@@ -3,14 +3,20 @@
     Build the Intune Win32 app packages (.intunewin) of SelfX Admin, SelfX Service and SelfX User.
 
 .DESCRIPTION
-    Uses the Microsoft Win32 Content Prep Tool (tools\IntuneWinAppUtil.exe) to wrap each
-    product folder into one .intunewin file in the build folder of the repository:
+    Wraps each product folder into one .intunewin file in the build folder of the repository:
 
       Product  Source folder    Setup file     Output file
       -------  ---------------  -------------  ---------------------------------
       Admin    SelfX Admin      Run_SelX.ps1   build\SelfX-Admin-<version>.intunewin
       Service  SelfX Service    Install.ps1    build\SelfX-Service-<version>.intunewin
       User     SelfX Standard   Install.ps1    build\SelfX-User-<version>.intunewin
+
+    The packages are created with New-IntuneWinPackage of the PowerShell module
+    SvRooij.ContentPrep.Cmdlet (open source, GPL-3.0, Stephan van Rooij, PowerShell Gallery).
+    If the module is missing, the script installs it for the current user (Install-Module
+    -Scope CurrentUser, no administrator rights). No packaging tool is kept in the repository.
+    With -ToolPath the script uses the Microsoft Win32 Content Prep Tool (IntuneWinAppUtil.exe)
+    instead; download it yourself from https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.
 
     Each product folder is first copied to a temporary staging folder, so that packaging-only
     files (Test-*.ps1) are not shipped and the source folders stay unchanged. Before
@@ -20,7 +26,8 @@
     The version in the file name comes from Tool_Version (Admin: Issues_List.xml).
 
     The script only reads the product folders, writes the staging folder (deleted at the end)
-    and the build folder. It installs nothing and uploads nothing to Intune.
+    and the build folder; if needed it installs the module for the current user. It uploads
+    nothing to Intune.
     Exit code 0 = all requested packages created, 1 = at least one package failed.
 
 .PARAMETER Product
@@ -30,7 +37,11 @@
     Target folder of the .intunewin files. Default: <repository>\build.
 
 .PARAMETER ToolPath
-    Path of IntuneWinAppUtil.exe. Default: the file next to this script.
+    Optional path of the Microsoft IntuneWinAppUtil.exe. Without it the module
+    SvRooij.ContentPrep.Cmdlet is used.
+
+.PARAMETER NoModuleInstall
+    Do not install SvRooij.ContentPrep.Cmdlet if it is missing; stop with an error instead.
 
 .EXAMPLE
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXIntuneWin.ps1
@@ -38,16 +49,21 @@
 .EXAMPLE
     .\tools\New-SelfXIntuneWin.ps1 -Product Service
 
+.EXAMPLE
+    .\tools\New-SelfXIntuneWin.ps1 -Product Service -ToolPath C:\Tools\IntuneWinAppUtil.exe
+
 .NOTES
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.0.0
+    Version : 1.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-04  Wolfgang Baeck       Initial version
+    1.1.0    2026-11-16  Wolfgang Baeck       Module SvRooij.ContentPrep.Cmdlet instead of the IntuneWinAppUtil.exe in the
+                                              repository (license); the Microsoft tool is optional (-ToolPath)
 #>
 
 [CmdletBinding()]
@@ -55,7 +71,8 @@ param(
     [ValidateSet('Admin', 'Service', 'User')]
     [string[]]$Product = @('Admin', 'Service', 'User'),
     [string]$OutputFolder,
-    [string]$ToolPath
+    [string]$ToolPath,
+    [switch]$NoModuleInstall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -63,7 +80,8 @@ $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptFolder
 if (-not $OutputFolder) { $OutputFolder = Join-Path $RepositoryRoot 'build' }
-if (-not $ToolPath) { $ToolPath = Join-Path $ScriptFolder 'IntuneWinAppUtil.exe' }
+$ModuleName = 'SvRooij.ContentPrep.Cmdlet'
+$ModuleMinimumVersion = '0.4.0'
 
 # Source folder, setup file and version source of every product.
 $Definitions = @{
@@ -106,10 +124,48 @@ function Test-StagedPackage {
     }
 }
 
-if (-not (Test-Path -LiteralPath $ToolPath -PathType Leaf)) { throw "IntuneWinAppUtil.exe not found: $ToolPath" }
-$signature = Get-AuthenticodeSignature -LiteralPath $ToolPath
-if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notlike 'CN=Microsoft Corporation,*') {
-    throw "IntuneWinAppUtil.exe is not validly signed by Microsoft ($($signature.Status))."
+function Initialize-ContentPrepModule {
+    $available = Get-Module -ListAvailable -Name $ModuleName | Where-Object { $_.Version -ge [version]$ModuleMinimumVersion } |
+        Sort-Object Version -Descending | Select-Object -First 1
+    if (-not $available) {
+        if ($NoModuleInstall) { throw "Module $ModuleName $ModuleMinimumVersion or newer is missing. Install it: Install-Module $ModuleName -Scope CurrentUser" }
+        Write-Host "Installing module $ModuleName for the current user from the PowerShell Gallery ..."
+        # TLS 1.2 is needed by the PowerShell Gallery; Windows PowerShell 5.1 may not use it by default.
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        Install-Module -Name $ModuleName -MinimumVersion $ModuleMinimumVersion -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
+        $available = Get-Module -ListAvailable -Name $ModuleName | Sort-Object Version -Descending | Select-Object -First 1
+        if (-not $available) { throw "Module $ModuleName could not be installed." }
+    }
+    Import-Module -Name $available.Path -Force
+    Write-Host "Packaging with $ModuleName $($available.Version)"
+}
+
+# Creates <OutputDir>\<setup file name>.intunewin, like IntuneWinAppUtil.exe.
+function New-PackageFile {
+    param([string]$Stage, [string]$SetupFile, [string]$OutputDir)
+    $created = Join-Path $OutputDir ([IO.Path]::GetFileNameWithoutExtension($SetupFile) + '.intunewin')
+    if ($ToolPath) {
+        # -q: no prompts and overwrite.
+        $toolLog = @(& $ToolPath -c $Stage -s $SetupFile -o $OutputDir -q 2>&1)
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $created -PathType Leaf)) {
+            throw "IntuneWinAppUtil.exe failed (exit code $LASTEXITCODE): $(($toolLog | Select-Object -Last 5) -join ' / ')"
+        }
+    } else {
+        $null = New-IntuneWinPackage -SourcePath $Stage -SetupFile $SetupFile -DestinationPath $OutputDir
+        if (-not (Test-Path -LiteralPath $created -PathType Leaf)) { throw "New-IntuneWinPackage created no file $created." }
+    }
+    return $created
+}
+
+if ($ToolPath) {
+    if (-not (Test-Path -LiteralPath $ToolPath -PathType Leaf)) { throw "IntuneWinAppUtil.exe not found: $ToolPath" }
+    $signature = Get-AuthenticodeSignature -LiteralPath $ToolPath
+    if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notlike 'CN=Microsoft Corporation,*') {
+        throw "IntuneWinAppUtil.exe is not validly signed by Microsoft ($($signature.Status))."
+    }
+    Write-Host "Packaging with $ToolPath"
+} else {
+    Initialize-ContentPrepModule
 }
 New-Item -ItemType Directory -Path $OutputFolder -Force | Out-Null
 $OutputFolder = (Resolve-Path -LiteralPath $OutputFolder).Path
@@ -135,12 +191,7 @@ try {
             }
             Test-StagedPackage -Stage $stage -Name $name -Definition $definition -Version $version
 
-            # -q: no prompts and overwrite. The tool names the file after the setup file.
-            $toolLog = @(& $ToolPath -c $stage -s $definition.Setup -o $toolOutput -q 2>&1)
-            $created = Join-Path $toolOutput ([IO.Path]::GetFileNameWithoutExtension($definition.Setup) + '.intunewin')
-            if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $created -PathType Leaf)) {
-                throw "IntuneWinAppUtil.exe failed (exit code $LASTEXITCODE): $(($toolLog | Select-Object -Last 5) -join ' / ')"
-            }
+            $created = New-PackageFile -Stage $stage -SetupFile $definition.Setup -OutputDir $toolOutput
 
             $target = Join-Path $OutputFolder ('SelfX-{0}-{1}.intunewin' -f $name, $version)
             Move-Item -LiteralPath $created -Destination $target -Force

@@ -46,7 +46,7 @@ reporting.
 | `SelfX Service` | Machine-wide offline package: installer, local Windows service (C# source), merged action catalogue with User and System actions, WPF application and scripts |
 | `SelfX Standard` | Per-user installer, detection and uninstall scripts, WPF application, XML configuration and troubleshooting scripts |
 | `SelfX Admin` | WPF application, ServiceUI launcher, XML action list and administrative troubleshooting scripts |
-| `tools` | `IntuneWinAppUtil.exe` (Microsoft Win32 Content Prep Tool) and `New-SelfXIntuneWin.ps1`, which builds the Intune packages (see [Building the Intune packages](docs/Installation.md#building-the-intune-packages)) |
+| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune packages with the open-source PowerShell module `SvRooij.ContentPrep.Cmdlet` (see [Building the Intune packages](docs/Installation.md#building-the-intune-packages)) |
 | `build` | Output of `New-SelfXIntuneWin.ps1`: `SelfX-Admin-<version>.intunewin`, `SelfX-Service-<version>.intunewin`, `SelfX-User-<version>.intunewin` |
 
 Review each action script and its execution context before deploying it. Actions
@@ -72,3 +72,8 @@ The System information tab of SelfX Standard is based on the idea and data
 points of the [System Information Tool](https://github.com/JayRHa/windows-system-information)
 by Jannik Reinhard (MIT License, Copyright (c) 2026 Jannik Reinhard). SelfX
 reimplements the collection in `SelfX Standard\Sources\SystemInfo.ps1` (also used by SelfX Service).
+
+The Intune packages are built with the open-source PowerShell module
+[SvRooij.ContentPrep.Cmdlet](https://github.com/svrooij/ContentPrep) by Stephan
+van Rooij (GPL-3.0). It is installed from the PowerShell Gallery when needed and
+is not part of this repository.

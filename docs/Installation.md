@@ -229,13 +229,27 @@ assemblies.
 
 ## Building the Intune packages
 
-`tools\New-SelfXIntuneWin.ps1` uses the Microsoft Win32 Content Prep Tool
-(`tools\IntuneWinAppUtil.exe`) to create one `.intunewin` file per product in
-the `build` folder of the repository:
+`tools\New-SelfXIntuneWin.ps1` creates one `.intunewin` file per product in
+the `build` folder of the repository (the folder is not committed, see
+`.gitignore`). It uses `New-IntuneWinPackage` of the PowerShell module
+[SvRooij.ContentPrep.Cmdlet](https://www.powershellgallery.com/packages/SvRooij.ContentPrep.Cmdlet)
+(open source, GPL-3.0, by [Stephan van Rooij](https://github.com/svrooij/ContentPrep)),
+an open-source re-implementation of the Microsoft Win32 Content Prep Tool.
+No packaging tool is stored in the repository. If the module (0.4.0 or newer)
+is missing, the script installs it for the current user from the PowerShell
+Gallery (no administrator rights; `-NoModuleInstall` stops with an error
+instead). To install it yourself:
+
+```powershell
+Install-Module SvRooij.ContentPrep.Cmdlet -Scope CurrentUser
+```
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXIntuneWin.ps1
 # only one product: -Product Service   (Admin, Service, User)
+# with the Microsoft tool instead of the module (download it yourself from
+# https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool):
+#   -ToolPath C:\Tools\IntuneWinAppUtil.exe
 ```
 
 | Product | Source folder | Setup file | Package |
@@ -249,10 +263,17 @@ SelfX Admin `Issues_List.xml`). The script copies each product folder to a
 temporary staging folder and leaves out the packaging tests (`Test-*.ps1`).
 Before packaging it checks that the setup file exists and that every XML file
 is valid. For SelfX Service it also checks that `$ExpectedVersion` in
-`Detection.ps1` equals `Tool_Version`. It also verifies the Microsoft signature
-of `IntuneWinAppUtil.exe`. It does not install or upload anything. Exit code
+`Detection.ps1` equals `Tool_Version`. With `-ToolPath` it verifies the
+Microsoft signature of `IntuneWinAppUtil.exe`. It uploads nothing to Intune. Exit code
 `0` means all packages were created; `1` means at least one failed. Run the
 tests of SelfX Service before building.
+
+The packages of the module have the same structure as those of the Microsoft
+tool (`IntuneWinPackage\Contents\IntunePackage.intunewin` encrypted with
+AES-256-CBC and HMAC-SHA256, `IntuneWinPackage\Metadata\Detection.xml`). The
+author describes the module as a re-implementation without warranty; if
+Intune rejects a package, build it again with `-ToolPath` and the Microsoft
+tool.
 
 Use the packages in Intune as follows:
 
