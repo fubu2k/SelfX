@@ -646,6 +646,12 @@ subfolder such as `Sources\Branding`, before you build the package. Paths are
 relative to the install folder. All keys are optional; if a value is empty,
 invalid or the file is missing, SelfX uses the default.
 
+The delivered `Tool_Config.xml` contains placeholders (2.6.8): the logo
+`Branding\company_logo.png` ("YOUR LOGO"), the blue of the SelfX logo
+(`#0072BC`) and the support contacts `Mon-Fri 08:00-17:00`, `+1 555 0100`,
+`support@example.com` and `https://support.example.com`. Replace them with the
+values of your company before you build the package, or empty them to hide them.
+
 | Key | Default | Purpose |
 |---|---|---|
 | `Brand_Logo` | empty (no logo) | Company logo at the top of the navigation bar and in the About dialog. PNG, JPG, BMP, GIF or ICO, at most 196 pixels wide in the navigation. A transparent PNG works best on both themes. If empty, the About dialog shows `About_Logo`. |

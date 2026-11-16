@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Read-only Intune/SCCM detection for ProgramFiles\SelfX. Requires SelfXService.exe, SelfX.exe,
-    Tool_Config.xml, a registered SelfXService and an exact Tool_Version match of 2.6.7.
+    Tool_Config.xml, a registered SelfXService and an exact Tool_Version match of 2.6.8.
     Does not start the service, contact the pipe, verify that it is running or execute
     remediation scripts. Writes an installed message and exits 0 when checks pass; exits
     1 for a missing prerequisite or version mismatch. XML read/parse errors are not caught.
@@ -14,7 +14,7 @@
     Name    : Detection.ps1
     Package : SelfX Service
     Context : Detection
-    Version : 2.6.7
+    Version : 2.6.8
 
     History:
     Version  Date        Author               Change
@@ -28,7 +28,7 @@
     2.3.4    2026-10-29  Wolfgang Baeck       Detect the Pending status / Defender signature update package version
     2.4.0    2026-11-02  Wolfgang Baeck       Detect the device logs (send to support) package version
     2.5.0    2026-11-04  Wolfgang Baeck       Detect the modern UI / background checks package version
-    2.5.1    2026-11-04  Wolfgang Baeck       Detect the LARAG branding package version
+    2.5.1    2026-11-04  Wolfgang Baeck       Detect the branding package version
     2.5.2    2026-11-04  Wolfgang Baeck       Detect the package version with the update fix (exit code 1)
     2.5.3    2026-11-04  Wolfgang Baeck       Detect the version with user time zone, "Fix all problems" and SelfX.exe
     2.5.4    2026-11-05  Wolfgang Baeck       Detect version 2.5.4 (Defender Fix button only while not OK)
@@ -46,9 +46,10 @@
     2.6.5    2026-11-06  Wolfgang Baeck       Detect version 2.6.5 (notifications per user)
     2.6.6    2026-11-06  Wolfgang Baeck       Detect version 2.6.6 (appearance Automatic)
     2.6.7    2026-11-16  Wolfgang Baeck       Detect version 2.6.7 (default appearance Automatic)
+    2.6.8    2026-11-16  Wolfgang Baeck       Detect version 2.6.8 (neutral branding placeholders)
 #>
 
-$ExpectedVersion = '2.6.7'
+$ExpectedVersion = '2.6.8'
 $InstallFolder = Join-Path $env:ProgramFiles 'SelfX'
 $ToolConfigFile = Join-Path $InstallFolder 'Tool_Config.xml'
 $LogFolder = Join-Path $env:ProgramData 'SelfX\Logs'

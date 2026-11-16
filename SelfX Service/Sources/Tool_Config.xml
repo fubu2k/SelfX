@@ -16,7 +16,7 @@
 	2.3.4    2026-10-29  Wolfgang Baeck       Pending (warning) status; Defender signature update button
 	2.4.0    2026-11-02  Wolfgang Baeck       Device logs for the support by e-mail (DeviceLogs_Days, DeviceLogs_Compress)
 	2.5.0    2026-11-04  Wolfgang Baeck       Modern UI: Device status page, tray icon, help dialog (support hours, Teams, website)
-	2.5.1    2026-11-04  Wolfgang Baeck       LARAG branding (logo Branding\larag_logo.png, brand color #0071B9)
+	2.5.1    2026-11-04  Wolfgang Baeck       Company branding (logo in Branding, brand color)
 	2.5.2    2026-11-04  Wolfgang Baeck       Fix: update no longer fails (exit code 1) while SelfX or the status icon is open
 	2.5.3    2026-11-04  Wolfgang Baeck       Times in the time zone of the user; "Fix all problems" button on the Device status page; start without command window (SelfX.exe)
 	2.5.4    2026-11-05  Wolfgang Baeck       Defender row shows the Fix button only while it is not OK (When="NotOK")
@@ -34,9 +34,10 @@
 	2.6.5    2026-11-06  Wolfgang Baeck       Each user can switch the notifications of the status icon on or off (Tray_Notifications allows it)
 	2.6.6    2026-11-06  Wolfgang Baeck       Appearance Automatic: SelfX follows the app mode of Windows (dark or light)
 	2.6.7    2026-11-16  Wolfgang Baeck       Default appearance Automatic (Tool_Theme Auto): SelfX uses the dark or light mode of Windows
+	2.6.8    2026-11-16  Wolfgang Baeck       Neutral branding and support placeholders (Branding\company_logo.png, example.com)
 -->
 <GUI_Config>	
-	<Tool_Version>2.6.7</Tool_Version> <!-- Tool version -->
+	<Tool_Version>2.6.8</Tool_Version> <!-- Tool version -->
 	<!-- Language of the user interface. All texts are in Languages\<culture>.xml (see docs\Configuration.md) -->
 	<Tool_Language>Auto</Tool_Language> <!-- Default language: Auto = Windows display language of the user (English if not available), or a culture such as de, fr, es, zh-Hans. Users can choose another language in SelfX > Settings (see Show_Language_Setting) -->
 	<Tool_Name>SelfX (Self fix)</Tool_Name> <!-- Text displayed in the title bar --> 
@@ -48,13 +49,13 @@
 
 				
 	<!-- Branding: company logo, icon and colors. Files are relative to the install folder (copy them into Sources before packaging), e.g. Branding\logo.png -->
-	<Brand_Logo>Branding\larag_logo.png</Brand_Logo> <!-- Company logo shown at the top of the navigation bar and in the About dialog (png, jpg, bmp, gif or ico). Empty = no logo -->
+	<Brand_Logo>Branding\company_logo.png</Brand_Logo> <!-- Company logo (placeholder: replace Branding\company_logo.png with your logo or change the path) shown at the top of the navigation bar and in the About dialog (png, jpg, bmp, gif or ico). Empty = no logo -->
 	<Brand_Logo_Height>40</Brand_Logo_Height> <!-- Height of the logo in the navigation bar in pixels (16-120, at most 196 pixels wide) -->
 	<Brand_Icon>Repair.ico</Brand_Icon> <!-- Icon of the window, the taskbar, the shortcuts and the tray icon (.ico recommended) -->
-	<Brand_Accent_Color>#0071B9</Brand_Accent_Color> <!-- Company color as #RRGGBB, e.g. #E20074. Used for buttons, selections, links and icons (adjusted automatically when too dark or too light to read). Empty = use Tool_Color -->
-	<Brand_TitleBar_Color>#0071B9</Brand_TitleBar_Color> <!-- Title bar background as #RRGGBB (text color is chosen automatically). Empty = window background -->
-	<Brand_Run_Button_Color>#0071B9</Brand_Run_Button_Color> <!-- Color of the "run" and "fix" buttons as #RRGGBB. Empty = accent color -->
-	<Brand_Info_Button_Color>#0071B9</Brand_Info_Button_Color> <!-- Color of the "more information" icons as #RRGGBB. Empty = accent color -->
+	<Brand_Accent_Color>#0072BC</Brand_Accent_Color> <!-- Company color as #RRGGBB, e.g. #E20074. Used for buttons, selections, links and icons (adjusted automatically when too dark or too light to read). Empty = use Tool_Color -->
+	<Brand_TitleBar_Color>#0072BC</Brand_TitleBar_Color> <!-- Title bar background as #RRGGBB (text color is chosen automatically). Empty = window background -->
+	<Brand_Run_Button_Color>#0072BC</Brand_Run_Button_Color> <!-- Color of the "run" and "fix" buttons as #RRGGBB. Empty = accent color -->
+	<Brand_Info_Button_Color>#0072BC</Brand_Info_Button_Color> <!-- Color of the "more information" icons as #RRGGBB. Empty = accent color -->
 	<!-- Main color of the tool -->
 	<Tool_Color>Cyan</Tool_Color> <!-- Used when Brand_Accent_Color is empty. Available colors: “Red”, “Green”, “Blue”, “Purple”, “Orange”, “Lime”, “Emerald”, “Teal”, “Cyan”, “Cobalt”, “Indigo”, “Violet”, “Pink”, “Magenta”, “Crimson”, “Amber”, “Yellow”, “Brown”, “Olive”, “Steel”, “Mauve”, “Taupe”, “Sienna” -->				
 	<Tool_Theme>Auto</Tool_Theme> <!-- Default theme: Auto (as the app mode of Windows), Dark or Light. Each user can change it in SelfX > Settings -->
@@ -77,11 +78,11 @@
 	
 	<!-- Help and support dialog (question mark in the title bar). Empty values are not shown -->
 	<Show_Support_Button>True</Show_Support_Button> <!-- Display the help button in the title bar: True or False -->
-	<Support_Hours>Mon-Fri 07:30-17:30</Support_Hours> <!-- Support hours, e.g. Mon-Fri 07:30-17:30 -->
-	<Support_Phone_number>+41 71 929 34 34</Support_Phone_number> <!-- Support phone number -->
+	<Support_Hours>Mon-Fri 08:00-17:00</Support_Hours> <!-- Support hours (placeholder), e.g. Mon-Fri 08:00-17:00 -->
+	<Support_Phone_number>+1 555 0100</Support_Phone_number> <!-- Support phone number (placeholder) -->
 	<Support_Teams></Support_Teams> <!-- Teams chat: address of a user or shared support account (opens a chat), or a full https Teams link -->
-	<Support_Website>https://helpdesk.larag.com</Support_Website> <!-- Website or ticket system, must start with https:// or http:// -->
-	<Support_Mail>helpdesk@larag.com</Support_Mail> <!-- Support e-mail address. Also the recipient of the device logs e-mail (Post_Action MailReport). Empty = the user enters the recipient -->
+	<Support_Website>https://support.example.com</Support_Website> <!-- Placeholder. Website or ticket system, must start with https:// or http:// -->
+	<Support_Mail>support@example.com</Support_Mail> <!-- Placeholder. Support e-mail address. Also the recipient of the device logs e-mail (Post_Action MailReport). Empty = the user enters the recipient -->
 
 	<!-- Device logs for the support (action "Send the device logs to the support", Collect-DeviceLogs.ps1 run as SYSTEM) -->
 	<DeviceLogs_Days>7</DeviceLogs_Days> <!-- Days of event log history in the report (1-60) -->
