@@ -9,7 +9,7 @@
     files are written only to a temporary folder. Start-Process and the scheduled task cmdlets are mocked.
     Run in Windows PowerShell 5.1 (STA): powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-UI.ps1
 .NOTES
-    Version: 2.6.7
+    Version: 2.6.9
     History:
     2.5.0  2026-11-04  Wolfgang Baeck  Initial UI tests (modern UI, tray icon, theme, caches).
     2.5.3  2026-11-04  Wolfgang Baeck  Test that SelfX and the status icon start without a console window.
@@ -21,6 +21,7 @@
     2.6.5  2026-11-06  Wolfgang Baeck  Test the notifications switch of the user (status icon).
     2.6.6  2026-11-06  Wolfgang Baeck  Test the appearance Automatic (app mode of Windows).
     2.6.7  2026-11-16  Wolfgang Baeck  Test the default appearance Automatic.
+    2.6.9  2026-11-19  Wolfgang Baeck  Test that the cached status read does not block a repair.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -227,6 +228,17 @@ try {
     Assert-Equal "$($toolConfig.SelectSingleNode('//Tool_Theme').InnerText)/$($guiText.Contains('(Get-SelfXText "Tool_Theme" "Auto")'))" 'Auto/True' 'Default appearance is Automatic (Tool_Config and fallback)'
     Assert-Equal ($guiText.Contains("Set-SelfXUserSetting 'Theme' 'Auto'") -and $guiText.Contains('$Theme_Timer.Stop()')) $true 'Automatic is saved for the user; the theme timer stops when SelfX closes'
     Assert-Equal ((Get-SelfXString 'Settings_Theme_Auto') -ne 'Settings_Theme_Auto' -and (Get-SelfXString 'Settings_Theme_Auto_ToolTip') -ne 'Settings_Theme_Auto_ToolTip') $true 'Texts of Automatic'
+
+    # --- Repairs are not blocked by the cached status read every minute ------------------------------
+    . ([scriptblock]::Create((Get-FunctionText $gui 'Test-SelfXCheckRunning')))
+    $Global:Health_Busy = $true; $Global:Health_Job = 'Cached'
+    Assert-Equal (Test-SelfXCheckRunning) $false 'Reading the cached status does not block Fix, Fix all or Check all'
+    $Global:Health_Job = 'Full'
+    Assert-Equal (Test-SelfXCheckRunning) $true 'A running check blocks a repair (the service would answer BUSY)'
+    $Global:Health_Busy = $false
+    Assert-Equal (Test-SelfXCheckRunning) $false 'No check running'
+    Assert-Equal ($guiText.Contains('If($Global:SvcAction_Running -or $Global:Health_Busy)') -or $guiText.Contains('If($Global:SvcAction_Running -or $Global:Health_Busy -or $Global:FixAll_Active)')) $false 'Status card and Fix all buttons use Test-SelfXCheckRunning'
+    Assert-Equal ($guiText.Contains("`$Btn_CheckAll.Add_Click({ Start-SysInfoHealthCheck -Id '' -Name '' })")) $true 'Check all during a cached read is queued instead of ignored'
 
     $trayText = [IO.File]::ReadAllText("$sources\SelfX_Tray.ps1")
     Assert-Equal ($trayText.Contains('-Language $Global:Tray_Language_Setting')) $true 'Status icon uses the language of the user'

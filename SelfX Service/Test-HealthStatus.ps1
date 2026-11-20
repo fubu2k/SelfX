@@ -5,7 +5,7 @@
     All system data and external process calls are mocked. No service is installed, no task
     is registered and no extension script is executed. Module autoloading is disabled.
 .NOTES
-    Version: 2.5.6
+    Version: 2.6.9
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial isolated health-check tests.
     2.3.1  2026-10-28  Wolfgang Baeck  Test remediation mapping, service allowlist and recheck callbacks.
@@ -16,6 +16,7 @@
         2.5.3  2026-11-04  Wolfgang Baeck  Test UTC time markers and conversion into the time zone of the user.
         2.5.5  2026-11-05  Wolfgang Baeck  Test the last output line of script checks as detail text.
         2.5.6  2026-11-05  Wolfgang Baeck  Test the Updates remediation and the remediation TimeoutSeconds of the service.
+        2.6.9  2026-11-19  Wolfgang Baeck  Test the pending restart from the Windows Update Agent and the orchestrator.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -50,6 +51,8 @@ function Get-BitLockerVolume { param($ErrorAction) $script:volumes }
 function Get-SelfXAppReports { $script:reports }
 function Get-SelfXPendingRebootMarkers { if ($script:rebootFails) { throw 'Mock registry denied' }; $script:rebootMarkers }
 function Get-SelfXUpdateSearchResult { if ($script:updateFails) { throw 'Mock WUA unavailable' }; $script:updateSearch }
+function Get-SelfXWuaRebootRequired { if ($script:wuaRebootFails) { throw 'Mock WUA denied' }; [bool]$script:wuaReboot }
+function Get-SelfXOrchestratorRebootTitles { @($script:orchestratorReboot) }
 function Invoke-SelfXHealthScript { param($Path, $TimeoutSeconds) if ($script:timeout) { throw 'Mock timeout' }; [pscustomobject]@{ ExitCode = $script:exitCode; Output = $script:checkOutput } }
 function Start-Process { throw 'Forbidden in tests' }
 function Invoke-CimMethod { throw 'Forbidden in tests' }
@@ -60,7 +63,7 @@ function New-ScheduledTaskTrigger { throw 'Forbidden in tests' }
 function New-ScheduledTaskPrincipal { throw 'Forbidden in tests' }
 function New-ScheduledTaskSettingsSet { throw 'Forbidden in tests' }
 foreach ($name in @('Get-Service','Get-CimInstance','Get-MpComputerStatus','Get-BitLockerVolume',
-    'Get-SelfXAppReports','Get-SelfXPendingRebootMarkers','Get-SelfXUpdateSearchResult',
+    'Get-SelfXAppReports','Get-SelfXPendingRebootMarkers','Get-SelfXUpdateSearchResult','Get-SelfXWuaRebootRequired','Get-SelfXOrchestratorRebootTitles',
     'Invoke-SelfXHealthScript','Start-Process','Invoke-CimMethod',
     'Register-ScheduledTask','New-ScheduledTask','New-ScheduledTaskAction','New-ScheduledTaskTrigger',
     'New-ScheduledTaskPrincipal','New-ScheduledTaskSettingsSet')) {
@@ -149,6 +152,19 @@ try {
         Assert-Equal (@(Get-SelfXPendingRebootMarkers) -join ',') 'Component Based Servicing,Windows Update' 'CBS and WU markers'
         $script:regKeys = @(); $script:newName = 'PC2'
         Assert-Equal (@(Get-SelfXPendingRebootMarkers) -join ',') 'Computer rename' 'Rename marker'
+        # Windows 11 24H2+: the orchestrator does not always set the registry key (Settings shows "Restart now").
+        $script:newName = 'PC1'
+        $script:wuaReboot = $true
+        Assert-Equal (@(Get-SelfXPendingRebootMarkers) -join ',') 'Windows Update' 'Windows Update Agent RebootRequired without registry key'
+        $script:wuaReboot = $false
+        $script:orchestratorReboot = @('2026-11 Security Update (KB5132061) (26200.9974)')
+        Assert-Equal (@(Get-SelfXPendingRebootMarkers) -join ',') 'Windows Update (2026-11 Security Update (KB5132061) (26200.9974))' 'Orchestrator ReadyToReboot names the update'
+        $script:regKeys = @('RebootRequired'); $script:wuaReboot = $true
+        Assert-Equal @(Get-SelfXPendingRebootMarkers).Count 1 'Windows Update named once when several sources report it'
+        $script:regKeys = @(); $script:wuaReboot = $false; $script:orchestratorReboot = @()
+        $script:wuaRebootFails = $true
+        Assert-Equal @(Get-SelfXPendingRebootMarkers).Count 0 'A failing Windows Update Agent does not make the check fail'
+        $script:wuaRebootFails = $false
         $script:newName = ''
         Assert-Equal (Get-SelfXPendingRebootHealth).Status Unknown 'Missing computer name is Unknown'
     }
@@ -169,6 +185,14 @@ try {
     $script:updateFails = $true
     Assert-Equal (Get-SelfXUpdateHealth).Status Unknown 'Update search failure is Unknown'
     $script:updateFails = $false
+    # An update installed by the orchestrator that only waits for the restart is not "to install".
+    $script:updateSearch = [pscustomobject]@{ Titles = @('2026-11 Security Update (KB5132061)', 'Audio driver'); LastSearch = [datetime]::Now.AddDays(-1) }
+    $script:orchestratorReboot = @('2026-11 Security Update (KB5132061)')
+    $updatesWaiting = Get-SelfXUpdateHealth
+    Assert-Equal "$($updatesWaiting.Status)|$($updatesWaiting.Detail -like '1 update(s) to install*: Audio driver 1 installed update(s) wait for the restart.')" 'Pending|True' 'Update waiting for the restart is not listed to install'
+    $script:updateSearch = [pscustomobject]@{ Titles = @('2026-11 Security Update (KB5132061)'); LastSearch = [datetime]::Now.AddDays(-30) }
+    Assert-Equal (Get-SelfXUpdateHealth).Status OK 'Only updates waiting for the restart: nothing to install'
+    $script:orchestratorReboot = @()
     $script:updateSearch = [pscustomobject]@{ Titles = @(); LastSearch = [datetime]::Now.AddDays(-1) }
 
     [xml]$apps = '<Applications><Exclude Name="Ignored*"/><Application Id="id-2" Name="Ignored broken app"/></Applications>'
@@ -478,7 +502,7 @@ try {
         Assert-Equal "$($runningRow.Running)/$($null -eq $Global:SvcAction_Row)" 'False/True' 'Finished action: running state cleared'
 
         # "Fix all problems": repairs run one after another, results are counted, then a full recheck.
-        foreach ($fn in 'Start-SelfXNextFixAll', 'Update-SelfXFixAllButton') {
+        foreach ($fn in 'Start-SelfXNextFixAll', 'Update-SelfXFixAllButton', 'Test-SelfXCheckRunning') {
             $def = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $fn }, $true)
             if (-not $def) { throw "$fn not found." }
             . ([scriptblock]::Create($def.Extent.Text))

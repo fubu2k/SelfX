@@ -11,7 +11,7 @@
     -CacheFile (set by the service) also stores the result for the background status cache:
     a full collection replaces the file, a single check replaces only its own rows.
 .NOTES
-    Version: 2.6.0
+    Version: 2.6.9
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial local health checks and extension contract.
     2.3.1  2026-10-28  Wolfgang Baeck  Expose configured remediation mappings without running repairs.
@@ -27,6 +27,10 @@
     2.6.0  2026-11-06  Wolfgang Baeck  Logging (SelfXLog.ps1); apps: app id from the key <app id>_<revision> (the
                                        user id was taken before), names from the IME logs, error codes in hex,
                                        not applicable apps (3000-3999) are not counted, clear detail text.
+    2.6.9  2026-11-19  Wolfgang Baeck  Pending restart also from the Windows Update Agent (SystemInfo.RebootRequired)
+                                       and the orchestrator (ReadyToReboot, Windows 11 24H2+): Settings showed
+                                       "Restart now" while SelfX reported no restart; updates that only wait for
+                                       the restart are no longer listed as "to install".
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -112,6 +116,23 @@ function Get-SelfXBitLockerHealth {
     } catch { New-SelfXHealthResult BitLocker Unknown $_.Exception.Message }
 }
 
+# Windows Update Agent: ISystemInformation.RebootRequired (documented, readable without administrator rights).
+function Get-SelfXWuaRebootRequired {
+    return [bool](New-Object -ComObject Microsoft.Update.SystemInfo).RebootRequired
+}
+
+# Windows Update orchestrator (Windows 11 24H2+, what Settings > Windows Update shows): titles of the updates
+# that are installed and wait for the restart (AttentionRequiredReason ReadyToReboot). Empty on older Windows.
+function Get-SelfXOrchestratorRebootTitles {
+    try {
+        $null = [Windows.Management.Update.WindowsUpdateManager, Windows.Management.Update, ContentType = WindowsRuntime]
+        $manager = New-Object Windows.Management.Update.WindowsUpdateManager -ArgumentList 'SelfX.Health'
+    } catch { return @() }
+    @(foreach ($update in @($manager.GetApplicableUpdates())) {
+        if ($update -and $update.AttentionRequiredInfo -and "$($update.AttentionRequiredInfo.Reason)" -eq 'ReadyToReboot') { "$($update.Title)" }
+    })
+}
+
 function Get-SelfXPendingRebootMarkers {
     # Read-only registry markers. PendingFileRenameOperations is ignored on purpose: many
     # installers and security products set it permanently, which would cause false errors.
@@ -119,7 +140,14 @@ function Get-SelfXPendingRebootMarkers {
     if (Test-Path -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending') {
         $markers += 'Component Based Servicing'
     }
-    if (Test-Path -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') {
+    # Updates installed by the orchestrator (Windows 11 24H2+) do not always set this key: the documented
+    # Windows Update APIs below are asked as well. They only add markers; failing APIs do not hide the registry.
+    $wuaReboot = $false
+    try { $wuaReboot = Get-SelfXWuaRebootRequired } catch { }
+    $waiting = @()
+    try { $waiting = @(Get-SelfXOrchestratorRebootTitles | Where-Object { $_ }) } catch { }
+    if ($waiting.Count) { $markers += 'Windows Update (' + ($waiting -join ', ') + ')' }
+    elseif ($wuaReboot -or (Test-Path -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired')) {
         $markers += 'Windows Update'
     }
     $names = 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName'
@@ -158,6 +186,12 @@ function Get-SelfXUpdateHealth {
     try {
         $search = Get-SelfXUpdateSearchResult
         $titles = @($search.Titles | Where-Object { $_ })
+        # Installed by the orchestrator and only waiting for the restart: shown on the "Restart pending" row.
+        $restart = @()
+        try { $restart = @(Get-SelfXOrchestratorRebootTitles | Where-Object { $_ }) } catch { }
+        $titles = @($titles | Where-Object { $restart -notcontains $_ })
+        $restartText = ''
+        if ($restart.Count) { $restartText = " $($restart.Count) installed update(s) wait for the restart." }
         $last = $search.LastSearch
         $lastText = 'unknown'
         $stale = $true
@@ -168,12 +202,12 @@ function Get-SelfXUpdateHealth {
             $stale = ([datetime]::UtcNow - $last.ToUniversalTime()).TotalDays -gt $MaxSearchAgeDays
         }
         if ($titles.Count) {
-            New-SelfXHealthResult Updates Pending ("{0} update(s) to install (last scan {1}): {2}" -f $titles.Count, $lastText, ($titles -join '; '))
-        } elseif ($stale) {
+            New-SelfXHealthResult Updates Pending (("{0} update(s) to install (last scan {1}): {2}" -f $titles.Count, $lastText, ($titles -join '; ')) + $restartText)
+        } elseif ($stale -and -not $restart.Count) {
             # An empty cache that is old or was never filled does not prove the device is current.
             New-SelfXHealthResult Updates Unknown "No pending updates in the local cache, but the last successful scan ($lastText) is older than $MaxSearchAgeDays day(s) or unknown."
         } else {
-            New-SelfXHealthResult Updates OK "No updates to install (last scan $lastText)."
+            New-SelfXHealthResult Updates OK ("No updates to install (last scan $lastText)." + $restartText)
         }
     } catch { New-SelfXHealthResult Updates Unknown $_.Exception.Message }
 }

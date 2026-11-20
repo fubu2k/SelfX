@@ -68,10 +68,12 @@
          cause of non-compliance. -->
     <Remediation Id="Defender" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
     <Remediation Id="Compliance" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
-    <!-- Install the pending Windows updates now through the Windows Update Agent (policies of the device apply,
-         never restarts) and start the Microsoft Store app updates as SYSTEM. SelfX shows "Running..." until the
-         installation has finished and then checks the whole status again. Optional TimeoutSeconds (max. 7200). -->
-    <Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="3600" />
+    <!-- Install the pending Windows updates now (policies of the device apply, never restarts) and start the
+         Microsoft Store app updates as SYSTEM. Windows 11 24H2+: through the Windows Update orchestrator, as
+         "Check for updates" in Settings; the Windows Update Agent installs only what is left. SelfX shows
+         "Running..." until the installation has finished and then checks the whole status again.
+         Optional TimeoutSeconds (max. 7200); the orchestrator is watched at most 90 minutes. -->
+    <Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" />
     <!-- Restart Windows to complete a pending restart, only after the user confirmed the restart warning. -->
     <Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" />
     <!-- Retry failed Intune app installations now (instead of after the IME retry schedule of 24 hours):

@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.6.7
+    Version : 2.6.9
 
     History:
     Version  Date        Author               Change
@@ -79,6 +79,7 @@
     2.6.5    2026-11-06  Wolfgang Baeck       Settings: switch "Show notifications about problems" of the status icon (per user)
     2.6.6    2026-11-06  Wolfgang Baeck       Appearance Automatic (Settings): follows the app mode of Windows, also while SelfX is open
     2.6.7    2026-11-16  Wolfgang Baeck       Default appearance Automatic (Tool_Theme missing or unknown value)
+    2.6.9    2026-11-19  Wolfgang Baeck       Fix, Fix all and Check all are no longer refused while the cached status is read (every minute)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -1535,6 +1536,10 @@ Function Start-SelfXHealthJob
 		return $True
 	}
 
+# A check runs (all or one status). Reading the cached status every minute takes only a moment and blocks nothing:
+# the service answers STATUS without a lock, so a repair can start meanwhile.
+Function Test-SelfXCheckRunning { return [bool]($Global:Health_Busy -and ($Global:Health_Job -ne 'Cached')) }
+
 # Re-checks a single health status (card button and after a remediation). Unknown ids trigger a full check.
 Function Start-SysInfoHealthCheck
 	{
@@ -1640,7 +1645,7 @@ $Global:FixAll_Queue = New-Object System.Collections.Queue
 Function Update-SelfXFixAllButton
 	{
 		$Btn_FixAll.Visibility = $(If(@($Global:Health_FixAll_Cards).Count -or $Global:FixAll_Active) { 'Visible' } Else { 'Collapsed' })
-		$Btn_FixAll.IsEnabled = -not ($Global:Health_Busy -or $Global:SvcAction_Running -or $Global:FixAll_Active)
+		$Btn_FixAll.IsEnabled = -not ((Test-SelfXCheckRunning) -or $Global:SvcAction_Running -or $Global:FixAll_Active)
 	}
 
 Function Update-SelfXStatusView
@@ -1675,8 +1680,8 @@ Function Update-SelfXStatusView
 		$NavBadgeText.Text = "$Issues"
 		$NavBadge.SetResourceReference([System.Windows.Controls.Border]::BackgroundProperty, $(If($Errors) { 'ErrSolid' } Else { 'WarnSolid' }))
 
-		$Status_Spinner.Visibility = $(If($Global:Health_Busy) { 'Visible' } Else { 'Collapsed' })
-		$Btn_CheckAll.IsEnabled = -not $Global:Health_Busy
+		$Status_Spinner.Visibility = $(If(Test-SelfXCheckRunning) { 'Visible' } Else { 'Collapsed' })
+		$Btn_CheckAll.IsEnabled = -not (Test-SelfXCheckRunning)
 
 		# One repair per script: several rows (for example two disks) can share the same repair.
 		# The restart is never part of "Fix all problems": it would end all other repairs and the session.
@@ -1716,7 +1721,7 @@ $StatusCards.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEv
 	$event.Handled = $True
 	$Card = $Button.DataContext
 	If(-not $Card) { return }
-	If($Global:SvcAction_Running -or $Global:Health_Busy)
+	If($Global:SvcAction_Running -or (Test-SelfXCheckRunning))
 		{
 			$msgbar.SetWarningAlert($Service_Busy_Text)
 			return
@@ -1747,7 +1752,7 @@ $StatusCards.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEv
 				}
 		}
 })
-$Btn_CheckAll.Add_Click({ [void](Start-SelfXHealthJob -Mode Full) })
+$Btn_CheckAll.Add_Click({ Start-SysInfoHealthCheck -Id '' -Name '' })
 
 # Runs the next repair of "Fix all problems"; after the last one, everything is checked again.
 Function Start-SelfXNextFixAll
@@ -1781,7 +1786,7 @@ Function Start-SelfXNextFixAll
 	}
 
 $Btn_FixAll.Add_Click({
-	If($Global:SvcAction_Running -or $Global:Health_Busy -or $Global:FixAll_Active)
+	If($Global:SvcAction_Running -or (Test-SelfXCheckRunning) -or $Global:FixAll_Active)
 		{
 			$msgbar.SetWarningAlert($Service_Busy_Text)
 			return

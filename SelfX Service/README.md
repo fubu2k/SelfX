@@ -79,7 +79,7 @@ installed locally and works without any network connection.
 | `Test-UI.ps1` | Isolated tests of the user interface (XAML, theme, texts), the tray icon notifications and the information cache; no window is shown. |
 | `Test-Scripts.ps1` | Runs every action and repair script in a temporary sandbox with mocked commands and checks result and log (2.6.0); nothing on the device is changed. |
 | `Sources\SelfXLog.ps1` | Shared logging of all scripts to `%ProgramData%\SelfX\Logs` and the user-side log housekeeping (2.6.0). |
-| `Sources\Scripts_to_run\SelfX_Device_Restart.ps1`, `SelfX_Apps_RetryInstall.ps1`, `SelfX_Updates_Install.ps1` | Repairs of the Device status page: restart after confirmation, retry failed app installations, install Windows updates through the Windows Update Agent (2.6.0 / 2.6.3). |
+| `Sources\Scripts_to_run\SelfX_Device_Restart.ps1`, `SelfX_Apps_RetryInstall.ps1`, `SelfX_Updates_Install.ps1` | Repairs of the Device status page: restart after confirmation, retry failed app installations, install Windows updates through the Windows Update orchestrator (Windows 11 24H2+, as "Check for updates" in Settings) and the Windows Update Agent (2.6.0 / 2.6.3 / 2.6.9). |
 | `Sources\SelfX_Tray.ps1` | Status icon in the notification area (started at sign-in through the HKLM Run entry `SelfXTray`, and right after the installation for signed-in users). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Device logs: read-only collector, System wrapper and the GUI e-mail helper. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Service-side collector and administrator-controlled health settings. Optional scripts go in `Sources\HealthChecks`. |

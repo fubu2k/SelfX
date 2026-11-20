@@ -12,10 +12,11 @@
     Also checks the headers, the logging and the catalog / Health_Config references of all scripts.
     Run in Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-Scripts.ps1
 .NOTES
-    Version: 2.6.3
+    Version: 2.6.9
     History:
     2.6.0  2026-11-06  Wolfgang Baeck  Initial version: sandbox tests of all action, repair and check scripts.
     2.6.3  2026-11-06  Wolfgang Baeck  Updates: Windows Update Agent flow with a simulated session.
+    2.6.9  2026-11-19  Wolfgang Baeck  Updates: simulated Windows Update orchestrator; WUA skips feature updates.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -343,6 +344,60 @@ try {
 	$updatesText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Updates_Install.ps1'))
 	$updatesCode = $updatesText.Substring($updatesText.IndexOf('#>') + 2)
 	Assert-Equal ($updatesCode -match '(?i)UsoClient|shutdown|Restart-Computer|RebootRequired\\') $false 'Updates: no UsoClient (fails on Windows 11 24H2), never restarts, no registry restart markers'
+
+	# Feature updates and updates that only wait for the restart are never installed through the WUA API.
+	$feature = New-FakeUpdate 'Windows 11, version 26H2' ''
+	$feature | Add-Member NoteProperty Categories @([pscustomobject]@{ Name = 'Upgrades' })
+	$session = New-FakeSession @($feature, (New-FakeUpdate '2026-11 Security Update (KB5132061)' '5132061'), (New-FakeUpdate 'Audio driver' ''))
+	$script:updateLog.Clear()
+	$result = Install-SelfXWindowsUpdates -Session $session -PollSeconds 1 -SkipTitles @('2026-11 Security Update (KB5132061)')
+	Assert-Equal "$($result.Ok)|$($result.Text)" 'True|Windows Update: 1 of 1 update(s) installed (Audio driver)' 'Updates: WUA skips feature updates and updates waiting for the restart'
+	Assert-Equal (@($script:updateLog | Where-Object { $_ -like '*Skipped (feature update)*' -or $_ -like '*Skipped (installed, waits for the restart)*' }).Count) 2 'Updates: skipped updates are logged'
+
+	# Orchestrator (Windows 11 24H2+): simulated WindowsUpdateManager. Each poll step plays the next state.
+	function New-FakeOrchestratorUpdate([string]$Id, [string]$Title, [object[]]$Steps, [bool]$Feature = $false) {
+		$u = [pscustomobject]@{ UpdateId = $Id; Title = $Title; IsEulaAccepted = $false; IsFeatureUpdate = $Feature; Steps = $Steps; Step = 0
+			CurrentAction = ''; ActionProgress = $null; AttentionRequiredInfo = $null }
+		$u | Add-Member ScriptMethod AcceptEula { $this.IsEulaAccepted = $true }
+		$u
+	}
+	function New-FakeManager([object[]]$Updates, [int]$ScanPolls = 1, [switch]$ThrowOnScan) {
+		$m = [pscustomobject]@{ Updates = $Updates; ScanPolls = $ScanPolls; Polls = 0; Scans = (New-Object System.Collections.Generic.List[string]); ThrowOnScan = [bool]$ThrowOnScan }
+		$m | Add-Member ScriptMethod StartScan { param($user) if ($this.ThrowOnScan) { throw 'Access denied' }; $this.Scans.Add("user=$user") }
+		$m | Add-Member ScriptProperty IsScanning { $this.Polls -lt $this.ScanPolls }
+		$m | Add-Member ScriptMethod GetApplicableUpdates {
+			$this.Polls++
+			foreach ($u in $this.Updates) {
+				$s = $u.Steps[[Math]::Min($u.Step, $u.Steps.Count - 1)]; $u.Step++
+				$u.CurrentAction = "$($s[0])"
+				$u.ActionProgress = $(if ($s[0]) { [pscustomobject]@{ Action = $s[0]; Progress = $s[1] } } else { $null })
+				$u.AttentionRequiredInfo = $(if ($s[2]) { [pscustomobject]@{ Reason = $s[2] } } else { $null })
+			}
+			@($this.Updates | Where-Object { "$($_.Steps[[Math]::Min($_.Step - 1, $_.Steps.Count - 1)][0])" -ne 'Gone' })
+		}
+		$m
+	}
+	$script:updateLog.Clear()
+	$lcu = New-FakeOrchestratorUpdate 'a1' '2026-11 Security Update (KB5132061)' @(@('Download', 40, ''), @('Install', 70, ''), @('', 0, 'ReadyToReboot'))
+	$drv = New-FakeOrchestratorUpdate 'b2' 'Audio driver' @(@('Download', 10, ''), @('Install', 90, ''), @('Gone', 0, ''))
+	$manager = New-FakeManager @($lcu, $drv)
+	$result = Install-SelfXOrchestratorUpdates -Manager $manager -PollSeconds 1 -IdleSeconds 3 -ScanStartSeconds 2 -TimeoutSeconds 100
+	Assert-Equal ($manager.Scans -join ';') 'user=True' 'Updates: orchestrator scan as "Check for updates" in Settings (user initiated)'
+	Assert-Equal "$($result.Ok)|$($result.TimedOut)|$($result.Text)" 'True|False|Windows Update orchestrator: all updates processed; restart required to complete: 2026-11 Security Update (KB5132061)' 'Updates: orchestrator installs, restart reported'
+	Assert-Equal "$($lcu.IsEulaAccepted)/$($drv.IsEulaAccepted)" 'True/True' 'Updates: EULAs accepted for the orchestrator'
+	Assert-Equal (@($script:updateLog | Where-Object { $_ -like '*KB5132061): action Install, progress Install 70' }).Count) 1 'Updates: orchestrator progress logged per update'
+
+	$seeker = New-FakeOrchestratorUpdate 'c3' 'Optional driver' @(,@('', 0, 'SeekerUpdate'))
+	$upgrade = New-FakeOrchestratorUpdate 'd4' 'Windows 11, version 26H2' @(,@('', 0, 'SeekerUpdate')) -Feature $true
+	$result = Install-SelfXOrchestratorUpdates -Manager (New-FakeManager @($seeker, $upgrade)) -PollSeconds 1 -IdleSeconds 3 -ScanStartSeconds 2 -TimeoutSeconds 100
+	Assert-Equal "$($result.Ok)|$($result.Remaining -join ',')" 'False|Optional driver' 'Updates: an update the orchestrator does not install remains for the WUA API; feature update left to the policy'
+	Assert-Equal ($result.Text -like '*1 update(s) not installed: Optional driver (SeekerUpdate)*feature update(s) left to the update policy: Windows 11, version 26H2') $true 'Updates: waiting reason and feature update reported'
+
+	$busy = New-FakeOrchestratorUpdate 'e5' 'Cumulative update' @(,@('Install', 50, ''))
+	$result = Install-SelfXOrchestratorUpdates -Manager (New-FakeManager @($busy)) -PollSeconds 1 -IdleSeconds 3 -ScanStartSeconds 2 -TimeoutSeconds 6
+	Assert-Equal "$($result.Ok)|$($result.TimedOut)" 'False|True' 'Updates: orchestrator still installing after the time limit (no parallel WUA installation)'
+	Assert-Equal ($updatesCode.Contains('if ($orchestrator.TimedOut) { $runAgent = $false; $failed = $true }') -and $updatesCode.Contains('$manager.StartScan($false)')) $true 'Updates: no WUA installation while the orchestrator works; Settings refreshed after a WUA installation'
+	Assert-Equal ((Get-SelfXUpdateManager) -eq $null -or (Get-SelfXUpdateManager).GetType().FullName -eq 'Windows.Management.Update.WindowsUpdateManager') $true 'Updates: orchestrator API is created or missing (older Windows), never an error'
 
 	# App retry: reset of the cached error and the retry schedule of failed apps (registry mocked).
 	. "$sources\HealthStatus.ps1"

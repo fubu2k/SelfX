@@ -379,7 +379,7 @@ The client cannot supply a path or code to the service.
 | Applications | Best-effort **local IME Win32 app reporting cache**, plus configured application probes. Known cached success (`1000`) is OK; failure states (`5000` through `5999`) are Error; other states are Unknown. Error takes precedence over Unknown, which takes precedence over OK. With no included results, the overall result is Unknown. |
 | Disk | Every fixed logical disk: Error when used space is **at least 90% OR free space is below 20 GiB** (displayed as GB, PowerShell `1GB`). Exactly 20 GiB is sufficient only if usage is below 90%. Thresholds are configurable. |
 | BitLocker | Every returned OS/fixed-data volume must be fully encrypted with protection On; suspended, unencrypted or partially encrypted volumes are Error. Unsupported/unreadable data is Unknown. No keys or recovery secrets are collected. |
-| Pending reboot | Error when Windows reports a pending restart: the Component Based Servicing `RebootPending` key, the Windows Update `RebootRequired` key, or a pending computer rename. `PendingFileRenameOperations` is deliberately ignored because installers and security products often leave it set permanently. Unreadable registry data is Unknown. |
+| Pending reboot | Error when Windows reports a pending restart: the Component Based Servicing `RebootPending` key, the Windows Update `RebootRequired` key, `RebootRequired` of the Windows Update Agent (`Microsoft.Update.SystemInfo`), updates of the Windows Update orchestrator that wait for the restart (`ReadyToReboot`, Windows 11 24H2+, what Settings shows as *Restart now*; since 2.6.9, the detail names the updates), or a pending computer rename. `PendingFileRenameOperations` is deliberately ignored because installers and security products often leave it set permanently. Unreadable registry data is Unknown; a failing Windows Update API does not hide the registry result. |
 | Updates to install | Searches only the **local Windows Update Agent cache** (offline, no scan, download or installation). Any not-installed, not-hidden update (except browse-only/optional ones) is **Pending** (warning) and listed in the detail. An empty cache is OK only if the last successful Windows Update scan is at most `MaxSearchAgeDays` old (default 14); otherwise, or when the scan date is unknown, the result is Unknown. Updates deployed only through ConfigMgr are not part of this cache view. While the row is Pending, **Fix** installs the pending Windows updates and starts the Microsoft Store app updates as SYSTEM, without a restart (since 2.5.6, see [Health remediation](#health-remediation)). |
 | Additional services | Exact service name and expected state (`Running` or `Stopped`). |
 | Script checks | Exit `0` = OK; exit `1` = Error. Other exit codes, missing files, exceptions and timeouts are also Error. |
@@ -524,11 +524,11 @@ Defender row as well, remove `When="NotOK"` from the Defender line. The update n
 source; offline it fails (exit 1) and the status stays unchanged. Remove the
 two lines to disable this.
 
-**Updates remediation (2.5.6, fixed in 2.6.3):** the package ships
+**Updates remediation (2.5.6, fixed in 2.6.3 and 2.6.9):** the package ships
 `Scripts_to_run\SelfX_Updates_Install.ps1` and enables it in the default `Health_Config.xml`:
 
 ```xml
-<Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="3600" />
+<Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" />
 ```
 
 While updates are pending, the **Updates to install** row offers **Fix**. While the installation
@@ -539,21 +539,39 @@ whole device status again (updates, restart pending, compliance). The script run
 1. starts the Microsoft Store app update scan of the MDM bridge
    (`MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod`). This also works when the
    Store is blocked for users. The Store updates the apps asynchronously in the background.
-2. installs the updates through the documented **Windows Update Agent API**: online search at the
+2. on Windows 11 24H2 and newer (2.6.9) starts **"Check for updates" of the Windows Update
+   orchestrator** through the documented WinRT API `Windows.Management.Update.WindowsUpdateManager`
+   (`StartScan(userInitiated: true)`, the same as the button in Settings). Windows downloads and
+   installs the updates itself, with the policies of the device, and **Settings > Windows Update
+   shows the progress**. The script waits until no update is downloaded or installed any more (at
+   most 90 minutes) and logs each update with its action, progress and the reason why it waits, for
+   example `2026-11 Security Update (KB5132061): action Install, progress Install 70` or
+   `Optional driver: waiting: SeekerUpdate`. Updates that only wait for the restart (`ReadyToReboot`)
+   are done. Feature updates (new Windows version) are left to the update policy.
+3. installs what the orchestrator left (and on older Windows everything) through the documented
+   **Windows Update Agent API**: online search at the
    update source of the device policy (Intune update rings / Windows Update for Business, WSUS or
    Microsoft Update), EULAs accepted, download and quiet installation of every not-installed,
-   not-hidden update. Optional (browse-only) updates and updates that need user input are skipped,
-   the same selection as the status check. If Windows Update is installing right now, the script
+   not-hidden update. Optional (browse-only) updates, updates that need user input, feature updates
+   (category *Upgrades*) and updates that only wait for the restart are skipped. If Windows Update is
+   installing right now, the script
    waits for it (at most 10 minutes). Every update is logged in
    `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<date>.log` with its title and result, for example
    `Installed: 2026-10 .NET Framework Security Update (restart required)`, and the summary names the
    KB numbers (`Windows Update: 2 of 2 update(s) installed (KB5127690, KB890830); restart required to
-   complete`).
+   complete`). Afterwards a background scan of the orchestrator updates the page in Settings. While
+   the orchestrator is still working after 90 minutes, the WUA step is skipped (two installations at
+   the same time would conflict) and the repair ends with exit `1`; Windows continues in the
+   background.
 
 2.6.0 to 2.6.2 used `UsoClient.exe StartDownload` / `StartInstall`. Windows 11 24H2 rejects these
 commands (exit code `-2147024809` / `0x80070057` in the log), so only a scan ran and nothing was
 installed; a restart that was already pending was even reported as installed. 2.6.3 no longer uses
-`UsoClient.exe`.
+`UsoClient.exe`. 2.6.3 to 2.6.8 used only the Windows Update Agent API. Microsoft documents that the
+Windows Update page in Settings shows only updates of the orchestrator and that updates handled
+through the WUA API do not appear there and can conflict with it, so the updates could still be
+shown as pending in Settings. Before 2.6.9 a click on **Fix** was also refused with "Another action
+is still running" while SelfX read the cached status (once a minute, for a moment).
 
 The script **never restarts** Windows. If an update needs a restart, the **Restart pending** row
 shows it. Exit `0` = all selected updates installed (or nothing to install); exit `1` = search,
