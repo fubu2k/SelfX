@@ -87,7 +87,7 @@ the **entire package**. The update installs like every other update;
   request and every change of `main`. The workflow has read-only rights and
   uses actions pinned to a commit.
 - `SECURITY.md` (private reporting of vulnerabilities), `.github/CODEOWNERS`
-  and Dependabot for the pinned GitHub Actions.
+  and Dependabot for the pinned GitHub Actions; this `CHANGELOG.md`.
 
 ### Fixed
 
@@ -95,7 +95,6 @@ the **entire package**. The update installs like every other update;
   in `Test-Catalog.ps1`, a changed method signature in `Test-HealthStatus.ps1`,
   and two tests that assumed a non-elevated account). The product code was not
   affected.
-- `CHANGELOG.md`.
 
 ### Changed
 
