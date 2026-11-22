@@ -303,7 +303,7 @@ function Get-SelfXCopilotDataLines {
 		if ($null -eq $disk -or "$($disk.Drive)" -notmatch '^[A-Za-z]:$') { continue }
 		$used = 0; $free = 0
 		if ([int]::TryParse("$($disk.UsedPercent)", [ref]$used) -and [int]::TryParse("$($disk.FreeGB)", [ref]$free) -and $used -ge 0 -and $used -le 100 -and $free -ge 0) {
-			$lines.Add(('Disk {0}: {1}% used, {2} GB free' -f "$($disk.Drive)".ToUpperInvariant(), $used, $free))
+			$lines.Add(('Disk {0} {1}% used, {2} GB free' -f "$($disk.Drive)".ToUpperInvariant(), $used, $free))
 		}
 	}
 

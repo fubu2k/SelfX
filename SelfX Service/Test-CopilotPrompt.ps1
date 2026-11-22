@@ -119,7 +119,6 @@ foreach ($required in
 	Assert-Equal (@($lines | Where-Object { $_ -eq $required }).Count) 1 "prompt: line '$required'"
 }
 Assert-Equal ($prompt -like '*Du hilfst einer Person*') $true 'prompt: German instructions for user and language de'
-if ($script:errors.Count) { Write-Output ('DEBUG prompt data: ' + (($lines | Where-Object { $_ -match '^(Disk|Uptime|Windows|SelfX|Network)' }) -join ' | ')) }
 
 # Application names can be left out (the error code stays).
 $noNames = New-SelfXCopilotPrompt -Facts $facts -Context $context -IncludeAppNames $false
