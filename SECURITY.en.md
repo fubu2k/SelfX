@@ -1,5 +1,7 @@
 # Security policy
 
+**English** | [Deutsch](SECURITY.md)
+
 SelfX Service runs a Windows service as LOCAL SYSTEM and accepts requests from every signed-in user through a
 local named pipe. A weakness can therefore lead to privilege escalation on every managed device. Please report
 it privately.

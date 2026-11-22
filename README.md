@@ -1,281 +1,315 @@
 # SelfX (Self fix)
 
-SelfX is a self-service troubleshooting tool for Windows, written in PowerShell
-and WPF. Users without technical knowledge can see the health of their device
-and fix common problems with Teams, Office, OneDrive, Outlook, Intune, Windows
-Update and the network on their own, before they call the support. They can also
-send the logs of their device to the support in a few clicks.
+[English](README.en.md) | **Deutsch**
 
-**SelfX Service** is installed machine-wide and works fully offline. It runs
-actions either as the signed-in user or, through the local **SelfXService**
-Windows service, with SYSTEM rights. No network access, SCCM or Intune is
-needed to fix a problem. See [Features](#features-of-selfx-service).
+SelfX ist ein Self-Service-Werkzeug für die Fehlerbehebung unter Windows,
+geschrieben in PowerShell und WPF. Nutzer ohne technisches Wissen sehen den
+Zustand ihres Geräts und beheben häufige Probleme mit Teams, Office, OneDrive,
+Outlook, Intune, Windows Update und dem Netzwerk selbst, bevor sie den Support
+anrufen. Sie können die Protokolle ihres Geräts außerdem mit wenigen Klicks an
+den Support senden.
 
-SelfX has no central backend, push messaging or centralized task reporting.
+**SelfX Service** wird für das ganze Gerät installiert und arbeitet vollständig
+offline. Es führt Aktionen entweder als angemeldeter Nutzer aus oder über den
+lokalen Windows-Dienst **SelfXService** mit SYSTEM-Rechten. Zur Behebung eines
+Problems sind weder Netzwerkzugriff noch SCCM oder Intune nötig. Siehe
+[Funktionen](#funktionen-von-selfx-service).
 
-This repository ([fubu2k/SelfX](https://github.com/fubu2k/SelfX)) is a fork of
-[wbaeck/SelfX](https://github.com/wbaeck/SelfX) and is developed **only for
-SelfX Service**. SelfX Standard (per user) and SelfX Admin of the upstream
-projects are not part of this fork; use the upstream repositories if you need
-them. The work in this fork concentrates on the security, the tests and the
-deployment of SelfX Service: see
-[Security hardening in this fork](#security-hardening-in-this-fork) and the
-[Changelog](CHANGELOG.md). Current version: **2.6.12**.
+SelfX hat kein zentrales Backend, keine Push-Nachrichten und keine zentrale
+Auswertung der Aktionen.
 
-## Screenshots
+Dieses Repository ([fubu2k/SelfX](https://github.com/fubu2k/SelfX)) ist ein Fork
+von [wbaeck/SelfX](https://github.com/wbaeck/SelfX) und wird **nur für SelfX
+Service** weiterentwickelt. SelfX Standard (pro Nutzer) und SelfX Admin der
+Upstream-Projekte gehören nicht zu diesem Fork; nutzen Sie dafür die
+Upstream-Repositories. Die Arbeit in diesem Fork konzentriert sich auf
+Sicherheit, Tests und Bereitstellung von SelfX Service: siehe
+[Sicherheitshärtung in diesem Fork](#sicherheitshärtung-in-diesem-fork) und das
+[Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **2.6.12**.
 
-The screenshots were taken with SelfX Service 2.6.8 and show sample data (fictional device
-*Contoso*) and the placeholder logo of the delivered configuration.
+Deutsch ist die Basissprache der Oberfläche und dieser Dokumentation; Englisch
+ist der Rückfall für fehlende Texte und die Übersetzung der Dokumentation (Dateien
+mit der Endung `.en.md` und der Ordner `docs/en`).
 
-**Troubleshooting:** actions in plain language, with search, categories and an
-explanation for each action.
+## Bildschirmfotos
 
-![Troubleshooting page, dark appearance](docs/images/selfx-troubleshooting-dark.png)
+Die Bildschirmfotos stammen von SelfX Service 2.6.8 (englische Oberfläche) und
+zeigen Beispieldaten (fiktives Gerät *Contoso*) sowie das Platzhalter-Logo der
+mitgelieferten Konfiguration.
 
-**Device status:** the results of the background checks, problems first, with
-a **Fix** button where a repair is available.
+**Fehlerbehebung:** Aktionen in einfacher Sprache, mit Suche, Kategorien und
+einer Erklärung zu jeder Aktion.
 
-![Device status page with problems and warnings](docs/images/selfx-device-status-dark.png)
+![Seite Fehlerbehebung, dunkles Design](docs/images/selfx-troubleshooting-dark.png)
 
-**System information:** everything the support team asks for, in one place,
-ready to copy or export.
+**Gerätestatus:** die Ergebnisse der Hintergrundprüfungen, Probleme zuerst, mit
+einer Schaltfläche **Beheben**, wo eine Reparatur möglich ist.
 
-![System information page](docs/images/selfx-system-information-dark.png)
+![Seite Gerätestatus mit Problemen und Warnungen](docs/images/selfx-device-status-dark.png)
 
-**Light appearance:** *Automatic* follows the dark or light mode of Windows;
-each user can also choose *Dark* or *Light*.
+**Systeminformationen:** alles, was der Support erfragt, an einer Stelle, zum
+Kopieren oder Exportieren.
 
-![Troubleshooting page, light appearance](docs/images/selfx-troubleshooting-light.png)
+![Seite Systeminformationen](docs/images/selfx-system-information-dark.png)
 
-**Adaptive window:** in a narrow window the navigation shows only icons and the
-cards rearrange.
+**Helles Design:** *Automatisch* folgt dem dunklen oder hellen Modus von Windows;
+jeder Nutzer kann auch *Dunkel* oder *Hell* wählen.
 
-![Device status in a narrow window](docs/images/selfx-device-status-narrow.png)
+![Seite Fehlerbehebung, helles Design](docs/images/selfx-troubleshooting-light.png)
 
-**Status icon next to the clock:** a colored dot shows the device status; the
-menu opens SelfX, checks the status or sends the logs.
+**Anpassbares Fenster:** in einem schmalen Fenster zeigt die Navigation nur
+Symbole und die Karten ordnen sich neu an.
 
-![Status icon states and menu](docs/images/selfx-tray-icon.png)
+![Gerätestatus in einem schmalen Fenster](docs/images/selfx-device-status-narrow.png)
 
-| Help and support contacts | Settings | Confirmation before an action |
+**Statussymbol neben der Uhr:** ein farbiger Punkt zeigt den Gerätestatus; das
+Menü öffnet SelfX, prüft den Status oder sendet die Protokolle.
+
+![Zustände und Menü des Statussymbols](docs/images/selfx-tray-icon.png)
+
+| Hilfe und Support-Kontakte | Einstellungen | Bestätigung vor einer Aktion |
 |---|---|---|
-| ![Help dialog](docs/images/selfx-help.png) | ![Settings dialog](docs/images/selfx-settings.png) | ![Confirmation dialog](docs/images/selfx-confirm.png) |
+| ![Hilfe-Dialog](docs/images/selfx-help.png) | ![Einstellungen](docs/images/selfx-settings.png) | ![Bestätigungsdialog](docs/images/selfx-confirm.png) |
 
-## Features of SelfX Service
+## Funktionen von SelfX Service
 
-### For the user
+### Für Nutzer
 
-- **Troubleshooting page**
-  - One card per action with a short description in plain language.
-  - Search field, category buttons (Device, Intune, Office, OneDrive, Outlook,
-    Teams, Browser) and a switch between the *simplified* view (a few general
-    actions) and the *detailed* view (one action per symptom, for example
-    *Teams is stuck on "Loading Microsoft Teams"*).
-  - An info button explains what the action does. Every action asks for
-    confirmation and tells the user what will happen (for example "Teams will
-    close").
-  - While an action runs, its button shows a rotating icon and *Running…*. The
-    result appears in the message bar. A shield marks actions that run with
-    administrator rights through the service.
-- **Included actions**
-  - Teams: clear the cache and restart.
-  - Word and Excel: close the application and start it again.
-  - OneDrive: start, restart or reset the client; check the disk for locked
-    files (chkdsk).
-  - Outlook: restore the *Teams meeting* button.
-  - Microsoft Store: reset the Store.
-  - Network: clear the DNS cache; restart the network adapters.
-  - Device: empty the recycle bin and the temporary files when the device is
-    slow.
-  - Browsers: clear the cache of Chrome and Firefox.
-  - Intune: restart the Intune service and force a synchronization.
-  - Support: send the device logs to the support.
-  - Administrators can add their own actions in an XML file.
-- **Device status page**
-  - One card per check with the state OK (green), Pending (yellow warning),
-    Error (red) or Unknown (gray), problems first. A counter on the navigation
-    shows the number of open points.
-  - **Fix** repairs a problem after confirmation:
-    - update the Defender signatures;
-    - install pending Windows updates and Microsoft Store app updates;
-    - try again to install company apps that failed;
-    - restart the device, with its own warning.
-  - **Fix all problems** runs all repairs at once, except the restart. The arrow
-    button checks a single status again.
-- **System information page**
-  - Device, Windows, user and Intune/Entra ID management, and network details
-    (LAN, Wi-Fi, VPN, internet, IP, DNS, MAC).
-  - Double-click a line to copy it. Copy all, or export as TXT, HTML, CSV or JSON.
-  - Shown immediately from the last collection and refreshed in the background.
-- **Send logs to support**
-  - The service collects all logs needed to analyze a device problem (event
-    logs, Intune / Autopilot / ESP, apps, updates, SelfX logs) as SYSTEM.
-  - SelfX then opens a new e-mail to the support with the report attached
-    (`.zip`). The user describes the problem and sends it; nothing is sent
-    automatically.
-- **Help dialog (?)**
-  - Support hours, phone number, e-mail, Teams chat and website / ticket
-    system, each with a button to start it.
-- **Settings (gear)**
-  - Language: 24 languages; *Automatic* uses the Windows display language,
-    with English as fallback.
-  - Appearance: *Automatic*, *Dark* or *Light*.
-  - Status icon on or off; Windows notifications about problems on or off.
-  - All choices are stored per user.
-- **Status icon next to the clock**
-  - Green, yellow, red or gray dot.
-  - Tooltip with the number of problems and warnings.
-  - One Windows notification when a new problem is found, for example low disk
-    space.
-  - Menu: open SelfX, show the device status, check now, send logs, switch
-    notifications, hide the icon.
-- **Modern, adaptive window**
-  - Resizable, with a compact navigation in narrow windows.
-  - Remembers size and position.
-  - Right-to-left layout for Arabic, Persian and Urdu.
-  - Own taskbar icon.
-  - Only one window per user: a second start brings the open window to the front.
+- **Seite Fehlerbehebung**
+  - Eine Karte pro Aktion mit einer kurzen Beschreibung in einfacher Sprache.
+  - Suchfeld, Kategorien (Gerät, Intune, Office, OneDrive, Outlook, Teams,
+    Browser) und ein Schalter zwischen der *einfachen* Ansicht (wenige
+    allgemeine Aktionen) und der *detaillierten* Ansicht (eine Aktion pro
+    Symptom, zum Beispiel *Teams hängt bei „Microsoft Teams wird geladen“*).
+  - Eine Info-Schaltfläche erklärt, was die Aktion tut. Jede Aktion fragt vorher
+    nach und sagt dem Nutzer, was passiert (zum Beispiel „Teams wird
+    geschlossen“).
+  - Während eine Aktion läuft, zeigt ihre Schaltfläche ein drehendes Symbol und
+    *Wird ausgeführt…*. Das Ergebnis erscheint in der Meldungsleiste. Ein Schild
+    kennzeichnet Aktionen, die über den Dienst mit Administratorrechten laufen.
+- **Enthaltene Aktionen**
+  - Teams: Cache leeren und neu starten.
+  - Word und Excel: Anwendung schließen und wieder starten.
+  - OneDrive: Client starten, neu starten oder zurücksetzen; Datenträger auf
+    gesperrte Dateien prüfen (chkdsk).
+  - Outlook: Schaltfläche *Teams-Besprechung* wiederherstellen.
+  - Microsoft Store: Store zurücksetzen.
+  - Netzwerk: DNS-Cache leeren; Netzwerkadapter neu starten.
+  - Gerät: Papierkorb und temporäre Dateien leeren, wenn das Gerät langsam ist.
+  - Browser: Cache von Chrome und Firefox leeren.
+  - Intune: Intune-Dienst neu starten und eine Synchronisierung erzwingen.
+  - Support: Geräteprotokolle an den Support senden.
+  - Administratoren können eigene Aktionen in einer XML-Datei ergänzen.
+- **Seite Gerätestatus**
+  - Eine Karte pro Prüfung mit dem Zustand OK (grün), Ausstehend (gelbe
+    Warnung), Fehler (rot) oder Unbekannt (grau), Probleme zuerst. Ein Zähler an
+    der Navigation zeigt die Zahl der offenen Punkte.
+  - **Beheben** repariert ein Problem nach Bestätigung:
+    - Defender-Signaturen aktualisieren;
+    - ausstehende Windows-Updates und App-Updates aus dem Microsoft Store
+      installieren;
+    - fehlgeschlagene Unternehmens-Apps erneut installieren;
+    - das Gerät neu starten, mit eigener Warnung.
+  - **Alle Probleme beheben** führt alle Reparaturen auf einmal aus, außer dem
+    Neustart. Die Pfeil-Schaltfläche prüft einen einzelnen Status erneut.
+- **Seite Systeminformationen**
+  - Gerät, Windows, Nutzer und Intune-/Entra-ID-Verwaltung sowie
+    Netzwerkdetails (LAN, WLAN, VPN, Internet, IP, DNS, MAC).
+  - Doppelklick auf eine Zeile kopiert sie. Alles kopieren oder als TXT, HTML,
+    CSV oder JSON exportieren.
+  - Sofort aus der letzten Erfassung angezeigt und im Hintergrund aktualisiert.
+- **Protokolle an den Support senden**
+  - Der Dienst sammelt als SYSTEM alle Protokolle, die zur Analyse eines
+    Geräteproblems nötig sind (Ereignisprotokolle, Intune / Autopilot / ESP,
+    Apps, Updates, SelfX-Protokolle).
+  - SelfX öffnet danach eine neue E-Mail an den Support mit dem Bericht im
+    Anhang (`.zip`). Der Nutzer beschreibt das Problem und sendet sie ab; es wird
+    nichts automatisch gesendet.
+- **Hilfe-Dialog (?)**
+  - Supportzeiten, Telefonnummer, E-Mail, Teams-Chat und Website bzw.
+    Ticketsystem, jeweils mit einer Schaltfläche zum Starten.
+- **Einstellungen (Zahnrad)**
+  - Sprache: 24 Sprachen; Deutsch ist voreingestellt, *Automatisch* nutzt die
+    Anzeigesprache von Windows (Deutsch, wenn sie nicht verfügbar ist). Texte,
+    die in einer Sprache fehlen, erscheinen auf Englisch.
+  - Design: *Automatisch*, *Dunkel* oder *Hell*.
+  - Statussymbol ein oder aus; Windows-Benachrichtigungen über Probleme ein oder
+    aus.
+  - Alle Auswahlen werden pro Nutzer gespeichert.
+- **Statussymbol neben der Uhr**
+  - Grüner, gelber, roter oder grauer Punkt.
+  - Kurzinfo mit der Zahl der Probleme und Warnungen.
+  - Eine Windows-Benachrichtigung, wenn ein neues Problem gefunden wird, zum
+    Beispiel wenig Speicherplatz.
+  - Menü: SelfX öffnen, Gerätestatus anzeigen, jetzt prüfen, Protokolle senden,
+    Benachrichtigungen umschalten, Symbol ausblenden.
+- **Modernes, anpassbares Fenster**
+  - Größe änderbar, mit kompakter Navigation in schmalen Fenstern.
+  - Merkt sich Größe und Position.
+  - Rechts-nach-links-Layout für Arabisch, Persisch und Urdu.
+  - Eigenes Symbol in der Taskleiste.
+  - Pro Nutzer nur ein Fenster: ein zweiter Start bringt das offene Fenster nach
+    vorn.
 
-### For IT administrators
+### Für IT-Administratoren
 
-- **Local Windows service, fully offline.**
-  - `SelfXService` runs as SYSTEM.
-  - It only runs the scripts listed as system actions in the catalogue
-    (whitelist); the user cannot pass a path or code to the service.
-  - No central server, no cloud credentials on the client.
-- **Background health checks**
-  - Default every 15 minutes (5–1440).
-  - Paused on battery and postponed while the processor is busy; the first
-    check is delayed after start-up.
-  - The result is cached, so SelfX and the status icon show it immediately.
-- **Checks**
-  - Intune Management Extension service.
-  - Microsoft Defender (protection on, signatures up to date).
-  - Local compliance criteria (BitLocker, Secure Boot, TPM, firewall, Defender,
-    OS version).
-  - Company apps from the local IME cache.
-  - Disk capacity (default: error at 90% used or below 20 GB free).
-  - BitLocker on all fixed volumes.
-  - Pending restart.
-  - Windows updates to install (local cache, no online scan).
-  - Additional services with their expected state.
-  - Your own read-only check scripts.
-- **Configurable repairs:** map any check to a repair script and choose whether
-  the **Fix** button is shown always or only when the check is not OK.
-- **Logging**
-  - All scripts log to `%ProgramData%\SelfX\Logs`; each user's logs go to their
-    own, protected folder.
-  - Housekeeping deletes logs older than 90 days (configurable).
+- **Lokaler Windows-Dienst, vollständig offline.**
+  - `SelfXService` läuft als SYSTEM.
+  - Er führt nur die Skripte aus, die im Katalog als Systemaktionen stehen
+    (Positivliste); der Nutzer kann dem Dienst weder einen Pfad noch Code
+    übergeben.
+  - Kein zentraler Server, keine Cloud-Zugangsdaten auf dem Client.
+- **Gesundheitsprüfungen im Hintergrund**
+  - Standardmäßig alle 15 Minuten (5–1440).
+  - Pausiert im Akkubetrieb und verschoben, solange der Prozessor ausgelastet
+    ist; die erste Prüfung startet verzögert nach dem Systemstart.
+  - Das Ergebnis wird zwischengespeichert, sodass SelfX und das Statussymbol es
+    sofort anzeigen.
+- **Prüfungen**
+  - Dienst Intune Management Extension.
+  - Microsoft Defender (Schutz aktiv, Signaturen aktuell).
+  - Lokale Compliance-Kriterien (BitLocker, Secure Boot, TPM, Firewall,
+    Defender, Betriebssystemversion).
+  - Unternehmens-Apps aus dem lokalen IME-Cache.
+  - Datenträgerkapazität (Standard: Fehler bei 90 % belegt oder unter 20 GB frei).
+  - BitLocker auf allen festen Laufwerken.
+  - Ausstehender Neustart.
+  - Zu installierende Windows-Updates (lokaler Cache, keine Online-Suche).
+  - Zusätzliche Dienste mit ihrem erwarteten Zustand.
+  - Eigene, nur lesende Prüfskripte.
+- **Konfigurierbare Reparaturen:** jede Prüfung kann einem Reparaturskript
+  zugeordnet werden; Sie legen fest, ob die Schaltfläche **Beheben** immer oder
+  nur bei nicht erfüllter Prüfung erscheint.
+- **Protokollierung**
+  - Alle Skripte protokollieren nach `%ProgramData%\SelfX\Logs`; die Protokolle
+    jedes Nutzers liegen in einem eigenen, geschützten Ordner.
+  - Die Bereinigung löscht Protokolle, die älter als 90 Tage sind
+    (konfigurierbar).
 - **Branding**
-  - Company logo, icon, accent color, title bar, button and info colors.
-  - Tool name, shortcuts and support contacts.
-  - The delivered configuration contains placeholders (`Branding\company_logo.png`,
-    `example.com`); replace them before packaging.
-- **Settings for each feature**
-  - Administrators can show or hide pages, buttons, the language and appearance
-    settings, the status icon and its notifications.
-  - All texts are in language files (`Languages\<culture>.xml`), so they can be
-    changed or translated.
-- **Intune deployment**
-  - One Win32 app package, built with `tools\New-SelfXIntuneWin.ps1`.
-  - Install, uninstall and detection scripts. Raise `Tool_Version` and
-    `$ExpectedVersion` of `Detection.ps1` for every release, otherwise Intune
-    does not roll out the update.
-  - Optional prebuilt programs that `Install.ps1` checks by SHA256, with ready
-    AppLocker hash rules (`tools\Build-SelfXBinaries.ps1`); without them, the
-    device compiles the programs as before.
-  - An update or uninstall closes the running SelfX windows and status icons;
-    after the installation the status icon starts right away for all signed-in
-    users.
-- **Tested:** nine test suites (user interface, health checks, device logs,
-  action scripts, language files, catalogue, uninstall, service pipe,
-  installer programs). They mock every command that changes the device; the pipe
-  test starts only the pipe listener of the service under a test name. GitHub
-  Actions runs all of them, and a security-focused script analysis, for every
-  pull request.
+  - Firmenlogo, Symbol, Akzentfarbe, Titelleiste, Farben von Schaltflächen und
+    Infos.
+  - Name des Werkzeugs, Verknüpfungen und Support-Kontakte.
+  - Die mitgelieferte Konfiguration enthält Platzhalter
+    (`Branding\company_logo.png`, `example.com`); ersetzen Sie sie vor dem
+    Paketieren.
+- **Einstellungen für jede Funktion**
+  - Administratoren können Seiten, Schaltflächen, die Einstellungen für Sprache
+    und Design, das Statussymbol und seine Benachrichtigungen ein- oder
+    ausblenden.
+  - Alle Texte stehen in Sprachdateien (`Languages\<Kultur>.xml`) und können
+    geändert oder übersetzt werden.
+- **Bereitstellung mit Intune**
+  - Ein Win32-App-Paket, erstellt mit `tools\New-SelfXIntuneWin.ps1`.
+  - Skripte für Installation, Deinstallation und Erkennung. Erhöhen Sie bei jedem
+    Release `Tool_Version` und `$ExpectedVersion` in `Detection.ps1`, sonst
+    verteilt Intune das Update nicht.
+  - Optionale vorkompilierte Programme, die `Install.ps1` per SHA256 prüft, mit
+    fertigen AppLocker-Hashregeln (`tools\Build-SelfXBinaries.ps1`); ohne sie
+    kompiliert das Gerät die Programme wie bisher.
+  - Ein Update oder eine Deinstallation schließt die laufenden SelfX-Fenster und
+    Statussymbole; nach der Installation startet das Statussymbol sofort für alle
+    angemeldeten Nutzer.
+- **Getestet:** neun Testsuiten (Oberfläche, Gesundheitsprüfungen,
+  Geräteprotokolle, Aktionsskripte, Sprachdateien, Katalog, Deinstallation,
+  Dienst-Pipe, Installer-Programme). Sie ersetzen jeden Befehl, der das Gerät
+  verändert, durch einen Mock; der Pipe-Test startet nur den Pipe-Listener des
+  Dienstes unter einem Testnamen. GitHub Actions führt sie alle sowie eine
+  sicherheitsorientierte Skriptanalyse für jeden Pull Request aus.
 
-The details are described in [Configuration](docs/Configuration.md) and
-[Installation](docs/Installation.md); the [User manual](docs/User-Manual.md)
-explains SelfX for the users.
+Die Einzelheiten stehen in der [Konfiguration](docs/Configuration.md) und der
+[Installation](docs/Installation.md); das [Benutzerhandbuch](docs/User-Manual.md)
+erklärt SelfX für die Nutzer.
 
-## Security hardening in this fork
+## Sicherheitshärtung in diesem Fork
 
-SelfX Service can start scripts with SYSTEM rights for every signed-in user, so
-it is treated as a security-critical program. The service was reviewed in
-November 2026 and hardened in versions 2.6.10 and 2.6.11; the details are in the
-[Changelog](CHANGELOG.md) and in the
-[security model](SelfX%20Service/README.md#security-model) of the package.
+SelfX Service kann für jeden angemeldeten Nutzer Skripte mit SYSTEM-Rechten
+starten und gilt deshalb als sicherheitskritisches Programm. Der Dienst wurde im
+November 2026 geprüft und in den Versionen 2.6.10 und 2.6.11 gehärtet; die
+Einzelheiten stehen im [Änderungsprotokoll](CHANGELOG.md) und im
+[Sicherheitsmodell](SelfX%20Service/README.md#sicherheitsmodell) des Pakets.
 
-- **Only approved actions.** The service runs only scripts that are listed with
-  `Context=System` in the installed catalogue. Users can never pass a path,
-  code or arguments. `Test-Catalog.ps1` checks the catalogue for every release.
-- **Protected pipe.** The service limits connections (8 per user, 64 in total),
-  gives every request one 5-second deadline, pauses between requests of the
-  same user and cleans the text it logs. The SelfX window checks that the pipe
-  is served by the real service.
-- **Several users on one device.** The device logs report contains only the
-  data of the requesting user, unless an elevated administrator asks for it.
-  Actions that would disturb others (restart, Windows updates, disk check,
-  restart of the network adapters) are not available to a normal user while
-  another user is signed in (`OtherSessions`).
-- **Careful file handling.** SYSTEM does not read logs from folders that users
-  can change, and the uninstallation does not follow junctions.
-- **Controlled build and deployment.** Optional prebuilt programs are checked by
-  hash during installation and can be allowed with AppLocker hash rules. Without
-  them, the compiler on the device uses a protected temporary folder.
-- **Automatic checks.** Every pull request compiles the service and runs the
-  tests and a script analysis.
+- **Nur freigegebene Aktionen.** Der Dienst führt nur Skripte aus, die im
+  installierten Katalog mit `Context=System` stehen. Nutzer können nie einen
+  Pfad, Code oder Argumente übergeben. `Test-Catalog.ps1` prüft den Katalog bei
+  jedem Release.
+- **Geschützte Pipe.** Der Dienst begrenzt Verbindungen (8 pro Nutzer, 64
+  insgesamt), gibt jeder Anfrage eine Frist von 5 Sekunden, legt zwischen
+  Anfragen desselben Nutzers eine Pause ein und bereinigt den Text, den er
+  protokolliert. Das SelfX-Fenster prüft, dass die Pipe vom echten Dienst
+  bedient wird.
+- **Mehrere Nutzer auf einem Gerät.** Der Bericht mit den Geräteprotokollen
+  enthält nur die Daten des anfragenden Nutzers, außer ein Administrator mit
+  erhöhten Rechten fragt ihn an. Aktionen, die andere stören würden (Neustart,
+  Windows-Updates, Datenträgerprüfung, Neustart der Netzwerkadapter), stehen
+  einem normalen Nutzer nicht zur Verfügung, solange ein anderer Nutzer
+  angemeldet ist (`OtherSessions`).
+- **Sorgfältiger Umgang mit Dateien.** SYSTEM liest keine Protokolle aus
+  Ordnern, die Nutzer ändern können, und die Deinstallation folgt keinen
+  Junctions.
+- **Kontrollierter Bau und Rollout.** Optionale vorkompilierte Programme werden
+  bei der Installation per Hash geprüft und können mit AppLocker-Hashregeln
+  zugelassen werden. Ohne sie nutzt der Compiler auf dem Gerät einen
+  geschützten temporären Ordner.
+- **Automatische Prüfungen.** Jeder Pull Request kompiliert den Dienst und führt
+  die Tests und eine Skriptanalyse aus.
 
-Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Melden Sie Sicherheitslücken vertraulich, wie in [SECURITY.md](SECURITY.md)
+beschrieben.
 
-## Documentation
+## Dokumentation
 
-- [Installation](docs/Installation.md), including the release checklist of SelfX Service
-- [Configuration](docs/Configuration.md)
-- [User manual](docs/User-Manual.md)
-- [Package notes of SelfX Service](SelfX%20Service/README.md)
-- [Changelog](CHANGELOG.md)
-- [Security policy](SECURITY.md)
+- [Installation](docs/Installation.md), mit der Release-Checkliste von SelfX Service
+- [Konfiguration](docs/Configuration.md)
+- [Benutzerhandbuch](docs/User-Manual.md)
+- [Pakethinweise zu SelfX Service](SelfX%20Service/README.md)
+- [Änderungsprotokoll](CHANGELOG.md)
+- [Sicherheitsrichtlinie](SECURITY.md)
+- Englische Fassungen: [README](README.en.md), [Installation](docs/en/Installation.md),
+  [Configuration](docs/en/Configuration.md), [User manual](docs/en/User-Manual.md),
+  [Changelog](CHANGELOG.en.md), [Security policy](SECURITY.en.md)
 
-## Repository layout
+## Aufbau des Repositorys
 
-| Directory | Contents |
+| Verzeichnis | Inhalt |
 |---|---|
-| `SelfX Service` | The package: installer, local Windows service (C# source), action catalogue with User and System actions, WPF application, scripts and tests |
-| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/Installation.md#building-the-intune-package)), and `Build-SelfXBinaries.ps1`, which builds the optional prebuilt programs of SelfX Service (see [Prebuilt programs](docs/Installation.md#prebuilt-programs-selfx-service-2611)) |
-| `.github` | GitHub Actions workflow (compile, tests, script analysis), `CODEOWNERS`, Dependabot configuration |
-| `build` | Not committed. Output of `New-SelfXIntuneWin.ps1`: `SelfX-Service-<version>.intunewin`; and of `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
+| `SelfX Service` | Das Paket: Installer, lokaler Windows-Dienst (C#-Quelltext), Aktionskatalog mit Nutzer- und Systemaktionen, WPF-Anwendung, Skripte und Tests |
+| `tools` | `New-SelfXIntuneWin.ps1`, das das Intune-Paket mit dem signierten Win32 Content Prep Tool von Microsoft erstellt (siehe [Intune-Paket erstellen](docs/Installation.md#intune-paket-erstellen)), und `Build-SelfXBinaries.ps1`, das die optionalen vorkompilierten Programme von SelfX Service erstellt (siehe [Vorkompilierte Programme](docs/Installation.md#vorkompilierte-programme-selfx-service-2611)) |
+| `docs` | Installation, Konfiguration und Benutzerhandbuch (Deutsch); `docs/en` enthält die englischen Fassungen, `docs/images` die Bildschirmfotos |
+| `.github` | GitHub-Actions-Workflow (Kompilieren, Tests, Skriptanalyse), `CODEOWNERS`, Dependabot-Konfiguration |
+| `build` | Nicht eingecheckt. Ausgabe von `New-SelfXIntuneWin.ps1`: `SelfX-Service-<Version>.intunewin`; und von `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 
-Review each action script and its execution context before deploying it. Actions
-are started as hidden PowerShell processes and may change device state or
-terminate applications.
+Prüfen Sie jedes Aktionsskript und seinen Ausführungskontext, bevor Sie es
+bereitstellen. Aktionen werden als versteckte PowerShell-Prozesse gestartet und
+können den Gerätezustand ändern oder Anwendungen beenden.
 
-## Upstream and credits
+## Herkunft und Dank
 
-SelfX was created by **Damien Van Robaeys** ([Syst & Deploy](https://www.systanddeploy.com))
-as a tool that helps users solve common IT issues on their own. **Wolfgang Baeck**
-([wbaeck/SelfX](https://github.com/wbaeck/SelfX)) built SelfX Service on it: the
-local Windows service, the merged action catalogue, the health checks, the status
-icon, the languages and the Intune packaging. This repository is a fork of his
-project. The original project is here:
+SelfX wurde von **Damien Van Robaeys** ([Syst & Deploy](https://www.systanddeploy.com))
+als Werkzeug entwickelt, mit dem Nutzer häufige IT-Probleme selbst lösen.
+**Wolfgang Baeck** ([wbaeck/SelfX](https://github.com/wbaeck/SelfX)) hat darauf
+SelfX Service aufgebaut: den lokalen Windows-Dienst, den zusammengeführten
+Aktionskatalog, die Gesundheitsprüfungen, das Statussymbol, die Sprachen und das
+Intune-Paket. Dieses Repository ist ein Fork seines Projekts. Das
+ursprüngliche Projekt finden Sie hier:
 
-- Original repository: [damienvanrobaeys/SelfX](https://github.com/damienvanrobaeys/SelfX)
-- Introduction of the tool: [blog post on Syst & Deploy (August 2022)](https://www.systanddeploy.com/2022/08/selfx-tool-allowing-users-to-solve.html)
+- Ursprüngliches Repository: [damienvanrobaeys/SelfX](https://github.com/damienvanrobaeys/SelfX)
+- Vorstellung des Werkzeugs: [Blogbeitrag auf Syst & Deploy (August 2022)](https://www.systanddeploy.com/2022/08/selfx-tool-allowing-users-to-solve.html)
 
-Many thanks to Damien for the idea, the original WPF interface, the XML action
-catalogue and the troubleshooting scripts. Many thanks to Wolfgang Baeck: this
-fork would not exist without his SelfX Service, his clear structure, his
-documentation and his tests, which made the security work possible. The
-security hardening, the additional tests, the prebuilt programs and the CI were
-added in this fork (see the [Changelog](CHANGELOG.md)). The license of the
-original project is kept in [LICENSE.md](LICENSE.md).
+Vielen Dank an Damien für die Idee, die ursprüngliche WPF-Oberfläche, den
+XML-Aktionskatalog und die Skripte zur Fehlerbehebung. Vielen Dank an Wolfgang
+Baeck: Ohne sein SelfX Service, seine klare Struktur, seine Dokumentation und
+seine Tests gäbe es diesen Fork nicht, und die Sicherheitsarbeit wäre nicht
+möglich gewesen. Die Sicherheitshärtung, die zusätzlichen Tests, die
+vorkompilierten Programme und die CI wurden in diesem Fork ergänzt (siehe das
+[Änderungsprotokoll](CHANGELOG.md)). Die Lizenz des ursprünglichen Projekts
+bleibt in [LICENSE.md](LICENSE.md) erhalten.
 
-The System information tab is based on the idea and data points of the
+Die Seite Systeminformationen beruht auf der Idee und den Datenpunkten des
 [System Information Tool](https://github.com/JayRHa/windows-system-information)
-by Jannik Reinhard (MIT License, Copyright (c) 2026 Jannik Reinhard). SelfX
-reimplements the collection in `SelfX Service\Sources\SystemInfo.ps1`.
+von Jannik Reinhard (MIT-Lizenz, Copyright (c) 2026 Jannik Reinhard). SelfX
+setzt die Erfassung in `SelfX Service\Sources\SystemInfo.ps1` selbst um.
 
-The Intune package is built with Microsoft's
-[Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool).
-The executable is not included in this repository; the build script verifies
-its Microsoft Authenticode signature before use.
+Das Intune-Paket wird mit dem
+[Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool)
+von Microsoft erstellt. Die ausführbare Datei gehört nicht zu diesem Repository;
+das Bauskript prüft vor der Verwendung ihre Authenticode-Signatur von Microsoft.

@@ -1,5 +1,7 @@
 # Configuration
 
+**English** | [Deutsch](../Configuration.md)
+
 SelfX uses XML files for its settings and its action catalogue. Edit them in
 the package before installation.
 

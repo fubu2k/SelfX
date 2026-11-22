@@ -1,5 +1,7 @@
 # SelfX user manual
 
+**English** | [Deutsch](../User-Manual.md)
+
 SelfX is a self-service interface for selected troubleshooting tasks. The
 available actions depend on the XML catalogue configured by your support team.
 

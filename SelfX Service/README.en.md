@@ -1,23 +1,25 @@
 # SelfX Service
 
+**English** | [Deutsch](README.md)
+
 SelfX Service is installed machine-wide and works without any network connection. Current version:
-**2.6.12** (see the [Changelog](../CHANGELOG.md)).
+**2.6.12** (see the [Changelog](../CHANGELOG.en.md)).
 
 - One modern, resizable user interface for users without technical knowledge
   (2.5.0): navigation bar with **Troubleshooting**, **Device status** and
   **System information**, icon buttons with explaining tooltips, dark and
   light theme, help dialog with the support contacts (hours, phone, mail,
   Teams chat, website / ticket system). See
-  [User interface](../docs/Configuration.md#user-interface-selfx-service-250).
+  [User interface](../docs/en/Configuration.md#user-interface-selfx-service-250).
 - Background checks (2.5.0): the service checks the device status regularly
   (default every 15 minutes, paused on battery, postponed under high processor
   load) and keeps the result, so SelfX shows status and system information
   immediately. See
-  [Background checks](../docs/Configuration.md#background-checks-and-status-cache-selfx-service-250).
+  [Background checks](../docs/en/Configuration.md#background-checks-and-status-cache-selfx-service-250).
 - Tray icon (2.5.0): a status icon next to the clock for every user (green,
   yellow, red) with a notification when a problem is found, for example low
   disk space. Each user can hide it. See
-  [Tray icon](../docs/Configuration.md#tray-icon-selfx-service-250).
+  [Tray icon](../docs/en/Configuration.md#tray-icon-selfx-service-250).
 - **Fix all problems** and user time zone (2.5.3): one button on the Device
   status page runs all prepared repairs one after another; all times are shown
   in the current time zone of the user. SelfX and the status icon start
@@ -33,38 +35,38 @@ SelfX Service is installed machine-wide and works without any network connection
   still need the network to have an effect, for example Intune sync.
 - Branding: you can set a company logo, an icon and the colors in
   `Tool_Config.xml`. See
-  [Configuration](../docs/Configuration.md#branding).
+  [Configuration](../docs/en/Configuration.md#branding).
 - Multilingual user interface: SelfX uses the Windows display language of the
   user and falls back to English. Users can choose another language in the
   settings (saved per user, 2.5.9). 24 languages are included in
   `Sources\Languages`. To add a language, add one XML file. See
-  [Configuration](../docs/Configuration.md#languages).
+  [Configuration](../docs/en/Configuration.md#languages).
 - Every script starts with a description and a version history.
 - Status cards with an administrator-configured remediation offer a localized
   **Fix** button. Repairs run through the local service after confirmation,
   then re-check that status. Every card has a **check again** button that only
   re-checks that status. By default
   Defender (always) and Compliance (when not OK) offer a signature update
-  (`Update-MpSignature`); the Defender row shows signature version and last update. See [Health remediation](../docs/Configuration.md#health-remediation).
+  (`Update-MpSignature`); the Defender row shows signature version and last update. See [Health remediation](../docs/en/Configuration.md#health-remediation).
 - Local health results on the Device status page: IME, Defender, disk space,
   BitLocker, pending reboot, updates to install (offline Windows Update cache),
   a best-effort cached app summary with exclusions, configurable
   services and script probes. Cloud compliance is not inferred offline.
-  See [Health status](../docs/Configuration.md#health-status-selfx-service-230).
+  See [Health status](../docs/en/Configuration.md#health-status-selfx-service-230).
 - **Send logs to support** (2.4.0): the action *Send the device logs to the
   support* and a button in System information run `Collect-DeviceLogs.ps1`
   with administrator rights through the service. Then they open a new e-mail
   (Outlook) to `Support_Mail` with the report attached; the user describes the
   issue and sends it. See
-  [Device logs for the support](../docs/Configuration.md#device-logs-for-the-support-selfx-service-240).
+  [Device logs for the support](../docs/en/Configuration.md#device-logs-for-the-support-selfx-service-240).
 - Logging and repairs (2.6.0): every script logs to `%ProgramData%\SelfX\Logs`
   (users to `Logs\Users\<SID>`), old logs are deleted after `Log_Retention_Days`
   (default 90). **Restart now** on *Restart pending* (with a restart warning),
   **Try again** for failed company apps, and the update repair installs the pending Windows updates
   (2.6.3). All action scripts were checked and
   fixed (for example Word, Teams, OneDrive and the disk check). See
-  [Logging](../docs/Configuration.md#logging-and-log-housekeeping-selfx-service-260)
-  and [Health remediation](../docs/Configuration.md#health-remediation).
+  [Logging](../docs/en/Configuration.md#logging-and-log-housekeeping-selfx-service-260)
+  and [Health remediation](../docs/en/Configuration.md#health-remediation).
 
 ## Package layout
 
@@ -87,7 +89,7 @@ SelfX Service is installed machine-wide and works without any network connection
 | `Sources\SelfX_Tray.ps1` | Status icon in the notification area (started at sign-in through the HKLM Run entry `SelfXTray`, and right after the installation for signed-in users). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Device logs: read-only collector, System wrapper and the GUI e-mail helper. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Service-side collector and administrator-controlled health settings. Optional scripts go in `Sources\HealthChecks`. |
-| `Service\SelfXService.cs` | Source of the Windows service. Compiled on the device during installation, or built once with `tools\Build-SelfXBinaries.ps1` (2.6.11, see [Installation](../docs/Installation.md#prebuilt-programs-selfx-service-2611)). |
+| `Service\SelfXService.cs` | Source of the Windows service. Compiled on the device during installation, or built once with `tools\Build-SelfXBinaries.ps1` (2.6.11, see [Installation](../docs/en/Installation.md#prebuilt-programs-selfx-service-2611)). |
 | `Service\SelfXLauncher.cs` | Source of `SelfX.exe` (2.5.3), the starter without console window used by the shortcuts and the status icon autostart. Compiled on the device during installation, or prebuilt like the service. |
 | `Service\SelfXSessionStarter.cs` | Used by `Install.ps1` (2.5.8, compiled in memory): starts the status icon right after the installation in the sessions of the signed-in users, with their normal rights. |
 | `Bin\` (optional, not in Git) | Prebuilt `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` and the manifest `SelfX.Binaries.json` from `tools\Build-SelfXBinaries.ps1`. When present, `Install.ps1` checks and installs them instead of compiling (F9, 2.6.11). |
@@ -146,7 +148,7 @@ user, for example the device logs report.
 - Multi-user devices (2.6.10): the device logs report contains only the own
   data of the requesting user. Only an elevated administrator (token read by the
   service, `SELFX_CALLER_ADMIN=1`) gets the complete report. See
-  [Configuration](../docs/Configuration.md).
+  [Configuration](../docs/en/Configuration.md).
 - Blocked actions on multi-user devices (2.6.10): for actions with
   `OtherSessions=Block` (restart, Windows updates, disk check, restart of the
   network adapters and of the Intune service) a normal user gets a notice
@@ -170,7 +172,7 @@ user, for example the device logs report.
   (folder `Bin`, checked against the SHA256 manifest during the installation,
   allowed with AppLocker hash rules) or compiled on the device with the
   temporary files in a protected folder. See
-  [Installation](../docs/Installation.md#prebuilt-programs-selfx-service-2611).
+  [Installation](../docs/en/Installation.md#prebuilt-programs-selfx-service-2611).
 - Text from requests is cleaned before it is logged (control characters and line
   separators become `?`, long text is shortened), and rejected requests are
   logged at most 20 times per minute, so a user cannot forge log lines or push
@@ -193,6 +195,6 @@ Set-Location 'C:\Path\To\SelfX Service'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
-See [Installation](../docs/Installation.md#selfx-service),
-[Configuration](../docs/Configuration.md#selfx-service) and the
-[User manual](../docs/User-Manual.md#selfx).
+See [Installation](../docs/en/Installation.md#selfx-service),
+[Configuration](../docs/en/Configuration.md#selfx-service) and the
+[User manual](../docs/en/User-Manual.md#selfx).

@@ -1,5 +1,7 @@
 # Installation
 
+**English** | [Deutsch](../Installation.md)
+
 This guide describes the installation of **SelfX Service** on managed Windows
 devices, in particular with Microsoft Intune.
 
@@ -168,7 +170,7 @@ creates `Logs\Users` and the service compiles the log housekeeping. Configure
 `Sources\HealthChecks` before packaging; see
 [Health status](Configuration.md#health-status-selfx-service-230).
 Versions 2.6.10 and 2.6.11 (security hardening, see the
-[Changelog](../CHANGELOG.md)) change the service and the installer. Redeploy the
+[Changelog](../../CHANGELOG.en.md)) change the service and the installer. Redeploy the
 **entire package** and raise `Tool_Version` and `$ExpectedVersion`.
 Do not grant users write access to the install folder or check scripts.
 

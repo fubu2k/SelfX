@@ -1,5 +1,7 @@
 # Changelog
 
+**English** | [Deutsch](CHANGELOG.md)
+
 Changes of this fork ([fubu2k/SelfX](https://github.com/fubu2k/SelfX)) compared
 with its upstream [wbaeck/SelfX](https://github.com/wbaeck/SelfX) at SelfX
 Service 2.6.9. Newest version first.
