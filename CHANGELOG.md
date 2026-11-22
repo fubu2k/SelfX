@@ -21,6 +21,9 @@ Anhebung der Version ausgeliefert.
 
 ### Geändert
 
+- „Updates installieren“ nutzt nur noch den Windows-Update-Orchestrator (`SelfXWinRT.dll`,
+  PowerShell 7). Die Windows-Update-Agent-API und der PowerShell-5.1-Zweig sind entfernt
+  (Mindestversion Windows 11 25H2). Fehlt die Orchestrator-API, endet die Aktion mit Exit 1.
 - Mindestversion: Windows 11 25H2 (Build 26200). `Install.ps1` prüft die Build-Nummer
   (Registry) vor jeder Änderung und bricht bei älteren Builds hart ab; die bestehende
   Installation bleibt unverändert.
