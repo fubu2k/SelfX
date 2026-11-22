@@ -16,12 +16,14 @@
     Name    : SelfX_Outlook_Reboot.ps1
     Package : SelfX Service
     Context : User
-    Version : 2.8.2
+    Version : 2.8.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.2    2026-11-22  fubu2k               Initial version (own session, classic Outlook only)
+    2.8.0    2026-11-23  fubu2k               No start by program name: the path is taken from the closed process or from App Paths, nothing is
+                                              closed when it is unknown (code review finding N8)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -38,12 +40,18 @@ if (-not $outlook.Count) {
 }
 # Capture the executable path before termination removes its process metadata.
 $outlookPath = $outlook | Where-Object { $_.Path } | Select-Object -First 1 -ExpandProperty Path
+if (-not $outlookPath) {
+	# No search through the program path: the path comes from the machine-wide App Paths registration (administrators only).
+	$appPath = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\OUTLOOK.EXE' -ErrorAction SilentlyContinue).'(default)'
+	if ($appPath -and (Test-Path -LiteralPath $appPath.Trim('"') -PathType Leaf)) { $outlookPath = $appPath.Trim('"') }
+}
+if (-not $outlookPath) { throw 'The program path of Outlook could not be determined; Outlook was not closed.' }
 Write-SelfXLog "Closing $($outlook.Count) Outlook process(es) ($outlookPath)."
 $outlook | Stop-Process -Force -ErrorAction Stop
 for ($i = 0; $i -lt 30 -and (Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }); $i++) { Start-Sleep -Seconds 1 }
 if (Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }) {
 	throw 'Outlook is still running after 30 seconds; it was not restarted.'
 }
-if ($outlookPath) { Start-Process -FilePath $outlookPath } else { Start-Process -FilePath 'outlook.exe' }
+Start-Process -FilePath $outlookPath
 Write-SelfXLog 'Outlook started again.'
 exit 0

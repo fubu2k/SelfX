@@ -172,6 +172,7 @@ try {
 		Assert-Equal ($code -match '(?i)-like\s+"\*(word|teams)\*"') $false "$($file.Name) uses no *word* / *teams* wildcards"
 		Assert-Equal ($code.Contains('echo Y|')) $false "$($file.Name) does not answer prompts in English only"
 		Assert-Equal ($code -match '(?i)C:\\Users\\') $false "$($file.Name) uses no fixed C:\Users path"
+		Assert-Equal ($code -match "(?i)Start-Process\s+-FilePath\s+'[A-Za-z]+\.exe'") $false "$($file.Name) starts no program by a bare name"
 		if ($referenced -notcontains $file.Name) { $script:unused += $file.Name }
 	}
 	foreach ($action in $catalog.SelectNodes('//Action')) {
@@ -246,6 +247,14 @@ try {
 	Assert-Equal @($global:FakeProcesses | Where-Object ProcessName -eq 'olk').Count 1 'Outlook: new Outlook keeps running'
 	$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Outlook: nothing to do when not running'
+	$global:FakeProcesses.Clear()
+
+	# Program path unknown (no path of the process, no App Paths entry): nothing is closed and nothing is started by name.
+	New-FakeProcess 'OUTLOOK' ''
+	function global:Get-ItemProperty { param($LiteralPath, $Path, $Name, $ErrorAction) $null }
+	$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
+	Remove-Item -LiteralPath Function:\Get-ItemProperty
+	Assert-Equal "$($run.ExitCode)|$($script:calls -contains 'Stop-Process OUTLOOK')|$(@($script:calls | Where-Object { $_ -like 'Start-Process*' }).Count)" '1|False|0' 'Outlook: unknown program path, nothing closed and no start by name'
 	$global:FakeProcesses.Clear()
 
 	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'

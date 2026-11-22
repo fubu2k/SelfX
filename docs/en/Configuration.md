@@ -145,7 +145,7 @@ start brings the open window to the front.
 - **Help dialog:** shows only the contacts you have entered: `Support_Hours`,
   `Support_Phone_number`, `Support_Mail` (opens an e-mail), `Support_Teams` (a user or
   mailbox address opens a Teams chat, a full `https://` link opens unchanged) and
-  `Support_Website` (only `http://` or `https://`). Without any contact, the dialog
+  `Support_Website` (only `https://`; `http://` is ignored and noted in the log). The address in `Support_Mail` must be one plain e-mail address (no list, no additions such as `?cc=`), otherwise the dialog shows it without a button. Without any contact, the dialog
   asks the user to contact the IT department.
 
 ### Background checks

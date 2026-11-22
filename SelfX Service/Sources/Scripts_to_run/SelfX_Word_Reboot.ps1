@@ -14,7 +14,7 @@
     Name    : SelfX_Word_Reboot.ps1
     Package : SelfX Service
     Context : User
-    Version : 2.6.0
+    Version : 2.8.0
 
     History:
     Version  Date        Author               Change
@@ -25,6 +25,8 @@
     2.6.0    2026-11-06  Wolfgang Baeck       Only WINWORD.EXE of the user (was every process named *word*, which also
                                               closed for example 1Password or WordPad); several Word processes no
                                               longer break the start; logging
+    2.8.0    2026-11-23  fubu2k               No start by program name: the path is taken from the closed process or from App Paths, nothing is
+                                              closed when it is unknown (code review finding N8)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -41,12 +43,18 @@ if (-not $word.Count) {
 }
 # Capture the executable path before termination removes its process metadata.
 $wordPath = $word | Where-Object { $_.Path } | Select-Object -First 1 -ExpandProperty Path
+if (-not $wordPath) {
+	# No search through the program path: the path comes from the machine-wide App Paths registration (administrators only).
+	$appPath = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\WINWORD.EXE' -ErrorAction SilentlyContinue).'(default)'
+	if ($appPath -and (Test-Path -LiteralPath $appPath.Trim('"') -PathType Leaf)) { $wordPath = $appPath.Trim('"') }
+}
+if (-not $wordPath) { throw 'The program path of Word could not be determined; Word was not closed.' }
 Write-SelfXLog "Closing $($word.Count) Word process(es) ($wordPath)."
 $word | Stop-Process -Force -ErrorAction Stop
 for ($i = 0; $i -lt 15 -and (Get-Process -Name WINWORD -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }); $i++) { Start-Sleep -Seconds 1 }
 if (Get-Process -Name WINWORD -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }) {
 	throw 'Word is still running after 15 seconds; it was not restarted.'
 }
-if ($wordPath) { Start-Process -FilePath $wordPath } else { Start-Process -FilePath 'winword.exe' }
+Start-Process -FilePath $wordPath
 Write-SelfXLog 'Word started again.'
 exit 0
