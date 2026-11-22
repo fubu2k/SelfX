@@ -245,7 +245,11 @@ function Read-SelfXSystemInfoCache {
         $items = @($data.Items | Where-Object { $_.Category -and $_.Property } | ForEach-Object {
             New-SelfXInfoItem "$($_.Category)" "$($_.Property)" "$($_.Value)" })
         if (-not $items.Count) { return $null }
-        return [pscustomobject]@{ CollectedAt = [datetime]::Parse("$($data.CollectedAt)", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind); Items = $items }
+        # Windows PowerShell 5.1 returns the time as text, PowerShell 7 already as [datetime] (kind lost when converted back to text).
+        $collected = $data.CollectedAt
+        if ($collected -is [datetime]) { $collected = $collected.ToUniversalTime() }
+        else { $collected = [datetime]::Parse("$collected", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind) }
+        return [pscustomobject]@{ CollectedAt = $collected; Items = $items }
     } catch { return $null }
 }
 
