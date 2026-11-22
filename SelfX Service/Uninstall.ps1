@@ -7,7 +7,9 @@
     waits up to thirty seconds for removal, deletes configured shortcuts from the public
     desktop and machine Start Menu, and removes the HKLM Apps & Features entry. Deletes
     the entire InstallFolder (default ProgramFiles\SelfX), including local customizations.
-    ProgramData\SelfX logs are retained unless -RemoveLogs deletes that directory too.
+    ProgramData\SelfX logs are retained unless -RemoveLogs deletes that directory too. Folders in
+    ProgramData\SelfX are deleted without following junctions or symbolic links (a link is removed,
+    never the folder it points to), because users can create links in their own Logs\Users folder.
     Device logs reports (ProgramData\SelfX\Reports) and the status cache (ProgramData\SelfX\Cache)
     are always deleted. The HKLM Run entry of the status icon is removed. Open SelfX windows
     and status icons of all signed-in users (powershell.exe running Self_X.ps1 or
@@ -27,7 +29,7 @@
     Name    : Uninstall.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.5.7
+    Version : 2.6.10
 
     History:
     Version  Date        Author               Change
@@ -40,6 +42,9 @@
                                               empty folder in use is no failure
     2.5.7    2026-11-05  Wolfgang Baeck       Close open SelfX windows and status icons of all users before removal; a
                                               service marked for deletion is no failure; log Logs\Uninstall.log
+    2.6.10   2026-11-22  fubu2k               Security: the data folders are deleted without following junctions or symbolic
+                                              links (users own subfolders of Logs\Users and can create links there); a
+                                              link is removed itself, never its target
 #>
 
 [CmdletBinding()]
@@ -51,6 +56,27 @@ param(
 $ServiceName = 'SelfXService'
 $UninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SelfX'
 $DataFolder = Join-Path $env:ProgramData 'SelfX'
+
+# Deletes a folder tree as SYSTEM without following junctions or symbolic links. Users own their subfolders of
+# Logs\Users and can create links there; a recursive delete could otherwise reach files outside the tree.
+# A link is removed itself (never its target); real files and folders are deleted bottom-up.
+function Remove-SelfXTree
+{
+	param([Parameter(Mandatory = $true)][string]$Path)
+	$item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+	If(-not $item) { return }
+	If($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
+	{
+		Try { If($item.PSIsContainer) { [IO.Directory]::Delete($Path) } Else { [IO.File]::Delete($Path) } } Catch {}
+		return
+	}
+	If($item.PSIsContainer)
+	{
+		Try { $children = @([IO.Directory]::EnumerateFileSystemEntries($Path)) } Catch { $children = @() }
+		ForEach($child in $children) { Remove-SelfXTree -Path $child }
+	}
+	Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+}
 
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 If(-not $IsAdmin) { Write-Output 'Uninstall.ps1 must run with administrator rights.'; exit 1 }
@@ -117,8 +143,8 @@ If((Test-Path -LiteralPath $InstallFolder) -and ($RemainingFiles.Count -eq 0))
 	Write-Output "The empty folder '$InstallFolder' is still in use and remains until the next sign-out or restart."
 }
 # Reports contain user and device data; they are never kept after uninstall.
-Remove-Item -LiteralPath (Join-Path $DataFolder 'Reports') -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath (Join-Path $DataFolder 'Cache') -Recurse -Force -ErrorAction SilentlyContinue
+Remove-SelfXTree -Path (Join-Path $DataFolder 'Reports')
+Remove-SelfXTree -Path (Join-Path $DataFolder 'Cache')
 
 # A service that another program still has open (e.g. the Services console) is only marked for deletion. It
 # can no longer start (its file is gone) and disappears when that program closes it, so this is no failure.
@@ -139,5 +165,5 @@ If(($RemainingFiles.Count -gt 0) -or $ServiceLeft)
 }
 Else { Write-Output 'SelfX removed.' }
 If($Transcript) { Stop-Transcript | Out-Null }
-If($RemoveLogs) { Remove-Item -LiteralPath $DataFolder -Recurse -Force -ErrorAction SilentlyContinue }
+If($RemoveLogs) { Remove-SelfXTree -Path $DataFolder }
 exit $ExitCode
