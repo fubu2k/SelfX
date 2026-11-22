@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SelfXSessionStarter.dll: used by Install.ps1 only (starts the status icon in the signed-in sessions).
+       netstandard2.0 loads in Windows PowerShell 5.1 (.NET Framework) and in PowerShell 7 (.NET 10). -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>SelfXSessionStarter</AssemblyName>
+    <RootNamespace>SelfXInstall</RootNamespace>
+    <DebugType>none</DebugType>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\SelfXSessionStarter.cs" Link="SelfXSessionStarter.cs" />
+  </ItemGroup>
+</Project>
