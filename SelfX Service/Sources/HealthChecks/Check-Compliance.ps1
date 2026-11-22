@@ -78,8 +78,9 @@ if ($Require.BitLocker) {
 
 if ($Require.SecureBoot) {
     Test-Criterion 'Secure Boot' {
+        . (Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXDeviceSecurity.ps1')
         $secureBoot = $false
-        try { $secureBoot = Confirm-SecureBootUEFI -ErrorAction Stop }
+        try { $secureBoot = Get-SelfXSecureBootEnabled }
         catch [System.PlatformNotSupportedException] { return 'not supported (legacy BIOS)' }
         if (-not $secureBoot) { 'off' }
     }

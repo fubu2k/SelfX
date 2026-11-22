@@ -422,6 +422,24 @@ try {
 	Microsoft.PowerShell.Management\Remove-Item Function:\Get-ChildItem, Function:\Get-ItemProperty, Function:\Test-Path, Function:\Get-SelfXImeAppNames
 
 	#------------------------------------------------------------------------------------------------
+	# Secure Boot from the registry (SelfXDeviceSecurity.ps1): the SecureBoot module is not used
+	function global:Confirm-SecureBootUEFI { throw 'Confirm-SecureBootUEFI is not allowed (use SelfXDeviceSecurity.ps1)' }
+	. (Join-Path $sources 'SelfXDeviceSecurity.ps1')
+	function Test-Path { param([string]$LiteralPath) $script:sbKey }
+	function Get-ItemProperty { param([string]$LiteralPath, $ErrorAction) $script:sbValues }
+	$script:sbKey = $true; $script:sbValues = [pscustomobject]@{ UEFISecureBootEnabled = 1 }
+	Assert-Equal (Get-SelfXSecureBootEnabled -Path 'HKLM:\x') $true 'Secure Boot: 1 is on'
+	$script:sbValues = [pscustomobject]@{ UEFISecureBootEnabled = 0 }
+	Assert-Equal (Get-SelfXSecureBootEnabled -Path 'HKLM:\x') $false 'Secure Boot: 0 is off'
+	foreach ($case in @(@{ Key = $false; Values = $null }, @{ Key = $true; Values = [pscustomobject]@{ PolicyVersion = 1 } })) {
+		$script:sbKey = $case.Key; $script:sbValues = $case.Values
+		$thrown = ''
+		try { $null = Get-SelfXSecureBootEnabled -Path 'HKLM:\x' } catch { $thrown = $_.Exception.GetType().Name }
+		Assert-Equal $thrown 'PlatformNotSupportedException' 'Secure Boot: missing key or value means legacy BIOS (PlatformNotSupportedException)'
+	}
+	Microsoft.PowerShell.Management\Remove-Item Function:\Test-Path, Function:\Get-ItemProperty
+
+	#------------------------------------------------------------------------------------------------
 	# Read-only scripts, run for real in a child process (sandbox ProgramData for their logs)
 	#------------------------------------------------------------------------------------------------
 	$powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'

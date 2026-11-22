@@ -21,6 +21,8 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- Secure Boot check (compliance) reads the registry (`UEFISecureBootEnabled`, new file `Sources\SelfXDeviceSecurity.ps1`)
+  instead of `Confirm-SecureBootUEFI`: no Windows PowerShell compatibility layer and no administrator rights needed.
 - Defender without the Defender module: status (device status, compliance) and signature update use CIM
   (`root\Microsoft\Windows\Defender`, new file `Sources\SelfXDefender.ps1`) instead of `Get-MpComputerStatus`
   and `Update-MpSignature`. Update sources and their order still come from the Defender policy.
