@@ -70,6 +70,10 @@ Notes:
     2.6.10   2026-11-22  fubu2k               RUN children also receive SELFX_CALLER_ADMIN (1 = elevated administrator, from the client token)
     2.6.10   2026-11-22  fubu2k               OtherSessions=Block (catalog element / Health_Config attribute): a normal user cannot start
                                               such an action while another user has an active session (answer ERROR OtherSessions)
+    2.6.11   2026-11-22  fubu2k               Pipe deadlines use overlapped I/O (asynchronous pipe handle), so a cancelled read or write
+                                              ends reliably; one deadline for the whole request. The per-user connection limit is
+                                              applied when the connection is accepted (owner of the client process), before any data
+                                              is read
 */
 
 using System;
@@ -129,8 +133,22 @@ namespace SelfX
         readonly Dictionary<string, DateTime> cooldowns = new Dictionary<string, DateTime>();
         int activeConnections;
 
+        // Grace period after CancelIoEx until the cancelled operation has completed; afterwards the handle is closed.
+        const int CancelGraceMs = 2000;
+        // Connections whose client process owner cannot be read share one bucket with the per-user limit.
+        const string UnknownClientKey = "client:unknown";
+
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool CancelIoEx(SafePipeHandle handle, IntPtr overlapped);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetNamedPipeClientProcessId(SafePipeHandle pipe, out uint processId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr OpenProcess(uint access, bool inheritHandle, uint processId);
+        [DllImport("advapi32.dll", SetLastError = true)]
+        static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+        // CloseHandle is declared below (also used by the session check of F5).
+        const uint ProcessQueryLimitedInformation = 0x1000;
+        const uint TokenQuery = 0x0008;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool GetNamedPipeClientSessionId(SafePipeHandle pipe, out uint clientSessionId);
@@ -336,7 +354,7 @@ namespace SelfX
                 try
                 {
                     server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Byte, PipeOptions.None, 4096, 4096, security);
+                        PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security);
                     server.WaitForConnection();
                     if (stopping)
                     {
@@ -353,8 +371,18 @@ namespace SelfX
                     }
                     else
                     {
+                        // The per-user limit is applied before any data is read: the key is the owner of the client
+                        // process (from the kernel, not from the client), so one user cannot fill the global slots.
+                        string clientKey = GetClientProcessKey(connection);
+                        if (!EnterUser(clientKey))
+                        {
+                            Interlocked.Decrement(ref activeConnections);
+                            connection.Dispose();
+                            LogRejected("Rate limit: more than " + MaxConnectionsPerUser + " open connections from " + clientKey + "; a connection was refused.");
+                            continue;
+                        }
                         // A thread of its own, so that waiting connections cannot starve the thread pool.
-                        Thread worker = new Thread(delegate() { HandleConnection(connection); });
+                        Thread worker = new Thread(delegate() { HandleConnection(connection, clientKey); });
                         worker.IsBackground = true;
                         worker.Name = "SelfX.Pipe";
                         worker.Start();
@@ -376,44 +404,124 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Run a blocking pipe operation with a deadline. When the deadline passes, the pending I/O of the pipe is
-        /// cancelled (CancelIoEx), so the operation ends and the connection can be closed. Returns false on a timeout.
+        /// Wait for one overlapped pipe operation until the deadline. On a timeout the I/O of the pipe is cancelled
+        /// (CancelIoEx works reliably for overlapped I/O, the pipe is opened with PipeOptions.Asynchronous); if it
+        /// still does not complete, the handle is closed. Returns false on a timeout.
         /// </summary>
-        static bool RunWithDeadline(NamedPipeServerStream pipe, int milliseconds, Action operation)
+        static bool WaitForPipeIo(NamedPipeServerStream pipe, IAsyncResult pending, int milliseconds)
         {
-            bool[] timedOut = new bool[1];
-            using (ManualResetEvent finished = new ManualResetEvent(false))
-            using (Timer watchdog = new Timer(delegate(object state)
+            if (pending.CompletedSynchronously || pending.AsyncWaitHandle.WaitOne(Math.Max(0, milliseconds)))
             {
+                return true;
+            }
+            try { CancelIoEx(pipe.SafePipeHandle, IntPtr.Zero); } catch { }
+            if (!pending.AsyncWaitHandle.WaitOne(CancelGraceMs))
+            {
+                try { pipe.Dispose(); } catch { }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Read one request line (bytes up to '\n', at most maxBytes) within one deadline for the whole request.
+        /// A client that sends slowly cannot extend the deadline. Returns null on a timeout or when the client
+        /// closes the connection before sending anything.
+        /// </summary>
+        static string ReadRequest(NamedPipeServerStream pipe, int maxBytes, int deadlineMs)
+        {
+            Stopwatch elapsed = Stopwatch.StartNew();
+            MemoryStream line = new MemoryStream();
+            byte[] buffer = new byte[256];
+            while (line.Length < maxBytes)
+            {
+                int remaining = deadlineMs - (int)elapsed.ElapsedMilliseconds;
+                if (remaining <= 0) return null;
+                IAsyncResult pending = pipe.BeginRead(buffer, 0, buffer.Length, null, null);
+                if (!WaitForPipeIo(pipe, pending, remaining)) return null;
+                int count;
+                try { count = pipe.EndRead(pending); }
+                catch (IOException) { return null; }
+                catch (OperationCanceledException) { return null; }
+                catch (ObjectDisposedException) { return null; }
+                if (count <= 0) break;
+                int newline = Array.IndexOf(buffer, (byte)'\n', 0, count);
+                int take = newline >= 0 ? newline : count;
+                take = (int)Math.Min(take, maxBytes - line.Length);
+                line.Write(buffer, 0, take);
+                if (newline >= 0) break;
+            }
+            if (line.Length == 0 && elapsed.ElapsedMilliseconds >= deadlineMs) return null;
+            // Invalid UTF-8 becomes U+FFFD and is then rejected by the request patterns.
+            return Encoding.UTF8.GetString(line.ToArray()).Trim();
+        }
+
+        /// <summary>
+        /// Write the answer within the deadline. Returns false when the client does not read it in time.
+        /// </summary>
+        static bool WriteResponse(NamedPipeServerStream pipe, string response, int deadlineMs)
+        {
+            byte[] data = new UTF8Encoding(false).GetBytes(response + "\r\n");
+            IAsyncResult pending = pipe.BeginWrite(data, 0, data.Length, null, null);
+            if (!WaitForPipeIo(pipe, pending, deadlineMs)) return false;
+            try { pipe.EndWrite(pending); }
+            catch (IOException) { return false; }
+            catch (OperationCanceledException) { return false; }
+            catch (ObjectDisposedException) { return false; }
+            return true;
+        }
+
+        /// <summary>
+        /// Keep the connection until the client has read the answer and closed its end, at most until the deadline
+        /// (replaces WaitForPipeDrain, which cannot be cancelled). Extra data from the client is discarded.
+        /// </summary>
+        static void WaitForClientClose(NamedPipeServerStream pipe, int deadlineMs)
+        {
+            Stopwatch elapsed = Stopwatch.StartNew();
+            byte[] buffer = new byte[256];
+            while (true)
+            {
+                int remaining = deadlineMs - (int)elapsed.ElapsedMilliseconds;
+                if (remaining <= 0) return;
+                IAsyncResult pending = pipe.BeginRead(buffer, 0, buffer.Length, null, null);
+                if (!WaitForPipeIo(pipe, pending, remaining)) return;
                 try
                 {
-                    if (!finished.WaitOne(0))
+                    if (pipe.EndRead(pending) <= 0) return;
+                }
+                catch { return; }
+            }
+        }
+
+        /// <summary>
+        /// Key for the connection limit before anything is read: "sid:" + the owner SID of the client process.
+        /// The process ID comes from the kernel (GetNamedPipeClientProcessId); a client cannot choose it. When the
+        /// owner cannot be read (process already ended, access denied) the shared unknown bucket is used.
+        /// </summary>
+        static string GetClientProcessKey(NamedPipeServerStream pipe)
+        {
+            uint processId;
+            try
+            {
+                if (!GetNamedPipeClientProcessId(pipe.SafePipeHandle, out processId) || processId == 0) return UnknownClientKey;
+            }
+            catch { return UnknownClientKey; }
+            IntPtr process = OpenProcess(ProcessQueryLimitedInformation, false, processId);
+            if (process == IntPtr.Zero) return UnknownClientKey;
+            try
+            {
+                IntPtr token;
+                if (!OpenProcessToken(process, TokenQuery, out token)) return UnknownClientKey;
+                try
+                {
+                    using (WindowsIdentity owner = new WindowsIdentity(token))
                     {
-                        Volatile.Write(ref timedOut[0], true);
-                        CancelIoEx(pipe.SafePipeHandle, IntPtr.Zero);
+                        return owner.User != null ? "sid:" + owner.User.Value : UnknownClientKey;
                     }
                 }
-                catch { }
-            }, null, milliseconds, 250))
-            {
-                try
-                {
-                    operation();
-                }
-                catch (IOException)
-                {
-                    if (!Volatile.Read(ref timedOut[0])) throw;
-                }
-                catch (ObjectDisposedException)
-                {
-                    if (!Volatile.Read(ref timedOut[0])) throw;
-                }
-                finally
-                {
-                    finished.Set();
-                }
+                catch { return UnknownClientKey; }
+                finally { CloseHandle(token); }
             }
-            return !Volatile.Read(ref timedOut[0]);
+            finally { CloseHandle(process); }
         }
 
         /// <summary>
@@ -477,24 +585,18 @@ namespace SelfX
         /// <summary>
         /// Read one UTF-8 request, identify its caller and return one protocol response.
         /// </summary>
-        void HandleConnection(NamedPipeServerStream pipe)
+        void HandleConnection(NamedPipeServerStream pipe, string clientKey)
         {
             string user = "unknown";
-            string limitKey = null;
             try
             {
                 using (pipe)
                 {
-                    UTF8Encoding encoding = new UTF8Encoding(false);
-                    StreamReader reader = new StreamReader(pipe, encoding, false, 1024, true);
-                    StreamWriter writer = new StreamWriter(pipe, encoding, 1024, true);
-                    writer.AutoFlush = true;
-
-                    string request = null;
-                    bool received = RunWithDeadline(pipe, RequestReadTimeoutMs, delegate { request = ReadLine(reader, MaxRequestLength); });
-                    if (!received || request == null)
+                    // One deadline for the whole request: a client that sends nothing or sends slowly is closed.
+                    string request = ReadRequest(pipe, MaxRequestLength, RequestReadTimeoutMs);
+                    if (request == null)
                     {
-                        LogRejected("No complete request within " + (RequestReadTimeoutMs / 1000) + " s; the connection was closed.");
+                        LogRejected("No complete request within " + (RequestReadTimeoutMs / 1000) + " s from " + clientKey + "; the connection was closed.");
                         return;
                     }
                     try { user = pipe.GetImpersonationUserName(); } catch { }
@@ -503,24 +605,11 @@ namespace SelfX
                     long callerSession = -1;
                     try { uint sessionId; if (GetNamedPipeClientSessionId(pipe.SafePipeHandle, out sessionId)) callerSession = sessionId; } catch { }
 
-                    string key = LimitKey(user, callerSid);
-                    string response;
-                    if (EnterUser(key))
+                    string response = ProcessRequest(request, user, callerSid, callerIsAdmin, callerSession);
+                    // A client that does not read the answer must not block this thread.
+                    if (WriteResponse(pipe, response, ResponseWriteTimeoutMs))
                     {
-                        limitKey = key;
-                        response = ProcessRequest(request, user, callerSid, callerIsAdmin, callerSession);
-                    }
-                    else
-                    {
-                        LogRejected("Rate limit: more than " + MaxConnectionsPerUser + " open connections from " + user + "; request refused.");
-                        response = "BUSY";
-                    }
-                    // A client that does not read the answer must not block this thread: the write has a deadline, and
-                    // the connection is kept until the client has read the answer and closed its end (replaces
-                    // WaitForPipeDrain, which cannot be cancelled).
-                    if (RunWithDeadline(pipe, ResponseWriteTimeoutMs, delegate { writer.WriteLine(response); }))
-                    {
-                        RunWithDeadline(pipe, ClientCloseTimeoutMs, delegate { while (pipe.ReadByte() >= 0) { } });
+                        WaitForClientClose(pipe, ClientCloseTimeoutMs);
                     }
                 }
             }
@@ -530,7 +619,7 @@ namespace SelfX
             }
             finally
             {
-                if (limitKey != null) LeaveUser(limitKey);
+                LeaveUser(clientKey);
                 Interlocked.Decrement(ref activeConnections);
             }
         }
@@ -588,27 +677,6 @@ namespace SelfX
                 return null;
             }
             return sid;
-        }
-
-        /// <summary>
-        /// Read a bounded request line and remove surrounding whitespace.
-        /// </summary>
-        static string ReadLine(StreamReader reader, int maxLength)
-        {
-            StringBuilder line = new StringBuilder();
-            while (line.Length < maxLength)
-            {
-                int c = reader.Read();
-                if (c < 0 || c == '\n')
-                {
-                    break;
-                }
-                if (c != '\r')
-                {
-                    line.Append((char)c);
-                }
-            }
-            return line.ToString().Trim();
         }
 
         /// <summary>
