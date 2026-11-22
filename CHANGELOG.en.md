@@ -159,6 +159,7 @@ the **entire package**. The update installs like every other update;
 
 ### Added
 
+- `NOTICE.md` / `NOTICE.en.md`: authors, sources and open license questions (Damien Van Robaeys, Wolfgang Baeck, Jannik Reinhard).
 - `Test-ServicePipe.ps1`: starts the pipe listener of the service under a test
   pipe name and checks the deadlines, slow senders, oversized requests and the
   per-user limit. It needs no installation and no administrator rights.
