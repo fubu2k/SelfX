@@ -572,7 +572,7 @@ whole device status again (updates, restart pending, compliance). The script run
 1. starts the Microsoft Store app update scan of the MDM bridge
    (`MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod`). This also works when the
    Store is blocked for users. The Store updates the apps asynchronously in the background.
-2. on Windows 11 25H2 and newer (minimum version, 2.7.0) starts **"Check for updates" of the Windows Update
+2. on Windows 11 25H2 and newer (minimum version, 2.6.10) starts **"Check for updates" of the Windows Update
    orchestrator** through the documented WinRT API `Windows.Management.Update.WindowsUpdateManager`
    (`StartScan(userInitiated: true)`, the same as the button in Settings). Windows downloads and
    installs the updates itself, with the policies of the device, and **Settings > Windows Update
@@ -593,7 +593,7 @@ installed; a restart that was already pending was even reported as installed. 2.
 `UsoClient.exe`. 2.6.3 to 2.6.8 used only the Windows Update Agent API. Microsoft documents that the
 Windows Update page in Settings shows only updates of the orchestrator and that updates handled
 through the WUA API do not appear there and can conflict with it, so the updates could still be
-shown as pending in Settings. Since 2.7.0 the Windows Update Agent API is not used any more for installing. Before 2.6.9 a click on **Fix** was also refused with "Another action
+shown as pending in Settings. Since 2.6.10 the Windows Update Agent API is not used any more for installing. Before 2.6.9 a click on **Fix** was also refused with "Another action
 is still running" while SelfX read the cached status (once a minute, for a moment).
 
 The script **never restarts** Windows. If an update needs a restart, the **Restart pending** row

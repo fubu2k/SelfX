@@ -22,7 +22,7 @@
     installed; a restart that was already pending was even reported as "updates installed".
     2.6.3 to 2.6.8 used only the Windows Update Agent API. Microsoft documents that the Settings page
     shows only updates of the orchestrator; updates handled through the WUA API do not appear there and
-    can conflict with it. So the updates could still be listed as pending in Settings. Since 2.7.0 only the
+    can conflict with it. So the updates could still be listed as pending in Settings. Since 2.6.10 only the
     orchestrator is used (Windows 11 25H2 is the minimum version); the Windows Update Agent API is gone.
 
     Never restarts Windows and never signs out the user. When an update needs a restart, the
@@ -35,7 +35,7 @@
     Name    : SelfX_Updates_Install.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.7.0
+    Version : 2.6.10
 
     History:
     Version  Date        Author               Change
@@ -49,7 +49,7 @@
                                               (WindowsUpdateManager, as "Check for updates" in Settings) and waits
                                               for it; the Windows Update Agent API only installs what is left;
                                               feature updates and updates waiting for the restart are skipped
-    2.7.0    2026-11-22  fubu2k               Windows 11 25H2 minimum: only the orchestrator (SelfXWinRT.dll, PowerShell 7);
+    2.6.10   2026-11-22  fubu2k               Windows 11 25H2 minimum: only the orchestrator (SelfXWinRT.dll, PowerShell 7);
                                               the Windows Update Agent API and the PowerShell 5.1 path are removed;
                                               a missing orchestrator API is an error (exit 1)
 #>
