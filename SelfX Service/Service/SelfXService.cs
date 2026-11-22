@@ -62,12 +62,16 @@ Notes:
     2.5.3    2026-11-04  Wolfgang Baeck       Log uses the current time zone (cache cleared after time zone changes)
     2.5.6    2026-11-05  Wolfgang Baeck       Optional TimeoutSeconds on Health_Config remediations (max. 7200)
     2.6.0    2026-11-06  Wolfgang Baeck       Daily log housekeeping (Log_Retention_Days in Tool_Config.xml, default 90)
+    2.6.10   2026-11-22  fubu2k               Pipe hardening: deadline for reading the request and writing the answer, thread per
+                                              connection, limits of 64 connections (8 per user), pause after HEALTH (3 s) and
+                                              after a RUN of the same action by the same user (15 s)
     2.6.10   2026-11-22  fubu2k               Log hardening: request text is cleaned and shortened, rejected requests are rate limited;
                                               regex anchors use \z instead of $
     2.6.10   2026-11-22  fubu2k               RUN children also receive SELFX_CALLER_ADMIN (1 = elevated administrator, from the client token)
 */
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -79,6 +83,7 @@ using System.ServiceProcess;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
 using System.Xml;
 
 namespace SelfX
@@ -108,6 +113,22 @@ namespace SelfX
         int rejectedInWindow = 0;
         int rejectedSuppressed = 0;
         const int DefaultLogRetentionDays = 90;
+        // Pipe hardening: every local user can open the pipe, so a connection that sends nothing (or never reads the
+        // answer) must not hold a thread forever, and one user must not use up all connections or the run slot.
+        const int RequestReadTimeoutMs = 5000;
+        const int ResponseWriteTimeoutMs = 10000;
+        const int ClientCloseTimeoutMs = 10000;
+        const int MaxConnections = 64;
+        const int MaxConnectionsPerUser = 8;
+        const int RunCooldownSeconds = 15;
+        const int HealthCooldownSeconds = 3;
+        readonly object limitLock = new object();
+        readonly Dictionary<string, int> connectionsPerUser = new Dictionary<string, int>();
+        readonly Dictionary<string, DateTime> cooldowns = new Dictionary<string, DateTime>();
+        int activeConnections;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool CancelIoEx(SafePipeHandle handle, IntPtr overlapped);
 
         static readonly Regex ScriptNamePattern = new Regex(@"^[A-Za-z0-9_\-\.]{1,100}\.ps1\z", RegexOptions.IgnoreCase);
         static readonly Regex HealthRequestPattern = new Regex(
@@ -297,7 +318,20 @@ namespace SelfX
                     }
                     NamedPipeServerStream connection = server;
                     server = null;
-                    ThreadPool.QueueUserWorkItem(delegate { HandleConnection(connection); });
+                    if (Interlocked.Increment(ref activeConnections) > MaxConnections)
+                    {
+                        Interlocked.Decrement(ref activeConnections);
+                        connection.Dispose();
+                        LogRejected("Connection limit (" + MaxConnections + ") reached; a connection was refused.");
+                    }
+                    else
+                    {
+                        // A thread of its own, so that waiting connections cannot starve the thread pool.
+                        Thread worker = new Thread(delegate() { HandleConnection(connection); });
+                        worker.IsBackground = true;
+                        worker.Name = "SelfX.Pipe";
+                        worker.Start();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -315,11 +349,111 @@ namespace SelfX
         }
 
         /// <summary>
+        /// Run a blocking pipe operation with a deadline. When the deadline passes, the pending I/O of the pipe is
+        /// cancelled (CancelIoEx), so the operation ends and the connection can be closed. Returns false on a timeout.
+        /// </summary>
+        static bool RunWithDeadline(NamedPipeServerStream pipe, int milliseconds, Action operation)
+        {
+            bool[] timedOut = new bool[1];
+            using (ManualResetEvent finished = new ManualResetEvent(false))
+            using (Timer watchdog = new Timer(delegate(object state)
+            {
+                try
+                {
+                    if (!finished.WaitOne(0))
+                    {
+                        Volatile.Write(ref timedOut[0], true);
+                        CancelIoEx(pipe.SafePipeHandle, IntPtr.Zero);
+                    }
+                }
+                catch { }
+            }, null, milliseconds, 250))
+            {
+                try
+                {
+                    operation();
+                }
+                catch (IOException)
+                {
+                    if (!Volatile.Read(ref timedOut[0])) throw;
+                }
+                catch (ObjectDisposedException)
+                {
+                    if (!Volatile.Read(ref timedOut[0])) throw;
+                }
+                finally
+                {
+                    finished.Set();
+                }
+            }
+            return !Volatile.Read(ref timedOut[0]);
+        }
+
+        /// <summary>
+        /// Key for the per-user limits: the SID from the client token, or the user name when the SID is unknown.
+        /// </summary>
+        static string LimitKey(string user, string callerSid)
+        {
+            return callerSid != null ? callerSid : "user:" + user;
+        }
+
+        bool EnterUser(string key)
+        {
+            lock (limitLock)
+            {
+                int count;
+                connectionsPerUser.TryGetValue(key, out count);
+                if (count >= MaxConnectionsPerUser) return false;
+                connectionsPerUser[key] = count + 1;
+                return true;
+            }
+        }
+
+        void LeaveUser(string key)
+        {
+            lock (limitLock)
+            {
+                int count;
+                if (!connectionsPerUser.TryGetValue(key, out count)) return;
+                if (count <= 1) connectionsPerUser.Remove(key);
+                else connectionsPerUser[key] = count - 1;
+            }
+        }
+
+        bool InCooldown(string key)
+        {
+            lock (limitLock)
+            {
+                DateTime until;
+                return cooldowns.TryGetValue(key, out until) && DateTime.UtcNow < until;
+            }
+        }
+
+        void StartCooldown(string key, int seconds)
+        {
+            lock (limitLock)
+            {
+                DateTime now = DateTime.UtcNow;
+                if (cooldowns.Count > 500)
+                {
+                    List<string> expired = new List<string>();
+                    foreach (KeyValuePair<string, DateTime> entry in cooldowns)
+                    {
+                        if (entry.Value <= now) expired.Add(entry.Key);
+                    }
+                    foreach (string expiredKey in expired) cooldowns.Remove(expiredKey);
+                }
+                cooldowns[key] = now.AddSeconds(seconds);
+            }
+        }
+
+        /// <summary>
         /// Read one UTF-8 request, identify its caller and return one protocol response.
         /// </summary>
         void HandleConnection(NamedPipeServerStream pipe)
         {
             string user = "unknown";
+            string limitKey = null;
             try
             {
                 using (pipe)
@@ -329,19 +463,46 @@ namespace SelfX
                     StreamWriter writer = new StreamWriter(pipe, encoding, 1024, true);
                     writer.AutoFlush = true;
 
-                    string request = ReadLine(reader, MaxRequestLength);
+                    string request = null;
+                    bool received = RunWithDeadline(pipe, RequestReadTimeoutMs, delegate { request = ReadLine(reader, MaxRequestLength); });
+                    if (!received || request == null)
+                    {
+                        LogRejected("No complete request within " + (RequestReadTimeoutMs / 1000) + " s; the connection was closed.");
+                        return;
+                    }
                     try { user = pipe.GetImpersonationUserName(); } catch { }
                     string callerSid = GetCallerSid(pipe);
                     bool callerIsAdmin = GetCallerIsAdmin(pipe);
 
-                    string response = ProcessRequest(request, user, callerSid, callerIsAdmin);
-                    writer.WriteLine(response);
-                    try { pipe.WaitForPipeDrain(); } catch { }
+                    string key = LimitKey(user, callerSid);
+                    string response;
+                    if (EnterUser(key))
+                    {
+                        limitKey = key;
+                        response = ProcessRequest(request, user, callerSid, callerIsAdmin);
+                    }
+                    else
+                    {
+                        LogRejected("Rate limit: more than " + MaxConnectionsPerUser + " open connections from " + user + "; request refused.");
+                        response = "BUSY";
+                    }
+                    // A client that does not read the answer must not block this thread: the write has a deadline, and
+                    // the connection is kept until the client has read the answer and closed its end (replaces
+                    // WaitForPipeDrain, which cannot be cancelled).
+                    if (RunWithDeadline(pipe, ResponseWriteTimeoutMs, delegate { writer.WriteLine(response); }))
+                    {
+                        RunWithDeadline(pipe, ClientCloseTimeoutMs, delegate { while (pipe.ReadByte() >= 0) { } });
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Log("Connection error (" + user + "): " + ex.Message);
+            }
+            finally
+            {
+                if (limitKey != null) LeaveUser(limitKey);
+                Interlocked.Decrement(ref activeConnections);
             }
         }
 
@@ -455,6 +616,13 @@ namespace SelfX
                         filter += " -OnlyName " + healthMatch.Groups[2].Value;
                     }
                 }
+                // Per user, a short pause after each check: one user cannot keep the run slot busy for everybody.
+                string healthKey = "HEALTH|" + LimitKey(user, callerSid);
+                if (InCooldown(healthKey))
+                {
+                    LogRejected("Rate limit: HEALTH request from " + user + " refused.");
+                    return "BUSY";
+                }
                 if (!runLock.Wait(0)) return "BUSY";
                 try
                 {
@@ -466,7 +634,11 @@ namespace SelfX
                     }
                     finally { healthLock.Release(); }
                 }
-                finally { runLock.Release(); }
+                finally
+                {
+                    runLock.Release();
+                    StartCooldown(healthKey, HealthCooldownSeconds);
+                }
             }
             if (request.StartsWith("HEALTH", StringComparison.Ordinal))
             {
@@ -499,6 +671,13 @@ namespace SelfX
                 return "ERROR Script not found";
             }
 
+            // The same user cannot start the same action again right after it ended (the run slot is shared by all users).
+            string runKey = "RUN|" + LimitKey(user, callerSid) + "|" + scriptName.ToLowerInvariant();
+            if (InCooldown(runKey))
+            {
+                LogRejected("Rate limit: request from " + user + " for '" + scriptName + "' refused.");
+                return "BUSY";
+            }
             // Refuse concurrent repairs rather than queueing potentially conflicting changes.
             if (!runLock.Wait(0))
             {
@@ -512,6 +691,7 @@ namespace SelfX
             finally
             {
                 runLock.Release();
+                StartCooldown(runKey, RunCooldownSeconds);
             }
         }
 
