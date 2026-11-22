@@ -277,23 +277,35 @@ language state). It runs in about one to a few minutes. The section list and
 the parameters are described in the header of `Collect-DeviceLogs.ps1`; replace
 the file to update the collector.
 
-**SelfX logs in the report (2.6.4):** the wrapper adds the logs of SelfX itself
-(see [Logging](#logging-and-log-housekeeping-selfx-service-260)):
+**SelfX logs in the report (2.6.4, changed in 2.6.10):** the report contains the
+logs of SelfX itself (see [Logging](#logging-and-log-housekeeping-selfx-service-260)).
+They are added by two different parties, each with its own rights:
 
-- from `%ProgramData%\SelfX\Logs`: `SelfXService.log`, `Install.log` and
-  `Uninstall.log` always, all other `*.log` files (scripts, health checks,
-  detection) of the last `DeviceLogs_Days` days;
-- from `%ProgramData%\SelfX\Logs\Users\<SID>`: the logs of the **requesting
-  user** (window, status icon, user actions) of the last `DeviceLogs_Days` days.
-  Logs of other users are never added.
+- the **wrapper (SYSTEM)** adds the machine logs from `%ProgramData%\SelfX\Logs`:
+  `SelfXService.log`, `Install.log` and `Uninstall.log` always, all other `*.log`
+  files (scripts, health checks, detection) of the last `DeviceLogs_Days` days.
+  Only the files directly in that folder are read; the subfolder `Logs\Users` is
+  never read as SYSTEM;
+- the **SelfX window (the signed-in user)** adds the logs of the **own user**
+  (window, status icon, user actions) from
+  `%ProgramData%\SelfX\Logs\Users\<own SID>` of the last `DeviceLogs_Days` days
+  to its copy of the report in `%LOCALAPPDATA%\SelfX\Reports`, with the rights
+  of the user. Logs of other users are never added.
 
 In the `.zip` they are separate files in the folder `SelfX-Logs` (`SelfX-Logs\User`
 for the user logs); in a `.txt` report they are appended as the last section.
-At most the last 2 MB of each file and 30 MB in total are added. Users can
-create their own folder under `Logs\Users`, so the wrapper (running as SYSTEM)
-reads there only from a normal folder (no junction) and only files owned by the
-user; no protected file of another account can get into the report. Note that
-`SelfXService.log` names the users who started actions on this device.
+At most the last 2 MB of each file and 30 MB per party are added.
+
+Why: users can create and change their own folder under `Logs\Users`. If SYSTEM
+read it, a user could redirect the read (for example with a junction replaced
+between the check and the read) to a protected file, whose content would then be
+in the report that the user can open. Because the window reads the own logs with
+the rights of the user, it can only add what the user could read anyway. A
+problem while adding the user logs never stops the e-mail. Skipped are a
+junction as folder and files that another account owns.
+
+Note that `SelfXService.log` (machine logs) names the users who started actions
+on this device.
 
 Exit codes of `SelfX_Device_CollectLogs.ps1`: `0` report created, `1`
 collection or compression failed, `2` requesting user unknown (service older
