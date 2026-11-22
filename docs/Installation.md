@@ -1,17 +1,13 @@
 # Installation
 
-SelfX consists of three independent Windows packages. **SelfX Service** replaces
-Standard and Admin for devices that must support users without a network
-connection. Choose the package that matches the intended user experience and
-execution context.
+This guide describes the installation of **SelfX Service** on managed Windows
+devices, in particular with Microsoft Intune.
 
 ## Requirements
 
 - A supported Windows desktop with Windows PowerShell and WPF.
 - The complete package directory, including its `assembly` and
   `Scripts_to_run` content.
-- For SelfX Admin, `ServiceUI.exe` and a signed-in interactive user session if
-  the UI is to be displayed to that user.
 - For SelfX Service, 64-bit Windows PowerShell 5.1 and .NET Framework 4.x. The
   installer either installs the prebuilt programs of the package (folder `Bin`,
   see [Prebuilt programs](#prebuilt-programs-selfx-service-2611)) or compiles
@@ -196,7 +192,7 @@ Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20   # as admin
    AppLocker policy. A new build has new hashes: replace the rules of the
    previous build.
 5. Build the package with `tools\New-SelfXIntuneWin.ps1` (see
-   [Building the Intune packages](#building-the-intune-packages)).
+   [Building the Intune packages](#building-the-intune-package)).
 6. Test on a device that is not in production: new installation, update from
    the previous version, uninstallation, detection. Test as a standard user and,
    if you have shared devices, with a second signed-in user.
@@ -241,82 +237,9 @@ from other sources. Rebuild `Bin` after every change of `Service\*.cs`, and
 replace the hash rules in AppLocker at the same time: a new build has new
 hashes, and the old rules no longer match.
 
-## SelfX Standard
+## Building the Intune package
 
-SelfX Standard installs for the current user. Run the installer from its
-directory, using the account whose profile should contain SelfX:
-
-```powershell
-Set-Location 'C:\Path\To\SelfX Standard'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
-```
-
-The installer copies `Sources` to `%LOCALAPPDATA%\SelfX`, unblocks copied files,
-and creates shortcuts according to `Sources\Tool_Config.xml`. The installer
-does not require a machine-wide service. Because the destination is the current
-user's profile, running it as SYSTEM installs into the SYSTEM profile rather
-than the signed-in user's profile.
-
-### Optional remote configuration
-
-The installer accepts links to an issue-list XML and a ZIP of action scripts:
-
-```powershell
-Set-Location 'C:\Path\To\SelfX Standard'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 `
-  -XML_Link 'https://example.invalid/selfx/Issues_List.xml' `
-  -ZIP_Link 'https://example.invalid/selfx/Scripts_to_run.zip'
-```
-
-Use your organization's actual HTTPS URLs. The XML and scripts are executable
-configuration; publish them only from a trusted, access-controlled location.
-See [Configuration](Configuration.md#selfx-standard) for the update format.
-
-### Uninstall
-
-Close SelfX, then run `Uninstall.ps1` from the `SelfX Standard` directory in the
-same user context:
-
-```powershell
-Set-Location 'C:\Path\To\SelfX Standard'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1
-```
-
-The script removes the configured Desktop and Start menu shortcuts and deletes
-the current user's `%LOCALAPPDATA%\SelfX` directory recursively. Back up any
-local configuration or downloaded content that must be retained.
-
-## SelfX Admin
-
-SelfX Admin has no installer or service-registration script in this repository.
-Deploy or extract the complete `SelfX Admin` directory, then launch it from that
-directory:
-
-```powershell
-Set-Location 'C:\Path\To\SelfX Admin'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Run_SelX.ps1
-```
-
-`Run_SelX.ps1` starts PowerShell through `ServiceUI.exe` and uses the current
-process token. For a deployment running as SYSTEM, this can display the UI in
-the interactive user's session while the actions retain the SYSTEM token. This
-behavior depends on the deployment tool and the active session; it is not an
-installed SelfX service and it does not elevate a standard-user process.
-
-SelfX Admin is an older code base and was not part of the security hardening of
-SelfX Service (2.6.10 and 2.6.11). If you can, use SelfX Service for actions that
-need administrator rights. If you use SelfX Admin, store it only in a folder that
-only administrators can change, keep `List_config.xml` on `Manual` (no download)
-and do not start it as SYSTEM unless the actions need it.
-
-If running manually, use an appropriately elevated PowerShell process only
-when the selected actions require it. Keep the working directory at
-`SelfX Admin`, because the scripts use relative paths for XML, XAML and
-assemblies.
-
-## Building the Intune packages
-
-`tools\New-SelfXIntuneWin.ps1` creates one `.intunewin` file per product in
+`tools\New-SelfXIntuneWin.ps1` creates the `.intunewin` file of SelfX Service in
 the `build` folder of the repository (the folder is not committed, see
 `.gitignore`). It uses Microsoft's
 [Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool)
@@ -327,39 +250,34 @@ repository, and the script does not install a PowerShell packaging module.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXIntuneWin.ps1 `
-  -Product Service -ToolPath C:\Tools\IntuneWinAppUtil.exe
+  -ToolPath C:\Tools\IntuneWinAppUtil.exe
 ```
 
-| Product | Source folder | Setup file | Package |
-|---|---|---|---|
-| Admin | `SelfX Admin` | `Run_SelX.ps1` | `build\SelfX-Admin-<version>.intunewin` |
-| Service | `SelfX Service` | `Install.ps1` | `build\SelfX-Service-<version>.intunewin` |
-| User | `SelfX Standard` | `Install.ps1` | `build\SelfX-User-<version>.intunewin` |
+| Source folder | Setup file | Package |
+|---|---|---|
+| `SelfX Service` | `Install.ps1` | `build\SelfX-Service-<version>.intunewin` |
 
-The version is `Tool_Version` of the product (`Sources\Tool_Config.xml`; for
-SelfX Admin `Issues_List.xml`). The script copies each product folder to a
+The version is `Tool_Version` (`Sources\Tool_Config.xml`). The script copies the folder to a
 temporary staging folder and leaves out the packaging tests (`Test-*.ps1`).
 Before packaging it checks that the setup file exists and that every XML file
-is valid. For SelfX Service it also checks that `$ExpectedVersion` in
+is valid. It also checks that `$ExpectedVersion` in
 `Detection.ps1` equals `Tool_Version`. With `-ToolPath` it verifies the
 Microsoft signature of `IntuneWinAppUtil.exe`. It uploads nothing to Intune. Exit code
-`0` means all packages were created; `1` means at least one failed. Run the
+`0` means the package was created; `1` means it failed. Run the
 tests of SelfX Service before building.
 
-Use the packages in Intune as follows:
+Use the package in Intune as follows:
 
-| Product | Install command | Install behavior | Uninstall / detection |
-|---|---|---|---|
-| Service | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, custom script `Detection.ps1` (see [SelfX Service](#selfx-service)) |
-| User | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | User | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1`, custom script `Detection.ps1` (checks `%LOCALAPPDATA%\SelfX`) |
-| Admin | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Run_SelX.ps1` | System | No installer and no detection script: the package only starts the UI through `ServiceUI.exe` while the app runs (see [SelfX Admin](#selfx-admin)). Choose a detection rule that fits how you offer it. |
+| Install command | Install behavior | Uninstall / detection |
+|---|---|---|
+| `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, custom script `Detection.ps1` (see [SelfX Service](#selfx-service)) |
 
 ## Deployment checklist
 
 1. Review the XML action list and every referenced `.ps1` script.
-2. Verify whether the package is launched in user or SYSTEM context.
+2. Install as System (the installer needs administrator rights).
 3. Test the UI and each intended action on a non-production device.
-4. Confirm the deployment tool presents the UI in the intended user session.
-5. Keep the complete package together; do not omit `assembly`, icons, XML,
-   XAML or action scripts.
-6. For SelfX Service, follow the [release checklist](#release-checklist-selfx-service).
+4. Check the status icon and the window as a standard user (no administrator).
+5. Keep the complete package together; do not omit icons, XML, XAML or action
+   scripts.
+6. Follow the [release checklist](#release-checklist-selfx-service).

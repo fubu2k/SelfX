@@ -352,8 +352,6 @@ try {
     Assert-Equal $sync.Kind ([DateTimeKind]::Local) 'OMA-DM time is local time'
     Assert-Equal (ConvertFrom-SelfXOmaDmTime 'garbage') $null 'Invalid OMA-DM time'
     Assert-Equal (ConvertFrom-SelfXOmaDmTime '') $null 'Empty OMA-DM time'
-    $standardText = [IO.File]::ReadAllText((Join-Path (Split-Path $PSScriptRoot) 'SelfX Standard\Sources\SystemInfo.ps1'))
-    Assert-Equal ($standardText.Contains('.ToLocalTime()')) $false 'SelfX Standard does not shift the OMA-DM time either'
 
     # --- Tray icon: status, tooltip and notifications (no icon is shown, nothing is started) -------
     $tray = Get-ScriptAst "$sources\SelfX_Tray.ps1"

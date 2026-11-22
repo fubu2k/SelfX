@@ -1,7 +1,6 @@
 # SelfX Service
 
-SelfX Service combines SelfX Standard and SelfX Admin into one package that is
-installed locally and works without any network connection. Current version:
+SelfX Service is installed machine-wide and works without any network connection. Current version:
 **2.6.11** (see the [Changelog](../CHANGELOG.md)).
 
 - One modern, resizable user interface for users without technical knowledge
@@ -25,7 +24,7 @@ installed locally and works without any network connection. Current version:
   without any command window (`SelfX.exe`).
 - One action catalogue (`Sources\Issues_List.xml`). Each action has a
   `Context`:
-  - `User` actions run in the signed-in user's session, as in SelfX Standard.
+  - `User` actions run in the signed-in user's session.
   - `System` actions are sent to the local **SelfXService** Windows service,
     which runs them with SYSTEM rights. In the list these actions are marked
     with a shield icon.
@@ -196,4 +195,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 
 See [Installation](../docs/Installation.md#selfx-service),
 [Configuration](../docs/Configuration.md#selfx-service) and the
-[User manual](../docs/User-Manual.md#selfx-service).
+[User manual](../docs/User-Manual.md#selfx).

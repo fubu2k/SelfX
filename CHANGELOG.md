@@ -11,6 +11,16 @@ histories of the single files show where a change was made. Changes marked
 2.6.10 were made before the package version was raised; they are delivered with
 **2.6.11**, the first package version of this fork.
 
+## Repository, 2026-11-22
+
+- The fork is developed only for SelfX Service. The folders `SelfX Standard`
+  and `SelfX Admin` were removed; use the upstream projects if you need them.
+  `tools\New-SelfXIntuneWin.ps1` (1.3.0) builds only the SelfX Service package;
+  `Test-UI.ps1` no longer reads a file of SelfX Standard.
+- README, installation guide, configuration guide, user manual and
+  `SECURITY.md` describe only SelfX Service.
+- The package version of SelfX Service is unchanged (2.6.11).
+
 ## 2.6.11 - 2026-11-22 (SelfX Service)
 
 Security hardening release. It replaces the service and the installer: redeploy
