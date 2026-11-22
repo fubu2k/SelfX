@@ -505,16 +505,14 @@ rejected explicitly, not shown as OK. Repair actions and checks requested by
 SelfX share a lock: a concurrent request returns Busy; retry after it finishes.
 A check requested while a background check runs waits until it has finished.
 
-Run the isolated tests before packaging:
-
-```powershell
-powershell.exe -NoProfile -File '.\SelfX Service\Test-HealthStatus.ps1'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-UI.ps1'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-Scripts.ps1'
-```
+Run all tests of the package before packaging, see the
+[release checklist](Installation.md#release-checklist-selfx-service). The
+catalogue and the health configuration are also checked by `Test-Catalog.ps1`
+(2.6.10).
 
 Tests mock all system probes and script execution. They do not install a
-service or execute real custom scripts. `Test-Scripts.ps1` (2.6.0) runs every
+service or execute real custom scripts; `Test-ServicePipe.ps1` only starts the
+pipe listener of the service under a test pipe name. `Test-Scripts.ps1` (2.6.0) runs every
 action and repair script in a temporary sandbox with mocked commands (no
 process is closed, nothing is started or restarted) and checks its result and
 its log; only the read-only scripts `Check-Compliance.ps1`, `Detection.ps1`

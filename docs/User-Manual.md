@@ -45,6 +45,12 @@ Solutions with a **shield** need administrator rights. SelfX runs them for you
 through the local SelfX service, so you do not need an administrator account.
 Only one shield solution can run at a time.
 
+If another person is signed in to the same device (for example on a shared PC
+or in a remote session), SelfX does not run solutions that would disturb that
+person, such as restarting the device, installing updates, the disk check or
+restarting the network adapters. SelfX tells you so. Try again when you are the
+only user, or ask your support team.
+
 At the bottom left you see whether the SelfX service is running (green dot). If
 it is not running (red dot), solutions with a shield and the device status are
 not available. Restart your device or contact your support team.

@@ -35,7 +35,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.6.0
+    Version : 2.6.11
 
     History:
     Version  Date        Author               Change
