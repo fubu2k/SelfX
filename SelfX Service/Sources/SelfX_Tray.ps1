@@ -26,7 +26,7 @@
     Name    : SelfX_Tray.ps1
     Package : SelfX Service
     Context : User (started at sign-in, HKLM Run entry)
-    Version : 2.6.5
+    Version : 2.8.8
 
     History:
     Version  Date        Author               Change
@@ -38,6 +38,7 @@
     2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1): start, status changes, notifications, stop reason
     2.6.5    2026-11-06  Wolfgang Baeck       Notifications per user (HKCU TrayNotifications): menu item "Show notifications" and
                                               switch in SelfX > Settings; problems are remembered also while they are off
+    2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -268,8 +269,8 @@ Function Start-TraySystemInfoCache
 	{
 		$Global:Tray_Info_PS = [PowerShell]::Create()
 		[void]$Global:Tray_Info_PS.AddScript($Global:Tray_Job_Script).AddStatement().AddScript(
-			'param($TestHost, $TestPort, $Text, $Culture) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text); Save-SelfXSystemInfoCache -Items $Items -Culture $Culture'
-		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture)
+			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig); Save-SelfXSystemInfoCache -Items $Items -Culture $Culture'
+		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture).AddArgument((Join-Path $Global:Tray_Folder 'Network_Test_Config.xml'))
 		$Global:Tray_Info_Job = $Global:Tray_Info_PS.BeginInvoke()
 	}
 

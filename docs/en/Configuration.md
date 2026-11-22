@@ -343,6 +343,45 @@ and write the report as `DeviceLogs-*.zip` or `DeviceLogs-*.txt` to
 catalogue actions to hide the feature; the System information button is shown
 only when a `System` action with `MailReport` exists.
 
+### Network measurements (SelfX Service 2.8.8)
+
+Optional and off by default. The file `Network_Test_Config.xml` (in the install folder, writable by administrators only) switches on additional rows in the Network section of the *System information* page: round-trip time to the default gateway, duration of a name lookup (DNS) and duration of a TCP connection to targets listed in the file. The measurements run in the context of the user, read-only, in the background together with the other system information. There is no user input: users cannot add or change targets.
+
+```xml
+<Network_Test_Config>
+  <Settings Enabled="True" Gateway="True" Samples="3" TimeoutMs="2000" />
+  <Targets>
+    <Target Label="Intranet" Host="intranet.example.org" Port="443" />
+    <Target Label="Internet" Host="www.example.org" Port="443" />
+  </Targets>
+</Network_Test_Config>
+```
+
+| Setting | Meaning |
+|---|---|
+| `Enabled` | `True` switches the measurements on (default `False`). |
+| `Gateway` | `True` (default): ping to the default gateway. |
+| `Samples` | Measurements per value, 1 to 5 (default 3). |
+| `TimeoutMs` | Wait time per measurement, 200 to 5000 ms (default 2000). |
+| `Target` | Up to 5 targets. `Label` (display name, letters, digits, `. _ -` and space, up to 40 characters), `Host` (DNS name or IPv4 address), `Port` (optional, 1 to 65535). |
+
+**Domain name is freely selectable:** The name of the target is only in the configuration, not in the code. This defines what is measured:
+- An **internal name** (reachable only in the company network or through VPN) shows the quality of the internal connection (office, VPN).
+- A **name reachable from the internet** shows the connection of a device that works remotely without VPN. Use an address that the organisation operates itself or that is meant for such tests.
+- Both can be combined (for example one internal and one external target).
+
+**Values:**
+- *Latency: default gateway*: average, minimum and maximum of the ping replies and the number of lost replies. If no IPv4 gateway address is known the row is missing.
+- *DNS lookup: <Label>*: duration of the name lookup through the Windows resolver. Its cache applies, so repeated measurements can be faster than the first one. The row is missing when `Host` is an IPv4 address.
+- *Connection: <Label>*: time until a TCP connection to `Host:Port` is open. The connection is closed at once and no data is sent. Without `Port` the row is missing. The connection uses the address found by the name lookup.
+- If all measurements of a value are lost the row is an error; if some are lost it is a warning.
+- The measurements of one run take at most 20 seconds. The remaining rows then show "not measured (time limit reached)".
+- No throughput (bandwidth) is measured.
+
+**Security and privacy:** Targets come only from the file (administrators), `Host` is checked strictly (letters, digits, hyphen and dots only; no scheme, path, port or spaces), at most 5 targets, a DTD in the XML is refused. Invalid entries are skipped, a file that cannot be read switches the measurements off. The rows are part of the copy, export and ticket of the system information, including the configured host names. The device sends only a name query, ping packets to the gateway and the TCP connection set-up to the listed targets.
+
+**Check before distribution:** `tools\Test-SelfXNetworkMeasure.ps1` shows the settings, the targets and invalid entries. With `-Run` it makes the measurements once on the current device (also with `Enabled="False"`).
+
 ### Ticket by e-mail (SelfX Service 2.8.5, assignment 2.8.6)
 
 Optional and off by default (`Ticket_Enabled` = `False`). When enabled and a valid address is set, the help dialog (?) shows the row *Report an issue* with the button *Create ticket*.

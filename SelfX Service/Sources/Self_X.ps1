@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.6.9
+    Version : 2.8.8
 
     History:
     Version  Date        Author               Change
@@ -80,6 +80,7 @@
     2.6.6    2026-11-06  Wolfgang Baeck       Appearance Automatic (Settings): follows the app mode of Windows, also while SelfX is open
     2.6.7    2026-11-16  Wolfgang Baeck       Default appearance Automatic (Tool_Theme missing or unknown value)
     2.6.9    2026-11-19  Wolfgang Baeck       Fix, Fix all and Check all are no longer refused while the cached status is read (every minute)
+    2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -1894,8 +1895,8 @@ Function Start-SysInfoCollection
 		Set-SysInfoBusy $True
 		$Global:SysInfo_PS = [PowerShell]::Create()
 		[void]$Global:SysInfo_PS.AddScript($Global:SysInfo_Script).AddStatement().AddScript(
-			'param($TestHost, $TestPort, $Text, $Culture) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text); try { Save-SelfXSystemInfoCache -Items $Items -Culture $Culture } catch { }; $Items'
-		).AddArgument($SysInfo_Test_Host).AddArgument($SysInfo_Test_Port).AddArgument($Global:SysInfo_Texts).AddArgument($SelfX_UI_Language.Culture)
+			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig); try { Save-SelfXSystemInfoCache -Items $Items -Culture $Culture } catch { }; $Items'
+		).AddArgument($SysInfo_Test_Host).AddArgument($SysInfo_Test_Port).AddArgument($Global:SysInfo_Texts).AddArgument($SelfX_UI_Language.Culture).AddArgument((Join-Path $Current_Folder 'Network_Test_Config.xml'))
 		$Global:SysInfo_Handle = $Global:SysInfo_PS.BeginInvoke()
 		$SysInfo_Timer.Start()
 	}

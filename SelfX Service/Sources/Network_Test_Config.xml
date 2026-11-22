@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network_Test_Config.xml: optional latency measurements on the System information page (SelfX Service 2.8.8).
+  Off by default (Enabled="False"). Only administrators can change this file; users cannot add or change targets.
+
+  The measurements run in the context of the user, only read, and send no data other than a name lookup,
+  an ICMP echo request to the default gateway and the opening (and immediate closing) of a TCP connection.
+  They run in the background together with the other system information.
+
+  Settings
+    Enabled    True switches the measurements on.
+    Gateway    True (default) measures the round-trip time (ping) to the default gateway.
+    Samples    Measurements per value, 1 to 5 (default 3).
+    TimeoutMs  Wait time per measurement in milliseconds, 200 to 5000 (default 2000).
+
+  Targets (up to 5)
+    Label  Name shown in the list (letters, digits . _ - and space, up to 40 characters).
+    Host   DNS name or IPv4 address. Choose the name according to what the measurement should show:
+           - an internal name (reachable only in the company network or through VPN) shows the quality of the
+             internal connection (office, VPN);
+           - a name that is reachable from the internet shows the connection of a device that works remotely
+             without VPN. Use an address that you operate or that is meant for such tests.
+    Port   Optional (1 to 65535). With a port the time to open a TCP connection is measured too.
+           Without a port only the name lookup is measured. For an IPv4 address no name lookup is measured.
+  Entries that are not valid are skipped. Check the file with tools\Test-SelfXNetworkMeasure.ps1.
+
+  Note on the DNS time: the name is resolved through the Windows resolver, so its cache applies. Repeated
+  measurements can be faster than the first one.
+
+  Example (remove the comment marks):
+  <Targets>
+    <Target Label="Intranet" Host="intranet.example.org" Port="443" />
+    <Target Label="Internet" Host="www.example.org" Port="443" />
+  </Targets>
+-->
+<Network_Test_Config>
+  <Settings Enabled="False" Gateway="True" Samples="3" TimeoutMs="2000" />
+  <Targets>
+  </Targets>
+</Network_Test_Config>

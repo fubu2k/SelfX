@@ -251,6 +251,12 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Proxy_Script>Automatisches Konfigurationsskript</Proxy_Script>
 		<Network_Drives>Netzlaufwerke</Network_Drives>
 		<Network_Drives_None>Keine</Network_Drives_None>
+		<Latency_Gateway>Latenz: Standardgateway</Latency_Gateway>
+		<Latency_Dns>DNS-Abfrage: {0}</Latency_Dns>
+		<Latency_Connection>Verbindung: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} von {4} verloren)</Latency_Value>
+		<Latency_Failed>nicht erreichbar ({0} von {1} fehlgeschlagen)</Latency_Failed>
+		<Latency_Skipped>nicht gemessen (Zeitlimit erreicht)</Latency_Skipped>
 		<Collected_At>Erfasst am</Collected_At>
 		<Error>Fehler</Error>
 		<Yes>Ja</Yes>

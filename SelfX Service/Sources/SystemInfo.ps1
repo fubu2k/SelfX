@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.8.3
+    Version : 2.8.8
 
     History:
     Version  Date        Author               Change
@@ -47,6 +47,8 @@
     2.6.0    2026-11-06  Wolfgang Baeck       Label "Company apps (Intune)" instead of "Applications (local IME cache)"
     2.8.2    2026-11-22  fubu2k               Uptime row shows a restart hint (warning status) from 7 days without a restart (Get-SelfXUptimeInfo)
     2.8.3    2026-11-22  fubu2k               Network: proxy setting of the user (server and port, configuration script address; credentials masked) and mapped network drive letters
+    2.8.8    2026-11-22  fubu2k               Optional latency measurements (default gateway, DNS lookup and connection time to configured targets;
+                                              Network_Test_Config.xml, off by default)
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -66,6 +68,9 @@ $Script:SelfXInfoDefaultText = @{
 	IPv4 = 'IPv4 address(es)'; IPv6 = 'IPv6 address(es)'; Gateway = 'Default gateway'; DNS = 'DNS server(s)'; MAC = 'MAC address(es)'
 	Proxy = 'Proxy (user setting)'; Proxy_None = 'No proxy'; Proxy_Manual = 'Manual proxy'; Proxy_Script = 'Automatic configuration script'
 	Network_Drives = 'Network drives'; Network_Drives_None = 'None'
+	Latency_Gateway = 'Latency: default gateway'; Latency_Dns = 'DNS lookup: {0}'; Latency_Connection = 'Connection: {0}'
+	Latency_Value = '{0} ms (min {1}, max {2}, {3} of {4} lost)'; Latency_Failed = 'not reachable ({0} of {1} failed)'
+	Latency_Skipped = 'not measured (time limit reached)'
 	Collected_At = 'Collected at'; Error = 'Error'; Yes = 'Yes'; No = 'No'; Not_Available = 'n/a'
 	Not_Enrolled = 'Not enrolled / unknown'; No_WiFi = 'No Wi-Fi connection'
 	Category_Health = 'Health status'; Health_IME = 'IME service'; Health_Defender = 'Microsoft Defender'
@@ -436,11 +441,232 @@ function Get-SelfXGatewayInterfaceIndexes {
 	return @(Invoke-SelfXSafe { Get-SelfXDefaultRouteInterfaceIndexes })
 }
 
+# Network measurements (optional, off by default). Targets come only from Network_Test_Config.xml
+# (writable by administrators only), never from the user. Everything runs in the user context and only reads.
+
+# True for a DNS name (letters, digits, hyphen, dots; labels up to 63 characters, total up to 253) or an IPv4 address.
+function Test-SelfXNetworkHostName {
+	param([string]$Name)
+	if ([string]::IsNullOrEmpty($Name) -or $Name.Length -gt 253) { return $false }
+	return ($Name -match '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\z')
+}
+
+# True for an IPv4 address in dotted notation (no DNS lookup is measured for it).
+function Test-SelfXIPv4Literal {
+	param([string]$Name)
+	if ($Name -notmatch '^\d{1,3}(\.\d{1,3}){3}\z') { return $false }
+	$address = $null
+	return [Net.IPAddress]::TryParse($Name, [ref]$address)
+}
+
+# Reads Network_Test_Config.xml. Entries that are not valid are skipped and named in Errors; a file that cannot
+# be read switches the measurements off. Limits: up to MaxTargets targets, 1-5 samples, 200-5000 ms timeout.
+function Read-SelfXNetworkTestConfig {
+	param([Parameter(Mandatory = $true)][string]$Path, [int]$MaxTargets = 5)
+	$errors = New-Object System.Collections.Generic.List[string]
+	$targets = New-Object System.Collections.Generic.List[object]
+	$result = [pscustomobject]@{ Enabled = $false; Gateway = $true; Samples = 3; TimeoutMs = 2000; Targets = @(); Errors = @() }
+	$doc = New-Object Xml.XmlDocument
+	$doc.XmlResolver = $null
+	$reader = $null
+	try {
+		$settings = New-Object Xml.XmlReaderSettings
+		$settings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
+		$settings.XmlResolver = $null
+		$reader = [Xml.XmlReader]::Create($Path, $settings)
+		$doc.Load($reader)
+	} catch {
+		$result.Errors = @("The file cannot be read: $($_.Exception.Message)")
+		return $result
+	} finally {
+		if ($reader) { $reader.Dispose() }
+	}
+	$node = $doc.SelectSingleNode('/Network_Test_Config/Settings')
+	if (-not $node) { $result.Errors = @('Settings element is missing.'); return $result }
+	$result.Enabled = ($node.GetAttribute('Enabled').Trim() -eq 'True')
+	$result.Gateway = ($node.GetAttribute('Gateway').Trim() -ne 'False')
+	$value = 0
+	$text = $node.GetAttribute('Samples').Trim()
+	if ($text) {
+		if ([int]::TryParse($text, [ref]$value) -and $value -ge 1 -and $value -le 5) { $result.Samples = $value }
+		else { $errors.Add('Samples must be a number from 1 to 5: 3 is used.') }
+	}
+	$text = $node.GetAttribute('TimeoutMs').Trim()
+	if ($text) {
+		if ([int]::TryParse($text, [ref]$value) -and $value -ge 200 -and $value -le 5000) { $result.TimeoutMs = $value }
+		else { $errors.Add('TimeoutMs must be a number from 200 to 5000: 2000 is used.') }
+	}
+	$count = 0
+	foreach ($target in @($doc.SelectNodes('/Network_Test_Config/Targets/Target'))) {
+		$count++
+		if ($count -gt $MaxTargets) { $errors.Add("More than $MaxTargets targets: the rest is ignored."); break }
+		$label = $target.GetAttribute('Label').Trim()
+		$name = $target.GetAttribute('Host').Trim()
+		$portText = $target.GetAttribute('Port').Trim()
+		if ($label -notmatch '^[A-Za-z0-9._ -]{1,40}\z') { $errors.Add("Target $count has no valid Label (letters, digits . _ - and space, up to 40)."); continue }
+		if (-not (Test-SelfXNetworkHostName $name)) { $errors.Add("Target '$label' has no valid Host (DNS name or IPv4 address): skipped."); continue }
+		$port = 0
+		if ($portText) {
+			if (-not ([int]::TryParse($portText, [ref]$port) -and $port -ge 1 -and $port -le 65535)) { $errors.Add("Target '$label' has no valid Port (1-65535): skipped."); continue }
+		}
+		if (@($targets | Where-Object { $_.Label -eq $label }).Count) { $errors.Add("Target '$label' is listed twice: the first entry is used."); continue }
+		$targets.Add([pscustomobject]@{ Label = $label; Host = $name; Port = $port })
+	}
+	$result.Targets = $targets.ToArray()
+	$result.Errors = $errors.ToArray()
+	return $result
+}
+
+# Minimum, average and maximum (whole milliseconds) of the samples; $null in Samples = lost or failed.
+function Get-SelfXLatencyStats {
+	param([object[]]$Samples = @())
+	$values = @($Samples | Where-Object { $null -ne $_ } | ForEach-Object { [double]$_ })
+	$sent = @($Samples).Count
+	$stats = [pscustomobject]@{ Sent = $sent; Lost = ($sent - $values.Count); Min = $null; Avg = $null; Max = $null }
+	if ($values.Count) {
+		$measure = $values | Measure-Object -Minimum -Maximum -Average
+		$stats.Min = [int][math]::Round($measure.Minimum)
+		$stats.Avg = [int][math]::Round($measure.Average)
+		$stats.Max = [int][math]::Round($measure.Maximum)
+	}
+	return $stats
+}
+
+# Time of a name resolution through the Windows resolver (its cache applies, so repeated samples can be faster).
+# Returns Stats, Address (first IPv4 address, otherwise the first address; $null if it did not resolve) and Skipped
+# (the Deadline was reached before all samples were taken).
+function Measure-SelfXDnsLatency {
+	param([string]$HostName, [int]$Samples = 3, [int]$TimeoutMs = 2000, [datetime]$Deadline = [datetime]::MaxValue)
+	$times = New-Object System.Collections.Generic.List[object]
+	$address = $null
+	for ($i = 0; $i -lt $Samples; $i++) {
+		if ([datetime]::UtcNow -gt $Deadline) { break }
+		$elapsed = $null
+		try {
+			$stopwatch = [Diagnostics.Stopwatch]::StartNew()
+			$task = [Net.Dns]::GetHostAddressesAsync($HostName)
+			if ($task.Wait($TimeoutMs)) {
+				$stopwatch.Stop()
+				$found = @($task.Result)
+				if ($found.Count) {
+					$elapsed = $stopwatch.Elapsed.TotalMilliseconds
+					if (-not $address) {
+						$ipv4 = @($found | Where-Object { $_.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork })
+						$address = "$(if ($ipv4.Count) { $ipv4[0] } else { $found[0] })"
+					}
+				}
+			}
+		} catch { $elapsed = $null }
+		$times.Add($elapsed)
+	}
+	return [pscustomobject]@{ Stats = (Get-SelfXLatencyStats $times.ToArray()); Address = $address; Skipped = ($times.Count -lt $Samples) }
+}
+
+# Time to open a TCP connection to Address:Port (the connection is closed at once, no data is sent).
+function Measure-SelfXTcpLatency {
+	param([string]$Address, [int]$Port, [int]$Samples = 3, [int]$TimeoutMs = 2000, [datetime]$Deadline = [datetime]::MaxValue)
+	$times = New-Object System.Collections.Generic.List[object]
+	for ($i = 0; $i -lt $Samples; $i++) {
+		if ([datetime]::UtcNow -gt $Deadline) { break }
+		$elapsed = $null
+		$client = New-Object System.Net.Sockets.TcpClient
+		try {
+			$stopwatch = [Diagnostics.Stopwatch]::StartNew()
+			$async = $client.BeginConnect($Address, $Port, $null, $null)
+			if ($async.AsyncWaitHandle.WaitOne($TimeoutMs, $false) -and $client.Connected) {
+				$client.EndConnect($async)
+				$stopwatch.Stop()
+				$elapsed = $stopwatch.Elapsed.TotalMilliseconds
+			}
+		} catch { $elapsed = $null }
+		finally { $client.Close() }
+		$times.Add($elapsed)
+	}
+	return [pscustomobject]@{ Stats = (Get-SelfXLatencyStats $times.ToArray()); Skipped = ($times.Count -lt $Samples) }
+}
+
+# Round-trip time of ICMP echo requests to Address (used for the default gateway).
+function Measure-SelfXPingLatency {
+	param([string]$Address, [int]$Samples = 3, [int]$TimeoutMs = 2000, [datetime]$Deadline = [datetime]::MaxValue)
+	$times = New-Object System.Collections.Generic.List[object]
+	$ping = New-Object System.Net.NetworkInformation.Ping
+	try {
+		for ($i = 0; $i -lt $Samples; $i++) {
+			if ([datetime]::UtcNow -gt $Deadline) { break }
+			$elapsed = $null
+			try {
+				$reply = $ping.Send($Address, $TimeoutMs)
+				if ($reply.Status -eq [Net.NetworkInformation.IPStatus]::Success) { $elapsed = [double]$reply.RoundtripTime }
+			} catch { $elapsed = $null }
+			$times.Add($elapsed)
+		}
+	} finally { $ping.Dispose() }
+	return [pscustomobject]@{ Stats = (Get-SelfXLatencyStats $times.ToArray()); Skipped = ($times.Count -lt $Samples) }
+}
+
+# Text and status of one measurement: all lost = Error, some lost = Pending (warning), otherwise no status.
+function ConvertTo-SelfXLatencyInfo {
+	param($Measurement)
+	if ($Measurement.Skipped -and -not $Measurement.Stats.Sent) {
+		return [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Skipped'); Status = '' }
+	}
+	$stats = $Measurement.Stats
+	if ($stats.Lost -ge $stats.Sent) {
+		return [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Failed' $stats.Lost $stats.Sent); Status = 'Error' }
+	}
+	$status = $(if ($stats.Lost) { 'Pending' } else { '' })
+	return [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Value' $stats.Avg $stats.Min $stats.Max $stats.Lost $stats.Sent); Status = $status }
+}
+
+# Info items for the network measurements: default gateway (ping), per target the DNS lookup and, with a Port,
+# the connection time. The whole run stops after DeadlineSeconds; targets not reached are shown as not measured.
+function Get-SelfXNetworkMeasureItems {
+	param(
+		[string]$Category,
+		$Config,
+		[string[]]$Gateways = @(),
+		[int]$DeadlineSeconds = 20
+	)
+	$items = New-Object System.Collections.Generic.List[object]
+	if (-not $Config -or -not $Config.Enabled) { return $items.ToArray() }
+	$deadline = [datetime]::UtcNow.AddSeconds($DeadlineSeconds)
+	if ($Config.Gateway) {
+		$gateway = @($Gateways | Where-Object { Test-SelfXIPv4Literal $_ } | Select-Object -First 1)
+		if ($gateway.Count) {
+			$info = ConvertTo-SelfXLatencyInfo (Measure-SelfXPingLatency -Address $gateway[0] -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline)
+			$items.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Gateway') $info.Value $info.Status))
+		}
+	}
+	foreach ($target in @($Config.Targets)) {
+		$address = $target.Host
+		$dnsSkipped = $false
+		if (-not (Test-SelfXIPv4Literal $target.Host)) {
+			$dns = Measure-SelfXDnsLatency -HostName $target.Host -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline
+			$info = ConvertTo-SelfXLatencyInfo $dns
+			$items.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Dns' $target.Label) ('{0}: {1}' -f $target.Host, $info.Value) $info.Status))
+			$address = $dns.Address
+			$dnsSkipped = ($dns.Skipped -and -not $dns.Stats.Sent)
+		}
+		if ($target.Port -gt 0) {
+			if ($address) {
+				$info = ConvertTo-SelfXLatencyInfo (Measure-SelfXTcpLatency -Address $address -Port $target.Port -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline)
+			} elseif ($dnsSkipped) {
+				$info = [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Skipped'); Status = '' }
+			} else {
+				$info = [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Failed' $Config.Samples $Config.Samples); Status = 'Error' }
+			}
+			$items.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Connection' $target.Label) ('{0}:{1}: {2}' -f $target.Host, $target.Port, $info.Value) $info.Status))
+		}
+	}
+	return $items.ToArray()
+}
+
 # Collects all information and returns a list of Category/Property/Value objects.
 function Get-SelfXSystemInfo {
 	param(
 		[string]$InternetTestHost = 'www.msftconnecttest.com',
 		[int]$InternetTestPort = 80,
+		[string]$NetworkTestConfigPath = '',
 		[hashtable]$Text = @{},
 		[switch]$IncludeHealth
 	)
@@ -550,6 +776,13 @@ function Get-SelfXSystemInfo {
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Proxy') (ConvertTo-SelfXProxyText $proxySettings)))
 	$driveLetters = Invoke-SelfXSafe { @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq [IO.DriveType]::Network } | ForEach-Object { $_.Name.TrimEnd('\') }) }
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Network_Drives') (Get-SelfXNetworkDriveText $driveLetters)))
+	# Optional latency measurements (only with an enabled Network_Test_Config.xml).
+	if ($NetworkTestConfigPath -and (Test-Path -LiteralPath $NetworkTestConfigPath -PathType Leaf)) {
+		$measureConfig = Invoke-SelfXSafe { Read-SelfXNetworkTestConfig -Path $NetworkTestConfigPath }
+		foreach ($measureItem in @(Invoke-SelfXSafe { Get-SelfXNetworkMeasureItems -Category $catNetwork -Config $measureConfig -Gateways $gateways })) {
+			if ($measureItem) { $items.Add($measureItem) }
+		}
+	}
 
 	$items.Add((New-SelfXInfoItem $catReport (& $L 'Collected_At') (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')))
 	if ($IncludeHealth) {
