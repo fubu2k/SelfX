@@ -8,12 +8,13 @@
     (default ProgramFiles\SelfX; the folder itself is kept because an open SelfX window or
     status icon may use it as working directory, locked files are retried for 20 seconds),
     copies Sources and Uninstall.ps1, and installs the service SelfXService.exe and the console-less
-    starter SelfX.exe (SelfXLauncher.cs) used by the shortcuts and the status icon. When the package
-    contains the folder Bin (built centrally by tools\Build-SelfXBinaries.ps1), these prebuilt files
-    are installed after a check: the manifest Bin\SelfX.Binaries.json must list the SHA256 of the
-    sources in the package and of each file. Any failed check stops the installation (nothing is
-    compiled instead). The files are unsigned; AppLocker/WDAC allow them with hash rules. Without Bin both programs are compiled on the device as before, with the temporary
-    files of the compiler in a folder that only SYSTEM and administrators can write.
+    starter SelfX.exe (SelfXLauncher.cs) used by the shortcuts and the status icon. Both are .NET 10
+    programs (self-contained: no .NET runtime is needed on the device) that are built centrally by
+    tools\Build-SelfXBinaries.ps1 into the folder Bin of the package. Before anything on the device is
+    changed, Install.ps1 checks them: the manifest Bin\SelfX.Binaries.json must list the SHA256 of the
+    sources in the package and of each file. A missing Bin folder or any failed check stops the
+    installation with the old installation still in place (nothing is compiled on the device any more).
+    The files are unsigned; AppLocker/WDAC allow them with hash rules.
     Registers and starts an automatic LOCAL SYSTEM service with recovery restart actions.
     Restricts installed files against user modification and ProgramData\SelfX logs and the
     status cache to SYSTEM/administrators. Creates ProgramData\SelfX\Logs\Users, in which users
@@ -24,7 +25,7 @@
     (SelfX_Tray.ps1) at every sign-in for all users; otherwise the entry is removed. Running
     status icons are closed before the files are replaced. When the installer runs as SYSTEM,
     the new status icon is then started right away in every active user session with the
-    (not elevated) rights of the signed-in user (SelfXSessionStarter.cs, compiled in memory);
+    (not elevated) rights of the signed-in user (SelfXSessionStarter.dll from Bin, loaded from the package);
     in other contexts it appears at the next sign-in. A failed start is logged and does not
     fail the installation. Open SelfX windows are not closed. Reinstallation
     removes local customizations in InstallFolder and interrupts service actions. No Windows
@@ -35,7 +36,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.6.11
+    Version : 2.7.0
 
     History:
     Version  Date        Author               Change
@@ -54,6 +55,8 @@
     2.6.0    2026-11-06  Wolfgang Baeck       Logs\Users folder for the logs of the users (SelfXLog.ps1)
     2.6.11   2026-11-22  fubu2k               Prebuilt programs from Bin, checked against the SHA256 manifest; on-device
                                               compiling uses a protected TEMP (F9)
+    2.7.0    2026-11-22  fubu2k               .NET 10 programs: Bin is required and checked before the old installation
+                                              is touched; compiling on the device was removed
 #>
 
 [CmdletBinding()]
@@ -66,9 +69,6 @@ $ServiceName = 'SelfXService'
 $ServiceDisplayName = 'SelfX Service'
 $PackageFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $SourcesFolder = Join-Path $PackageFolder 'Sources'
-$ServiceSource = Join-Path $PackageFolder 'Service\SelfXService.cs'
-$LauncherSource = Join-Path $PackageFolder 'Service\SelfXLauncher.cs'
-$SessionStarterSource = Join-Path $PackageFolder 'Service\SelfXSessionStarter.cs'
 $BinFolder = Join-Path $PackageFolder 'Bin'
 $DataFolder = Join-Path $env:ProgramData 'SelfX'
 $LogFolder = Join-Path $DataFolder 'Logs'
@@ -77,7 +77,7 @@ $PowerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powe
 
 function Test-SelfXPrebuiltBinaries {
 	# Checks the prebuilt programs of the package (F9). Throws with a reason when any check fails; the caller
-	# stops the installation then (fail closed, no fallback to compiling).
+	# stops the installation then (fail closed, nothing is compiled instead).
 	#  - all three files and the manifest SelfX.Binaries.json exist;
 	#  - the manifest lists the SHA256 of the three sources in this package (the files were built from them)
 	#    and of the three files (complete, unchanged copy).
@@ -92,10 +92,11 @@ function Test-SelfXPrebuiltBinaries {
 		'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'
 	}
 	$ManifestPath = Join-Path $BinFolder 'SelfX.Binaries.json'
+	If(-not (Test-Path -LiteralPath $BinFolder -PathType Container)) { throw 'The folder Bin is missing in the package. Run tools\Build-SelfXBinaries.ps1 and build the package again (docs\Installation.md).' }
 	If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw 'Bin\SelfX.Binaries.json is missing.' }
 	Try { $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json }
 	Catch { throw "Bin\SelfX.Binaries.json is not valid JSON: $($_.Exception.Message)" }
-	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '1' -or -not $Manifest.Sources -or -not $Manifest.Binaries) { throw 'Bin\SelfX.Binaries.json has an unknown format.' }
+	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '2' -or -not $Manifest.Sources -or -not $Manifest.Binaries) { throw 'Bin\SelfX.Binaries.json has an unknown format.' }
 	ForEach($Name in $Expected.Keys)
 	{
 		$Source = $Expected[$Name]
@@ -105,30 +106,6 @@ function Test-SelfXPrebuiltBinaries {
 		$File = Join-Path $BinFolder $Name
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "Bin\$Name is missing." }
 		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
-	}
-}
-
-function Invoke-SelfXCompile {
-	# Compiles on the device when the package has no Bin folder. The compiler writes temporary files to TEMP;
-	# for SYSTEM that is C:\Windows\Temp, where users can create files. A folder below the install folder is
-	# used instead (its permissions were set before: SYSTEM and administrators full control, users read only;
-	# users cannot create it in advance below Program Files) and removed afterwards.
-	param([Parameter(Mandatory = $true)][scriptblock]$Compile, [Parameter(Mandatory = $true)][string]$ProtectedRoot)
-	$CompileTemp = Join-Path $ProtectedRoot ('Build-' + [guid]::NewGuid().ToString('N'))
-	New-Item -ItemType Directory -Path $CompileTemp -Force | Out-Null
-	$SavedTemp = $env:TEMP
-	$SavedTmp = $env:TMP
-	Try
-	{
-		$env:TEMP = $CompileTemp
-		$env:TMP = $CompileTemp
-		& $Compile
-	}
-	Finally
-	{
-		$env:TEMP = $SavedTemp
-		$env:TMP = $SavedTmp
-		Remove-Item -LiteralPath $CompileTemp -Recurse -Force -ErrorAction SilentlyContinue
 	}
 }
 
@@ -154,6 +131,11 @@ Try
 	$ToolVersion = $ToolConfig.GUI_Config.Tool_Version.Trim()
 	$ShortcutName = $ToolConfig.GUI_Config.Shortcut_Name.Trim()
 	Write-Output "Installing SelfX $ToolVersion to '$InstallFolder'."
+
+	# The programs of the package are checked first: when they are missing or do not match, the existing
+	# installation stays untouched and still works.
+	Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
+	Write-Output 'Programs in Bin checked against the manifest.'
 
 	# Remove a previous service so its files can be replaced
 	$ExistingService = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
@@ -193,29 +175,13 @@ Try
 	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$InstallFolder' (exit code $LASTEXITCODE)." }
 
-	# Service host and the starter without console window (shortcuts and status icon): prebuilt and checked
-	# from Bin when the package has it (F9), otherwise compiled locally with the C# compiler of the .NET Framework.
+	# Service host and the starter without console window (shortcuts and status icon): the programs from Bin
+	# that were checked at the start (.NET 10, self-contained).
 	$ServiceExe = Join-Path $InstallFolder 'SelfXService.exe'
 	$LauncherExe = Join-Path $InstallFolder 'SelfX.exe'
-	$UsePrebuilt = Test-Path -LiteralPath $BinFolder -PathType Container
-	If($UsePrebuilt)
-	{
-		Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
-		Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfXService.exe') -Destination $ServiceExe -Force
-		Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfX.exe') -Destination $LauncherExe -Force
-		Write-Output 'Installed the prebuilt programs from Bin (manifest checked).'
-	}
-	Else
-	{
-		Invoke-SelfXCompile -ProtectedRoot $InstallFolder -Compile {
-			Add-Type -TypeDefinition (Get-Content -LiteralPath $ServiceSource -Raw) `
-				-ReferencedAssemblies 'System.ServiceProcess', 'System.Xml' `
-				-OutputAssembly $ServiceExe -OutputType ConsoleApplication
-			Add-Type -TypeDefinition (Get-Content -LiteralPath $LauncherSource -Raw) `
-				-OutputAssembly $LauncherExe -OutputType WindowsApplication
-		}
-		Write-Output 'Compiled SelfXService.exe and SelfX.exe on the device (the package has no Bin folder).'
-	}
+	Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfXService.exe') -Destination $ServiceExe -Force
+	Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfX.exe') -Destination $LauncherExe -Force
+	Write-Output 'Installed SelfXService.exe and SelfX.exe from Bin.'
 	If(-not (Test-Path -LiteralPath $ServiceExe)) { throw 'SelfXService.exe is missing after the installation step.' }
 	If(-not (Test-Path -LiteralPath $LauncherExe)) { throw 'SelfX.exe is missing after the installation step.' }
 
@@ -269,9 +235,8 @@ Try
 		{
 			If(-not ('SelfXInstall.SessionStarter' -as [type]))
 			{
-				# The prebuilt library was checked above; it is loaded from the package and not installed.
-				If($UsePrebuilt) { Add-Type -LiteralPath (Join-Path $BinFolder 'SelfXSessionStarter.dll') }
-				Else { Invoke-SelfXCompile -ProtectedRoot $InstallFolder -Compile { Add-Type -TypeDefinition (Get-Content -LiteralPath $SessionStarterSource -Raw) } }
+				# The library was checked at the start; it is loaded from the package and not installed.
+				Add-Type -LiteralPath (Join-Path $BinFolder 'SelfXSessionStarter.dll')
 			}
 			ForEach($Line in [SelfXInstall.SessionStarter]::StartInActiveSessions($LauncherExe, '/tray', $env:SystemRoot)) { Write-Output "Status icon: $Line" }
 		}

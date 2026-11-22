@@ -13,6 +13,32 @@ histories of the single files show where a change was made. Changes marked
 2.6.10 were made before the package version was raised; they are delivered with
 **2.6.11**, the first package version of this fork.
 
+## 2.7.0 - 2026-11-22 (SelfX Service)
+
+The service and the starter run on .NET 10 (LTS, supported until 14 Nov 2028). The
+programs are built once on a build machine; the devices no longer compile anything.
+`Tool_Version` and `$ExpectedVersion` were raised: build and deploy the package again.
+
+### Changed
+
+- `SelfXService.exe` and `SelfX.exe` are .NET 10 programs (self-contained, one file,
+  about 36 MB each). No .NET runtime is needed on the devices. The user interface and
+  all scripts still run in Windows PowerShell 5.1.
+- `tools\Build-SelfXBinaries.ps1` builds with `dotnet publish` (.NET SDK 10 on the
+  build machine). The call stays the same. The manifest has format 2.
+- `Install.ps1` requires the folder `Bin` and checks it before it touches the existing
+  installation. Compiling on the device was removed. When `Bin` is missing, the
+  installation stops with a clear message and the old version stays.
+- `tools\New-SelfXIntuneWin.ps1` builds no package without a checked `Bin` and does not
+  package the .NET project files.
+- New: .NET projects in `SelfX Service\Service\Projects`, NuGet lock file, a CI job that
+  builds twice, compares the hashes and starts the service.
+- Installation guide rewritten with a step-by-step procedure.
+
+### Note
+
+New programs have new hashes: replace the AppLocker rules of the previous build.
+
 ## 2.6.12 - 2026-11-22 (SelfX Service)
 
 German is the base language of the user interface; English is the fallback.

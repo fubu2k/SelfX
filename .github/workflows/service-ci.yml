@@ -142,7 +142,8 @@ jobs:
           Write-Output "$failed of $($tests.Count) test scripts failed in PowerShell 7 (not blocking)."
 
   # .NET 10 build of the service, the starter and the session starter (phase 1 of the move to .NET 10 / PowerShell 7).
-  # Builds twice and compares the SHA256 (the build must be reproducible) and starts the service once in console mode.
+  # Builds with tools\Build-SelfXBinaries.ps1 twice and compares the SHA256 (the build must be reproducible), checks the result the way
+  # Install.ps1 does, loads the session starter in Windows PowerShell 5.1 and starts the service once in console mode.
   dotnet-build:
     name: Build with .NET 10 (self-contained)
     runs-on: windows-latest
@@ -156,33 +157,51 @@ jobs:
         shell: pwsh
         run: dotnet --list-sdks
 
-      - name: Publish twice and compare
+      - name: Build with tools\Build-SelfXBinaries.ps1 (twice) and compare
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Service\Projects') -Filter *.csproj -Recurse
-          foreach ($run in 'one', 'two') {
-            $out = Join-Path $env:RUNNER_TEMP "publish-$run"
-            foreach ($project in $projects) {
-              dotnet publish $project.FullName -c Release -o (Join-Path $out $project.BaseName) --nologo -v minimal
-              if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed: $($project.Name)" }
-            }
-          }
+          $script = Join-Path $env:GITHUB_WORKSPACE 'tools\Build-SelfXBinaries.ps1'
+          $one = Join-Path $env:RUNNER_TEMP 'bin-one'
+          $two = Join-Path $env:RUNNER_TEMP 'bin-two'
+          & $script -OutputFolder $one
+          & $script -OutputFolder $two
           $failed = $false
-          foreach ($file in Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'publish-one') -Recurse -File | Where-Object { $_.Extension -in '.exe', '.dll' }) {
-            $other = Join-Path (Join-Path $env:RUNNER_TEMP 'publish-two') $file.FullName.Substring((Join-Path $env:RUNNER_TEMP 'publish-one').Length + 1)
+          foreach ($file in Get-ChildItem -LiteralPath $one -File) {
             $a = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
-            $b = (Get-FileHash -LiteralPath $other -Algorithm SHA256).Hash
+            $b = (Get-FileHash -LiteralPath (Join-Path $two $file.Name) -Algorithm SHA256).Hash
+            # The manifest contains the build time and so differs; the programs must be identical.
+            if ($file.Name -eq 'SelfX.Binaries.json') { continue }
             '{0}  {1}  {2:N1} MB  {3}' -f $a, $file.Name, ($file.Length / 1MB), $(if ($a -eq $b) { 'reproducible' } else { 'DIFFERENT' })
             if ($a -ne $b) { $failed = $true }
           }
           if ($failed) { throw 'The two builds are not identical.' }
+          # The package folder of the checks below: Bin of the first build.
+          $bin = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Bin'
+          if (Test-Path -LiteralPath $bin) { Remove-Item -LiteralPath $bin -Recurse -Force }
+          Copy-Item -LiteralPath $one -Destination $bin -Recurse
+          Get-Content -LiteralPath (Join-Path $one 'SelfX.Binaries.json') -Raw
+
+      - name: Install.ps1 check accepts the build; session starter loads in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service'
+          # Take only the check function out of Install.ps1 (the script itself would install SelfX).
+          $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $package 'Install.ps1'), [ref]$null, [ref]$null)
+          $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Test-SelfXPrebuiltBinaries' }, $true)
+          . ([scriptblock]::Create($definition.Extent.Text))
+          Test-SelfXPrebuiltBinaries -BinFolder (Join-Path $package 'Bin') -PackageFolder $package
+          'Install.ps1 accepts Bin of this build.'
+          # The same call as Install.ps1 uses to start the status icon: the netstandard2.0 library in .NET Framework.
+          Add-Type -LiteralPath (Join-Path $package 'Bin\SelfXSessionStarter.dll')
+          'Active sessions: ' + (([SelfXInstall.SessionStarter]::GetActiveSessionIds()) -join ', ')
 
       - name: Start the service in console mode
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $exe = Join-Path $env:RUNNER_TEMP 'publish-one\SelfXService\SelfXService.exe'
+          $exe = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Bin\SelfXService.exe'
           $pipe = 'SelfX.CI.' + [guid]::NewGuid().ToString('N')
           $log = Join-Path $env:RUNNER_TEMP 'svc-logs'
           $process = Start-Process -FilePath $exe -ArgumentList '/console', "/pipe:$pipe", "/logdir:$log" -PassThru -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP 'svc.out') -RedirectStandardError (Join-Path $env:RUNNER_TEMP 'svc.err')

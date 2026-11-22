@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Read-only Intune/SCCM detection for ProgramFiles\SelfX. Requires SelfXService.exe, SelfX.exe,
-    Tool_Config.xml, a registered SelfXService and an exact Tool_Version match of 2.6.12.
+    Tool_Config.xml, a registered SelfXService and an exact Tool_Version match of 2.7.0.
     Does not start the service, contact the pipe, verify that it is running or execute
     remediation scripts. Writes an installed message and exits 0 when checks pass; exits
     1 for a missing prerequisite or version mismatch. XML read/parse errors are not caught.
@@ -14,7 +14,7 @@
     Name    : Detection.ps1
     Package : SelfX Service
     Context : Detection
-    Version : 2.6.12
+    Version : 2.7.0
 
     History:
     Version  Date        Author               Change
@@ -50,9 +50,10 @@
     2.6.9    2026-11-19  Wolfgang Baeck       Detect version 2.6.9 (Windows updates through the orchestrator)
     2.6.11   2026-11-22  fubu2k               Detect version 2.6.11 (security hardening, see CHANGELOG.md)
     2.6.12   2026-11-22  fubu2k               Detect version 2.6.12 (German base language)
+    2.7.0    2026-11-22  fubu2k               Detect version 2.7.0 (.NET 10 programs)
 #>
 
-$ExpectedVersion = '2.6.12'
+$ExpectedVersion = '2.7.0'
 $InstallFolder = Join-Path $env:ProgramFiles 'SelfX'
 $ToolConfigFile = Join-Path $InstallFolder 'Tool_Config.xml'
 $LogFolder = Join-Path $env:ProgramData 'SelfX\Logs'

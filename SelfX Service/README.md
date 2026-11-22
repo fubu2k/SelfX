@@ -3,7 +3,7 @@
 [English](README.en.md) | **Deutsch**
 
 SelfX Service wird für das ganze Gerät installiert und arbeitet ohne
-Netzwerkverbindung. Aktuelle Version: **2.6.12** (siehe das
+Netzwerkverbindung. Aktuelle Version: **2.7.0** (siehe das
 [Änderungsprotokoll](../CHANGELOG.md)).
 
 - Eine moderne Oberfläche mit änderbarer Größe für Nutzer ohne technisches Wissen

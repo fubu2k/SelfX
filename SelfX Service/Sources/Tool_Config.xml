@@ -38,9 +38,10 @@
 	2.6.9    2026-11-19  Wolfgang Baeck       Fix: "Fix" of Updates installs through the Windows Update orchestrator (as in Settings); a repair is no longer refused while the status is read; "Restart pending" also detects restarts that only Settings reported (orchestrator)
 	2.6.11   2026-11-22  fubu2k               Security hardening release (see CHANGELOG.md): includes all changes marked 2.6.10 and 2.6.11 in the script histories - pipe limits and deadlines, device logs report per user, actions blocked while another user is signed in, protected uninstall, optional prebuilt programs checked by SHA256 (Bin), CI. Redeploy the entire package
 	2.6.12   2026-11-22  fubu2k               German is the base language of the user interface (Tool_Language de, no matching language file -> German); English stays the fallback for missing texts
+	2.7.0    2026-11-22  fubu2k               Service and starter are .NET 10 programs (self-contained), built on a build machine; the devices no longer compile (see CHANGELOG.md)
 -->
 <GUI_Config>	
-	<Tool_Version>2.6.12</Tool_Version> <!-- Tool version -->
+	<Tool_Version>2.7.0</Tool_Version> <!-- Tool version -->
 	<!-- Language of the user interface. All texts are in Languages\<culture>.xml (see docs\Configuration.md) -->
 	<Tool_Language>de</Tool_Language> <!-- Default language (base language: German): a culture such as de, en, fr, es, zh-Hans, or Auto = Windows display language of the user (German if not available). Missing texts are shown in English. Users can choose another language in SelfX > Settings (see Show_Language_Setting) -->
 	<Tool_Name>SelfX (Self fix)</Tool_Name> <!-- Text displayed in the title bar --> 
