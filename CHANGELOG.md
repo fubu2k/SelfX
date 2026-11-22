@@ -13,6 +13,12 @@ einzelnen Dateien zeigen, wo eine Änderung gemacht wurde. Änderungen, die mit 
 gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mit
 **2.6.11** ausgeliefert, der ersten Paketversion dieses Forks.
 
+## Nicht veröffentlicht (SelfX Service)
+
+### Geändert
+
+- Statuszeile „Neustart ausstehend“: Der Text nennt jetzt den letzten Neustart und, wenn die letzte Update-Installation danach lag, deren Zeitpunkt (nur lesend, Zeiten in der Zeitzone des Nutzers). Fehlen die Quellen, entfällt nur der Zusatz.
+
 ## 2.8.0 - 2026-11-22 (SelfX Service)
 
 Dienst, Fenster und Statussymbol starten PowerShell 7 (ab 7.6) statt Windows PowerShell 5.1.

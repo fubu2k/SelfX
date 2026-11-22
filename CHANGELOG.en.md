@@ -13,6 +13,12 @@ histories of the single files show where a change was made. Changes marked
 2.6.10 were made before the package version was raised; they are delivered with
 **2.6.11**, the first package version of this fork.
 
+## Unreleased (SelfX Service)
+
+### Changed
+
+- Status row "Restart pending": the text now names the last restart and, when the last update installation was after it, its time (read-only, times in the time zone of the user). If the sources are missing, only the addition is left out.
+
 ## 2.8.0 - 2026-11-22 (SelfX Service)
 
 The service, the window and the status icon start PowerShell 7 (7.6 or newer) instead of

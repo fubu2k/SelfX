@@ -11,7 +11,7 @@
     -CacheFile (set by the service) also stores the result for the background status cache:
     a full collection replaces the file, a single check replaces only its own rows.
 .NOTES
-    Version: 2.6.10
+    Version: 2.8.1
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial local health checks and extension contract.
     2.3.1  2026-10-28  Wolfgang Baeck  Expose configured remediation mappings without running repairs.
@@ -34,6 +34,8 @@
     2.6.10 2026-11-22  fubu2k          Security: a single check (HEALTH <Id> <name>) never adds rows to the shared status
                                        cache; an unknown name could be appended by any user and made the cache invalid
                                        for all users. The placeholder result "Collection" is never stored.
+    2.8.1  2026-11-22  fubu2k          Pending restart: the detail also names the last restart and, when it is newer, the
+                                       time the last Windows update was installed (read-only, no new state).
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -174,10 +176,39 @@ function Get-SelfXPendingRebootMarkers {
     $markers
 }
 
+# Read-only times that tell how long a restart has been waiting: the last restart (CIM) and the last successful
+# Windows update installation (IAutomaticUpdatesResults, UTC with an unspecified kind). Either one may be missing.
+function Get-SelfXRestartTimes {
+    $boot = $null
+    $install = $null
+    try { $boot = (Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime } catch { }
+    try { $install = (New-Object -ComObject Microsoft.Update.AutoUpdate).Results.LastInstallationSuccessDate } catch { }
+    [pscustomobject]@{ LastBoot = $boot; LastInstall = $install }
+}
+
+function Get-SelfXPendingRebootTimeText {
+    # " Last restart {utc}; last update installed {utc}." The installation time is only named when it is after the
+    # last restart (otherwise it cannot be the update that waits). Failing sources only shorten the text.
+    try { $times = Get-SelfXRestartTimes } catch { return '' }
+    $parts = @()
+    $boot = $times.LastBoot
+    if ($boot -is [datetime] -and $boot.Year -gt 2000) {
+        if ($boot.Kind -eq [DateTimeKind]::Unspecified) { $boot = [datetime]::SpecifyKind($boot, [DateTimeKind]::Utc) }
+        $parts += 'Last restart ' + (Format-SelfXHealthTime $boot)
+        $install = $times.LastInstall
+        if ($install -is [datetime] -and $install.Year -gt 2000) {
+            $install = [datetime]::SpecifyKind($install, [DateTimeKind]::Utc)
+            if ($install -gt $boot.ToUniversalTime()) { $parts += 'last update installed ' + (Format-SelfXHealthTime $install) }
+        }
+    }
+    if ($parts.Count) { return ' ' + ($parts -join '; ') + '.' }
+    return ''
+}
+
 function Get-SelfXPendingRebootHealth {
     try {
         $markers = @(Get-SelfXPendingRebootMarkers)
-        if ($markers.Count) { New-SelfXHealthResult PendingReboot Error ('Restart required: ' + ($markers -join ', ')) }
+        if ($markers.Count) { New-SelfXHealthResult PendingReboot Error ('Restart required: ' + ($markers -join ', ') + '.' + (Get-SelfXPendingRebootTimeText)) }
         else { New-SelfXHealthResult PendingReboot OK 'No restart pending.' }
     } catch { New-SelfXHealthResult PendingReboot Unknown $_.Exception.Message }
 }
