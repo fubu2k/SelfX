@@ -273,7 +273,7 @@ fork would not exist without his SelfX Service, his clear structure, his
 documentation and his tests, which made the security work possible. The
 security hardening, the additional tests, the built .NET 10 programs and the CI were
 added in this fork (see the [Changelog](CHANGELOG.en.md)). The license of the
-original project is kept in [LICENSE.md](LICENSE.md); authors, sources and open license questions are in [NOTICE.en.md](NOTICE.en.md).
+original project is kept in [LICENSE.md](LICENSE.md); authors and sources are in [NOTICE.en.md](NOTICE.en.md).
 
 The System information tab is based on the idea and data points of the
 [System Information Tool](https://github.com/JayRHa/windows-system-information)

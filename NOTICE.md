@@ -27,13 +27,3 @@ ersetzt sie aber nicht.
   mit, prüft aber vor der Verwendung die Authenticode-Signatur von Microsoft.
 - **Gebaute Programme** (Dienst und Starter, .NET 10 self-contained) enthalten Teile der Microsoft-.NET-Laufzeit und das
   NuGet-Paket `System.ServiceProcess.ServiceController` (beide Microsoft, MIT-Lizenz).
-
-## Offene Klärung
-
-- `LICENSE.md` nennt „GitHub Inc.“ als Rechteinhaber (2011-2024), nicht Damien Van Robaeys. Der Text wurde bewusst nicht
-  verändert. Eine Bestätigung des gemeinten Rechteinhabers und des Geltungsbereichs für frühe Versionen (2022 bis Mai 2024,
-  ohne Lizenzdatei) steht aus.
-- Für die Ergänzungen von Wolfgang Baeck (einige Dateiköpfe nennen „Swisscom“) steht eine ausdrückliche Bestätigung der
-  MIT-Lizenz aus.
-
-Diese Datei ist keine Rechtsberatung. Bei Fragen zur Nutzung im Unternehmen bitte die Rechts- oder Compliance-Stelle fragen.

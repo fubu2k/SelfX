@@ -27,13 +27,3 @@ replace it.
   checks Microsoft's Authenticode signature before using it.
 - **Built programs** (service and launcher, .NET 10 self-contained) contain parts of the Microsoft .NET runtime and the
   NuGet package `System.ServiceProcess.ServiceController` (both Microsoft, MIT License).
-
-## Open clarification
-
-- `LICENSE.md` names "GitHub Inc." as copyright holder (2011-2024), not Damien Van Robaeys. The text was deliberately not
-  changed. Confirmation of the intended copyright holder and of the scope for early versions (2022 to May 2024, without a
-  license file) is still pending.
-- An explicit confirmation of the MIT License for Wolfgang Baeck's additions (some file headers name "Swisscom") is still
-  pending.
-
-This file is not legal advice. For use in a company, please ask the legal or compliance department.

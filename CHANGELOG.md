@@ -163,7 +163,7 @@ auf 2.6.11 angehoben.
 
 ### Hinzugefügt
 
-- `NOTICE.md` / `NOTICE.en.md`: Urheber, Quellen und offene Lizenzfragen (Damien Van Robaeys, Wolfgang Baeck, Jannik Reinhard).
+- `NOTICE.md` / `NOTICE.en.md`: Urheber und Quellen (Damien Van Robaeys, Wolfgang Baeck, Jannik Reinhard).
 - `Test-ServicePipe.ps1`: startet den Pipe-Listener des Dienstes unter einem
   Testnamen und prüft die Fristen, langsame Sender, zu große Anfragen und das Limit
   pro Nutzer. Er braucht weder Installation noch Administratorrechte.
