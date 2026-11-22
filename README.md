@@ -20,9 +20,8 @@ Auswertung der Aktionen.
 
 Dieses Repository ([fubu2k/SelfX](https://github.com/fubu2k/SelfX)) ist ein Fork
 von [wbaeck/SelfX](https://github.com/wbaeck/SelfX) und wird **nur für SelfX
-Service** weiterentwickelt. SelfX Standard (pro Nutzer) und SelfX Admin der
-Upstream-Projekte gehören nicht zu diesem Fork; nutzen Sie dafür die
-Upstream-Repositories. Die Arbeit in diesem Fork konzentriert sich auf
+Service** weiterentwickelt. 
+Die Arbeit in diesem Fork konzentriert sich auf
 Sicherheit, Tests und Bereitstellung von SelfX Service: siehe
 [Sicherheitshärtung in diesem Fork](#sicherheitshärtung-in-diesem-fork) und das
 [Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **2.6.12**.
