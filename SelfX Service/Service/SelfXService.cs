@@ -240,7 +240,7 @@ namespace SelfX
             CanShutdown = true;
             AutoLog = true;
 
-            installRoot = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+            installRoot = AppContext.BaseDirectory.TrimEnd('\\');
             scriptsRoot = Path.Combine(installRoot, "Scripts_to_run");
             catalogPath = Path.Combine(installRoot, "Issues_List.xml");
             this.pipeName = pipeName;
@@ -353,8 +353,14 @@ namespace SelfX
                 NamedPipeServerStream server = null;
                 try
                 {
+#if NET
+                    // .NET (since 5): the constructor with PipeSecurity no longer exists, the access rules are set by this factory.
+                    server = NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
+                        PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security);
+#else
                     server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
                         PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security);
+#endif
                     server.WaitForConnection();
                     if (stopping)
                     {

@@ -2,3 +2,7 @@
 /build/
 # Prebuilt programs of SelfX Service (tools\Build-SelfXBinaries.ps1); they belong into the package, not into Git
 /SelfX Service/Bin/
+
+# dotnet build output of SelfX Service
+SelfX Service/Service/Projects/**/obj/
+SelfX Service/Service/Projects/**/bin/
