@@ -52,8 +52,19 @@ jobs:
           foreach ($test in $tests) {
             Write-Output "::group::$($test.Name)"
             # Each test in its own process, so mocks and globals of one test cannot affect the next.
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $test.FullName
-            $code = $LASTEXITCODE
+            # A test that does not end within 5 minutes is stopped and its output so far is shown.
+            $outFile = Join-Path $env:RUNNER_TEMP "$($test.BaseName).out.txt"
+            $errFile = Join-Path $env:RUNNER_TEMP "$($test.BaseName).err.txt"
+            $process = Start-Process -FilePath 'powershell.exe' -PassThru -NoNewWindow `
+              -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$($test.FullName)`"" `
+              -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+            $code = 0
+            if (-not $process.WaitForExit(300000)) {
+              & taskkill.exe /PID $process.Id /T /F | Out-Null
+              $code = 124
+              Write-Output "Timeout after 5 minutes."
+            } else { $code = $process.ExitCode }
+            Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue | Write-Output
             Write-Output '::endgroup::'
             if ($code -ne 0) { $failed.Add("$($test.Name) (exit code $code)"); Write-Output "::error::$($test.Name) failed with exit code $code" }
           }

@@ -470,6 +470,7 @@ try {
     function Update-SelfXStatusView {}
     function Set-SelfXActionRunning { param($Row, $Running) if ($Row) { $Row.Running = $Running } }
     function ConvertTo-SelfXUserTime { param([datetime]$Time) $Time.ToLocalTime() }
+    function Get-SelfXConfigValue { param([string]$Name, [string]$Default) $Default }
     $script:alerts = @()
     $msgbar = [pscustomobject]@{}
     foreach ($kind in 'Clear', 'SetSuccessAlert', 'SetWarningAlert', 'SetDangerAlert', 'SetInformationAlert') {
