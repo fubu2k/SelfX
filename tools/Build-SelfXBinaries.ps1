@@ -127,7 +127,7 @@ $document = New-Object System.Xml.XmlDocument
 $document.XmlResolver = $null
 $document.Load($toolConfig)
 $manifest = [ordered]@{
-    ManifestVersion = 2
+    ManifestVersion = 3
     SdkVersion      = $sdkVersion
     ToolVersion     = $document.SelectSingleNode('/GUI_Config/Tool_Version').InnerText.Trim()
     BuiltUtc        = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')

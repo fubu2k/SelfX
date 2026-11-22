@@ -50,6 +50,7 @@ $files = [ordered]@{
 	'SelfXService.exe'        = 'Service/SelfXService.cs'
 	'SelfX.exe'               = 'Service/SelfXLauncher.cs'
 	'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'
+	'WinRT/SelfXWinRT.dll'    = 'Service/SelfXWinRT.cs'
 }
 
 function Reset-Package {
@@ -61,11 +62,13 @@ function Reset-Package {
 	foreach ($name in $files.Keys) {
 		$sourcePath = Join-Path $package ($files[$name].Replace('/', '\'))
 		[IO.File]::WriteAllText($sourcePath, "// source of $name")
-		[IO.File]::WriteAllText((Join-Path $bin $name), "binary $name")
+		$binaryPath = Join-Path $bin $name.Replace('/', '\')
+		New-Item -ItemType Directory -Path (Split-Path -Parent $binaryPath) -Force | Out-Null
+		[IO.File]::WriteAllText($binaryPath, "binary $name")
 		$sources[$files[$name]] = (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash
-		$binaries[$name] = (Get-FileHash -LiteralPath (Join-Path $bin $name) -Algorithm SHA256).Hash
+		$binaries[$name] = (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash
 	}
-	$manifest = [ordered]@{ ManifestVersion = 2; ToolVersion = 'test'; BuiltUtc = ''; Sources = $sources; Binaries = $binaries }
+	$manifest = [ordered]@{ ManifestVersion = 3; ToolVersion = 'test'; BuiltUtc = ''; Sources = $sources; Binaries = $binaries }
 	[IO.File]::WriteAllText((Join-Path $bin 'SelfX.Binaries.json'), ($manifest | ConvertTo-Json -Depth 4))
 }
 
@@ -99,7 +102,7 @@ try {
 	Assert-Equal ((Test-Accepted) -like 'refused*not built from*') $true 'Program built from other sources is refused'
 
 	Reset-Package
-	[IO.File]::WriteAllText((Join-Path $bin 'SelfX.Binaries.json'), '{ "ManifestVersion": 3, "Sources": {}, "Binaries": {} }')
+	[IO.File]::WriteAllText((Join-Path $bin 'SelfX.Binaries.json'), '{ "ManifestVersion": 4, "Sources": {}, "Binaries": {} }')
 	Assert-Equal ((Test-Accepted) -like 'refused*unknown format*') $true 'Unknown manifest format is refused'
 
 	Reset-Package
@@ -108,6 +111,27 @@ try {
 	$manifest.ManifestVersion = 1
 	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
 	Assert-Equal ((Test-Accepted) -like 'refused*unknown format*') $true 'Manifest of the old on-device build (version 1) is refused'
+	$manifest.ManifestVersion = 2
+	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
+	Assert-Equal ((Test-Accepted) -like 'refused*unknown format*') $true 'Manifest without the WinRT library (version 2) is refused'
+
+	# --- WinRT library: its DLLs are checked one by one, nothing else may be listed ---
+	Reset-Package
+	$extra = Join-Path $bin 'WinRT\Projection.dll'
+	[IO.File]::WriteAllText($extra, 'projection')
+	$manifestPath = Join-Path $bin 'SelfX.Binaries.json'
+	$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+	$manifest.Binaries | Add-Member -NotePropertyName 'WinRT/Projection.dll' -NotePropertyValue (Get-FileHash -LiteralPath $extra -Algorithm SHA256).Hash
+	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
+	Assert-Equal (Test-Accepted) 'accepted' 'An additional DLL in WinRT is accepted when it matches the manifest'
+	[IO.File]::WriteAllText($extra, 'changed projection')
+	Assert-Equal ((Test-Accepted) -like 'refused*Projection.dll does not match*') $true 'A changed DLL in WinRT is refused'
+	Remove-Item -LiteralPath $extra -Force
+	Assert-Equal ((Test-Accepted) -like 'refused*Projection.dll is missing*') $true 'A missing DLL in WinRT is refused'
+	$manifest.Binaries | Add-Member -NotePropertyName '..\..\evil.dll' -NotePropertyValue 'AA' -Force
+	$manifest.Binaries.PSObject.Properties.Remove('WinRT/Projection.dll')
+	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
+	Assert-Equal ((Test-Accepted) -like 'refused*unexpected file*') $true 'A manifest entry outside WinRT is refused'
 
 	Reset-Package
 	Remove-Item -LiteralPath $bin -Recurse -Force
