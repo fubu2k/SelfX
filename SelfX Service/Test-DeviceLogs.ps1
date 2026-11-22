@@ -42,6 +42,7 @@ function Assert-Throws([scriptblock]$Action, $Message) {
 # Function definitions of the code under test (dot-sourcing the wrapper only defines functions).
 . "$sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1"
 . "$sources\SupportReport.ps1"
+. "$sources\TicketMail.ps1"   # Test-SelfXTicketAddress (the MailReport step takes only one valid recipient)
 . "$sources\Localization.ps1"
 # Logger functions without Initialize-SelfXLog: they write nothing during the tests.
 . "$sources\SelfXLog.ps1"
