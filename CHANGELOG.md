@@ -16,6 +16,7 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 ## Nicht veröffentlicht (SelfX Service)
 
 ### Neu
+- Ticket per E-Mail (Standard aus, `Ticket_Enabled`): Schaltfläche *Ticket erstellen* im Hilfe-Dialog. Der Nutzer beschreibt das Problem, SelfX fügt immer alle Geräteinformationen hinzu (Text und Datei) und öffnet die E-Mail in klassischem Outlook (COM) oder im Standard-Mailprogramm (z. B. neues Outlook, mailto plus Datei im Explorer); gesendet wird nur vom Nutzer. Empfänger nur aus der Konfiguration (`Ticket_Mail`, sonst `Support_Mail`). Neue Datei `TicketSend.ps1`, Tests in `Test-Ticket.ps1`.
 - Grundlage für „Ticket aus SelfX“ (`Sources\TicketMail.ps1`, Test `Test-Ticket.ps1`): Ticketmodell mit standardisiertem Betreff und Text, bereinigten Feldern, Freitext im abgesetzten Block und geprüftem mailto-Link. Nur Bausteine ohne Funktion und ohne Oberfläche; es ändert sich nichts für Nutzer.
 
 - Systeminformationen: Die Zeile „Betriebszeit“ wird ab 7 Tagen ohne Neustart als Warnung mit dem Hinweis „Neustart empfohlen (nicht „Herunterfahren“)“ angezeigt (nur lesend; SelfX startet Windows nie selbst neu). Grund für den Hinweis: Mit Schnellstart setzt „Herunterfahren“ die Betriebszeit nicht zurück.

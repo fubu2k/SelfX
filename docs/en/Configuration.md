@@ -105,6 +105,7 @@ are not used.
 | `Show_Language_Setting` | `True` (default, 2.5.9): users can choose the language of SelfX in the settings dialog. `False` hides the choice and always uses `Tool_Language`; a language saved earlier by a user is then ignored. |
 | `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | Help button (?) and the contacts of the help dialog, see [User interface](#user-interface-selfx-service-250). `Support_Mail` is also the recipient of the device logs e-mail. |
 | `DeviceLogs_Days`, `DeviceLogs_Compress` | Device logs report: days of event log history (1–60, default 7) and `.zip` (`True`, default) or `.txt` attachment |
+| `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket by e-mail (off by default): button *Create ticket* in the help dialog. `Ticket_Mail` is the recipient (empty = `Support_Mail`, exactly one address, only from this configuration), `Ticket_Subject_Tag` the marker at the start of the subject for filters (letters, digits, `.`, `_`, `-`, up to 20 characters, otherwise `SelfX`) |
 | `Log_Retention_Days` | Log files older than this number of days are deleted (1–3650, default 90, 2.6.0); see [Logging](#logging-and-log-housekeeping-selfx-service-260) |
 | `Show_Status_Page` | `True` (default): show the Device status page |
 | `Show_SystemInfo_Tab`, `Show_SystemInfo_Intune_Actions`, `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | System information page and its tools |
@@ -341,6 +342,24 @@ and write the report as `DeviceLogs-*.zip` or `DeviceLogs-*.txt` to
 `%ProgramData%\SelfX\Reports\<SELFX_CALLER_SID>` with the same ACL. Remove both
 catalogue actions to hide the feature; the System information button is shown
 only when a `System` action with `MailReport` exists.
+
+### Ticket by e-mail (SelfX Service 2.8.5)
+
+Optional and off by default (`Ticket_Enabled` = `False`). When enabled and a valid address is set, the help dialog (?) shows the row *Report an issue* with the button *Create ticket*.
+
+**Flow (user context, no elevated rights):**
+1. The user describes the issue (up to 3000 characters).
+2. SelfX **always** adds the device information: all rows of *System information* and *Device status*, plus device name, Windows build and SelfX version. The user cannot switch it off but sees it in the opened e-mail.
+3. The e-mail is only **displayed, never sent automatically**. The user checks it and sends it.
+
+**Hand-over to the mail program:**
+- Classic Outlook (COM): recipient, subject, complete text and the file `TicketInfo-<device>-<time>.txt` attached.
+- New Outlook and other mail programs (mailto): recipient, subject and text; the link length is limited, so the text is cut if needed (description and core fields first, device information last). The complete file is selected in Explorer and the user attaches it (the dialog says so).
+- The file is in `%LOCALAPPDATA%\SelfX\Reports` (user only); older `TicketInfo-*` files are deleted with the next ticket.
+
+**E-mail layout (for filters and automation):** subject `[<Ticket_Subject_Tag>][<kind>] <device>` (kind in the language of the user, for example *Incident*); body with fixed English field names (`Time (UTC)`, `Computer`, `Windows build`, `SelfX version`), then `Description of the user:` and `Device information:`, both as fenced blocks. Assignment to the responsible IT unit (group tag, device category) follows in a later step.
+
+**Security:** The recipient comes only from `Tool_Config.xml` (`Ticket_Mail`, otherwise `Support_Mail`) and must be exactly one plain address; the user cannot change it. Fields are cleaned (no line breaks in the subject, fixed lengths, the device name must be a valid name). Free text and device information are in code blocks so a ticket system does not run commands from them (for example GitLab quick actions); test whether this works in your GitLab version before enabling. The device information contains addresses (for example the proxy) and device data and is meant for IT: clarify privacy and works council questions before enabling. The log names only the result (`Outlook`, `Manual`, `Error`) and the number of rows, never the text.
 
 ### Logging and log housekeeping (SelfX Service 2.6.0)
 

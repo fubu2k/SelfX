@@ -16,6 +16,7 @@ histories of the single files show where a change was made. Changes marked
 ## Unreleased (SelfX Service)
 
 ### Added
+- Ticket by e-mail (off by default, `Ticket_Enabled`): button *Create ticket* in the help dialog. The user describes the issue, SelfX always adds all device information (text and file) and opens the e-mail in classic Outlook (COM) or the default mail program (for example new Outlook, mailto plus file in Explorer); only the user sends it. Recipient only from the configuration (`Ticket_Mail`, otherwise `Support_Mail`). New file `TicketSend.ps1`, tests in `Test-Ticket.ps1`.
 - Foundation for "open a ticket from SelfX" (`Sources\TicketMail.ps1`, test `Test-Ticket.ps1`): ticket model with a standardised subject and body, cleaned fields, the free text in a fenced block and a validated mailto link. Building blocks only, no function and no user interface yet; nothing changes for users.
 
 - System information: the "Uptime" row is shown as a warning with the hint "restart recommended (not "Shut down")" from 7 days without a restart (read-only; SelfX never restarts Windows). Reason: with fast startup "Shut down" does not reset the uptime.

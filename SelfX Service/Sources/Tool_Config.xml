@@ -89,6 +89,11 @@
 	<Support_Website>https://support.example.com</Support_Website> <!-- Placeholder. Website or ticket system, must start with https:// or http:// -->
 	<Support_Mail>support@example.com</Support_Mail> <!-- Placeholder. Support e-mail address. Also the recipient of the device logs e-mail (Post_Action MailReport). Empty = the user enters the recipient -->
 
+	<!-- Ticket by e-mail (button in the help dialog): the user describes the issue, SelfX adds the device information (text and file) and opens the e-mail, the user sends it -->
+	<Ticket_Enabled>False</Ticket_Enabled> <!-- True or False. Needs a valid Ticket_Mail or Support_Mail -->
+	<Ticket_Mail></Ticket_Mail> <!-- Placeholder. Recipient of the ticket e-mail (for example the Service Desk address of the ticket system). Empty = Support_Mail. One plain address only -->
+	<Ticket_Subject_Tag>SelfX</Ticket_Subject_Tag> <!-- Marker at the start of the subject for filters: letters, digits . _ - (up to 20 characters), otherwise SelfX -->
+
 	<!-- Device logs for the support (action "Send the device logs to the support", Collect-DeviceLogs.ps1 run as SYSTEM) -->
 	<DeviceLogs_Days>7</DeviceLogs_Days> <!-- Days of event log history in the report (1-60) -->
 	<DeviceLogs_Compress>True</DeviceLogs_Compress> <!-- Attach the report as .zip (True) or as .txt (False) -->
