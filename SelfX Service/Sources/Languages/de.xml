@@ -339,6 +339,13 @@ Möchten Sie fortfahren?</Alerte_MSG>
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Outlook reagiert nicht mehr</Name>
+				<Explanation>Sie arbeiten in Outlook, aber das Programm reagiert nicht mehr, sendet oder empfängt keine E-Mails oder zeigt Ihr Postfach nicht richtig an.</Explanation>
+				<Alerte_MSG>Outlook wird beendet und danach neu gestartet. E-Mails, die Sie gerade schreiben und nicht als Entwurf gespeichert haben, gehen verloren. Nach dem Start prüft Outlook eventuell seine Daten, das kann etwas dauern. Ihr Profil und Ihr Postfach werden nicht verändert. Das neue Outlook ist nicht betroffen.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="Q_Store">
 				<Name>Der Microsoft Store funktioniert nicht</Name>
 				<Explanation>Der Microsoft Store lässt sich nicht öffnen, zeigt Fehler an oder installiert keine Apps.</Explanation>
