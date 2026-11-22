@@ -112,7 +112,7 @@ Im Anhang finden Sie die Geräteprotokolle von {0}, erfasst durch SelfX am {1}.
 
 Beschreibung des Problems:</Report_Mail_Body>
 		<Report_Mail_Opened_Text>Eine neue E-Mail mit den Protokollen im Anhang ist geöffnet. Beschreiben Sie Ihr Problem und senden Sie die E-Mail ab.</Report_Mail_Opened_Text>
-		<Report_Mail_Recipient_Text>Eine neue E-Mail mit den Protokollen im Anhang ist geöffnet. Tragen Sie als Empfänger {0} ein, beschreiben Sie Ihr Problem und senden Sie die E-Mail ab.</Report_Mail_Recipient_Text>
+		<Report_Mail_Recipient_Text>Eine neue E-Mail mit den Protokollen im Anhang ist geöffnet. Tragen Sie als Empfänger „{0}“ ein, beschreiben Sie Ihr Problem und senden Sie die E-Mail ab.</Report_Mail_Recipient_Text>
 		<Report_Mail_Manual_Text>Die Protokolle sind unter {0} gespeichert. Hängen Sie diese Datei an eine E-Mail an {1} an und beschreiben Sie Ihr Problem.</Report_Mail_Manual_Text>
 		<Report_Not_Found_Text>Die Protokolle wurden gesammelt, aber die E-Mail ließ sich nicht vorbereiten: {0}</Report_Not_Found_Text>
 		<Report_Support_Fallback>Ihr Support</Report_Support_Fallback>
