@@ -46,6 +46,8 @@ jobs:
 
       - name: Run all Test-*.ps1 of SelfX Service
         shell: powershell
+        env:
+          SELFX_TEST_TRACE: '1'
         run: |
           $failed = New-Object System.Collections.Generic.List[string]
           $tests = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Sort-Object Name
@@ -58,12 +60,13 @@ jobs:
             $process = Start-Process -FilePath 'powershell.exe' -PassThru -NoNewWindow `
               -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$($test.FullName)`"" `
               -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+            $null = $process.Handle   # keeps the exit code readable after the process ended
             $code = 0
             if (-not $process.WaitForExit(300000)) {
               & taskkill.exe /PID $process.Id /T /F | Out-Null
               $code = 124
               Write-Output "Timeout after 5 minutes."
-            } else { $code = $process.ExitCode }
+            } else { $process.WaitForExit(); $code = $process.ExitCode }
             Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue | Write-Output
             Write-Output '::endgroup::'
             if ($code -ne 0) { $failed.Add("$($test.Name) (exit code $code)"); Write-Output "::error::$($test.Name) failed with exit code $code" }
