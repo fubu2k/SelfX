@@ -198,6 +198,7 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Copilot_Open_Button>कॉपी करें और Copilot खोलें</Copilot_Open_Button>
 		<Copilot_Opened_Text>पाठ क्लिपबोर्ड में है और Copilot Chat खुल गया है। उसे वहाँ पेस्ट करें (Ctrl+V) और भेजें।</Copilot_Opened_Text>
 		<Copilot_Error_Text>पाठ तैयार नहीं हो सका: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>विवरण में नाम, पासवर्ड या ग्राहक डेटा न लिखें। Copilot गलत हो सकता है: ऐसे कमांड न चलाएँ जिन्हें आप नहीं समझते।</Copilot_Warning_Text>
 		<Version_Text>संस्करण {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: सब कुछ ठीक है</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} समस्याएँ, {1} चेतावनियाँ</Tray_Tooltip_Issues>

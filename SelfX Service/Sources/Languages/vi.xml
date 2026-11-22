@@ -198,6 +198,7 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Copilot_Open_Button>Sao chép và mở Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Văn bản đã nằm trong bộ nhớ tạm và Copilot Chat đã được mở. Hãy dán vào đó (Ctrl+V) rồi gửi.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Không thể chuẩn bị văn bản: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Không ghi tên, mật khẩu hoặc dữ liệu khách hàng vào phần mô tả. Copilot có thể sai: đừng chạy những lệnh mà bạn không hiểu.</Copilot_Warning_Text>
 		<Version_Text>Phiên bản {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: mọi thứ đều ổn</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} sự cố, {1} cảnh báo</Tray_Tooltip_Issues>

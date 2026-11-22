@@ -11,12 +11,13 @@
     Name    : Test-CopilotFacts.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.10
+    Version : 2.8.11
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.10   2026-11-22  fubu2k               Initial version
+    2.8.11   2026-11-22  fubu2k               Company apps row without app names, network facts, note text
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -51,9 +52,41 @@ Assert-Equal @(ConvertTo-SelfXCopilotStatusRows -HealthItems @($null)).Count 0 '
 $many = @(1..60 | ForEach-Object { [pscustomobject]@{ Status = 'OK'; HealthId = "Check$_"; HealthName = ''; Detail = '' } })
 Assert-Equal @(ConvertTo-SelfXCopilotStatusRows -HealthItems $many).Count 40 'status rows: at most 40 rows'
 
+# --- Company apps without app names ----------------------------------------------------------------------------
+$appItems = @([pscustomobject]@{ Category = 'Health'; Property = 'Apps'; Value = 'x'; Status = 'Error'; HealthId = 'Applications'; HealthName = ''; Detail = '1 of 3 app(s) could not be installed: Contoso Teams Plugin (error 0x87D1041C).' })
+$withNames = @(ConvertTo-SelfXCopilotStatusRows -HealthItems $appItems -IncludeAppNames $true)
+$withoutNames = @(ConvertTo-SelfXCopilotStatusRows -HealthItems $appItems -IncludeAppNames $false)
+Assert-Equal ($withNames[0].Detail -like '*Contoso Teams Plugin*') $true 'apps row: details with app names by default'
+Assert-Equal $withoutNames.Count 1 'apps row: the row stays without app names'
+Assert-Equal $withoutNames[0].State 'Error' 'apps row: the state stays without app names'
+Assert-Equal $withoutNames[0].Detail '' 'apps row: no details (app names) with Copilot_Include_AppNames = False'
+$otherItems = @([pscustomobject]@{ Status = 'Error'; HealthId = 'Disk'; HealthName = 'C:'; Detail = '96 % used' })
+$otherRows = @(ConvertTo-SelfXCopilotStatusRows -HealthItems $otherItems -IncludeAppNames $false)
+Assert-Equal $otherRows[0].Detail '96 % used' 'apps row: other rows keep their details'
+$noNames = Get-SelfXCopilotFacts -HealthItems $appItems -IncludeAppNames $false
+$noNamesPrompt = New-SelfXCopilotPrompt -Facts $noNames -Audience User -Language 'en' -IncludeAppNames $false
+Assert-Equal ($noNamesPrompt -match 'Contoso|Teams Plugin') $false 'apps row: no app name in the prompt with Copilot_Include_AppNames = False'
+Assert-Equal ($noNamesPrompt -like '*- Applications: Error*') $true 'apps row: the row itself is in the prompt'
+
+# --- Network facts -----------------------------------------------------------------------------------------------
+$net = ConvertTo-SelfXCopilotNetworkFacts -Connections ([pscustomobject]@{ Lan = $true; WiFi = $false; Wwan = $false }) -Vpn $true -ProxySettings ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'proxy.fabrikam.example:8080'; AutoConfigURL = '' })
+Assert-Equal (($net.Connection -join ',') -ceq 'LAN,VPN') $true 'network: LAN and VPN'
+Assert-Equal ($net.Proxy -ceq 'Manual') $true 'network: manual proxy'
+$net2 = ConvertTo-SelfXCopilotNetworkFacts -Connections ([pscustomobject]@{ Lan = $false; WiFi = $true; Wwan = $true }) -Vpn $false -ProxySettings ([pscustomobject]@{ ProxyEnable = 0; ProxyServer = 'x:1'; AutoConfigURL = 'https://pac.fabrikam.example/proxy.pac' })
+Assert-Equal (($net2.Connection -join ',') -ceq 'Wi-Fi,Mobile') $true 'network: Wi-Fi and mobile'
+Assert-Equal ($net2.Proxy -ceq 'Script') $true 'network: proxy script'
+$net3 = ConvertTo-SelfXCopilotNetworkFacts -Connections ([pscustomobject]@{ Lan = $false; WiFi = $false; Wwan = $false }) -Vpn $false -ProxySettings ([pscustomobject]@{ ProxyEnable = 0; ProxyServer = ''; AutoConfigURL = '' })
+Assert-Equal ($net3.ContainsKey('Connection')) $false 'network: no connection kinds when nothing is connected'
+Assert-Equal ($net3.Proxy -ceq 'None') $true 'network: no proxy'
+$net4 = ConvertTo-SelfXCopilotNetworkFacts -Connections $null -Vpn $false -ProxySettings $null
+Assert-Equal ($net4.ContainsKey('Proxy')) $false 'network: unreadable proxy settings are left out'
+$netPrompt = New-SelfXCopilotPrompt -Facts $net -Audience User -Language 'en'
+Assert-Equal ($netPrompt -like '*Network: LAN + VPN, proxy manual*') $true 'network: line in the prompt'
+Assert-Equal ($netPrompt -match 'fabrikam|8080') $false 'network: no proxy address in the prompt'
+
 # --- Facts ---------------------------------------------------------------------------------------------------
 $facts = Get-SelfXCopilotFacts -HealthItems $items -SelfXVersion '2.8.10' -Language 'de'
-$allowed = @('WindowsEdition', 'WindowsVersion', 'WindowsBuild', 'SelfXVersion', 'Language', 'UptimeDays', 'Disks', 'Status')
+$allowed = @('WindowsEdition', 'WindowsVersion', 'WindowsBuild', 'SelfXVersion', 'Language', 'UptimeDays', 'Disks', 'Status', 'Connection', 'Proxy')
 $unknown = @($facts.Keys | Where-Object { $_ -notin $allowed })
 Assert-Equal $unknown.Count 0 'facts: only keys of the positive list'
 Assert-Equal $facts.SelfXVersion '2.8.10' 'facts: SelfX version'
@@ -83,7 +116,7 @@ Assert-Equal "$($config.GUI_Config.Copilot_Audience)" 'User' 'config: audience U
 Assert-Equal "$($config.GUI_Config.Copilot_Include_AppNames)" 'True' 'config: app names are included by default'
 
 # --- Texts in all language files -----------------------------------------------------------------------------
-$keys = @('Copilot_Row_Label', 'Copilot_Row_Text', 'Copilot_Button', 'Copilot_Window_Title', 'Copilot_Intro_Text', 'Copilot_Description_Label', 'Copilot_Preview_Label', 'Copilot_Preview_Button', 'Copilot_Target_Text', 'Copilot_Open_Button', 'Copilot_Opened_Text', 'Copilot_Error_Text')
+$keys = @('Copilot_Row_Label', 'Copilot_Row_Text', 'Copilot_Button', 'Copilot_Window_Title', 'Copilot_Intro_Text', 'Copilot_Description_Label', 'Copilot_Preview_Label', 'Copilot_Preview_Button', 'Copilot_Target_Text', 'Copilot_Open_Button', 'Copilot_Opened_Text', 'Copilot_Error_Text', 'Copilot_Warning_Text')
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $sources 'Languages') -Filter '*.xml') {
 	[xml]$lang = [IO.File]::ReadAllText($file.FullName)
 	foreach ($key in $keys) {
@@ -112,6 +145,8 @@ if (($start -ge 0) -and ($end -gt $start)) {
 		Assert-Equal ($dialog -match $pattern) $false "window: the Copilot dialog does not use $pattern (no text in the log)"
 	}
 }
+Assert-Equal ($ui -match 'Get-SelfXCopilotFacts [^\r\n]*-IncludeAppNames \$Copilot_AppNames') $true 'window: the setting Copilot_Include_AppNames is passed to the facts'
+Assert-Equal ($ui -match "FindName\('CopilotWarning'\)\.Text = Get-SelfXString 'Copilot_Warning_Text'") $true 'window: the note for the user is shown'
 Assert-Equal ($ui -match '\$Copilot_Available = \(\(Get-SelfXText "Copilot_Enabled" "False"\) -eq ''True''\) -and \(Test-SelfXCopilotUrl \$Copilot_Url\)') $true 'window: the button needs Copilot_Enabled and a valid address'
 
 if ($script:errors.Count) {

@@ -198,6 +198,7 @@
 		<Copilot_Open_Button>คัดลอกและเปิด Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>ข้อความอยู่ในคลิปบอร์ดและเปิด Copilot Chat แล้ว วางข้อความที่นั่น (Ctrl+V) แล้วส่ง</Copilot_Opened_Text>
 		<Copilot_Error_Text>เตรียมข้อความไม่สำเร็จ: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>อย่าเขียนชื่อ รหัสผ่าน หรือข้อมูลลูกค้าในคำอธิบาย Copilot อาจผิดพลาดได้ อย่าสั่งรันคำสั่งที่คุณไม่เข้าใจ</Copilot_Warning_Text>
 		<Version_Text>เวอร์ชัน {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: ทุกอย่างเรียบร้อย</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: ปัญหา {0} รายการ คำเตือน {1} รายการ</Tray_Tooltip_Issues>

@@ -198,6 +198,7 @@ Description du problème :</Report_Mail_Body>
 		<Copilot_Open_Button>Copier et ouvrir Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Le texte est dans le presse-papiers et Copilot Chat est ouvert. Collez-le (Ctrl+V) et envoyez-le.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Le texte n’a pas pu être préparé : {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>N’écrivez pas de noms, de mots de passe ni de données clients dans la description. Copilot peut se tromper : n’exécutez pas de commandes que vous ne comprenez pas.</Copilot_Warning_Text>
 		<Version_Text>Version {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX : tout est en ordre</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX : {0} problème(s), {1} avertissement(s)</Tray_Tooltip_Issues>

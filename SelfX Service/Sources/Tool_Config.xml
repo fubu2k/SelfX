@@ -41,6 +41,7 @@
 	2.7.0    2026-11-22  fubu2k               Service and starter are .NET 10 programs (self-contained), built on a build machine; the devices no longer compile (see CHANGELOG.md)
 	2.8.0    2026-11-22  fubu2k               Service, window and status icon run with PowerShell 7 (>= 7.6); minimum Windows 11 25H2 (build 26200); see CHANGELOG.md
 	2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, Copilot_Url, Copilot_Audience, Copilot_Include_AppNames), off by default
+	2.8.11   2026-11-22  fubu2k               Copilot_Include_AppNames also applies to the company apps row of the device status
 -->
 <GUI_Config>	
 	<Tool_Version>2.8.0</Tool_Version> <!-- Tool version -->
@@ -99,7 +100,7 @@
 	<Copilot_Enabled>False</Copilot_Enabled> <!-- True or False (off by default). Needs a valid Copilot_Url -->
 	<Copilot_Url>https://m365.cloud.microsoft/chat</Copilot_Url> <!-- Address that is opened. Must start with https:// (no user name or password in it, at most 500 characters). Can be any https address, for example another Copilot entry point of your tenant -->
 	<Copilot_Audience>User</Copilot_Audience> <!-- User = answers for the user in plain language (default), Admin = answers for IT staff with technical steps -->
-	<Copilot_Include_AppNames>True</Copilot_Include_AppNames> <!-- True = names of company apps with errors are part of the text. False = only the error codes -->
+	<Copilot_Include_AppNames>True</Copilot_Include_AppNames> <!-- True = names of company apps with errors are part of the text. False = the company apps row of the device status is kept without details (no app names, no error codes) -->
 
 	<!-- Device logs for the support (action "Send the device logs to the support", Collect-DeviceLogs.ps1 run as SYSTEM) -->
 	<DeviceLogs_Days>7</DeviceLogs_Days> <!-- Days of event log history in the report (1-60) -->

@@ -198,6 +198,7 @@
 		<Copilot_Open_Button>Копіювати й відкрити Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Текст у буфері обміну, Copilot Chat відкрито. Вставте текст туди (Ctrl+V) і надішліть.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Не вдалося підготувати текст: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Не вказуйте в описі імена, паролі чи дані клієнтів. Copilot може помилятися: не виконуйте команди, яких ви не розумієте.</Copilot_Warning_Text>
 		<Version_Text>Версія {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: усе гаразд</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: проблем: {0}, попереджень: {1}</Tray_Tooltip_Issues>

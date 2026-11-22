@@ -18,12 +18,13 @@
     Name    : CopilotFacts.ps1
     Package : SelfX Service
     Context : GUI helper (signed-in user), functions only
-    Version : 2.8.10
+    Version : 2.8.11
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.10   2026-11-22  fubu2k               Initial version
+    2.8.11   2026-11-22  fubu2k               Fix: Copilot_Include_AppNames = False also removes the details of the company apps row (they name the apps); network facts (connection types, VPN, proxy kind) from local values
 #>
 
 function ConvertTo-SelfXCopilotStatusRows {
@@ -32,7 +33,10 @@ function ConvertTo-SelfXCopilotStatusRows {
 	    Turns the health items of the window (Status, HealthId, HealthName, Detail) into status rows.
 	    Items without a technical check Id are skipped.
 	#>
-	param([object[]]$HealthItems = @())
+	param(
+		[object[]]$HealthItems = @(),
+		[bool]$IncludeAppNames = $true
+	)
 	$rows = New-Object System.Collections.Generic.List[object]
 	foreach ($item in @($HealthItems)) {
 		if ($null -eq $item) { continue }
@@ -44,6 +48,8 @@ function ConvertTo-SelfXCopilotStatusRows {
 		if ($item.PSObject.Properties.Name -contains 'HealthName' -and "$($item.HealthName)" -match '^[A-Za-z0-9 _.():-]{1,60}$') { $name = "$id ($($item.HealthName))" }
 		$detail = ''
 		if ($item.PSObject.Properties.Name -contains 'Detail') { $detail = "$($item.Detail)" }
+		# The details of the company apps row name the apps ("Teams (error 0x...)"): without app names only the state stays.
+		if (-not $IncludeAppNames -and $id -eq 'Applications') { $detail = '' }
 		$rows.Add(@{ Name = $name; State = $state; Detail = $detail })
 		if ($rows.Count -ge 40) { break }
 	}
@@ -67,6 +73,48 @@ function Get-SelfXCopilotDiskFacts {
 	return $disks.ToArray()
 }
 
+function ConvertTo-SelfXCopilotNetworkFacts {
+	<#
+	.SYNOPSIS
+	    Network facts from already read local values (pure function): connection types (object with Lan, WiFi, Wwan),
+	    VPN (bool) and the proxy settings of the user (object with ProxyEnable, ProxyServer, AutoConfigURL).
+	    No address, name or proxy server reaches the result, only the kinds.
+	#>
+	param($Connections, [bool]$Vpn = $false, $ProxySettings)
+	$result = @{}
+	$kinds = New-Object System.Collections.Generic.List[string]
+	if ($Connections) {
+		if ($Connections.Lan -eq $true) { $kinds.Add('LAN') }
+		if ($Connections.WiFi -eq $true) { $kinds.Add('Wi-Fi') }
+		if ($Connections.Wwan -eq $true) { $kinds.Add('Mobile') }
+	}
+	if ($Vpn) { $kinds.Add('VPN') }
+	if ($kinds.Count) { $result.Connection = $kinds.ToArray() }
+	if ($null -ne $ProxySettings) {
+		$manual = $false
+		$enable = 0
+		if ([int]::TryParse("$($ProxySettings.ProxyEnable)", [ref]$enable) -and $enable -eq 1 -and -not [string]::IsNullOrWhiteSpace("$($ProxySettings.ProxyServer)")) { $manual = $true }
+		if ($manual) { $result.Proxy = 'Manual' }
+		elseif (-not [string]::IsNullOrWhiteSpace("$($ProxySettings.AutoConfigURL)")) { $result.Proxy = 'Script' }
+		else { $result.Proxy = 'None' }
+	}
+	return $result
+}
+
+function Get-SelfXCopilotNetworkFacts {
+	# Reads the local values (adapters, VPN profiles, proxy settings of the user). No network access, no
+	# internet test. Needs the functions of SystemInfo.ps1 and SelfXNetwork.ps1; without them nothing is returned.
+	if (-not (Get-Command Get-SelfXConnectionTypes -ErrorAction SilentlyContinue)) { return @{} }
+	try {
+		$adapters = @(Invoke-SelfXSafe { Get-SelfXNetAdapters })
+		$connections = Get-SelfXConnectionTypes -Adapters $adapters -GatewayIndexes @(Get-SelfXGatewayInterfaceIndexes)
+		$vpn = [bool](Test-SelfXVpnConnection)
+		$proxy = Invoke-SelfXSafe { Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -ErrorAction Stop }
+		return (ConvertTo-SelfXCopilotNetworkFacts -Connections $connections -Vpn $vpn -ProxySettings $proxy)
+	}
+	catch { return @{} }
+}
+
 function Get-SelfXCopilotFacts {
 	<#
 	.SYNOPSIS
@@ -76,7 +124,8 @@ function Get-SelfXCopilotFacts {
 	param(
 		[object[]]$HealthItems = @(),
 		[string]$SelfXVersion = '',
-		[string]$Language = ''
+		[string]$Language = '',
+		[bool]$IncludeAppNames = $true
 	)
 	$facts = @{}
 	try {
@@ -91,7 +140,9 @@ function Get-SelfXCopilotFacts {
 	try { $facts.UptimeDays = [math]::Floor([Environment]::TickCount64 / 86400000) } catch { }
 	$disks = @(Get-SelfXCopilotDiskFacts)
 	if ($disks.Count) { $facts.Disks = $disks }
-	$status = @(ConvertTo-SelfXCopilotStatusRows -HealthItems $HealthItems)
+	$status = @(ConvertTo-SelfXCopilotStatusRows -HealthItems $HealthItems -IncludeAppNames $IncludeAppNames)
 	if ($status.Count) { $facts.Status = $status }
+	$network = Get-SelfXCopilotNetworkFacts
+	foreach ($key in @($network.Keys)) { $facts[$key] = $network[$key] }
 	return $facts
 }

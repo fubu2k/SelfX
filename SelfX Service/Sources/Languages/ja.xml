@@ -198,6 +198,7 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Copilot_Open_Button>コピーして Copilot を開く</Copilot_Open_Button>
 		<Copilot_Opened_Text>テキストはクリップボードにあり、Copilot Chat が開きました。そこに貼り付け（Ctrl+V）、送信してください。</Copilot_Opened_Text>
 		<Copilot_Error_Text>テキストを準備できませんでした: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>説明に氏名、パスワード、顧客データを書かないでください。Copilot は間違えることがあります。理解できないコマンドは実行しないでください。</Copilot_Warning_Text>
 		<Version_Text>バージョン {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 問題ありません</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: 問題 {0} 件、警告 {1} 件</Tray_Tooltip_Issues>

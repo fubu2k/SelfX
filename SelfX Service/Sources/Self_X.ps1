@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.10
+    Version : 2.8.11
 
     History:
     Version  Date        Author               Change
@@ -82,6 +82,7 @@
     2.6.9    2026-11-19  Wolfgang Baeck       Fix, Fix all and Check all are no longer refused while the cached status is read (every minute)
     2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
     2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, off by default): preview of the prompt, copy, open the configured https address
+    2.8.11   2026-11-22  fubu2k               Copilot Chat: notes for the user in the dialog; Copilot_Include_AppNames also applies to the company apps row; network facts
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -2062,6 +2063,7 @@ Function Show-SelfXCopilotDialog
       <TextBlock Name="CopilotIntro" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,0,0,10"/>
       <TextBlock Name="CopilotLabel" FontWeight="SemiBold" Margin="0,0,0,4"/>
       <TextBox Name="CopilotText" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="80" MaxLength="1000" Padding="6"/>
+      <TextBlock Name="CopilotWarning" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,6,0,0"/>
       <Button Name="CopilotPreviewButton" HorizontalAlignment="Left" MinWidth="130" Margin="0,8,0,0"/>
       <TextBlock Name="CopilotPreviewLabel" FontWeight="SemiBold" Margin="0,12,0,4"/>
       <TextBox Name="CopilotPreview" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="190" MaxLength="8000" Padding="6" FontFamily="Consolas"/>
@@ -2074,6 +2076,7 @@ Function Show-SelfXCopilotDialog
 '@
 		$Dialog.FindName('CopilotIntro').Text = Get-SelfXString 'Copilot_Intro_Text'
 		$Dialog.FindName('CopilotLabel').Text = Get-SelfXString 'Copilot_Description_Label'
+		$Dialog.FindName('CopilotWarning').Text = Get-SelfXString 'Copilot_Warning_Text'
 		$Dialog.FindName('CopilotPreviewLabel').Text = Get-SelfXString 'Copilot_Preview_Label'
 		$Dialog.FindName('CopilotTarget').Text = Get-SelfXString 'Copilot_Target_Text' (Get-SelfXCopilotUrlHost $Copilot_Url)
 		$Close = $Dialog.FindName('CopilotClose')
@@ -2086,7 +2089,7 @@ Function Show-SelfXCopilotDialog
 			$Result = $Dlg.FindName('CopilotResult')
 			Try
 				{
-					$Facts = Get-SelfXCopilotFacts -HealthItems @($Global:Health_Items) -SelfXVersion "$Tool_Version" -Language "$($SelfX_UI_Language.Culture)"
+					$Facts = Get-SelfXCopilotFacts -HealthItems @($Global:Health_Items) -SelfXVersion "$Tool_Version" -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames
 					$Context = @{ ComputerName = $env:COMPUTERNAME; UserName = $env:USERNAME; DomainName = @($env:USERDOMAIN, $env:USERDNSDOMAIN) }
 					$Prompt = New-SelfXCopilotPrompt -Facts $Facts -Description $Dlg.FindName('CopilotText').Text -Context $Context -Audience $Copilot_Audience -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames
 					$Dlg.FindName('CopilotPreview').Text = $Prompt

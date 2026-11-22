@@ -198,6 +198,7 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Copilot_Open_Button>Kopiëren en Copilot openen</Copilot_Open_Button>
 		<Copilot_Opened_Text>De tekst staat op het klembord en Copilot Chat is geopend. Plak de tekst daar (Ctrl+V) en verstuur hem.</Copilot_Opened_Text>
 		<Copilot_Error_Text>De tekst kon niet worden voorbereid: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Schrijf geen namen, wachtwoorden of klantgegevens in de beschrijving. Copilot kan zich vergissen: voer geen opdrachten uit die u niet begrijpt.</Copilot_Warning_Text>
 		<Version_Text>Versie {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: alles in orde</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} probleem/problemen, {1} waarschuwing(en)</Tray_Tooltip_Issues>

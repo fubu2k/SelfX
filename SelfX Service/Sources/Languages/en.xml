@@ -196,6 +196,7 @@ Description of the issue:</Report_Mail_Body>
 		<Copilot_Open_Button>Copy and open Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>The text is in the clipboard and Copilot Chat has been opened. Paste it there (Ctrl+V) and send it.</Copilot_Opened_Text>
 		<Copilot_Error_Text>The text could not be prepared: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Do not write names, passwords or customer data in the description. Copilot can be wrong: do not carry out commands that you do not understand.</Copilot_Warning_Text>
 		<Service_Short_Running>SelfX service running</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX service not available</Service_Short_Unavailable>
 		<Version_Text>Version {0}</Version_Text>

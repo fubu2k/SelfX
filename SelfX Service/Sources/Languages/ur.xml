@@ -196,6 +196,7 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<Copilot_Open_Button>کاپی کریں اور Copilot کھولیں</Copilot_Open_Button>
 		<Copilot_Opened_Text>متن کلپ بورڈ میں ہے اور Copilot Chat کھل گیا ہے۔ اسے وہاں پیسٹ کریں (Ctrl+V) اور بھیج دیں۔</Copilot_Opened_Text>
 		<Copilot_Error_Text>متن تیار نہیں ہو سکا: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>وضاحت میں نام، پاس ورڈ یا گاہکوں کا ڈیٹا نہ لکھیں۔ Copilot غلط ہو سکتا ہے: ایسے احکامات نہ چلائیں جو آپ کی سمجھ میں نہ آئیں۔</Copilot_Warning_Text>
 		<Version_Text>ورژن {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: سب کچھ ٹھیک ہے</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} مسائل، {1} انتباہات</Tray_Tooltip_Issues>
