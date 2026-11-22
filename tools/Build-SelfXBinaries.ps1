@@ -60,6 +60,8 @@ $Programs = [ordered]@{
     'Service/SelfXService.cs'        = @{ Project = 'SelfXService';        Output = 'SelfXService.exe' }
     'Service/SelfXLauncher.cs'       = @{ Project = 'SelfXLauncher';       Output = 'SelfX.exe' }
     'Service/SelfXSessionStarter.cs' = @{ Project = 'SelfXSessionStarter'; Output = 'SelfXSessionStarter.dll' }
+    # Library for PowerShell 7 (WinRT projection). All its DLLs go into Bin\WinRT and are listed one by one in the manifest.
+    'Service/SelfXWinRT.cs'          = @{ Project = 'SelfXWinRT';          Folder = 'WinRT'; Output = 'SelfXWinRT.dll' }
 }
 
 # The .NET SDK 10 is required: another major version would build other files than the ones that were tested.
@@ -94,10 +96,20 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $($definition.Project) (exit code $LASTEXITCODE)." }
         $built = Join-Path $publishFolder $definition.Output
         if (-not (Test-Path -LiteralPath $built -PathType Leaf)) { throw "dotnet publish did not create $($definition.Output)." }
-        $outputPath = Join-Path $OutputFolder $definition.Output
-        Copy-Item -LiteralPath $built -Destination $outputPath -Force
         $sourcePath = Join-Path $PackageFolder $relative.Replace('/', '\')
         $manifestSources[$relative] = (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash
+        if ($definition.Folder) {
+            # The library and the Windows SDK projection DLLs it needs, each with its own SHA256.
+            $targetFolder = Join-Path $OutputFolder $definition.Folder
+            New-Item -ItemType Directory -Path $targetFolder -Force | Out-Null
+            foreach ($dll in Get-ChildItem -LiteralPath $publishFolder -Filter '*.dll' -File | Sort-Object Name) {
+                Copy-Item -LiteralPath $dll.FullName -Destination (Join-Path $targetFolder $dll.Name) -Force
+                $manifestBinaries["$($definition.Folder)/$($dll.Name)"] = (Get-FileHash -LiteralPath (Join-Path $targetFolder $dll.Name) -Algorithm SHA256).Hash
+            }
+            continue
+        }
+        $outputPath = Join-Path $OutputFolder $definition.Output
+        Copy-Item -LiteralPath $built -Destination $outputPath -Force
         $manifestBinaries[$definition.Output] = (Get-FileHash -LiteralPath $outputPath -Algorithm SHA256).Hash
     }
 }
@@ -133,7 +145,7 @@ if (@(Get-Command -Name Get-AppLockerFileInformation, New-AppLockerPolicy -Error
     $buildFolder = Join-Path $RepositoryRoot 'build'
     New-Item -ItemType Directory -Path $buildFolder -Force | Out-Null
     $policyPath = Join-Path $buildFolder 'SelfX.AppLocker.xml'
-    $paths = @($manifestBinaries.Keys | ForEach-Object { Join-Path $OutputFolder $_ })
+    $paths = @($manifestBinaries.Keys | ForEach-Object { Join-Path $OutputFolder $_.Replace('/', '\') })
     # The rules are a convenience: a problem here must not fail the build (PowerShell 7 reaches the AppLocker
     # cmdlets only through a compatibility layer; use Windows PowerShell 5.1 for the rules in that case).
     try {
