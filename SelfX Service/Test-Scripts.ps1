@@ -75,6 +75,8 @@ function global:Get-CimInstance {
 	param($Namespace, $ClassName, $Filter, $ErrorAction)
 	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetAdapter') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeAdapters }
 	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpComputerStatus') { return [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00' } }
+	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftVolumeEncryption' -and $ClassName -eq 'Win32_EncryptableVolume') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeVolumes }
+	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftTpm' -and $ClassName -eq 'Win32_Tpm') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeTpm }
 	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetRoute') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeRoutes }
 	throw "Get-CimInstance is not allowed in tests ($ClassName)"
 }
@@ -438,6 +440,31 @@ try {
 		Assert-Equal $thrown 'PlatformNotSupportedException' 'Secure Boot: missing key or value means legacy BIOS (PlatformNotSupportedException)'
 	}
 	Microsoft.PowerShell.Management\Remove-Item Function:\Test-Path, Function:\Get-ItemProperty
+
+	#------------------------------------------------------------------------------------------------
+	# BitLocker and TPM through CIM (SelfXDeviceSecurity.ps1): the BitLocker and TPM cmdlets are not used (values measured on a device)
+	function global:Get-BitLockerVolume { throw 'Get-BitLockerVolume is not allowed (use SelfXDeviceSecurity.ps1)' }
+	function global:Get-Tpm { throw 'Get-Tpm is not allowed (use SelfXDeviceSecurity.ps1)' }
+	$global:FakeVolumes = @(
+		[pscustomobject]@{ DriveLetter = 'C:'; VolumeType = 0; ProtectionStatus = 1; ConversionStatus = 1 },
+		[pscustomobject]@{ DriveLetter = 'D:'; VolumeType = 1; ProtectionStatus = 0; ConversionStatus = 0 },
+		[pscustomobject]@{ DriveLetter = 'E:'; VolumeType = 2; ProtectionStatus = 2; ConversionStatus = 2 })
+	$bl = @(Get-SelfXBitLockerVolumes)
+	Assert-Equal (($bl | ForEach-Object { "$($_.MountPoint)/$($_.VolumeType)/$($_.ProtectionStatus)/$($_.VolumeStatus)" }) -join ';') 'C:/OperatingSystem/On/FullyEncrypted;D:/FixedData/Off/FullyDecrypted;E:/Removable/Unknown/EncryptionInProgress' 'BitLocker: CIM values mapped like Get-BitLockerVolume'
+	$global:FakeVolumes = @([pscustomobject]@{ DriveLetter = 'C:'; VolumeType = 9; ProtectionStatus = 7; ConversionStatus = $null })
+	$bl = @(Get-SelfXBitLockerVolumes)
+	Assert-Equal "$($bl[0].VolumeType)|$($null -eq $bl[0].ProtectionStatus)|$($null -eq $bl[0].VolumeStatus)" 'Unknown|True|True' 'BitLocker: unknown CIM values stay unknown (no guess)'
+	$global:FakeCimFails = $true
+	$thrown = ''
+	try { $null = @(Get-SelfXBitLockerVolumes) } catch { $thrown = $_.Exception.Message }
+	Assert-Equal $thrown 'Mock CIM denied' 'BitLocker: an unreadable class throws (callers show unknown)'
+	$global:FakeCimFails = $false
+	$global:FakeTpm = [pscustomobject]@{ IsEnabled_InitialValue = $true; IsActivated_InitialValue = $true; IsOwned_InitialValue = $true }
+	Assert-Equal "$((Get-SelfXTpmStatus).TpmPresent)/$((Get-SelfXTpmStatus).TpmReady)" 'True/True' 'TPM: present and ready'
+	$global:FakeTpm = [pscustomobject]@{ IsEnabled_InitialValue = $true; IsActivated_InitialValue = $false; IsOwned_InitialValue = $true }
+	Assert-Equal "$((Get-SelfXTpmStatus).TpmPresent)/$((Get-SelfXTpmStatus).TpmReady)" 'True/False' 'TPM: not activated is not ready'
+	$global:FakeTpm = $null
+	Assert-Equal "$((Get-SelfXTpmStatus).TpmPresent)/$((Get-SelfXTpmStatus).TpmReady)" 'False/False' 'TPM: no instance means not present'
 
 	#------------------------------------------------------------------------------------------------
 	# Read-only scripts, run for real in a child process (sandbox ProgramData for their logs)
