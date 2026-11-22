@@ -21,6 +21,9 @@ Anhebung der Version ausgeliefert.
 
 ### Geändert
 
+- Mindestversion: Windows 11 25H2 (Build 26200). `Install.ps1` prüft die Build-Nummer
+  (Registry) vor jeder Änderung und bricht bei älteren Builds hart ab; die bestehende
+  Installation bleibt unverändert.
 - Der Dienst startet alle Skripte mit `%ProgramFiles%\PowerShell\7\pwsh.exe` (fester
   Pfad, keine PATH-Suche). Er setzt für das Skript nur die maschinenweiten Modulordner
   (`PSModulePath`) und schaltet Telemetrie und Update-Prüfung von PowerShell aus. Fehlt

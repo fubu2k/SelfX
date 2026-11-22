@@ -4,6 +4,7 @@
 
 .DESCRIPTION
     Runs in elevated 64-bit Windows PowerShell 5.1, normally as SYSTEM via Intune/SCCM.
+    Requires Windows 11 25H2 (build 26200) or newer; on older builds it stops before anything is changed.
     Stops and deletes an existing SelfXService, deletes the entire content of InstallFolder
     (default ProgramFiles\SelfX; the folder itself is kept because an open SelfX window or
     status icon may use it as working directory, locked files are retried for 20 seconds),
@@ -74,6 +75,23 @@ $DataFolder = Join-Path $env:ProgramData 'SelfX'
 $LogFolder = Join-Path $DataFolder 'Logs'
 $UninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SelfX'
 $PowerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+
+function Test-SelfXWindowsBuild {
+	# SelfX Service needs Windows 11 25H2 (build 26200) or newer. Older builds are not supported any more and the
+	# installation stops before anything is changed (hard abort). The build number is read from the registry
+	# (not from [Environment]::OSVersion, which an application manifest can falsify).
+	param(
+		[int]$Build = 0,
+		[int]$MinimumBuild = 26200
+	)
+	If($Build -le 0)
+	{
+		Try { $Build = [int](Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber -ErrorAction Stop).CurrentBuildNumber }
+		Catch { throw 'The Windows build number cannot be read. SelfX Service needs Windows 11 25H2 (build 26200) or newer.' }
+	}
+	If($Build -lt $MinimumBuild) { throw "Windows build $Build is not supported. SelfX Service needs Windows 11 25H2 (build $MinimumBuild) or newer." }
+	return $Build
+}
 
 function Test-SelfXPowerShell7 {
 	# Checks the PowerShell 7 that the service, the window and the status icon start (fixed machine-wide path, no PATH
@@ -154,6 +172,7 @@ function Test-SelfXPrebuiltBinaries {
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 If(-not $IsAdmin) { throw 'Install.ps1 must run with administrator rights.' }
 If($PSVersionTable.PSEdition -eq 'Core') { throw 'Install.ps1 must run in Windows PowerShell 5.1 (powershell.exe), not PowerShell 7.' }
+$null = Test-SelfXWindowsBuild
 If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) { throw 'Run Install.ps1 in a 64-bit PowerShell (use %SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe from 32-bit agents).' }
 
 New-Item -ItemType Directory -Path $LogFolder -Force | Out-Null

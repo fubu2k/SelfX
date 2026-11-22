@@ -36,7 +36,7 @@ $tokens = $null
 $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Install.ps1'), [ref]$tokens, [ref]$parseErrors)
 Assert-Equal @($parseErrors).Count 0 'Install.ps1 parses'
-foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7') {
+foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Test-SelfXWindowsBuild') {
 	$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
 	Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
 	if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
@@ -166,6 +166,21 @@ try {
 	& icacls.exe $ps7Folder /remove:g '*S-1-5-32-545' | Out-Null
 	& icacls.exe $ps7Folder /grant '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'Users may read and run the folder'
+
+	# Windows 11 25H2 (build 26200) is the minimum; older builds stop the installation (hard abort).
+	function Test-WindowsBuildResult {
+		param([int]$Build)
+		try { return "accepted $(Test-SelfXWindowsBuild -Build $Build)" } catch { return 'refused: ' + $_.Exception.Message }
+	}
+	Assert-Equal (Test-WindowsBuildResult 26200) 'accepted 26200' 'Windows 11 25H2 (build 26200) is accepted'
+	Assert-Equal (Test-WindowsBuildResult 26300) 'accepted 26300' 'A newer build is accepted'
+	Assert-Equal ((Test-WindowsBuildResult 26199) -like 'refused*Windows build 26199 is not supported*') $true 'Build 26199 is refused'
+	Assert-Equal ((Test-WindowsBuildResult 26100) -like 'refused*25H2*') $true 'Windows 11 24H2 (build 26100) is refused'
+	Assert-Equal ((Test-WindowsBuildResult 19045) -like 'refused*') $true 'Windows 10 is refused'
+	$readBuild = Test-SelfXWindowsBuild -MinimumBuild 1
+	Assert-Equal ($readBuild -is [int] -and $readBuild -gt 0) $true 'The build number of this computer is read from the registry'
+	$installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
+	Assert-Equal ($installText.IndexOf('$null = Test-SelfXWindowsBuild') -ge 0 -and $installText.IndexOf('$null = Test-SelfXWindowsBuild') -lt $installText.IndexOf('New-Item -ItemType Directory -Path $LogFolder')) $true 'The build check runs before the installer changes anything'
 
 }
 finally {
