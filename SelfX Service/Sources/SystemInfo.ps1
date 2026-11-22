@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.6.0
+    Version : 2.8.2
 
     History:
     Version  Date        Author               Change
@@ -45,6 +45,7 @@
                                               fix: last Intune sync was shown one hour (UTC offset) too late, the OMA-DM
                                               time is local time despite its "Z" (ConvertFrom-SelfXOmaDmTime)
     2.6.0    2026-11-06  Wolfgang Baeck       Label "Company apps (Intune)" instead of "Applications (local IME cache)"
+    2.8.2    2026-11-22  fubu2k               Uptime row shows a restart hint (warning status) from 7 days without a restart (Get-SelfXUptimeInfo)
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -55,7 +56,7 @@ $Script:SelfXInfoDefaultText = @{
 	BIOS_Version = 'BIOS version'; Processor = 'Processor'; Memory = 'Memory (RAM)'; Free_Space = 'Free space {0}'
 	Free_Space_Value = '{0} of {1} ({2}%)'; Battery = 'Battery'
 	Windows_Version = 'Windows version'; OS_Build = 'OS build'; Last_Boot = 'Last boot'; Uptime = 'Uptime'
-	Uptime_Value = '{0} day(s) {1:D2}:{2:D2} h'; Last_Update = 'Last update installed'; Time_Zone = 'Time zone'
+	Uptime_Value = '{0} day(s) {1:D2}:{2:D2} h'; Uptime_Restart_Hint = 'restart recommended (not "Shut down")'; Last_Update = 'Last update installed'; Time_Zone = 'Time zone'
 	Current_User = 'Current user'; User_Principal_Name = 'User principal name'; Domain = 'Domain / workgroup'
 	Entra_Joined = 'Entra ID joined'; Domain_Joined = 'Domain joined'; Tenant = 'Tenant'; Entra_Device_Id = 'Entra device ID'
 	Intune_User = 'Intune enrolled user'; Intune_Last_Sync = 'Last Intune sync'
@@ -90,6 +91,17 @@ function Get-SelfXInfoText {
 		catch { return [string]::Format($Script:SelfXInfoDefaultText[$Key], $Arguments) }
 	}
 	return $value
+}
+
+# Uptime text and status. From WarnDays days without a restart the row is a warning (Pending) with a hint.
+# Read-only: SelfX never restarts Windows. Note: with fast startup "Shut down" does not reset the uptime.
+function Get-SelfXUptimeInfo {
+	param([timespan]$Uptime, [int]$WarnDays = 7)
+	$text = Get-SelfXInfoText 'Uptime_Value' $Uptime.Days $Uptime.Hours $Uptime.Minutes
+	if ($Uptime.TotalDays -ge $WarnDays) {
+		return [pscustomobject]@{ Value = ('{0} ({1})' -f $text, (Get-SelfXInfoText 'Uptime_Restart_Hint')); Status = 'Pending' }
+	}
+	return [pscustomobject]@{ Value = $text; Status = '' }
 }
 
 function New-SelfXInfoItem {
@@ -449,7 +461,8 @@ function Get-SelfXSystemInfo {
 	if ($os.LastBootUpTime) {
 		$uptime = (Get-Date) - $os.LastBootUpTime
 		$items.Add((New-SelfXInfoItem $catWindows (& $L 'Last_Boot') $os.LastBootUpTime.ToString('yyyy-MM-dd HH:mm:ss')))
-		$items.Add((New-SelfXInfoItem $catWindows (& $L 'Uptime') (Get-SelfXInfoText 'Uptime_Value' $uptime.Days $uptime.Hours $uptime.Minutes)))
+		$uptimeInfo = Get-SelfXUptimeInfo -Uptime $uptime
+		$items.Add((New-SelfXInfoItem $catWindows (& $L 'Uptime') $uptimeInfo.Value $uptimeInfo.Status))
 	}
 	$lastUpdate = Invoke-SelfXSafe { Get-HotFix -ErrorAction Stop | Where-Object { $_.InstalledOn } | Sort-Object InstalledOn -Descending | Select-Object -First 1 }
 	if ($lastUpdate) {
