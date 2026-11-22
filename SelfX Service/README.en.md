@@ -36,9 +36,11 @@ SelfX Service is installed machine-wide and works without any network connection
 - Branding: you can set a company logo, an icon and the colors in
   `Tool_Config.xml`. See
   [Configuration](../docs/en/Configuration.md#branding).
-- Multilingual user interface: SelfX uses the Windows display language of the
-  user and falls back to English. Users can choose another language in the
-  settings (saved per user, 2.5.9). 24 languages are included in
+- Multilingual user interface: German is the base language (2.6.12); with
+  `Tool_Language` set to `Auto`, SelfX uses the Windows display language of the
+  user, and German if it is not available. Texts that are missing in a language
+  are shown in English. Users can choose another language in the settings
+  (saved per user, 2.5.9). 24 languages are included in
   `Sources\Languages`. To add a language, add one XML file. See
   [Configuration](../docs/en/Configuration.md#languages).
 - Every script starts with a description and a version history.
