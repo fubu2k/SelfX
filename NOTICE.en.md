@@ -10,7 +10,7 @@ plus the copyright line for the changes in this fork. This notice adds to it and
 |------|-----------------|---------|
 | SelfX (idea, WPF interface, XML action catalogue, troubleshooting scripts) | Damien Van Robaeys, [damienvanrobaeys/SelfX](https://github.com/damienvanrobaeys/SelfX), introduced on [Syst & Deploy (August 2022)](https://www.systanddeploy.com/2022/08/selfx-tool-allowing-users-to-solve.html) | MIT according to his repository (`LICENSE.md`, added 2024-05-21). The blog post names no license. |
 | SelfX Service (service, installer, health checks, tests, documentation) | Wolfgang Baeck, [wbaeck/SelfX](https://github.com/wbaeck/SelfX), a fork of damienvanrobaeys/SelfX | His README points to the license of the original project in `LICENSE.md`; there is no separate license file for his additions. |
-| Changes in this fork (security hardening, .NET 10 service, PowerShell 7 migration, tests, CI, documentation) | fubu2k, with the help of Claude Code (Anthropic) | Copyright (c) 2026 fubu2k, under the terms of the MIT License in [LICENSE.md](LICENSE.md). |
+| Changes in this fork (security hardening, .NET 10 service, PowerShell 7 migration, tests, CI, documentation) | fubu2k, with the help of Claude Code (Anthropic) | Copyright (c) 2026 fubu2k, licensed under the MIT License (text in [LICENSE.md](LICENSE.md)). |
 
 ## Other sources
 
@@ -27,3 +27,18 @@ plus the copyright line for the changes in this fork. This notice adds to it and
   checks Microsoft's Authenticode signature before using it.
 - **Built programs** (service and launcher, .NET 10 self-contained) contain parts of the Microsoft .NET runtime and the
   NuGet package `System.ServiceProcess.ServiceController` (both Microsoft, MIT License).
+
+## Disclaimer
+
+The software is provided as is, without warranty of any kind, express or implied, including but not limited to
+merchantability, fitness for a particular purpose, freedom from defects and errors, and non-infringement. The authors and
+copyright holders are not liable for any claim, damages or other liability arising from the software or its use. SelfX
+Service runs with SYSTEM rights and changes settings on the device: review and test every version before using it in
+your environment.
+
+The wording of the MIT License applies:
+
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+> WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+> ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
