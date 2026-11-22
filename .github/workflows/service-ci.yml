@@ -167,12 +167,13 @@ jobs:
           & $script -OutputFolder $one
           & $script -OutputFolder $two
           $failed = $false
-          foreach ($file in Get-ChildItem -LiteralPath $one -File) {
+          foreach ($file in Get-ChildItem -LiteralPath $one -File -Recurse) {
+            $relative = $file.FullName.Substring($one.Length + 1)
             $a = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
-            $b = (Get-FileHash -LiteralPath (Join-Path $two $file.Name) -Algorithm SHA256).Hash
+            $b = (Get-FileHash -LiteralPath (Join-Path $two $relative) -Algorithm SHA256).Hash
             # The manifest contains the build time and so differs; the programs must be identical.
             if ($file.Name -eq 'SelfX.Binaries.json') { continue }
-            '{0}  {1}  {2:N1} MB  {3}' -f $a, $file.Name, ($file.Length / 1MB), $(if ($a -eq $b) { 'reproducible' } else { 'DIFFERENT' })
+            '{0}  {1}  {2:N1} MB  {3}' -f $a, $relative, ($file.Length / 1MB), $(if ($a -eq $b) { 'reproducible' } else { 'DIFFERENT' })
             if ($a -ne $b) { $failed = $true }
           }
           if ($failed) { throw 'The two builds are not identical.' }
@@ -181,6 +182,8 @@ jobs:
           if (Test-Path -LiteralPath $bin) { Remove-Item -LiteralPath $bin -Recurse -Force }
           Copy-Item -LiteralPath $one -Destination $bin -Recurse
           Get-Content -LiteralPath (Join-Path $one 'SelfX.Binaries.json') -Raw
+          # TEMPORARY (WinRT library): the NuGet lock file created by the restore.
+          Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Service\Projects\SelfXWinRT') -Filter packages.lock.json | ForEach-Object { '--- ' + $_.Name; Get-Content -LiteralPath $_.FullName -Raw }
 
       - name: Install.ps1 check accepts the build; session starter loads in Windows PowerShell 5.1
         shell: powershell
