@@ -1,131 +1,137 @@
 # Installation
 
-This guide describes the installation of **SelfX Service** on managed Windows
-devices, in particular with Microsoft Intune.
+[English](en/Installation.md) | **Deutsch**
 
-## Requirements
+Diese Anleitung beschreibt die Installation von **SelfX Service** auf verwalteten
+Windows-Geräten, insbesondere mit Microsoft Intune.
 
-- A supported Windows desktop with Windows PowerShell and WPF.
-- The complete package directory, including its `assembly` and
-  `Scripts_to_run` content.
-- For SelfX Service, 64-bit Windows PowerShell 5.1 and .NET Framework 4.x. The
-  installer either installs the prebuilt programs of the package (folder `Bin`,
-  see [Prebuilt programs](#prebuilt-programs-selfx-service-2611)) or compiles
-  the service with the C# compiler that ships with the .NET Framework. No
-  internet access or SDK is needed.
+## Voraussetzungen
+
+- Ein unterstützter Windows-Desktop mit Windows PowerShell und WPF.
+- Das vollständige Paketverzeichnis, einschließlich der Inhalte von `assembly` und
+  `Scripts_to_run`.
+- Für SelfX Service: 64-Bit-Windows-PowerShell 5.1 und .NET Framework 4.x. Der
+  Installer installiert entweder die vorkompilierten Programme des Pakets (Ordner
+  `Bin`, siehe [Vorkompilierte Programme](#vorkompilierte-programme-selfx-service-2611))
+  oder kompiliert den Dienst mit dem C#-Compiler, der zum .NET Framework gehört.
+  Ein Internetzugang oder ein SDK ist nicht nötig.
 
 ## SelfX Service
 
-SelfX Service installs machine-wide and runs fully offline. Run the installer
-as administrator, either manually or from Intune/SCCM in SYSTEM context:
+SelfX Service wird für das ganze Gerät installiert und läuft vollständig offline.
+Führen Sie den Installer als Administrator aus, entweder manuell oder über
+Intune/SCCM im SYSTEM-Kontext:
 
 ```powershell
-Set-Location 'C:\Path\To\SelfX Service'
+Set-Location 'C:\Pfad\zu\SelfX Service'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
-From a 32-bit agent, use
-`%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe`. The installer:
+Von einem 32-Bit-Agenten aus verwenden Sie
+`%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe`. Der Installer:
 
-1. Stops and removes an existing `SelfXService`.
-2. Empties `%ProgramFiles%\SelfX` and copies `Sources` and `Uninstall.ps1`
-   into it. The folder itself is kept, because an open SelfX window or status
-   icon may use it as working directory. Files that are briefly in use are
-   retried for 20 seconds. The installer then
-   replaces inherited permissions so that SYSTEM and Administrators have full
-   control and Users can only read and execute.
-3. Installs `%ProgramFiles%\SelfX\SelfXService.exe` (the service) and
-   `%ProgramFiles%\SelfX\SelfX.exe` (2.5.3). When the package contains the
-   folder `Bin`, the installer first checks the prebuilt programs against their
-   SHA256 manifest and copies them (2.6.11); a failed check stops the
-   installation. Without `Bin` it compiles `Service\SelfXService.cs` and
-   `Service\SelfXLauncher.cs`; the compiler then writes its temporary files to
-   a folder below the install folder, not to `C:\Windows\Temp`.
-   `SelfX.exe` is a small starter without a console: it starts SelfX
-   (`/page:<Page>` optional) or the status icon (`/tray`) with a hidden Windows
-   PowerShell, so no command window appears, also not with Windows Terminal as
-   default terminal.
-4. Registers and starts the **SelfX Service** (`SelfXService`). It runs as
-   LocalSystem, starts automatically, and restarts after a failure.
-5. Creates shortcuts for all users on the public desktop and in the Start
-   menu (target `SelfX.exe`), according to `Tool_Config.xml`.
-6. Adds an Apps & Features entry.
-7. When `Show_Tray_Icon` is `True` (default), adds the HKLM Run entry
-   `SelfXTray` (`SelfX.exe /tray`), so the status icon (`SelfX_Tray.ps1`) starts at every sign-in
-   for all users. Since 2.5.8 the icon also appears right after the
-   installation. Running status icons are closed before the files are
-   replaced. When the installer runs as SYSTEM (Intune/SCCM), it starts
-   `SelfX.exe /tray` in every active user session, with the normal rights of
-   the signed-in user, not elevated. The result is written to `Install.log`
-   (`Status icon: Session <n>: started`). When you run the installer manually
-   as administrator, Windows does not allow this: the icon appears at the next
-   sign-in or when the user opens SelfX. Open SelfX windows are not closed.
+1. Stoppt und entfernt einen vorhandenen `SelfXService`.
+2. Leert `%ProgramFiles%\SelfX` und kopiert `Sources` und `Uninstall.ps1` hinein.
+   Der Ordner selbst bleibt erhalten, weil ein geöffnetes SelfX-Fenster oder
+   Statussymbol ihn als Arbeitsverzeichnis nutzen kann. Dateien, die kurz in
+   Benutzung sind, werden 20 Sekunden lang erneut versucht. Danach ersetzt der
+   Installer die vererbten Berechtigungen, sodass SYSTEM und Administratoren
+   Vollzugriff haben und Benutzer nur lesen und ausführen dürfen.
+3. Installiert `%ProgramFiles%\SelfX\SelfXService.exe` (den Dienst) und
+   `%ProgramFiles%\SelfX\SelfX.exe` (2.5.3). Enthält das Paket den Ordner `Bin`,
+   prüft der Installer zuerst die vorkompilierten Programme gegen ihr
+   SHA256-Manifest und kopiert sie (2.6.11); eine fehlgeschlagene Prüfung stoppt
+   die Installation. Ohne `Bin` kompiliert er `Service\SelfXService.cs` und
+   `Service\SelfXLauncher.cs`; der Compiler schreibt seine temporären Dateien dann
+   in einen Ordner unterhalb des Installationsordners, nicht nach `C:\Windows\Temp`.
+   `SelfX.exe` ist ein kleiner Starter ohne Konsole: Er startet SelfX
+   (`/page:<Seite>` optional) oder das Statussymbol (`/tray`) mit einer
+   versteckten Windows PowerShell, sodass kein Befehlsfenster erscheint, auch nicht
+   mit Windows Terminal als Standardterminal.
+4. Registriert und startet den **SelfX-Dienst** (`SelfXService`). Er läuft als
+   LocalSystem, startet automatisch und wird nach einem Fehler neu gestartet.
+5. Legt Verknüpfungen für alle Nutzer auf dem öffentlichen Desktop und im
+   Startmenü an (Ziel `SelfX.exe`), gemäß `Tool_Config.xml`.
+6. Fügt einen Eintrag unter Apps & Features hinzu.
+7. Ist `Show_Tray_Icon` auf `True` (Standard), wird der HKLM-Run-Eintrag
+   `SelfXTray` (`SelfX.exe /tray`) angelegt, sodass das Statussymbol
+   (`SelfX_Tray.ps1`) bei jeder Anmeldung für alle Nutzer startet. Seit 2.5.8
+   erscheint das Symbol auch direkt nach der Installation. Laufende Statussymbole
+   werden geschlossen, bevor die Dateien ersetzt werden. Läuft der Installer als
+   SYSTEM (Intune/SCCM), startet er `SelfX.exe /tray` in jeder aktiven
+   Nutzersitzung, mit den normalen Rechten des angemeldeten Nutzers, nicht
+   erhöht. Das Ergebnis steht in `Install.log` (`Status icon: Session <n>:
+   started`). Führen Sie den Installer manuell als Administrator aus, erlaubt
+   Windows das nicht: Das Symbol erscheint bei der nächsten Anmeldung oder wenn der
+   Nutzer SelfX öffnet. Geöffnete SelfX-Fenster werden nicht geschlossen.
 
-The installation log is `%ProgramData%\SelfX\Logs\Install.log`. The service log
-is `%ProgramData%\SelfX\Logs\SelfXService.log`. It rotates to `.old` at 5 MB.
-Both logs can be read only by administrators and SYSTEM. Since 2.6.0 every
-SelfX script logs to `%ProgramData%\SelfX\Logs` (one file per script and day);
-the window, the status icon and the user actions log to
-`%ProgramData%\SelfX\Logs\Users\<SID>`, which the installer creates so that
-each user can only create and read the own folder. Log files older than
-`Log_Retention_Days` (default 90) are deleted automatically; see
-[Logging](Configuration.md#logging-and-log-housekeeping-selfx-service-260).
+Das Installationsprotokoll ist `%ProgramData%\SelfX\Logs\Install.log`. Das
+Dienstprotokoll ist `%ProgramData%\SelfX\Logs\SelfXService.log`; es rotiert bei
+5 MB nach `.old`. Beide Protokolle können nur Administratoren und SYSTEM lesen.
+Seit 2.6.0 protokolliert jedes SelfX-Skript nach `%ProgramData%\SelfX\Logs` (eine
+Datei pro Skript und Tag); das Fenster, das Statussymbol und die Nutzeraktionen
+protokollieren nach `%ProgramData%\SelfX\Logs\Users\<SID>`. Diesen Ordner legt der
+Installer so an, dass jeder Nutzer nur den eigenen Ordner anlegen und lesen kann.
+Protokolldateien, die älter sind als `Log_Retention_Days` (Standard 90), werden
+automatisch gelöscht; siehe
+[Protokollierung](Configuration.md#protokollierung-und-aufbewahrung-selfx-service-260).
 
-The installer exits with code 0 on success and 1 on an error. The reason is
-the last line of `Install.log` (`Installation failed: ...`). Up to version
-2.5.1, an update failed with exit code 1 while a user had SelfX or the status
-icon open. Windows refuses to delete a folder that a running program uses as
-working directory, so the installer stopped after it had already removed the
-service and the files. Version 2.5.2 empties the folder instead of deleting
-it. The status icon no longer uses the install folder as working directory.
-To repair a device on which an older update failed, deploy 2.5.2. A sign-out
-is not needed.
+Der Installer endet bei Erfolg mit Exitcode 0 und bei einem Fehler mit 1. Der Grund
+steht in der letzten Zeile von `Install.log` (`Installation failed: ...`). Bis
+Version 2.5.1 schlug ein Update mit Exitcode 1 fehl, während ein Nutzer SelfX oder
+das Statussymbol geöffnet hatte. Windows verweigert das Löschen eines Ordners, den
+ein laufendes Programm als Arbeitsverzeichnis nutzt, sodass der Installer anhielt,
+nachdem er Dienst und Dateien bereits entfernt hatte. Version 2.5.2 leert den
+Ordner, statt ihn zu löschen. Das Statussymbol nutzt den Installationsordner nicht
+mehr als Arbeitsverzeichnis. Um ein Gerät zu reparieren, auf dem ein älteres Update
+fehlgeschlagen ist, verteilen Sie 2.5.2. Eine Abmeldung ist nicht nötig.
 
-For Intune Win32 apps:
+Für Intune-Win32-Apps:
 
-| Setting | Value |
+| Einstellung | Wert |
 |---|---|
-| Install command | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` |
-| Uninstall command | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` |
-| Install behavior | System |
-| Detection | Custom script `Detection.ps1`. Set `$ExpectedVersion` to the `Tool_Version` of the release. |
+| Installationsbefehl | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` |
+| Deinstallationsbefehl | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` |
+| Installationsverhalten | System |
+| Erkennung | Benutzerdefiniertes Skript `Detection.ps1`. Setzen Sie `$ExpectedVersion` auf die `Tool_Version` des Releases. |
 
-Raise `Tool_Version` (`Sources\Tool_Config.xml`) and `$ExpectedVersion`
-(`Detection.ps1`) for every release, to the same value. If you leave them
-unchanged, Intune finds the old version, treats the device as up to date and
-does not install the new package. `tools\New-SelfXIntuneWin.ps1` stops when the
-two values differ.
+Erhöhen Sie bei jedem Release `Tool_Version` (`Sources\Tool_Config.xml`) und
+`$ExpectedVersion` (`Detection.ps1`) auf denselben Wert. Lassen Sie sie unverändert,
+findet Intune die alte Version, hält das Gerät für aktuell und installiert das neue
+Paket nicht. `tools\New-SelfXIntuneWin.ps1` bricht ab, wenn die beiden Werte
+voneinander abweichen.
 
-`Uninstall.ps1` removes the service, `%ProgramFiles%\SelfX`, the shortcuts,
-the Apps & Features entry, the status icon autostart (`SelfXTray`), the status
-cache (`%ProgramData%\SelfX\Cache`) and the device logs reports
-(`%ProgramData%\SelfX\Reports`). Before it deletes files, it closes open
-SelfX windows and status icons of all signed-in users, because they keep the
-install folder in use. Before version 2.5.7, the uninstallation failed in
-that case. If another program still uses a file, for example an Explorer
-window opened in the install folder, the uninstaller retries for up to 90
-seconds. Two leftovers are not reported as errors:
+`Uninstall.ps1` entfernt den Dienst, `%ProgramFiles%\SelfX`, die Verknüpfungen, den
+Eintrag unter Apps & Features, den Autostart des Statussymbols (`SelfXTray`), den
+Status-Cache (`%ProgramData%\SelfX\Cache`) und die Berichte mit Geräteprotokollen
+(`%ProgramData%\SelfX\Reports`). Bevor es Dateien löscht, schließt es offene
+SelfX-Fenster und Statussymbole aller angemeldeten Nutzer, weil diese den
+Installationsordner in Benutzung halten. Vor Version 2.5.7 schlug die Deinstallation
+in diesem Fall fehl. Nutzt ein anderes Programm noch eine Datei, zum Beispiel ein im
+Installationsordner geöffnetes Explorer-Fenster, versucht der Deinstaller es bis zu
+90 Sekunden lang erneut. Zwei Reste werden nicht als Fehler gemeldet:
 
-- an empty install folder that is still in use,
-- a service that is only marked for deletion, for example because the
-  Services console is open.
+- ein leerer Installationsordner, der noch in Benutzung ist,
+- ein Dienst, der nur zum Löschen markiert ist, zum Beispiel weil die
+  Dienste-Konsole geöffnet ist.
 
-The result is logged in `%ProgramData%\SelfX\Logs\Uninstall.log`. Logs are
-kept; add `-RemoveLogs` to delete `%ProgramData%\SelfX` as
-well. Per-user settings and caches (`HKCU\Software\SelfX`,
-`%LOCALAPPDATA%\SelfX`) are not removed.
+Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Uninstall.log`. Protokolle bleiben
+erhalten; mit `-RemoveLogs` wird auch `%ProgramData%\SelfX` gelöscht.
+Einstellungen und Caches einzelner Nutzer (`HKCU\Software\SelfX`,
+`%LOCALAPPDATA%\SelfX`) werden nicht entfernt.
 
-> If a Group Policy enforces the PowerShell execution policy `AllSigned`, the
-> `-ExecutionPolicy Bypass` switch has no effect. In that case, sign
+> Erzwingt eine Gruppenrichtlinie die PowerShell-Ausführungsrichtlinie `AllSigned`,
+> hat der Schalter `-ExecutionPolicy Bypass` keine Wirkung. Signieren Sie dann
 > `Self_X.ps1`, `SelfXServiceClient.ps1`, `Branding.ps1`, `Localization.ps1`,
-> `SystemInfo.ps1`, `HealthStatus.ps1`, `SupportReport.ps1`, `SelfX_Tray.ps1`, `SelfXLog.ps1`, all health extension scripts and all action scripts
-> (including `Collect-DeviceLogs.ps1`) with a trusted code-signing
-> certificate.
+> `SystemInfo.ps1`, `HealthStatus.ps1`, `SupportReport.ps1`, `SelfX_Tray.ps1`,
+> `SelfXLog.ps1`, alle Skripte der Gesundheitserweiterungen und alle Aktionsskripte
+> (einschließlich `Collect-DeviceLogs.ps1`) mit einem vertrauenswürdigen
+> Codesignatur-Zertifikat.
 
-Run all tests of SelfX Service before you build a package (see the
-[release checklist](#release-checklist-selfx-service)). Every test exits with
-code 1 when it finds an error; GitHub Actions runs the same tests for every
-pull request:
+Führen Sie alle Tests von SelfX Service aus, bevor Sie ein Paket bauen (siehe die
+[Release-Checkliste](#release-checkliste-selfx-service)). Jeder Test endet mit
+Exitcode 1, wenn er einen Fehler findet; GitHub Actions führt dieselben Tests für
+jeden Pull Request aus:
 
 ```powershell
 Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
@@ -134,150 +140,156 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
 }
 ```
 
-After you change or add a language file, run only the language check:
-`& '.\SelfX Service\Test-LanguageFiles.ps1'` (optionally with `-Culture <code>`).
-The tests mock the commands that change the device. `Test-ServicePipe.ps1`
-starts the pipe listener of the service in the test process under a test pipe
-name; nothing is installed and no administrator rights are needed.
+Nachdem Sie eine Sprachdatei geändert oder hinzugefügt haben, führen Sie nur die
+Sprachprüfung aus: `& '.\SelfX Service\Test-LanguageFiles.ps1'` (optional mit
+`-Culture <Code>`). Die Tests ersetzen die Befehle, die das Gerät verändern, durch
+Mocks. `Test-ServicePipe.ps1` startet den Pipe-Listener des Dienstes im Testprozess
+unter einem Test-Pipe-Namen; es wird nichts installiert und es sind keine
+Administratorrechte nötig.
 
-For version 2.3.0 health reporting, redeploy the **entire package**: the service
-binary is rebuilt by the installer and must support `HEALTH`. Copying only the
-new GUI to a 2.2.0 installation is not sufficient. Version 2.3.1 remediation
-allowlisting, the 2.3.2 single-status recheck (`HEALTH <Id> [name]`) and the
-2.3.3 `PendingReboot`/`Updates` check Ids also
-require redeploying the service, not just the GUI. Version 2.3.4 (Pending
-status, Defender signature update script
-`Scripts_to_run\SelfX_Defender_UpdateSignature.ps1` and default remediations)
-also requires redeploying the entire package. Version 2.4.0 (device logs for
-the support) also requires redeploying the entire package: the service passes
-the requesting user to the script (`SELFX_CALLER_SID`); with an older service
-the action fails with exit code 2. Set `Support_Mail` in `Tool_Config.xml` to
-the helpdesk address that receives the device logs. Version 2.5.0 (modern user
-interface, background checks with status cache and the `STATUS` request, tray
-icon) also requires redeploying the entire package: SelfX 2.5.0 reads the
-status with `STATUS`, which older services do not know. Before packaging, set
-the support contacts of the help dialog (`Support_Hours`,
-`Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website`)
-and check the `Background` element of `Health_Config.xml`; see
-[User interface](Configuration.md#user-interface-selfx-service-250) and
-[Background checks](Configuration.md#background-checks-and-status-cache-selfx-service-250).
-SelfX Service no longer needs the MahApps.Metro assemblies. Version 2.6.0
-(logging, restart and app retry repairs, updates installed by SelfX) also requires redeploying the entire package: the installer
-creates `Logs\Users` and the service compiles the log housekeeping. Configure
-`Sources\Health_Config.xml` and optionally add reviewed read-only scripts under
-`Sources\HealthChecks` before packaging; see
-[Health status](Configuration.md#health-status-selfx-service-230).
-Versions 2.6.10 and 2.6.11 (security hardening, see the
-[Changelog](../CHANGELOG.md)) change the service and the installer. Redeploy the
-**entire package** and raise `Tool_Version` and `$ExpectedVersion`.
-Do not grant users write access to the install folder or check scripts.
+Für die Gesundheitsberichte der Version 2.3.0 verteilen Sie das **gesamte Paket**:
+Die Dienstdatei wird vom Installer neu gebaut und muss `HEALTH` unterstützen. Nur
+die neue Oberfläche auf eine Installation 2.2.0 zu kopieren, genügt nicht. Die
+Positivliste der Reparaturen von 2.3.1, die Einzelprüfung von 2.3.2
+(`HEALTH <Id> [Name]`) und die Check-Ids `PendingReboot`/`Updates` von 2.3.3
+erfordern ebenfalls die erneute Verteilung des Dienstes, nicht nur der Oberfläche.
+Version 2.3.4 (Status Ausstehend, Skript für das Defender-Signatur-Update
+`Scripts_to_run\SelfX_Defender_UpdateSignature.ps1` und Standardreparaturen)
+erfordert auch die Verteilung des gesamten Pakets. Version 2.4.0 (Geräteprotokolle
+für den Support) erfordert ebenfalls die Verteilung des gesamten Pakets: Der Dienst
+übergibt den anfragenden Nutzer an das Skript (`SELFX_CALLER_SID`); mit einem
+älteren Dienst schlägt die Aktion mit Exitcode 2 fehl. Setzen Sie `Support_Mail` in
+`Tool_Config.xml` auf die Helpdesk-Adresse, die die Geräteprotokolle erhält.
+Version 2.5.0 (moderne Oberfläche, Hintergrundprüfungen mit Status-Cache und die
+Anfrage `STATUS`, Statussymbol) erfordert ebenfalls die Verteilung des gesamten
+Pakets: SelfX 2.5.0 liest den Status mit `STATUS`, was ältere Dienste nicht kennen.
+Legen Sie vor dem Paketieren die Support-Kontakte des Hilfe-Dialogs fest
+(`Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`,
+`Support_Website`) und prüfen Sie das Element `Background` in `Health_Config.xml`;
+siehe [Benutzeroberfläche](Configuration.md#benutzeroberfläche-selfx-service-250)
+und [Hintergrundprüfungen](Configuration.md#hintergrundprüfungen-und-status-cache-selfx-service-250).
+SelfX Service braucht die MahApps.Metro-Assemblies nicht mehr. Version 2.6.0
+(Protokollierung, Reparaturen Neustart und App-Wiederholung, von SelfX installierte
+Updates) erfordert ebenfalls die Verteilung des gesamten Pakets: Der Installer legt
+`Logs\Users` an und der Dienst kompiliert die Protokollbereinigung. Konfigurieren
+Sie vor dem Paketieren `Sources\Health_Config.xml` und fügen Sie bei Bedarf geprüfte
+nur lesende Skripte unter `Sources\HealthChecks` hinzu; siehe
+[Gesundheitsstatus](Configuration.md#gesundheitsstatus-selfx-service-230).
+Die Versionen 2.6.10 und 2.6.11 (Sicherheitshärtung, siehe das
+[Änderungsprotokoll](../CHANGELOG.md)) ändern den Dienst und den Installer. Verteilen
+Sie das **gesamte Paket** und erhöhen Sie `Tool_Version` und `$ExpectedVersion`.
+Geben Sie Nutzern keinen Schreibzugriff auf den Installationsordner oder die
+Prüfskripte.
 
-Check the installation:
+Installation prüfen:
 
 ```powershell
 Get-Service SelfXService
-Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20   # as administrator
+Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20   # als Administrator
 ```
 
-### Release checklist (SelfX Service)
+### Release-Checkliste (SelfX Service)
 
-1. Adapt the configuration: branding and support contacts in
-   `Sources\Tool_Config.xml`, `Sources\Health_Config.xml`, the catalogue.
-2. Raise `Tool_Version` in `Sources\Tool_Config.xml` and set the same value as
-   `$ExpectedVersion` in `Detection.ps1`; add a line to the history of both
-   files.
-3. Run all tests (see above). Fix every error before you continue.
-4. Optional: build the prebuilt programs with `tools\Build-SelfXBinaries.ps1`
-   (see below) and merge the hash rules of `build\SelfX.AppLocker.xml` into your
-   AppLocker policy. A new build has new hashes: replace the rules of the
-   previous build.
-5. Build the package with `tools\New-SelfXIntuneWin.ps1` (see
-   [Building the Intune packages](#building-the-intune-package)).
-6. Test on a device that is not in production: new installation, update from
-   the previous version, uninstallation, detection. Test as a standard user and,
-   if you have shared devices, with a second signed-in user.
-7. Publish the package in Intune.
+1. Konfiguration anpassen: Branding und Support-Kontakte in
+   `Sources\Tool_Config.xml`, `Sources\Health_Config.xml`, der Katalog.
+2. `Tool_Version` in `Sources\Tool_Config.xml` erhöhen und denselben Wert als
+   `$ExpectedVersion` in `Detection.ps1` setzen; in den Verlauf beider Dateien eine
+   Zeile eintragen.
+3. Alle Tests ausführen (siehe oben). Jeden Fehler beheben, bevor es weitergeht.
+4. Optional: die vorkompilierten Programme mit `tools\Build-SelfXBinaries.ps1` bauen
+   (siehe unten) und die Hashregeln aus `build\SelfX.AppLocker.xml` in die
+   AppLocker-Richtlinie übernehmen. Ein neuer Build hat neue Hashes: Ersetzen Sie
+   die Regeln des vorherigen Builds.
+5. Das Paket mit `tools\New-SelfXIntuneWin.ps1` bauen (siehe
+   [Intune-Paket erstellen](#intune-paket-erstellen)).
+6. Auf einem Gerät testen, das nicht produktiv ist: Neuinstallation, Update von der
+   vorherigen Version, Deinstallation, Erkennung. Als Standardnutzer testen und, wenn
+   Sie gemeinsam genutzte Geräte haben, mit einem zweiten angemeldeten Nutzer.
+7. Das Paket in Intune veröffentlichen.
 
-### Prebuilt programs (SelfX Service 2.6.11)
+### Vorkompilierte Programme (SelfX Service 2.6.11)
 
-Without further steps, `Install.ps1` compiles `SelfXService.exe` and `SelfX.exe`
-on every device. The files then have a different hash on each device, so
-AppLocker or WDAC cannot allow them with a hash rule. Build them once instead,
-on a build machine with Windows PowerShell 5.1:
+Ohne weitere Schritte kompiliert `Install.ps1` `SelfXService.exe` und `SelfX.exe`
+auf jedem Gerät. Die Dateien haben dann auf jedem Gerät einen anderen Hash, sodass
+AppLocker oder WDAC sie nicht mit einer Hashregel zulassen können. Bauen Sie sie
+stattdessen einmal auf einem Build-Rechner mit Windows PowerShell 5.1:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
 ```
 
-The script writes `SelfX Service\Bin` (not committed): `SelfXService.exe`,
-`SelfX.exe`, `SelfXSessionStarter.dll` (used only by the installer) and the
-manifest `SelfX.Binaries.json` with the SHA256 of the three sources and the
-three files. The files are not signed. When the AppLocker cmdlets are
-available on the build machine, the script also writes
-`SelfX.AppLocker.xml` next to the `Bin` folder (in `build\`, not in the
-package): hash rules for the three files, ready to merge into your AppLocker
-policy (`Set-AppLockerPolicy -XmlPolicy ... -Merge` or import in the policy
-editor / Intune). AppLocker uses its own hash of the file (Authenticode
-SHA256), not the SHA256 of the manifest; always take the rules from this file.
-Build the Intune package afterwards; the `Bin` folder is part of it.
+Das Skript schreibt `SelfX Service\Bin` (nicht eingecheckt): `SelfXService.exe`,
+`SelfX.exe`, `SelfXSessionStarter.dll` (nur vom Installer verwendet) und das
+Manifest `SelfX.Binaries.json` mit dem SHA256 der drei Quellen und der drei
+Dateien. Die Dateien sind nicht signiert. Sind auf dem Build-Rechner die
+AppLocker-Cmdlets verfügbar, schreibt das Skript außerdem `SelfX.AppLocker.xml`
+neben den Ordner `Bin` (in `build\`, nicht im Paket): Hashregeln für die drei
+Dateien, bereit zum Zusammenführen mit Ihrer AppLocker-Richtlinie
+(`Set-AppLockerPolicy -XmlPolicy ... -Merge` oder Import im Richtlinien-Editor /
+in Intune). AppLocker verwendet einen eigenen Hash der Datei (Authenticode SHA256),
+nicht den SHA256 des Manifests; übernehmen Sie die Regeln immer aus dieser Datei.
+Bauen Sie danach das Intune-Paket; der Ordner `Bin` ist Teil davon.
 
-When the package contains `Bin`, `Install.ps1` checks before installing:
+Enthält das Paket `Bin`, prüft `Install.ps1` vor der Installation:
 
-- the manifest and all three files exist;
-- the sources of the package (`Service\*.cs`) have the hashes of the manifest,
-  so the programs were built from exactly these sources;
-- each file has the hash of the manifest.
+- das Manifest und alle drei Dateien sind vorhanden;
+- die Quellen des Pakets (`Service\*.cs`) haben die Hashes des Manifests, die
+  Programme wurden also aus genau diesen Quellen gebaut;
+- jede Datei hat den Hash des Manifests.
 
-Any failed check stops the installation with exit code `1`; nothing is compiled
-instead. The reason is in `%ProgramData%\SelfX\Logs\Install.log`. Without `Bin`
-the device compiles as before; the temporary files of the compiler are then
-written to a folder below the install folder instead of `C:\Windows\Temp`.
-`tools\New-SelfXIntuneWin.ps1` refuses to package a `Bin` folder that was built
-from other sources. Rebuild `Bin` after every change of `Service\*.cs`, and
-replace the hash rules in AppLocker at the same time: a new build has new
-hashes, and the old rules no longer match.
+Jede fehlgeschlagene Prüfung stoppt die Installation mit Exitcode `1`; stattdessen
+wird nichts kompiliert. Der Grund steht in `%ProgramData%\SelfX\Logs\Install.log`.
+Ohne `Bin` kompiliert das Gerät wie bisher; die temporären Dateien des Compilers
+werden dann in einen Ordner unterhalb des Installationsordners statt nach
+`C:\Windows\Temp` geschrieben. `tools\New-SelfXIntuneWin.ps1` weigert sich, einen
+Ordner `Bin` zu paketieren, der aus anderen Quellen gebaut wurde. Bauen Sie `Bin`
+nach jeder Änderung von `Service\*.cs` neu und ersetzen Sie gleichzeitig die
+Hashregeln in AppLocker: Ein neuer Build hat neue Hashes, die alten Regeln passen
+nicht mehr.
 
-## Building the Intune package
+## Intune-Paket erstellen
 
-`tools\New-SelfXIntuneWin.ps1` creates the `.intunewin` file of SelfX Service in
-the `build` folder of the repository (the folder is not committed, see
-`.gitignore`). It uses Microsoft's
+`tools\New-SelfXIntuneWin.ps1` erstellt die `.intunewin`-Datei von SelfX Service im
+Ordner `build` des Repositorys (der Ordner wird nicht eingecheckt, siehe
+`.gitignore`). Es verwendet das
 [Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool)
-(`IntuneWinAppUtil.exe`); download the executable from the official repository
-and pass its path with `-ToolPath`. The script verifies the Microsoft
-Authenticode signature before running it. The executable is not stored in this
-repository, and the script does not install a PowerShell packaging module.
+von Microsoft (`IntuneWinAppUtil.exe`); laden Sie die ausführbare Datei aus dem
+offiziellen Repository herunter und übergeben Sie ihren Pfad mit `-ToolPath`. Das
+Skript prüft die Authenticode-Signatur von Microsoft, bevor es die Datei startet.
+Die ausführbare Datei liegt nicht in diesem Repository, und das Skript installiert
+kein PowerShell-Paketierungsmodul.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXIntuneWin.ps1 `
   -ToolPath C:\Tools\IntuneWinAppUtil.exe
 ```
 
-| Source folder | Setup file | Package |
+| Quellordner | Setup-Datei | Paket |
 |---|---|---|
-| `SelfX Service` | `Install.ps1` | `build\SelfX-Service-<version>.intunewin` |
+| `SelfX Service` | `Install.ps1` | `build\SelfX-Service-<Version>.intunewin` |
 
-The version is `Tool_Version` (`Sources\Tool_Config.xml`). The script copies the folder to a
-temporary staging folder and leaves out the packaging tests (`Test-*.ps1`).
-Before packaging it checks that the setup file exists and that every XML file
-is valid. It also checks that `$ExpectedVersion` in
-`Detection.ps1` equals `Tool_Version`. With `-ToolPath` it verifies the
-Microsoft signature of `IntuneWinAppUtil.exe`. It uploads nothing to Intune. Exit code
-`0` means the package was created; `1` means it failed. Run the
-tests of SelfX Service before building.
+Die Version ist `Tool_Version` (`Sources\Tool_Config.xml`). Das Skript kopiert den
+Ordner in einen temporären Staging-Ordner und lässt die Tests der Paketierung
+(`Test-*.ps1`) weg. Vor dem Paketieren prüft es, dass die Setup-Datei existiert und
+jede XML-Datei gültig ist. Außerdem prüft es, dass `$ExpectedVersion` in
+`Detection.ps1` gleich `Tool_Version` ist. Mit `-ToolPath` prüft es die
+Microsoft-Signatur von `IntuneWinAppUtil.exe`. Es lädt nichts nach Intune hoch.
+Exitcode `0` bedeutet, dass das Paket erstellt wurde; `1`, dass es fehlgeschlagen
+ist. Führen Sie vor dem Bauen die Tests von SelfX Service aus.
 
-Use the package in Intune as follows:
+Verwenden Sie das Paket in Intune wie folgt:
 
-| Install command | Install behavior | Uninstall / detection |
+| Installationsbefehl | Installationsverhalten | Deinstallation / Erkennung |
 |---|---|---|
-| `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, custom script `Detection.ps1` (see [SelfX Service](#selfx-service)) |
+| `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, benutzerdefiniertes Skript `Detection.ps1` (siehe [SelfX Service](#selfx-service)) |
 
-## Deployment checklist
+## Checkliste für die Bereitstellung
 
-1. Review the XML action list and every referenced `.ps1` script.
-2. Install as System (the installer needs administrator rights).
-3. Test the UI and each intended action on a non-production device.
-4. Check the status icon and the window as a standard user (no administrator).
-5. Keep the complete package together; do not omit icons, XML, XAML or action
-   scripts.
-6. Follow the [release checklist](#release-checklist-selfx-service).
+1. Die XML-Aktionsliste und jedes referenzierte `.ps1`-Skript prüfen.
+2. Als System installieren (der Installer braucht Administratorrechte).
+3. Die Oberfläche und jede vorgesehene Aktion auf einem nicht produktiven Gerät
+   testen.
+4. Statussymbol und Fenster als Standardnutzer prüfen (ohne Administratorrechte).
+5. Das vollständige Paket zusammenhalten; keine Symbole, XML-, XAML- oder
+   Aktionsskripte weglassen.
+6. Der [Release-Checkliste](#release-checkliste-selfx-service) folgen.

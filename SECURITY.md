@@ -1,32 +1,44 @@
-# Security policy
+# Sicherheitsrichtlinie
 
-SelfX Service runs a Windows service as LOCAL SYSTEM and accepts requests from every signed-in user through a
-local named pipe. A weakness can therefore lead to privilege escalation on every managed device. Please report
-it privately.
+[English](SECURITY.en.md) | **Deutsch**
 
-## Reporting a vulnerability
+SelfX Service führt einen Windows-Dienst als LOCAL SYSTEM aus und nimmt über eine
+lokale Named Pipe Anfragen jedes angemeldeten Nutzers entgegen. Eine Schwachstelle
+kann deshalb auf jedem verwalteten Gerät zu einer Rechteausweitung führen. Bitte
+melden Sie sie vertraulich.
 
-- Use **GitHub private vulnerability reporting** of this repository (*Security* tab, *Report a vulnerability*).
-- Do **not** open a public issue or pull request for a vulnerability before a fix is available.
-- Include the version from the script or source header, the Windows
-  build, the execution context (user, administrator, SYSTEM, Intune deployment) and the steps to reproduce.
-- Do not include tokens, passwords, device logs with personal data or internal host names.
+## Schwachstelle melden
 
-You get an answer within 14 days. Fixes are made on a `security/...` branch and merged through a pull request;
-the release notes name the finding once a fixed version is available.
+- Nutzen Sie das **private Melden von Sicherheitslücken auf GitHub** in diesem
+  Repository (Reiter *Security*, *Report a vulnerability*).
+- Öffnen Sie **kein** öffentliches Issue und keinen Pull Request zu einer
+  Schwachstelle, bevor ein Fix verfügbar ist.
+- Geben Sie die Version aus dem Skript- oder Quelltext-Kopf, den Windows-Build, den
+  Ausführungskontext (Nutzer, Administrator, SYSTEM, Intune-Bereitstellung) und die
+  Schritte zur Reproduktion an.
+- Fügen Sie keine Token, Kennwörter, Geräteprotokolle mit personenbezogenen Daten
+  oder internen Hostnamen bei.
 
-## Scope
+Sie erhalten innerhalb von 14 Tagen eine Antwort. Fixes entstehen auf einem Branch
+`security/...` und werden über einen Pull Request gemergt; die Versionshinweise
+nennen den Befund, sobald eine korrigierte Version verfügbar ist.
 
-In scope, with priority:
+## Geltungsbereich
 
-- **SelfX Service**: `SelfXService.cs` and its named pipe protocol, the action catalogue (`Issues_List.xml`,
-  `Health_Config.xml`), every script that runs with `Context : System`, `Install.ps1`, `Uninstall.ps1`,
-  `Detection.ps1`, file and folder permissions under `%ProgramFiles%\SelfX` and `%ProgramData%\SelfX`.
-- `tools/New-SelfXIntuneWin.ps1` (packaging).
+Im Geltungsbereich, mit Priorität:
 
-Out of scope: weaknesses that require administrator rights on the device beforehand, and third-party binaries
-(report those to their vendor).
+- **SelfX Service**: `SelfXService.cs` und sein Pipe-Protokoll, der Aktionskatalog
+  (`Issues_List.xml`, `Health_Config.xml`), jedes Skript, das mit
+  `Context : System` läuft, `Install.ps1`, `Uninstall.ps1`, `Detection.ps1`,
+  Datei- und Ordnerberechtigungen unter `%ProgramFiles%\SelfX` und
+  `%ProgramData%\SelfX`.
+- `tools/New-SelfXIntuneWin.ps1` (Paketierung).
 
-## Supported versions
+Außerhalb des Geltungsbereichs: Schwachstellen, die vorher Administratorrechte auf
+dem Gerät voraussetzen, und Binärdateien von Drittanbietern (melden Sie diese dem
+jeweiligen Hersteller).
 
-Only the latest version on `main` of this fork is supported. Upstream: https://github.com/wbaeck/SelfX
+## Unterstützte Versionen
+
+Unterstützt wird nur die neueste Version auf `main` dieses Forks. Upstream:
+https://github.com/wbaeck/SelfX

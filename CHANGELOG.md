@@ -1,158 +1,164 @@
-# Changelog
+# Änderungsprotokoll
 
-Changes of this fork ([fubu2k/SelfX](https://github.com/fubu2k/SelfX)) compared
-with its upstream [wbaeck/SelfX](https://github.com/wbaeck/SelfX) at SelfX
-Service 2.6.9. Newest version first.
+[English](CHANGELOG.en.md) | **Deutsch**
 
-The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`.
-`Detection.ps1` must contain the same value, otherwise Intune does not detect
-the update (the packaging script checks this). The version numbers in the
-histories of the single files show where a change was made. Changes marked
-2.6.10 were made before the package version was raised; they are delivered with
-**2.6.11**, the first package version of this fork.
+Änderungen dieses Forks ([fubu2k/SelfX](https://github.com/fubu2k/SelfX)) gegenüber
+seinem Upstream [wbaeck/SelfX](https://github.com/wbaeck/SelfX) bei SelfX Service
+2.6.9. Neueste Version zuerst.
+
+Die Paketversion ist `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`.
+`Detection.ps1` muss denselben Wert enthalten, sonst erkennt Intune das Update nicht
+(das Paketierungsskript prüft das). Die Versionsnummern in den Verläufen der
+einzelnen Dateien zeigen, wo eine Änderung gemacht wurde. Änderungen, die mit 2.6.10
+gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mit
+**2.6.11** ausgeliefert, der ersten Paketversion dieses Forks.
 
 ## 2.6.12 - 2026-11-22 (SelfX Service)
 
-German is the base language of the user interface; English is the fallback.
-Raise of `Tool_Version` and `$ExpectedVersion`: redeploy the package.
+Deutsch ist die Basissprache der Benutzeroberfläche; Englisch ist der Rückfall.
+`Tool_Version` und `$ExpectedVersion` wurden angehoben: Paket neu verteilen.
 
-### Changed
+### Geändert
 
-- `Tool_Language` in `Tool_Config.xml` is now `de` by default (before: `Auto`,
-  the Windows display language). Users can still choose another language in
-  SelfX > Settings; `Auto` remains possible.
-- If no language file matches (for example `Auto` on a device in Czech), SelfX
-  uses German instead of English. A text that is missing in the selected
-  language is shown in English.
-- `Test-UI.ps1` tests the base language.
+- `Tool_Language` in `Tool_Config.xml` ist jetzt standardmäßig `de` (vorher `Auto`,
+  die Anzeigesprache von Windows). Nutzer können in SelfX > Einstellungen weiterhin
+  eine andere Sprache wählen; `Auto` bleibt möglich.
+- Passt keine Sprachdatei (zum Beispiel `Auto` auf einem Gerät mit tschechischer
+  Oberfläche), verwendet SelfX Deutsch statt Englisch. Ein Text, der in der
+  gewählten Sprache fehlt, erscheint auf Englisch.
+- `Test-UI.ps1` testet die Basissprache.
 
-Not changed: the texts of the actions in `Issues_List.xml` stay English base
-texts, which are used only if a text is missing in German and in English.
+Nicht geändert: Die Texte der Aktionen in `Issues_List.xml` bleiben englische
+Basistexte; sie werden nur verwendet, wenn ein Text weder auf Deutsch noch auf
+Englisch vorliegt.
 
 ## Repository, 2026-11-22
 
-- The fork is developed only for SelfX Service. The folders `SelfX Standard`
-  and `SelfX Admin` were removed; use the upstream projects if you need them.
-  `tools\New-SelfXIntuneWin.ps1` (1.3.0) builds only the SelfX Service package;
-  `Test-UI.ps1` no longer reads a file of SelfX Standard.
-- README, installation guide, configuration guide, user manual and
-  `SECURITY.md` describe only SelfX Service.
-- The package version of SelfX Service is unchanged (2.6.11).
+- Der Fork wird nur noch für SelfX Service entwickelt. Die Ordner `SelfX Standard`
+  und `SelfX Admin` wurden entfernt; nutzen Sie bei Bedarf die Upstream-Projekte.
+  `tools\New-SelfXIntuneWin.ps1` (1.3.0) baut nur noch das Paket von SelfX Service;
+  `Test-UI.ps1` liest keine Datei von SelfX Standard mehr.
+- README, Installationsanleitung, Konfigurationsanleitung, Benutzerhandbuch und
+  `SECURITY.md` beschreiben nur noch SelfX Service.
+- Die Paketversion von SelfX Service blieb unverändert (2.6.11).
+- Deutsch ist die Hauptsprache des Repositorys; die englischen Fassungen liegen als
+  `*.en.md` und unter `docs/en`.
 
 ## 2.6.11 - 2026-11-22 (SelfX Service)
 
-Security hardening release. It replaces the service and the installer: redeploy
-the **entire package**. The update installs like every other update;
-`Tool_Version` and `$ExpectedVersion` of `Detection.ps1` are both raised to
-2.6.11.
+Release zur Sicherheitshärtung. Es ersetzt den Dienst und den Installer: das
+**gesamte Paket** neu verteilen. Das Update wird wie jedes andere Update
+installiert; `Tool_Version` und `$ExpectedVersion` in `Detection.ps1` wurden beide
+auf 2.6.11 angehoben.
 
-### Security
+### Sicherheit
 
-- **Pipe deadlines that work reliably.** The pipe of the service uses
-  overlapped I/O. Reading the request, writing the answer and waiting for the
-  client are cancelled when the deadline passes; if the operation does not end,
-  the connection is closed. One 5-second deadline covers the whole request, so
-  sending slowly does not extend it.
-- **Connection limit before reading.** The limit of 8 connections per user is
-  applied when the connection is accepted, using the owner of the client
-  process reported by Windows. One user can no longer occupy the 64 connection
-  slots of all users before the service has read a request.
-- **Prebuilt programs checked by hash (optional).** `tools\Build-SelfXBinaries.ps1`
-  builds `SelfXService.exe`, `SelfX.exe` and `SelfXSessionStarter.dll` once on a
-  build machine and writes `SelfX Service\Bin\SelfX.Binaries.json` with the
-  SHA256 of the sources and the files. When the AppLocker cmdlets are
-  available, it also writes `build\SelfX.AppLocker.xml` with hash rules for the
-  three files. If the package contains `Bin`, `Install.ps1` checks the
-  manifest, the sources and the hash of every file and stops with exit code 1
-  when anything does not match; nothing is compiled instead. The files are not
-  signed.
-- **Protected compiler TEMP.** Without `Bin`, the device still compiles the
-  programs, but the compiler now writes its temporary files to a folder below
-  the protected install folder instead of `C:\Windows\Temp`.
-- **Packaging.** `tools\New-SelfXIntuneWin.ps1` refuses a `Bin` folder that was
-  built from other sources than the ones in the package.
+- **Zuverlässige Fristen an der Pipe.** Die Pipe des Dienstes nutzt überlappende
+  Ein-/Ausgabe. Das Lesen der Anfrage, das Schreiben der Antwort und das Warten auf
+  den Client werden abgebrochen, wenn die Frist abläuft; endet die Operation nicht,
+  wird die Verbindung geschlossen. Eine Frist von 5 Sekunden gilt für die ganze
+  Anfrage, langsames Senden verlängert sie nicht.
+- **Verbindungslimit vor dem Lesen.** Das Limit von 8 Verbindungen pro Nutzer wird
+  beim Annehmen der Verbindung angewendet, anhand des Besitzers des Client-Prozesses,
+  den Windows meldet. Ein Nutzer kann die 64 Verbindungsplätze aller Nutzer nicht
+  mehr belegen, bevor der Dienst eine Anfrage gelesen hat.
+- **Vorkompilierte Programme per Hash geprüft (optional).**
+  `tools\Build-SelfXBinaries.ps1` baut `SelfXService.exe`, `SelfX.exe` und
+  `SelfXSessionStarter.dll` einmal auf einem Build-Rechner und schreibt
+  `SelfX Service\Bin\SelfX.Binaries.json` mit dem SHA256 der Quellen und Dateien.
+  Sind die AppLocker-Cmdlets verfügbar, schreibt es außerdem
+  `build\SelfX.AppLocker.xml` mit Hashregeln für die drei Dateien. Enthält das Paket
+  `Bin`, prüft `Install.ps1` das Manifest, die Quellen und den Hash jeder Datei und
+  bricht mit Exitcode 1 ab, wenn etwas nicht passt; stattdessen wird nichts
+  kompiliert. Die Dateien sind nicht signiert.
+- **Geschützter TEMP-Ordner des Compilers.** Ohne `Bin` kompiliert das Gerät die
+  Programme weiterhin, aber der Compiler schreibt seine temporären Dateien jetzt in
+  einen Ordner unterhalb des geschützten Installationsordners statt nach
+  `C:\Windows\Temp`.
+- **Paketierung.** `tools\New-SelfXIntuneWin.ps1` weist einen Ordner `Bin` zurück,
+  der aus anderen Quellen gebaut wurde als denen im Paket.
 
-### Added
+### Hinzugefügt
 
-- `Test-ServicePipe.ps1`: starts the pipe listener of the service under a test
-  pipe name and checks the deadlines, slow senders, oversized requests and the
-  per-user limit. It needs no installation and no administrator rights.
-- `Test-InstallBinaries.ps1`: tests the check of the prebuilt programs and the
-  protected compiler TEMP.
-- GitHub Actions workflow `.github/workflows/service-ci.yml`: compiles the
-  service, launcher and session starter, runs all `Test-*.ps1` in Windows
-  PowerShell 5.1 and runs PSScriptAnalyzer with security rules for every pull
-  request and every change of `main`. The workflow has read-only rights and
-  uses actions pinned to a commit.
-- `SECURITY.md` (private reporting of vulnerabilities), `.github/CODEOWNERS`
-  and Dependabot for the pinned GitHub Actions.
+- `Test-ServicePipe.ps1`: startet den Pipe-Listener des Dienstes unter einem
+  Testnamen und prüft die Fristen, langsame Sender, zu große Anfragen und das Limit
+  pro Nutzer. Er braucht weder Installation noch Administratorrechte.
+- `Test-InstallBinaries.ps1`: testet die Prüfung der vorkompilierten Programme und
+  den geschützten TEMP-Ordner des Compilers.
+- GitHub-Actions-Workflow `.github/workflows/service-ci.yml`: kompiliert Dienst,
+  Launcher und Session-Starter, führt alle `Test-*.ps1` in Windows PowerShell 5.1
+  aus und führt PSScriptAnalyzer mit Sicherheitsregeln für jeden Pull Request und
+  jede Änderung an `main` aus. Der Workflow hat nur Leserechte und nutzt auf einen
+  Commit festgelegte Actions.
+- `SECURITY.md` (vertrauliches Melden von Schwachstellen), `.github/CODEOWNERS` und
+  Dependabot für die festgelegten GitHub Actions; dieses `CHANGELOG.md`.
 
-### Fixed
+### Behoben
 
-- Four existing tests failed on the first run on a Windows runner (parser error
-  in `Test-Catalog.ps1`, a changed method signature in `Test-HealthStatus.ps1`,
-  and two tests that assumed a non-elevated account). The product code was not
-  affected.
-- `CHANGELOG.md`.
+- Vier bestehende Tests schlugen beim ersten Lauf auf einem Windows-Runner fehl
+  (Parserfehler in `Test-Catalog.ps1`, eine geänderte Methodensignatur in
+  `Test-HealthStatus.ps1` und zwei Tests, die ein Konto ohne erhöhte Rechte
+  voraussetzten). Der Produktcode war nicht betroffen.
 
-### Changed
+### Geändert
 
-- A connection above the per-user limit is closed without an answer (before:
-  the answer *busy*). The SelfX window does not reach this limit.
-- Documentation: new installation and release checklist, description of the
-  prebuilt programs and of the AppLocker rules, updated test list.
+- Eine Verbindung über dem Limit pro Nutzer wird ohne Antwort geschlossen (vorher:
+  die Antwort *busy*). Das SelfX-Fenster erreicht dieses Limit nicht.
+- Dokumentation: neue Installations- und Release-Checkliste, Beschreibung der
+  vorkompilierten Programme und der AppLocker-Regeln, aktualisierte Testliste.
 
-## 2.6.10 - 2026-11-22 (SelfX Service; delivered with 2.6.11)
+## 2.6.10 - 2026-11-22 (SelfX Service; mit 2.6.11 ausgeliefert)
 
-Findings of the security review of SelfX Service. The pull request numbers
-refer to this repository.
+Befunde der Sicherheitsprüfung von SelfX Service. Die Nummern der Pull Requests
+beziehen sich auf dieses Repository.
 
-### Security
+### Sicherheit
 
-- **Device logs report (#1, #2).** The report no longer reads the log folders of
-  the users as SYSTEM (users can change these folders). The SelfX window adds
-  the own user logs with the rights of the user. On multi-user devices a normal
-  user receives only the own data; only an elevated administrator (read by the
-  service from the client token, `SELFX_CALLER_ADMIN=1`) gets the complete
-  report.
-- **Status cache (#3).** A single health check (`HEALTH <Id> <name>`) with an
-  unknown name can no longer append rows to the status cache that all users and
-  the status icon share.
-- **Service log and requests (#4).** Text from requests is cleaned and
-  shortened before it is logged, rejected requests are logged at most 20 times
-  per minute (a user cannot flood the log), and the request patterns end with
-  `\z` instead of `$`.
-- **Pipe limits (#6).** The service closes connections that send nothing for 5
-  seconds or do not read the answer, runs every connection in its own thread
-  and accepts at most 64 connections (8 per user). After a check, the same user
-  waits 3 seconds for the next one; after an action, 15 seconds before the same
-  action can be started again. In both cases the service answers *busy*.
-- **Pipe server check (#7).** Before the SelfX window sends a request it
-  checks that the pipe is served by the running `SelfXService` (process ID of
-  the pipe server compared with the process ID from the service control
-  manager). A user process that created the pipe name while the service was
-  stopped is refused.
-- **Uninstall (#8).** `Uninstall.ps1 -RemoveLogs` deletes the data folders
-  without following junctions or symbolic links that users created.
-- **Several users on one device (#9).** New catalogue element
-  `OtherSessions` (and attribute on a remediation in `Health_Config.xml`):
-  with `Block`, a normal user cannot start the action while another user has an
-  active session. The delivered configuration sets it for the restart,
-  Windows updates, the disk check, the restart of the network adapters and the
-  restart of the Intune service. Elevated administrators are not restricted;
-  if the sessions cannot be read, the action is blocked.
+- **Bericht mit den Geräteprotokollen (#1, #2).** Der Bericht liest die
+  Protokollordner der Nutzer nicht mehr als SYSTEM (Nutzer können diese Ordner
+  ändern). Das SelfX-Fenster fügt die eigenen Nutzerprotokolle mit den Rechten des
+  Nutzers hinzu. Auf Geräten mit mehreren Nutzern erhält ein normaler Nutzer nur die
+  eigenen Daten; nur ein Administrator mit erhöhten Rechten (vom Dienst aus dem
+  Client-Token gelesen, `SELFX_CALLER_ADMIN=1`) erhält den vollständigen Bericht.
+- **Status-Cache (#3).** Eine einzelne Gesundheitsprüfung (`HEALTH <Id> <Name>`) mit
+  unbekanntem Namen kann dem Status-Cache, den alle Nutzer und das Statussymbol
+  gemeinsam verwenden, keine Zeilen mehr hinzufügen.
+- **Dienstprotokoll und Anfragen (#4).** Text aus Anfragen wird vor dem
+  Protokollieren bereinigt und gekürzt, abgelehnte Anfragen werden höchstens 20-mal
+  pro Minute protokolliert (ein Nutzer kann das Protokoll nicht fluten) und die
+  Anfragemuster enden mit `\z` statt `$`.
+- **Pipe-Limits (#6).** Der Dienst schließt Verbindungen, die 5 Sekunden lang nichts
+  senden oder die Antwort nicht lesen, führt jede Verbindung in einem eigenen Thread
+  aus und nimmt höchstens 64 Verbindungen an (8 pro Nutzer). Nach einer Prüfung
+  wartet derselbe Nutzer 3 Sekunden bis zur nächsten; nach einer Aktion 15 Sekunden,
+  bis dieselbe Aktion erneut gestartet werden kann. In beiden Fällen antwortet der
+  Dienst *busy*.
+- **Prüfung des Pipe-Servers (#7).** Bevor das SelfX-Fenster eine Anfrage sendet,
+  prüft es, dass die Pipe vom laufenden `SelfXService` bedient wird (Prozess-ID des
+  Pipe-Servers verglichen mit der Prozess-ID aus der Dienststeuerung). Ein
+  Nutzerprozess, der den Pipe-Namen angelegt hat, während der Dienst gestoppt war,
+  wird abgewiesen.
+- **Deinstallation (#8).** `Uninstall.ps1 -RemoveLogs` löscht die Datenordner, ohne
+  Junctions oder symbolischen Links zu folgen, die Nutzer angelegt haben.
+- **Mehrere Nutzer auf einem Gerät (#9).** Neues Katalogelement `OtherSessions` (und
+  Attribut an einer Reparatur in `Health_Config.xml`): Mit `Block` kann ein normaler
+  Nutzer die Aktion nicht starten, solange ein anderer Nutzer eine aktive Sitzung
+  hat. Die mitgelieferte Konfiguration setzt es für den Neustart, Windows-Updates,
+  die Datenträgerprüfung, den Neustart der Netzwerkadapter und den Neustart des
+  Intune-Dienstes. Administratoren mit erhöhten Rechten sind nicht eingeschränkt;
+  lassen sich die Sitzungen nicht lesen, wird die Aktion blockiert.
 
-### Added
+### Hinzugefügt
 
-- `Test-Catalog.ps1` (#5): static check of the catalogue, `Health_Config.xml`
-  and the scripts that run as SYSTEM (plain file names, one context per script,
-  no mandatory parameters, remediation timeouts).
-- `Test-Uninstall.ps1` (#8) and extensions of `Test-HealthStatus.ps1` and
+- `Test-Catalog.ps1` (#5): statische Prüfung des Katalogs, von `Health_Config.xml`
+  und der Skripte, die als SYSTEM laufen (reine Dateinamen, ein Kontext pro Skript,
+  keine Pflichtparameter, Zeitlimits der Reparaturen).
+- `Test-Uninstall.ps1` (#8) sowie Erweiterungen von `Test-HealthStatus.ps1` und
   `Test-DeviceLogs.ps1`.
 
-## Based on upstream 2.6.9
+## Basierend auf Upstream 2.6.9
 
-Windows updates through the Windows Update orchestrator, pending restart
-detection and the other changes up to SelfX Service 2.6.9 come from
-[wbaeck/SelfX](https://github.com/wbaeck/SelfX). The history of every file is in
-its header.
+Windows-Updates über den Windows-Update-Orchestrator, die Erkennung eines
+ausstehenden Neustarts und die übrigen Änderungen bis SelfX Service 2.6.9 stammen
+von [wbaeck/SelfX](https://github.com/wbaeck/SelfX). Der Verlauf jeder Datei steht in
+ihrem Kopf.

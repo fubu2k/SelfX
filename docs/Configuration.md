@@ -1,40 +1,43 @@
-# Configuration
+# Konfiguration
 
-SelfX uses XML files for its settings and its action catalogue. Edit them in
-the package before installation.
+[English](en/Configuration.md) | **Deutsch**
+
+SelfX nutzt XML-Dateien für seine Einstellungen und seinen Aktionskatalog.
+Bearbeiten Sie sie im Paket vor der Installation.
 
 ## SelfX Service
 
-SelfX Service is configured with the files in `SelfX Service\Sources`. Edit them in the package before installation. After
-installation, the files in `%ProgramFiles%\SelfX` can be changed only by
-administrators. Deploy changes by publishing a new package version. There is no
-remote update and no download at launch.
+SelfX Service wird mit den Dateien in `SelfX Service\Sources` konfiguriert.
+Bearbeiten Sie sie im Paket vor der Installation. Nach der Installation können die
+Dateien in `%ProgramFiles%\SelfX` nur Administratoren ändern. Änderungen werden
+durch eine neue Paketversion ausgeliefert. Es gibt kein Remote-Update und keinen
+Download beim Start.
 
-### Action catalogue
+### Aktionskatalog
 
-`Issues_List.xml` has the structure `XML_Version`, `Quick_Solution`,
-`Detailed_Solution`, `Action` with English base texts. It also contains:
+`Issues_List.xml` hat die Struktur `XML_Version`, `Quick_Solution`,
+`Detailed_Solution`, `Action` mit englischen Basistexten. Außerdem enthält er:
 
-- An `Id` attribute on every action, for example `<Action Id="D_Teams_SoundCuts">`.
-  It must be unique. The language files use it to translate the action.
-- An optional `Messages` section with texts shared by several actions.
-  `Explanation` and `Alerte_MSG` can point to one of them with
-  `Ref="<message Id>"` instead of their own text, for example
+- Ein Attribut `Id` an jeder Aktion, zum Beispiel
+  `<Action Id="D_Teams_SoundCuts">`. Es muss eindeutig sein. Die Sprachdateien
+  übersetzen die Aktion über diese Id.
+- Einen optionalen Abschnitt `Messages` mit Texten, die mehrere Aktionen teilen.
+  `Explanation` und `Alerte_MSG` können mit `Ref="<Message-Id>"` darauf verweisen,
+  statt einen eigenen Text zu haben, zum Beispiel
   `<Alerte_MSG Ref="Msg_Teams_Restart"/>`.
-- `Category` contains a category Id (`Browser`, `Device`, `Intune`, `Office`,
-  `OneDrive`, `Outlook`, `Teams`). The displayed name comes from the language
-  file.
+- `Category` enthält eine Kategorie-Id (`Browser`, `Device`, `Intune`, `Office`,
+  `OneDrive`, `Outlook`, `Teams`). Der angezeigte Name kommt aus der Sprachdatei.
 
-Each action has these additional elements:
+Jede Aktion hat diese zusätzlichen Elemente:
 
-| Element | Values | Purpose |
+| Element | Werte | Zweck |
 |---|---|---|
-| `Context` | `User` or `System` | `User` runs the script as the signed-in user. `System` sends the script name to the SelfXService, which runs it as SYSTEM. If the element is missing or has another value, the action is treated as `User`. |
-| `TimeoutSeconds` | 1–7200, default 900 | Only for `System` actions. The service stops the script and its child processes after this time and reports a timeout. |
-| `OtherSessions` | empty or `Block` | Optional, only for `System` actions. `Block`: a normal user cannot start the action while another user has an **active** session on the device (the service answers `ERROR OtherSessions`, the window shows a notice). Elevated administrators are not restricted. If the sessions cannot be read, the action is blocked (fail closed). Set it on every entry of the same script; the service blocks when any `System` entry of the script says `Block`. Default in the delivered catalog: restart of the Intune service, restart of the network adapters and the CHKDSK repair. |
-| `Post_Action` | empty or `MailReport` | Optional, only for `System` actions. `MailReport`: after a successful run the GUI attaches the newest report of the user to a new support e-mail. See [Device logs for the support](#device-logs-for-the-support-selfx-service-240). |
+| `Context` | `User` oder `System` | `User` führt das Skript als angemeldeter Nutzer aus. `System` sendet den Skriptnamen an den SelfXService, der es als SYSTEM ausführt. Fehlt das Element oder hat es einen anderen Wert, wird die Aktion als `User` behandelt. |
+| `TimeoutSeconds` | 1–7200, Standard 900 | Nur für `System`-Aktionen. Der Dienst stoppt das Skript und seine Kindprozesse nach dieser Zeit und meldet einen Timeout. |
+| `OtherSessions` | leer oder `Block` | Optional, nur für `System`-Aktionen. `Block`: Ein normaler Nutzer kann die Aktion nicht starten, solange ein anderer Nutzer eine **aktive** Sitzung auf dem Gerät hat (der Dienst antwortet `ERROR OtherSessions`, das Fenster zeigt einen Hinweis). Administratoren mit erhöhten Rechten sind nicht eingeschränkt. Lassen sich die Sitzungen nicht lesen, wird die Aktion blockiert (fail closed). Setzen Sie es an jedem Eintrag desselben Skripts; der Dienst blockiert, wenn ein beliebiger `System`-Eintrag des Skripts `Block` angibt. Standard im mitgelieferten Katalog: Neustart des Intune-Dienstes, Neustart der Netzwerkadapter und die CHKDSK-Reparatur. |
+| `Post_Action` | leer oder `MailReport` | Optional, nur für `System`-Aktionen. `MailReport`: Nach einem erfolgreichen Lauf hängt die Oberfläche den neuesten Bericht des Nutzers an eine neue Support-E-Mail. Siehe [Geräteprotokolle für den Support](#geräteprotokolle-für-den-support-selfx-service-240). |
 
-Example:
+Beispiel:
 
 ```xml
 <Action Id="D_Intune_RestartService">
@@ -51,380 +54,408 @@ Do you want to continue?</Alerte_MSG>
 </Action>
 ```
 
-Rules for `System` actions:
+Regeln für `System`-Aktionen:
 
-- `Script` must be a plain file name made of letters, digits, `_`, `-` and `.`,
-  ending in `.ps1`. The file must be in `Scripts_to_run`. The service rejects
-  all other names.
-- The same script may appear in several actions, for example in the simplified
-  and the detailed view. The first `System` entry for a script sets its
-  `TimeoutSeconds`.
-- The script runs non-interactively as SYSTEM: there is no user profile, no
-  desktop and no prompts. Use non-interactive commands, return a meaningful
-  exit code (`0` = success), and write diagnostic output to stdout or stderr.
-  The output is logged.
-- Any signed-in user can start any `System` action. Only add actions that are
-  safe for every user.
-- The service passes the SID of the requesting user in the environment
-  variable `SELFX_CALLER_SID` (read from the pipe client token, SelfX Service
-  2.4.0 and later). Use it only to deliver results to that user, never to
-  decide whether an action is allowed.
+- `Script` muss ein reiner Dateiname aus Buchstaben, Ziffern, `_`, `-` und `.`
+  sein und auf `.ps1` enden. Die Datei muss in `Scripts_to_run` liegen. Der Dienst
+  weist alle anderen Namen ab.
+- Dasselbe Skript darf in mehreren Aktionen vorkommen, zum Beispiel in der
+  vereinfachten und der detaillierten Ansicht. Der erste `System`-Eintrag eines
+  Skripts legt seine `TimeoutSeconds` fest.
+- Das Skript läuft nicht interaktiv als SYSTEM: Es gibt kein Benutzerprofil, keinen
+  Desktop und keine Eingabeaufforderungen. Verwenden Sie nicht interaktive Befehle,
+  geben Sie einen aussagekräftigen Exitcode zurück (`0` = Erfolg) und schreiben Sie
+  Diagnoseausgaben nach stdout oder stderr. Die Ausgabe wird protokolliert.
+- Jeder angemeldete Nutzer kann jede `System`-Aktion starten. Nehmen Sie nur
+  Aktionen auf, die für jeden Nutzer sicher sind.
+- Der Dienst übergibt die SID des anfragenden Nutzers in der Umgebungsvariable
+  `SELFX_CALLER_SID` (aus dem Pipe-Client-Token gelesen, SelfX Service 2.4.0 und
+  neuer). Verwenden Sie sie nur, um Ergebnisse an diesen Nutzer zu übergeben, nie,
+  um zu entscheiden, ob eine Aktion erlaubt ist.
 
-When you add an action, give it a new `Id` and add its translations to the
-language files (see [Languages](#languages)). Without a translation, the English
-text from `Issues_List.xml` is shown.
+Wenn Sie eine Aktion hinzufügen, geben Sie ihr eine neue `Id` und ergänzen Sie ihre
+Übersetzungen in den Sprachdateien (siehe [Sprachen](#sprachen)). Ohne Übersetzung
+erscheint der englische Text aus `Issues_List.xml`.
 
-The included `System` actions are:
+Die mitgelieferten `System`-Aktionen sind:
 
-| Script | Purpose |
+| Skript | Zweck |
 |---|---|
-| `SelfX_Intune_RestartService.ps1` | Restart the Intune Management Extension service |
-| `SelfX_Device_AirePlaneMode.ps1` | Restart all enabled physical network adapters |
-| `SelfX_OneDrive_CHKDSK.ps1` | Schedule `chkdsk /r /f` of the system drive for the next restart |
-| `SelfX_Device_CollectLogs.ps1` | Collect the device logs with `Collect-DeviceLogs.ps1` and open a support e-mail with the report (`Post_Action` `MailReport`) |
+| `SelfX_Intune_RestartService.ps1` | Den Dienst der Intune Management Extension neu starten |
+| `SelfX_Device_AirePlaneMode.ps1` | Alle aktivierten physischen Netzwerkadapter neu starten |
+| `SelfX_OneDrive_CHKDSK.ps1` | `chkdsk /r /f` des Systemlaufwerks für den nächsten Neustart planen |
+| `SelfX_Device_CollectLogs.ps1` | Die Geräteprotokolle mit `Collect-DeviceLogs.ps1` sammeln und eine Support-E-Mail mit dem Bericht öffnen (`Post_Action` `MailReport`) |
 
-### UI settings
+### UI-Einstellungen
 
-`Tool_Config.xml` contains only settings. All texts of the window are in the
-language files (see [Languages](#languages)). Text keys such as `Main_Title_Text`,
-`Subtitle_Text` or `SystemInfo_*_Text`, `Link_Scripts` and install toast keys
-are not used.
+`Tool_Config.xml` enthält nur Einstellungen. Alle Texte des Fensters stehen in den
+Sprachdateien (siehe [Sprachen](#sprachen)). Textschlüssel wie `Main_Title_Text`,
+`Subtitle_Text` oder `SystemInfo_*_Text`, `Link_Scripts` und die Schlüssel der
+Installations-Benachrichtigungen werden nicht verwendet.
 
-| Key | Purpose |
+| Schlüssel | Zweck |
 |---|---|
-| `Tool_Language` | Default language. `de` (default, base language) shows German. `Auto` uses the Windows display language of the user (German if no language file matches). Another culture name such as `en`, `fr-CH` or `zh-Hans` sets that language. Texts that are missing in a language are shown in English. Users can choose another language in the settings unless `Show_Language_Setting` is `False`; see [Languages](#languages). |
-| `Tool_Name` | Text in the title bar and the About dialog |
-| `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | Shortcuts for all users created by `Install.ps1` |
-| `Show_Computer_Name_MainGUI`, `Show_Computer_Name_title_bar` | Show the computer name beside the title |
-| `Default_Solution_Mode` | `Simplified` or `Detailed` |
-| `Show_Reboot_Warning`, `Show_About_Button` | Show or hide the reboot reminder and the About button (i) |
-| `Show_Theme_Button` | `True`: users can choose the appearance (Automatic as Windows, Dark or Light) in the settings dialog (gear) |
-| `Show_Language_Setting` | `True` (default, 2.5.9): users can choose the language of SelfX in the settings dialog. `False` hides the choice and always uses `Tool_Language`; a language saved earlier by a user is then ignored. |
-| `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | Help button (?) and the contacts of the help dialog, see [User interface](#user-interface-selfx-service-250). `Support_Mail` is also the recipient of the device logs e-mail. |
-| `DeviceLogs_Days`, `DeviceLogs_Compress` | Device logs report: days of event log history (1–60, default 7) and `.zip` (`True`, default) or `.txt` attachment |
-| `Log_Retention_Days` | Log files older than this number of days are deleted (1–3650, default 90, 2.6.0); see [Logging](#logging-and-log-housekeeping-selfx-service-260) |
-| `Show_Status_Page` | `True` (default): show the Device status page |
-| `Show_SystemInfo_Tab`, `Show_SystemInfo_Intune_Actions`, `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | System information page and its tools |
-| `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | Tray icon, see [Tray icon](#tray-icon-selfx-service-250) |
+| `Tool_Language` | Standardsprache. `de` (Standard, Basissprache) zeigt Deutsch. `Auto` nutzt die Anzeigesprache von Windows des Nutzers (Deutsch, wenn keine Sprachdatei passt). Ein anderer Kulturname wie `en`, `fr-CH` oder `zh-Hans` legt diese Sprache fest. Texte, die in einer Sprache fehlen, erscheinen auf Englisch. Nutzer können in den Einstellungen eine andere Sprache wählen, sofern `Show_Language_Setting` nicht `False` ist; siehe [Sprachen](#sprachen). |
+| `Tool_Name` | Text in der Titelleiste und im Info-Dialog |
+| `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | Verknüpfungen für alle Nutzer, die `Install.ps1` anlegt |
+| `Show_Computer_Name_MainGUI`, `Show_Computer_Name_title_bar` | Den Computernamen neben dem Titel anzeigen |
+| `Default_Solution_Mode` | `Simplified` oder `Detailed` |
+| `Show_Reboot_Warning`, `Show_About_Button` | Neustart-Erinnerung und Info-Schaltfläche (i) anzeigen oder ausblenden |
+| `Show_Theme_Button` | `True`: Nutzer können das Erscheinungsbild (Automatisch wie Windows, Dunkel oder Hell) im Einstellungsdialog (Zahnrad) wählen |
+| `Show_Language_Setting` | `True` (Standard, 2.5.9): Nutzer können die Sprache von SelfX im Einstellungsdialog wählen. `False` blendet die Auswahl aus und verwendet immer `Tool_Language`; eine zuvor von einem Nutzer gespeicherte Sprache wird dann ignoriert. |
+| `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | Hilfe-Schaltfläche (?) und die Kontakte des Hilfe-Dialogs, siehe [Benutzeroberfläche](#benutzeroberfläche-selfx-service-250). `Support_Mail` ist auch der Empfänger der E-Mail mit den Geräteprotokollen. |
+| `DeviceLogs_Days`, `DeviceLogs_Compress` | Bericht mit Geräteprotokollen: Tage des Ereignisprotokoll-Verlaufs (1–60, Standard 7) und `.zip` (`True`, Standard) oder `.txt` als Anhang |
+| `Log_Retention_Days` | Protokolldateien, die älter sind als diese Anzahl Tage, werden gelöscht (1–3650, Standard 90, 2.6.0); siehe [Protokollierung](#protokollierung-und-aufbewahrung-selfx-service-260) |
+| `Show_Status_Page` | `True` (Standard): die Seite Gerätestatus anzeigen |
+| `Show_SystemInfo_Tab`, `Show_SystemInfo_Intune_Actions`, `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | Seite Systeminformationen und ihre Werkzeuge |
+| `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | Statussymbol, siehe [Statussymbol](#statussymbol-selfx-service-250) |
 
-Increase `Tool_Version` for each release and set the same value in
+Erhöhen Sie `Tool_Version` bei jedem Release und setzen Sie denselben Wert in
 `Detection.ps1`.
 
-### User interface (SelfX Service 2.5.0)
+### Benutzeroberfläche (SelfX Service 2.5.0)
 
-The window is designed for users without technical knowledge. It can be
-resized and maximized (minimum 640 × 480); below 900 pixels the navigation bar
-shows only icons and the cards rearrange in one to three columns. Size,
-position, theme, language and the tray icon choice are stored per user in
-`HKCU\Software\SelfX`. Only one SelfX window runs per user: a second start
-(shortcut or tray icon) brings the open window to the front.
+Das Fenster ist für Nutzer ohne technisches Wissen gestaltet. Seine Größe lässt
+sich ändern, es kann maximiert werden (Minimum 640 × 480); unter 900 Pixel zeigt
+die Navigationsleiste nur Symbole, und die Karten ordnen sich in einer bis drei
+Spalten an. Größe, Position, Design, Sprache und die Wahl für das Statussymbol
+werden pro Nutzer in `HKCU\Software\SelfX` gespeichert. Pro Nutzer läuft nur ein
+SelfX-Fenster: Ein zweiter Start (Verknüpfung oder Statussymbol) bringt das offene
+Fenster in den Vordergrund.
 
-- **Navigation bar** (left): *Troubleshooting*, *Device status* (with a counter
-  of problems and warnings), *System information*, the company logo
-  (`Brand_Logo`) at the top, **Send logs to support** and the state of the local
-  service at the bottom.
-- **Troubleshooting**: search field, category buttons, switch between the
-  simplified and the detailed view (the info icon explains the difference) and
-  one card per action with an info icon (explanation), a play button (run, with
-  confirmation) and a shield for actions with administrator rights. While an
-  action runs (2.6.1), its play button shows a rotating icon and *Running…* and
-  is locked; it returns to normal as soon as the action has ended. System actions
-  end when the service has answered; user actions are watched until their script
-  process has ended, then the result (exit code 0 = success) is shown in the
-  message bar and logged. The **Fix** button of a status card does the same while
-  its repair runs.
-- **Device status**: one card per check, problems first. The color and the
-  label show OK, Pending (warning), Error or Unknown. **Fix** (wrench) runs the
-  configured repair after confirmation; the arrow button checks only this
-  status again; the arrow button at the top checks everything. **Fix all
-  problems** (2.5.3) appears when at least one Error or Pending card has a
-  repair; after one confirmation it runs each configured repair once (one per
-  script, one after another through the service) and then checks everything
-  again. If the service is unavailable or busy, the remaining repairs are
-  skipped and reported. Times are collected as UTC (`{utc:...}` markers in
-  health details) and shown in the current time zone of the user, also after
-  an automatic time zone change during the OOBE. The status of
-  the background checks of the service is shown immediately, see
-  [Background checks](#background-checks-and-status-cache-selfx-service-250).
-- **System information**: one card per section (device, Windows, user and
-  management, network, report); double-click a line to copy its value. The last
-  collected values are shown immediately from `%LOCALAPPDATA%\SelfX\SystemInfo.json`
-  and updated in the background. Refresh, copy and export (TXT, HTML, CSV, JSON)
-  are icon buttons; copy and export include the device status. The *Tools*
-  (Intune sync, compliance check, Company Portal, Quick Assist, MDM logs, send
-  logs) are tiles below the information.
-- **Title bar**: help (?), settings (gear: language, theme, tray icon) and About (i).
-- **Help dialog**: shows only the configured contacts: `Support_Hours`,
-  `Support_Phone_number`, `Support_Mail` (button *Write e-mail*),
-  `Support_Teams` (button *Start chat*: a user or shared mailbox address opens a
-  Teams chat, a full `https://` Teams link is opened as is) and
-  `Support_Website` (button *Open*, only `http://` or `https://`). Without any
-  contact the dialog asks the user to contact the IT department.
+- **Navigationsleiste** (links): *Fehlerbehebung*, *Gerätestatus* (mit einem Zähler
+  der Probleme und Warnungen), *Systeminformationen*, oben das Firmenlogo
+  (`Brand_Logo`), unten **Protokolle an Support senden** und der Zustand des
+  lokalen Dienstes.
+- **Fehlerbehebung**: Suchfeld, Kategorieschaltflächen, Umschalter zwischen
+  vereinfachter und detaillierter Ansicht (das Info-Symbol erklärt den
+  Unterschied) und eine Karte pro Aktion mit einem Info-Symbol (Erklärung), einer
+  Start-Schaltfläche (ausführen, mit Bestätigung) und einem Schild für Aktionen mit
+  Administratorrechten. Solange eine Aktion läuft (2.6.1), zeigt ihre
+  Start-Schaltfläche ein rotierendes Symbol und *Läuft…* und ist gesperrt; sobald
+  die Aktion beendet ist, wird sie wieder normal. System-Aktionen enden, wenn der
+  Dienst geantwortet hat; Nutzeraktionen werden beobachtet, bis ihr Skriptprozess
+  beendet ist, dann erscheint das Ergebnis (Exitcode 0 = Erfolg) in der
+  Meldungsleiste und wird protokolliert. Die Schaltfläche **Beheben** einer
+  Statuskarte verhält sich ebenso, solange ihre Reparatur läuft.
+- **Gerätestatus**: eine Karte pro Prüfung, Probleme zuerst. Farbe und Beschriftung
+  zeigen In Ordnung, Ausstehend (Warnung), Fehler oder Unbekannt. **Beheben**
+  (Schraubenschlüssel) führt nach Bestätigung die konfigurierte Reparatur aus; die
+  Pfeil-Schaltfläche prüft nur diesen Status erneut; die Pfeil-Schaltfläche oben
+  prüft alles. **Alle Probleme beheben** (2.5.3) erscheint, wenn mindestens eine
+  Karte mit Fehler oder Ausstehend eine Reparatur hat; nach einer Bestätigung führt
+  sie jede konfigurierte Reparatur einmal aus (eine pro Skript, nacheinander über
+  den Dienst) und prüft dann alles erneut. Ist der Dienst nicht verfügbar oder
+  beschäftigt, werden die übrigen Reparaturen übersprungen und gemeldet. Zeiten
+  werden als UTC erfasst (`{utc:...}`-Marker in den Details der Gesundheitsprüfung)
+  und in der aktuellen Zeitzone des Nutzers angezeigt, auch nach einer
+  automatischen Änderung der Zeitzone während der OOBE. Der Status der
+  Hintergrundprüfungen des Dienstes wird sofort angezeigt, siehe
+  [Hintergrundprüfungen](#hintergrundprüfungen-und-status-cache-selfx-service-250).
+- **Systeminformationen**: eine Karte pro Abschnitt (Gerät, Windows, Nutzer und
+  Verwaltung, Netzwerk, Bericht); ein Doppelklick auf eine Zeile kopiert ihren
+  Wert. Die zuletzt erfassten Werte erscheinen sofort aus
+  `%LOCALAPPDATA%\SelfX\SystemInfo.json` und werden im Hintergrund aktualisiert.
+  Aktualisieren, Kopieren und Exportieren (TXT, HTML, CSV, JSON) sind
+  Symbolschaltflächen; Kopieren und Export enthalten den Gerätestatus. Die
+  *Werkzeuge* (Intune-Synchronisierung, Compliance-Prüfung, Unternehmensportal,
+  Quick Assist, MDM-Protokolle, Protokolle senden) sind Kacheln unter den
+  Informationen.
+- **Titelleiste**: Hilfe (?), Einstellungen (Zahnrad: Sprache, Design,
+  Statussymbol) und Info (i).
+- **Hilfe-Dialog**: zeigt nur die konfigurierten Kontakte: `Support_Hours`,
+  `Support_Phone_number`, `Support_Mail` (Schaltfläche *E-Mail schreiben*),
+  `Support_Teams` (Schaltfläche *Chat starten*: Eine Nutzer- oder
+  Gruppenpostfach-Adresse öffnet einen Teams-Chat, ein vollständiger
+  `https://`-Teams-Link wird unverändert geöffnet) und `Support_Website`
+  (Schaltfläche *Öffnen*, nur `http://` oder `https://`). Ohne Kontakt bittet der
+  Dialog den Nutzer, die IT-Abteilung zu kontaktieren.
 
-Every icon button has a tooltip that explains what happens. Confirmations,
-explanations and messages use dialogs in the same style; results of actions
-and the reboot reminder appear in the message bar at the bottom.
+Jede Symbolschaltfläche hat eine Kurzinfo, die erklärt, was geschieht. Bestätigungen,
+Erklärungen und Meldungen nutzen Dialoge im gleichen Stil; Ergebnisse von Aktionen
+und die Neustart-Erinnerung erscheinen in der Meldungsleiste unten.
 
-### Background checks and status cache (SelfX Service 2.5.0)
+### Hintergrundprüfungen und Status-Cache (SelfX Service 2.5.0)
 
-The service runs all health checks regularly in the background and keeps the
-result in `%ProgramData%\SelfX\Cache\Health.json` (readable by SYSTEM and
-administrators only). SelfX and the tray icon read it with the request
-`STATUS`, which answers immediately and runs nothing. Every check that SelfX
-starts (all, or a single status) also updates the cache.
+Der Dienst führt alle Gesundheitsprüfungen regelmäßig im Hintergrund aus und behält
+das Ergebnis in `%ProgramData%\SelfX\Cache\Health.json` (nur für SYSTEM und
+Administratoren lesbar). SelfX und das Statussymbol lesen es mit der Anfrage
+`STATUS`, die sofort antwortet und nichts ausführt. Jede Prüfung, die SelfX startet
+(alle oder ein einzelner Status), aktualisiert ebenfalls den Cache.
 
-Settings in `Health_Config.xml`:
+Einstellungen in `Health_Config.xml`:
 
 ```xml
 <Background Enabled="true" IntervalMinutes="15" PauseOnBattery="true" MaxCpuPercent="75" StartDelaySeconds="120" />
 ```
 
-| Attribute | Default | Purpose |
+| Attribut | Standard | Zweck |
 |---|---|---|
-| `Enabled` | `true` | `false` = no background checks; SelfX then checks when it is opened. |
-| `IntervalMinutes` | `15` | 5–1440. Time between two background checks. |
-| `PauseOnBattery` | `true` | No background check while the device runs on battery. SelfX shows the last result and the note that the checks are paused. |
-| `MaxCpuPercent` | `75` | 10–100. A check is postponed (retry after 2 minutes) while the processor load is higher; `100` = no limit. |
-| `StartDelaySeconds` | `120` | 0–3600. First check after the start of the service, so the sign-in is not slowed down. |
+| `Enabled` | `true` | `false` = keine Hintergrundprüfungen; SelfX prüft dann, wenn es geöffnet wird. |
+| `IntervalMinutes` | `15` | 5–1440. Zeit zwischen zwei Hintergrundprüfungen. |
+| `PauseOnBattery` | `true` | Keine Hintergrundprüfung im Akkubetrieb. SelfX zeigt das letzte Ergebnis und den Hinweis, dass die Prüfungen pausiert sind. |
+| `MaxCpuPercent` | `75` | 10–100. Eine Prüfung wird verschoben (neuer Versuch nach 2 Minuten), solange die Prozessorlast höher ist; `100` = kein Limit. |
+| `StartDelaySeconds` | `120` | 0–3600. Erste Prüfung nach dem Start des Dienstes, damit die Anmeldung nicht verlangsamt wird. |
 
-Missing or invalid values use the default. A background check is also
-postponed while a repair is running. It runs PowerShell with below-normal
-priority and the 240-second limit of the health collection; only a summary
-line is written to `SelfXService.log`. Changes of the settings apply without a
-restart of the service.
+Fehlende oder ungültige Werte verwenden den Standard. Eine Hintergrundprüfung wird
+außerdem verschoben, solange eine Reparatur läuft. Sie führt PowerShell mit
+niedrigerer Priorität und dem 240-Sekunden-Limit der Gesundheitserfassung aus; nach
+`SelfXService.log` wird nur eine Zusammenfassungszeile geschrieben. Änderungen der
+Einstellungen gelten ohne Neustart des Dienstes.
 
-### Tray icon (SelfX Service 2.5.0)
+### Statussymbol (SelfX Service 2.5.0)
 
-`SelfX_Tray.ps1` shows a SelfX icon in the notification area with a colored
-dot: green (OK), yellow (warning), red (problem) or gray (status not available
-yet). The tooltip shows the number of problems and warnings. When a check
-changes to Error, for example *Disk capacity*, a Windows notification is shown
-once; clicking it opens the Device status page. On Windows 10 and 11 these
-notifications are shown as Windows toast notifications (and kept in the
-notification center). The right-click menu opens SelfX, the device status,
-checks the status now, sends the logs to the support, switches the
-notifications on or off (2.6.5) or hides the icon.
+`SelfX_Tray.ps1` zeigt im Infobereich ein SelfX-Symbol mit einem farbigen Punkt:
+grün (in Ordnung), gelb (Warnung), rot (Problem) oder grau (Status noch nicht
+verfügbar). Die Kurzinfo zeigt die Anzahl der Probleme und Warnungen. Wechselt
+eine Prüfung zu Fehler, zum Beispiel *Datenträgerkapazität*, erscheint einmal eine
+Windows-Benachrichtigung; ein Klick darauf öffnet die Seite Gerätestatus. Unter
+Windows 10 und 11 erscheinen diese Benachrichtigungen als Windows-Toast
+(und bleiben im Benachrichtigungscenter erhalten). Das Rechtsklick-Menü öffnet
+SelfX, den Gerätestatus, prüft den Status jetzt, sendet die Protokolle an den
+Support, schaltet die Benachrichtigungen ein oder aus (2.6.5) oder verbirgt das
+Symbol.
 
-| Key in `Tool_Config.xml` | Default | Purpose |
+| Schlüssel in `Tool_Config.xml` | Standard | Zweck |
 |---|---|---|
-| `Show_Tray_Icon` | `True` | `Install.ps1` creates the HKLM Run entry `SelfXTray`, so the icon starts at every sign-in for all users, and (as SYSTEM, since 2.5.8) starts it right away for the signed-in users. `False` removes the entry. |
-| `Tray_Notifications` | `True` | Show a notification when a check changes to Error. Each user can switch the notifications off (2.6.5). `False` switches them off for all users and hides the user switch. |
-| `Tray_Poll_Seconds` | `60` | 15–3600. How often the icon reads the cached status (no check is run). |
+| `Show_Tray_Icon` | `True` | `Install.ps1` legt den HKLM-Run-Eintrag `SelfXTray` an, sodass das Symbol bei jeder Anmeldung für alle Nutzer startet, und startet es (als SYSTEM, seit 2.5.8) sofort für die angemeldeten Nutzer. `False` entfernt den Eintrag. |
+| `Tray_Notifications` | `True` | Eine Benachrichtigung zeigen, wenn eine Prüfung zu Fehler wechselt. Jeder Nutzer kann die Benachrichtigungen ausschalten (2.6.5). `False` schaltet sie für alle Nutzer aus und blendet den Nutzerschalter aus. |
+| `Tray_Poll_Seconds` | `60` | 15–3600. Wie oft das Symbol den zwischengespeicherten Status liest (es wird keine Prüfung ausgeführt). |
 
-**Notifications per user (2.6.5):** each user decides whether Windows
-notifications are shown in addition to the colored icon: switch *Show
-notifications about problems* in SelfX > Settings, or *Show notifications* in
-the menu of the icon. The choice is stored in `HKCU\Software\SelfX\TrayNotifications`
-(1 = on, default; 0 = off) and applies at once without a restart of the icon.
-While they are off, the icon still shows the problem (red dot, tooltip) and
-problems are still remembered, so switching the notifications on again does not
-announce problems that were already known. Answers to actions of the user
-(*Check status now*, *Hide this icon*) are always shown.
+**Benachrichtigungen pro Nutzer (2.6.5):** Jeder Nutzer entscheidet, ob zusätzlich
+zum farbigen Symbol Windows-Benachrichtigungen erscheinen: Schalter
+*Benachrichtigungen über Probleme anzeigen* in SelfX > Einstellungen oder
+*Benachrichtigungen anzeigen* im Menü des Symbols. Die Wahl wird in
+`HKCU\Software\SelfX\TrayNotifications` gespeichert (1 = an, Standard; 0 = aus) und
+gilt sofort ohne Neustart des Symbols. Solange sie aus sind, zeigt das Symbol das
+Problem weiterhin (roter Punkt, Kurzinfo) und Probleme werden weiterhin gemerkt,
+sodass das erneute Einschalten bereits bekannte Probleme nicht erneut meldet.
+Antworten auf Aktionen des Nutzers (*Status jetzt prüfen*, *Dieses Symbol
+verbergen*) erscheinen immer.
 
-SelfX Service has no notification after the installation.
+SelfX Service zeigt nach der Installation keine Benachrichtigung.
 
-Each user can hide the icon (menu *Hide this icon* or SelfX > Settings) and
-show it again in SelfX > Settings; the choice is stored in
-`HKCU\Software\SelfX\TrayIcon`. The icon needs no administrator rights: it
-only reads the status cache through the pipe of the service. Shortly after the
-start it collects the system information of the user once in the background,
-so SelfX shows it immediately. An installation or update through Intune/SCCM
-(SYSTEM) closes the running icons and starts the new version right away in
-the sessions of the signed-in users (2.5.8); users who switched the icon off
-do not get it back. After an uninstall the icons are closed.
-Opening SelfX also starts the icon when it is not running yet (for example
-after a manual installation).
+Jeder Nutzer kann das Symbol verbergen (Menü *Dieses Symbol verbergen* oder
+SelfX > Einstellungen) und in SelfX > Einstellungen wieder anzeigen; die Wahl wird in
+`HKCU\Software\SelfX\TrayIcon` gespeichert. Das Symbol braucht keine
+Administratorrechte: Es liest nur den Status-Cache über die Pipe des Dienstes. Kurz
+nach dem Start erfasst es einmal im Hintergrund die Systeminformationen des Nutzers,
+sodass SelfX sie sofort anzeigt. Eine Installation oder ein Update über Intune/SCCM
+(SYSTEM) schließt die laufenden Symbole und startet die neue Version sofort in den
+Sitzungen der angemeldeten Nutzer (2.5.8); Nutzer, die das Symbol ausgeschaltet
+haben, bekommen es nicht zurück. Nach einer Deinstallation werden die Symbole
+geschlossen. Das Öffnen von SelfX startet das Symbol ebenfalls, wenn es noch nicht
+läuft (zum Beispiel nach einer manuellen Installation).
 
-### Device logs for the support (SelfX Service 2.4.0)
+### Geräteprotokolle für den Support (SelfX Service 2.4.0)
 
-The action **Send the device logs to the support** (`Q_Device_SendLogs` in the
-simplified view, `D_Device_SendLogs` in the detailed view, category `Device`)
-and the buttons **Send logs to support** (navigation bar, System information page and tray icon) collect
-all logs that are needed to analyze a device problem and open a new e-mail to
-the support with the report attached. The user describes the issue and sends
-the e-mail; nothing is sent automatically.
+Die Aktion **Geräteprotokolle an den Support senden** (`Q_Device_SendLogs` in der
+vereinfachten Ansicht, `D_Device_SendLogs` in der detaillierten Ansicht, Kategorie
+`Device`) und die Schaltflächen **Protokolle an Support senden** (Navigationsleiste,
+Seite Systeminformationen und Statussymbol) sammeln alle Protokolle, die zur Analyse
+eines Geräteproblems nötig sind, und öffnen eine neue E-Mail an den Support mit dem
+Bericht im Anhang. Der Nutzer beschreibt das Problem und sendet die E-Mail; nichts
+wird automatisch gesendet.
 
-How it works:
+Funktionsweise:
 
-1. The user confirms the action. The GUI sends `RUN SelfX_Device_CollectLogs.ps1`
-   to the local service (shield action, timeout 1800 seconds).
-2. The service runs the wrapper as SYSTEM and passes the SID of the requesting
-   user in `SELFX_CALLER_SID`. The wrapper starts the read-only collector
-   `Scripts_to_run\Collect-DeviceLogs.ps1` with administrator rights. It writes
-   one report to `%ProgramData%\SelfX\Reports\<user SID>\DeviceLogs-<computer>-<time>.txt`
-   and compresses it to a `.zip` file (unless `DeviceLogs_Compress` is `False`).
-3. The report folder of the user has a protected ACL: SYSTEM and
-   Administrators have full control, only the requesting user can read. No
-   other user can read the report. The previous report of the user is deleted
-   at each run; reports older than 7 days are deleted for all users.
-4. After a successful run the GUI copies the report to
-   `%LOCALAPPDATA%\SelfX\Reports` and opens a new e-mail with the copy attached:
-   - classic Outlook through COM: recipient `Support_Mail`, localized subject
-     (`Report_Mail_Subject`) and text (`Report_Mail_Body`) are filled in;
-   - otherwise `outlook.exe /a <file>` (the user enters the recipient);
-   - otherwise (for example new Outlook, which has no COM interface) the
-     default mail app through `mailto:` and an Explorer window with the file
-     selected, so the user can attach it.
+1. Der Nutzer bestätigt die Aktion. Die Oberfläche sendet
+   `RUN SelfX_Device_CollectLogs.ps1` an den lokalen Dienst (Schild-Aktion, Timeout
+   1800 Sekunden).
+2. Der Dienst führt den Wrapper als SYSTEM aus und übergibt die SID des anfragenden
+   Nutzers in `SELFX_CALLER_SID`. Der Wrapper startet den nur lesenden Collector
+   `Scripts_to_run\Collect-DeviceLogs.ps1` mit Administratorrechten. Er schreibt
+   einen Bericht nach
+   `%ProgramData%\SelfX\Reports\<Nutzer-SID>\DeviceLogs-<Computer>-<Zeit>.txt` und
+   komprimiert ihn zu einer `.zip`-Datei (sofern `DeviceLogs_Compress` nicht `False`
+   ist).
+3. Der Berichtsordner des Nutzers hat eine geschützte ACL: SYSTEM und
+   Administratoren haben Vollzugriff, nur der anfragende Nutzer kann lesen. Kein
+   anderer Nutzer kann den Bericht lesen. Der vorherige Bericht des Nutzers wird bei
+   jedem Lauf gelöscht; Berichte, die älter als 7 Tage sind, werden für alle Nutzer
+   gelöscht.
+4. Nach einem erfolgreichen Lauf kopiert die Oberfläche den Bericht nach
+   `%LOCALAPPDATA%\SelfX\Reports` und öffnet eine neue E-Mail mit der Kopie im
+   Anhang:
+   - klassisches Outlook über COM: Empfänger `Support_Mail`, lokalisierter Betreff
+     (`Report_Mail_Subject`) und Text (`Report_Mail_Body`) werden eingetragen;
+   - sonst `outlook.exe /a <Datei>` (der Nutzer trägt den Empfänger ein);
+   - sonst (zum Beispiel neues Outlook, das keine COM-Schnittstelle hat) die
+     Standard-Mail-App über `mailto:` und ein Explorer-Fenster mit der markierten
+     Datei, sodass der Nutzer sie anhängen kann.
 
-The collector only reads the device: it changes nothing, loads no hive, starts
-no installation and sends nothing. The report contains the computer name, user
-and tenant names and log content of the device (Autopilot/ESP state, IME and
-Win32 app logs, servicing logs, event logs, AppX, Windows Update, network and
-language state). It runs in about one to a few minutes. The section list and
-the parameters are described in the header of `Collect-DeviceLogs.ps1`; replace
-the file to update the collector.
+Der Collector liest das Gerät nur: Er ändert nichts, lädt keine Registry-Struktur,
+startet keine Installation und sendet nichts. Der Bericht enthält den Computernamen,
+Nutzer- und Mandantennamen und Protokollinhalte des Geräts (Autopilot-/ESP-Status,
+IME- und Win32-App-Protokolle, Servicing-Protokolle, Ereignisprotokolle, AppX,
+Windows Update, Netzwerk- und Sprachstatus). Er läuft etwa ein bis einige Minuten.
+Die Liste der Abschnitte und die Parameter stehen im Kopf von
+`Collect-DeviceLogs.ps1`; ersetzen Sie die Datei, um den Collector zu aktualisieren.
 
-**Scope of the report on multi-user devices (2.6.10):** the report is cut per
-user. The service reads the token of the pipe client and passes
-`SELFX_CALLER_ADMIN` to the script: `1` only if the local group *Administrators*
-is **enabled** in that token (an elevated administrator), otherwise `0`. A
-missing or any other value (for example an older service) counts as a normal
-user (fail closed).
+**Umfang des Berichts auf Geräten mit mehreren Nutzern (2.6.10):** Der Bericht wird
+pro Nutzer beschnitten. Der Dienst liest das Token des Pipe-Clients und übergibt
+`SELFX_CALLER_ADMIN` an das Skript: `1` nur, wenn die lokale Gruppe *Administratoren*
+in diesem Token **aktiviert** ist (ein Administrator mit erhöhten Rechten), sonst
+`0`. Ein fehlender oder anderer Wert (zum Beispiel bei einem älteren Dienst) gilt als
+normaler Nutzer (fail closed).
 
-| | Administrator (`1`) | Normal user (`0` or missing) |
+| | Administrator (`1`) | Normaler Nutzer (`0` oder fehlend) |
 |---|---|---|
-| Collector | complete | `-UserView -CallerSid <own SID>` |
-| Serial number, console user | yes | no |
-| Sessions (`quser`) | all | own session only |
-| Join state (`dsregcmd`) | everything | join and sign-in state only, no tenant, device or user IDs |
-| Profiles and user hives | all | own profile and own hive |
-| AppX user entries | all | own entry |
-| Names, SIDs and profile folders of other local users in any line | as they are | replaced by `<other user>` |
-| SelfX machine logs (`SelfXService.log`, script logs) | yes | no (they name all users) |
-| Own SelfX user logs | yes | yes |
+| Collector | vollständig | `-UserView -CallerSid <eigene SID>` |
+| Seriennummer, Konsolennutzer | ja | nein |
+| Sitzungen (`quser`) | alle | nur die eigene Sitzung |
+| Beitrittsstatus (`dsregcmd`) | alles | nur Beitritts- und Anmeldestatus, keine Mandanten-, Geräte- oder Nutzer-IDs |
+| Profile und Nutzerstrukturen der Registry | alle | eigenes Profil und eigene Struktur |
+| AppX-Nutzereinträge | alle | eigener Eintrag |
+| Namen, SIDs und Profilordner anderer lokaler Nutzer in jeder Zeile | unverändert | ersetzt durch `<other user>` |
+| SelfX-Geräteprotokolle (`SelfXService.log`, Skriptprotokolle) | ja | nein (sie nennen alle Nutzer) |
+| Eigene SelfX-Nutzerprotokolle | ja | ja |
 
-The collector also runs without `-UserView` (Intune Win32 app, remediation,
-manual run): the report is then complete as before. Note that an administrator
-who runs SelfX **without** elevation is treated as a normal user, because the
-Administrators group is only deny-only in the filtered token.
+Der Collector läuft auch ohne `-UserView` (Intune-Win32-App, Remediation, manueller
+Lauf): Der Bericht ist dann wie bisher vollständig. Beachten Sie, dass ein
+Administrator, der SelfX **ohne** erhöhte Rechte ausführt, als normaler Nutzer
+behandelt wird, weil die Gruppe Administratoren im gefilterten Token nur „deny-only“
+ist.
 
-**SelfX logs in the report (2.6.4, changed in 2.6.10):** the report contains the
-logs of SelfX itself (see [Logging](#logging-and-log-housekeeping-selfx-service-260)).
-They are added by two different parties, each with its own rights:
+**SelfX-Protokolle im Bericht (2.6.4, geändert in 2.6.10):** Der Bericht enthält die
+Protokolle von SelfX selbst (siehe
+[Protokollierung](#protokollierung-und-aufbewahrung-selfx-service-260)). Sie werden
+von zwei verschiedenen Seiten hinzugefügt, jede mit ihren eigenen Rechten:
 
-- the **wrapper (SYSTEM)** adds, **for administrators only** (see the table above), the machine logs from `%ProgramData%\SelfX\Logs`:
-  `SelfXService.log`, `Install.log` and `Uninstall.log` always, all other `*.log`
-  files (scripts, health checks, detection) of the last `DeviceLogs_Days` days.
-  Only the files directly in that folder are read; the subfolder `Logs\Users` is
-  never read as SYSTEM;
-- the **SelfX window (the signed-in user)** adds the logs of the **own user**
-  (window, status icon, user actions) from
-  `%ProgramData%\SelfX\Logs\Users\<own SID>` of the last `DeviceLogs_Days` days
-  to its copy of the report in `%LOCALAPPDATA%\SelfX\Reports`, with the rights
-  of the user. Logs of other users are never added.
+- der **Wrapper (SYSTEM)** fügt, **nur für Administratoren** (siehe Tabelle oben),
+  die Geräteprotokolle aus `%ProgramData%\SelfX\Logs` hinzu: immer
+  `SelfXService.log`, `Install.log` und `Uninstall.log`, außerdem alle anderen
+  `*.log`-Dateien (Skripte, Gesundheitsprüfungen, Erkennung) der letzten
+  `DeviceLogs_Days` Tage. Es werden nur die Dateien direkt in diesem Ordner gelesen;
+  der Unterordner `Logs\Users` wird als SYSTEM nie gelesen;
+- das **SelfX-Fenster (der angemeldete Nutzer)** fügt die Protokolle des **eigenen
+  Nutzers** (Fenster, Statussymbol, Nutzeraktionen) aus
+  `%ProgramData%\SelfX\Logs\Users\<eigene SID>` der letzten `DeviceLogs_Days` Tage
+  seiner Kopie des Berichts in `%LOCALAPPDATA%\SelfX\Reports` hinzu, mit den Rechten
+  des Nutzers. Protokolle anderer Nutzer werden nie hinzugefügt.
 
-In the `.zip` they are separate files in the folder `SelfX-Logs` (`SelfX-Logs\User`
-for the user logs); in a `.txt` report they are appended as the last section.
-At most the last 2 MB of each file and 30 MB per party are added.
+In der `.zip` sind sie eigene Dateien im Ordner `SelfX-Logs` (`SelfX-Logs\User` für
+die Nutzerprotokolle); in einem `.txt`-Bericht werden sie als letzter Abschnitt
+angehängt. Es werden höchstens die letzten 2 MB jeder Datei und 30 MB pro Seite
+hinzugefügt.
 
-Why: users can create and change their own folder under `Logs\Users`. If SYSTEM
-read it, a user could redirect the read (for example with a junction replaced
-between the check and the read) to a protected file, whose content would then be
-in the report that the user can open. Because the window reads the own logs with
-the rights of the user, it can only add what the user could read anyway. A
-problem while adding the user logs never stops the e-mail. Skipped are a
-junction as folder and files that another account owns.
+Warum: Nutzer können ihren eigenen Ordner unter `Logs\Users` anlegen und ändern.
+Würde SYSTEM ihn lesen, könnte ein Nutzer das Lesen (zum Beispiel mit einer
+Junction, die zwischen Prüfung und Lesen ausgetauscht wird) auf eine geschützte
+Datei umlenken, deren Inhalt dann im Bericht stünde, den der Nutzer öffnen kann. Weil
+das Fenster die eigenen Protokolle mit den Rechten des Nutzers liest, kann es nur
+hinzufügen, was der Nutzer ohnehin lesen könnte. Ein Problem beim Hinzufügen der
+Nutzerprotokolle stoppt die E-Mail nie. Übersprungen werden eine Junction als Ordner
+und Dateien, die ein anderes Konto besitzt.
 
-Note that `SelfXService.log` (machine logs) names the users who started actions
-on this device.
+Beachten Sie, dass `SelfXService.log` (Geräteprotokolle) die Nutzer nennt, die auf
+diesem Gerät Aktionen gestartet haben.
 
-Exit codes of `SelfX_Device_CollectLogs.ps1`: `0` report created, `1`
-collection or compression failed, `2` requesting user unknown (service older
-than 2.4.0). The wrapper writes the collector summary and the report path to
-`SelfXService.log` and (2.6.0) to its own log.
+Exitcodes von `SelfX_Device_CollectLogs.ps1`: `0` Bericht erstellt, `1` Sammeln oder
+Komprimieren fehlgeschlagen, `2` anfragender Nutzer unbekannt (Dienst älter als
+2.4.0). Der Wrapper schreibt die Zusammenfassung des Collectors und den Berichtspfad
+nach `SelfXService.log` und (2.6.0) in sein eigenes Protokoll.
 
-To use the feature with another report script, keep `Post_Action` `MailReport`
-and write the report as `DeviceLogs-*.zip` or `DeviceLogs-*.txt` to
-`%ProgramData%\SelfX\Reports\<SELFX_CALLER_SID>` with the same ACL. Remove both
-catalogue actions to hide the feature; the System information button is shown
-only when a `System` action with `MailReport` exists.
+Um die Funktion mit einem anderen Berichtsskript zu nutzen, behalten Sie
+`Post_Action` `MailReport` bei und schreiben Sie den Bericht als `DeviceLogs-*.zip`
+oder `DeviceLogs-*.txt` mit derselben ACL nach
+`%ProgramData%\SelfX\Reports\<SELFX_CALLER_SID>`. Entfernen Sie beide
+Katalogaktionen, um die Funktion auszublenden; die Schaltfläche in den
+Systeminformationen erscheint nur, wenn eine `System`-Aktion mit `MailReport`
+existiert.
 
-### Logging and log housekeeping (SelfX Service 2.6.0)
+### Protokollierung und Aufbewahrung (SelfX Service 2.6.0)
 
-All SelfX Service scripts log to `%ProgramData%\SelfX\Logs` through the shared
-module `Sources\SelfXLog.ps1`: the window, the status icon, the health checks,
-the compliance check, the detection script and every action and repair script.
-One file per script and day, `<Script>_<yyyy-MM-dd>.log`, UTF-8 with BOM, one line
-per entry in the local time of the device:
+Alle Skripte von SelfX Service protokollieren über das gemeinsame Modul
+`Sources\SelfXLog.ps1` nach `%ProgramData%\SelfX\Logs`: das Fenster, das
+Statussymbol, die Gesundheitsprüfungen, die Compliance-Prüfung, das
+Erkennungsskript und jedes Aktions- und Reparaturskript. Eine Datei pro Skript und
+Tag, `<Skript>_<jjjj-MM-tt>.log`, UTF-8 mit BOM, eine Zeile pro Eintrag in der
+Ortszeit des Geräts:
 
 ```text
 2026-11-06 13:29:56.522 | Info    |  52068 | SelfX 2.6.0 opened: language de (setting de), page ''.
 2026-11-06 13:30:04.426 | Warning |  52068 | Message (Warning): Windows restarts in about 30 seconds. ...
 ```
 
-| Folder | Content | Readable by |
+| Ordner | Inhalt | Lesbar für |
 |---|---|---|
-| `Logs` | Scripts that run as SYSTEM (repairs and System actions started through the service, `HealthStatus`, `Check-Compliance`, `Detection`), `SelfXService.log`, `Install.log`, `Uninstall.log` | SYSTEM and administrators |
-| `Logs\Users\<SID>` | Scripts of the user: the window (`SelfX_*`), the status icon (`SelfX_Tray_*`) and the user actions | The user, SYSTEM and administrators |
+| `Logs` | Skripte, die als SYSTEM laufen (Reparaturen und über den Dienst gestartete System-Aktionen, `HealthStatus`, `Check-Compliance`, `Detection`), `SelfXService.log`, `Install.log`, `Uninstall.log` | SYSTEM und Administratoren |
+| `Logs\Users\<SID>` | Skripte des Nutzers: das Fenster (`SelfX_*`), das Statussymbol (`SelfX_Tray_*`) und die Nutzeraktionen | Den Nutzer, SYSTEM und Administratoren |
 
-The window logs its start, every action with the answer of the user, the result
-of every service action (status and exit code), the status checks started by the
-user, the language changes and **every message shown to the user**. The status
-icon logs status changes, notifications and why it stops. Each action script logs
-its steps and its result; unexpected errors are logged before the script ends.
-`HealthStatus` logs every check result of the background checks (one line per
-check every 15 minutes).
+Das Fenster protokolliert seinen Start, jede Aktion mit der Antwort des Nutzers, das
+Ergebnis jeder Dienstaktion (Status und Exitcode), die vom Nutzer gestarteten
+Statusprüfungen, die Sprachwechsel und **jede dem Nutzer angezeigte Meldung**. Das
+Statussymbol protokolliert Statusänderungen, Benachrichtigungen und warum es endet.
+Jedes Aktionsskript protokolliert seine Schritte und sein Ergebnis; unerwartete
+Fehler werden protokolliert, bevor das Skript endet. `HealthStatus` protokolliert
+jedes Prüfergebnis der Hintergrundprüfungen (eine Zeile pro Prüfung alle 15
+Minuten).
 
-`Install.ps1` creates `Logs\Users` so that users can only create their own
-folder (CREATOR OWNER = full control on it) and cannot list or read the folders
-of other users. A folder that is a link or belongs to another account is never
-used. Without that folder (installations before 2.6.0, or when it cannot be
-used) the user logs go to `%LOCALAPPDATA%\SelfX\Logs`.
+`Install.ps1` legt `Logs\Users` so an, dass Nutzer nur ihren eigenen Ordner anlegen
+können (CREATOR OWNER = Vollzugriff darauf) und die Ordner anderer Nutzer weder
+auflisten noch lesen können. Ein Ordner, der ein Link ist oder einem anderen Konto
+gehört, wird nie verwendet. Ohne diesen Ordner (Installationen vor 2.6.0 oder wenn er
+nicht verwendet werden kann) gehen die Nutzerprotokolle nach
+`%LOCALAPPDATA%\SelfX\Logs`.
 
-**Housekeeping:** log files older than `Log_Retention_Days` in `Tool_Config.xml`
-(1–3650, default **90**) are deleted:
+**Aufbewahrung:** Protokolldateien, die älter sind als `Log_Retention_Days` in
+`Tool_Config.xml` (1–3650, Standard **90**), werden gelöscht:
 
-- The SelfX service deletes old `*.log` and `*.old` files in `Logs` once a day
-  (first time after the start delay of the background checks), also while the
-  background checks are disabled, and logs the number of deleted files in
-  `SelfXService.log`.
-- Each user deletes the old files of the own `Logs\Users\<SID>` folder, at most
-  once a day, when a SelfX script starts. The service never deletes inside
-  `Logs\Users`: users can create folders there, and a deletion as SYSTEM must not
-  follow a link that a user could create.
+- Der SelfX-Dienst löscht alte `*.log`- und `*.old`-Dateien in `Logs` einmal am Tag
+  (das erste Mal nach der Startverzögerung der Hintergrundprüfungen), auch wenn die
+  Hintergrundprüfungen ausgeschaltet sind, und protokolliert die Anzahl der
+  gelöschten Dateien in `SelfXService.log`.
+- Jeder Nutzer löscht die alten Dateien seines eigenen Ordners `Logs\Users\<SID>`,
+  höchstens einmal am Tag, wenn ein SelfX-Skript startet. Der Dienst löscht nie in
+  `Logs\Users`: Nutzer können dort Ordner anlegen, und ein Löschen als SYSTEM darf
+  keinem Link folgen, den ein Nutzer anlegen könnte.
 
-`Uninstall.ps1` keeps the logs; `-RemoveLogs` deletes `%ProgramData%\SelfX`.
+`Uninstall.ps1` behält die Protokolle; `-RemoveLogs` löscht `%ProgramData%\SelfX`.
 
-### Health status (SelfX Service 2.3.0)
+### Gesundheitsstatus (SelfX Service 2.3.0)
 
-The Device status page (since 2.5.0; before in the System information tab)
-shows the result of the local health checks of the service. It reads the
-status cache of the background checks when SelfX opens and requests `HEALTH`
-when the user checks again. It displays **OK** (green), **Pending** (yellow warning),
-**Error** (red), or **Unknown** (gray). Pending means an outstanding action
-(updates to install, device not compliant yet); it is a warning, not an error.
-Unknown means missing data, an unsupported source, or an unavailable
-service; it is not a successful check. Technical details remain in English;
-labels and status words follow the UI language. Copy and all exports include
-the results. Existing device, Windows, user/management, network and report
-sections remain first; health status is appended below them in the same list.
-The report is a snapshot, not continuous monitoring.
+Die Seite Gerätestatus (seit 2.5.0; zuvor im Reiter Systeminformationen) zeigt das
+Ergebnis der lokalen Gesundheitsprüfungen des Dienstes. Sie liest den Status-Cache
+der Hintergrundprüfungen, wenn SelfX geöffnet wird, und fordert `HEALTH` an, wenn der
+Nutzer erneut prüft. Sie zeigt **In Ordnung** (grün), **Ausstehend** (gelbe Warnung),
+**Fehler** (rot) oder **Unbekannt** (grau). Ausstehend bedeutet eine offene Aktion
+(zu installierende Updates, Gerät noch nicht konform); das ist eine Warnung, kein
+Fehler. Unbekannt bedeutet fehlende Daten, eine nicht unterstützte Quelle oder einen
+nicht verfügbaren Dienst; es ist keine erfolgreiche Prüfung. Technische Details
+bleiben englisch; Beschriftungen und Statuswörter folgen der Sprache der Oberfläche.
+Kopieren und alle Exporte enthalten die Ergebnisse. Die vorhandenen Abschnitte Gerät,
+Windows, Nutzer/Verwaltung, Netzwerk und Bericht bleiben zuerst; der Gesundheitsstatus
+wird darunter in derselben Liste angehängt. Der Bericht ist eine Momentaufnahme, keine
+laufende Überwachung.
 
-Configure `Sources\Health_Config.xml` before packaging. The installer copies it
-alongside `HealthStatus.ps1`, with write access only for administrators/SYSTEM.
-The client cannot supply a path or code to the service.
+Konfigurieren Sie `Sources\Health_Config.xml` vor dem Paketieren. Der Installer
+kopiert sie neben `HealthStatus.ps1`, mit Schreibzugriff nur für Administratoren/SYSTEM.
+Der Client kann dem Dienst weder einen Pfad noch Code übergeben.
 
-| Check | Interpretation |
+| Prüfung | Auslegung |
 |---|---|
-| IME | `IntuneManagementExtension` must be running; missing or stopped is Error. |
-| Defender | Service, antivirus and real-time protection must be enabled; signatures must not be reported outdated and must be at most 7 days old. Passive mode/third-party antivirus can therefore produce Error. A failed query is Unknown. The detail starts with the signature version and the time of the last signature update, followed by product and engine version. By default the row offers **Fix**, which runs `Update-MpSignature` (see [Health remediation](#health-remediation)). |
-| Compliance | Intune evaluates compliance in the cloud; Windows stores no local compliance state, so SelfX cannot read the Company Portal status. Since 2.5.5 the package ships `HealthChecks\Check-Compliance.ps1`, enabled with `<Compliance Script="Check-Compliance.ps1" />`: it checks the local criteria of a typical Intune Windows compliance policy (Intune enrollment, BitLocker on the system drive, Secure Boot, TPM, firewall for all profiles, Defender antivirus/antispyware/real-time protection, up-to-date signatures, optional minimum OS version) and shows the criteria that are not met. Align `$Require` in the script with your compliance policy; the Company Portal stays authoritative. Exit `0` = OK, any other exit code = **Pending** (warning). Missing script, exception or timeout are Error. Without the `Compliance` element the row is Unknown. While the row is not OK, it offers **Fix** to update the Defender signatures, the most frequent cause after a longer absence. |
-| Applications | Best-effort **local IME Win32 app reporting cache**, plus configured application probes. Known cached success (`1000`) is OK; failure states (`5000` through `5999`) are Error; other states are Unknown. Error takes precedence over Unknown, which takes precedence over OK. With no included results, the overall result is Unknown. |
-| Disk | Every fixed logical disk: Error when used space is **at least 90% OR free space is below 20 GiB** (displayed as GB, PowerShell `1GB`). Exactly 20 GiB is sufficient only if usage is below 90%. Thresholds are configurable. |
-| BitLocker | Every returned OS/fixed-data volume must be fully encrypted with protection On; suspended, unencrypted or partially encrypted volumes are Error. Unsupported/unreadable data is Unknown. No keys or recovery secrets are collected. |
-| Pending reboot | Error when Windows reports a pending restart: the Component Based Servicing `RebootPending` key, the Windows Update `RebootRequired` key, `RebootRequired` of the Windows Update Agent (`Microsoft.Update.SystemInfo`), updates of the Windows Update orchestrator that wait for the restart (`ReadyToReboot`, Windows 11 24H2+, what Settings shows as *Restart now*; since 2.6.9, the detail names the updates), or a pending computer rename. `PendingFileRenameOperations` is deliberately ignored because installers and security products often leave it set permanently. Unreadable registry data is Unknown; a failing Windows Update API does not hide the registry result. |
-| Updates to install | Searches only the **local Windows Update Agent cache** (offline, no scan, download or installation). Any not-installed, not-hidden update (except browse-only/optional ones) is **Pending** (warning) and listed in the detail. An empty cache is OK only if the last successful Windows Update scan is at most `MaxSearchAgeDays` old (default 14); otherwise, or when the scan date is unknown, the result is Unknown. Updates deployed only through ConfigMgr are not part of this cache view. While the row is Pending, **Fix** installs the pending Windows updates and starts the Microsoft Store app updates as SYSTEM, without a restart (since 2.5.6, see [Health remediation](#health-remediation)). |
-| Additional services | Exact service name and expected state (`Running` or `Stopped`). |
-| Script checks | Exit `0` = OK; exit `1` = Error. Other exit codes, missing files, exceptions and timeouts are also Error. |
+| IME | `IntuneManagementExtension` muss laufen; fehlend oder gestoppt ist Fehler. |
+| Defender | Dienst, Virenschutz und Echtzeitschutz müssen aktiviert sein; die Signaturen dürfen nicht als veraltet gemeldet werden und höchstens 7 Tage alt sein. Passiver Modus/Virenschutz von Drittanbietern kann deshalb Fehler ergeben. Eine fehlgeschlagene Abfrage ist Unbekannt. Das Detail beginnt mit der Signaturversion und der Zeit des letzten Signatur-Updates, gefolgt von Produkt- und Engine-Version. Standardmäßig bietet die Zeile **Beheben**, das `Update-MpSignature` ausführt (siehe [Reparaturen der Gesundheitsprüfung](#reparaturen-der-gesundheitsprüfung)). |
+| Compliance | Intune bewertet die Compliance in der Cloud; Windows speichert keinen lokalen Compliance-Status, SelfX kann den Status des Unternehmensportals also nicht lesen. Seit 2.5.5 enthält das Paket `HealthChecks\Check-Compliance.ps1`, aktiviert mit `<Compliance Script="Check-Compliance.ps1" />`: Es prüft die lokalen Kriterien einer typischen Intune-Windows-Compliance-Richtlinie (Intune-Registrierung, BitLocker auf dem Systemlaufwerk, Secure Boot, TPM, Firewall für alle Profile, Defender-Virenschutz/Spyware-Schutz/Echtzeitschutz, aktuelle Signaturen, optional eine Mindestversion von Windows) und zeigt die nicht erfüllten Kriterien. Gleichen Sie `$Require` im Skript mit Ihrer Compliance-Richtlinie ab; das Unternehmensportal bleibt maßgeblich. Exit `0` = In Ordnung, jeder andere Exitcode = **Ausstehend** (Warnung). Ein fehlendes Skript, eine Ausnahme oder ein Timeout ist Fehler. Ohne das Element `Compliance` ist die Zeile Unbekannt. Solange die Zeile nicht in Ordnung ist, bietet sie **Beheben** an, um die Defender-Signaturen zu aktualisieren, die häufigste Ursache nach längerer Abwesenheit. |
+| Anwendungen | Bestmöglicher **lokaler IME-Win32-App-Berichts-Cache**, plus konfigurierte Anwendungsprüfungen. Ein bekannter zwischengespeicherter Erfolg (`1000`) ist In Ordnung; Fehlerzustände (`5000` bis `5999`) sind Fehler; andere Zustände sind Unbekannt. Fehler hat Vorrang vor Unbekannt, das Vorrang vor In Ordnung hat. Ohne einbezogene Ergebnisse ist das Gesamtergebnis Unbekannt. |
+| Datenträger | Jedes feste logische Laufwerk: Fehler, wenn der belegte Speicher **mindestens 90 % ODER der freie Speicher unter 20 GiB** beträgt (als GB angezeigt, PowerShell `1GB`). Genau 20 GiB genügen nur, wenn die Belegung unter 90 % liegt. Die Schwellenwerte sind konfigurierbar. |
+| BitLocker | Jedes zurückgegebene OS-/feste Datenvolume muss vollständig verschlüsselt und der Schutz aktiviert sein; ausgesetzte, unverschlüsselte oder teilweise verschlüsselte Volumes sind Fehler. Nicht unterstützte/nicht lesbare Daten sind Unbekannt. Es werden keine Schlüssel oder Wiederherstellungsgeheimnisse erfasst. |
+| Neustart ausstehend | Fehler, wenn Windows einen ausstehenden Neustart meldet: der Schlüssel `RebootPending` des Component Based Servicing, der Schlüssel `RebootRequired` von Windows Update, `RebootRequired` des Windows Update Agents (`Microsoft.Update.SystemInfo`), Updates des Windows-Update-Orchestrators, die auf den Neustart warten (`ReadyToReboot`, Windows 11 24H2+, was die Einstellungen als *Jetzt neu starten* zeigen; seit 2.6.9 nennt das Detail die Updates) oder eine ausstehende Umbenennung des Computers. `PendingFileRenameOperations` wird absichtlich ignoriert, weil Installer und Sicherheitsprodukte es oft dauerhaft gesetzt lassen. Nicht lesbare Registry-Daten sind Unbekannt; eine fehlschlagende Windows-Update-API verbirgt das Registry-Ergebnis nicht. |
+| Zu installierende Updates | Durchsucht nur den **lokalen Cache des Windows Update Agents** (offline, kein Scan, Download oder Installation). Jedes nicht installierte, nicht ausgeblendete Update (außer reinen Browse-Updates/optionalen) ist **Ausstehend** (Warnung) und im Detail aufgelistet. Ein leerer Cache ist nur in Ordnung, wenn der letzte erfolgreiche Windows-Update-Scan höchstens `MaxSearchAgeDays` alt ist (Standard 14); sonst, oder wenn das Scan-Datum unbekannt ist, ist das Ergebnis Unbekannt. Updates, die nur über ConfigMgr verteilt werden, sind nicht Teil dieser Cache-Ansicht. Solange die Zeile Ausstehend ist, installiert **Beheben** die ausstehenden Windows-Updates und startet die Updates der Microsoft-Store-Apps als SYSTEM, ohne Neustart (seit 2.5.6, siehe [Reparaturen der Gesundheitsprüfung](#reparaturen-der-gesundheitsprüfung)). |
+| Zusätzliche Dienste | Genauer Dienstname und erwarteter Zustand (`Running` oder `Stopped`). |
+| Skriptprüfungen | Exit `0` = In Ordnung; Exit `1` = Fehler. Andere Exitcodes, fehlende Dateien, Ausnahmen und Timeouts sind ebenfalls Fehler. |
 
-**Application limitations:** the IME registry cache is an implementation detail,
-not a stable Microsoft API, installed-software inventory, or live Intune report.
-It can be stale and can contain several user/device records for the same app.
-All available included records are considered (a failed record is not discarded
-because another record succeeded). Cache format changes or unreadable data
-produce Unknown. A successful installation does not prove that the application
-works. Use explicit probes for non-IME apps or functional checks; SelfX cannot
-automatically diagnose every installed application.
+**Einschränkungen bei Anwendungen:** Der IME-Registry-Cache ist ein
+Implementierungsdetail, keine stabile Microsoft-API, kein Inventar installierter
+Software und kein Live-Bericht von Intune. Er kann veraltet sein und mehrere
+Nutzer-/Geräteeinträge für dieselbe App enthalten. Alle verfügbaren einbezogenen
+Einträge werden berücksichtigt (ein fehlgeschlagener Eintrag wird nicht verworfen,
+weil ein anderer Eintrag erfolgreich war). Änderungen des Cache-Formats oder nicht
+lesbare Daten ergeben Unbekannt. Eine erfolgreiche Installation beweist nicht, dass
+die Anwendung funktioniert. Verwenden Sie ausdrückliche Prüfungen für Apps ohne IME
+oder Funktionsprüfungen; SelfX kann nicht jede installierte Anwendung automatisch
+diagnostizieren.
 
 ```xml
 <HealthConfig>
@@ -449,23 +480,26 @@ automatically diagnose every installed application.
 </HealthConfig>
 ```
 
-Exclusions match names **case-insensitively with PowerShell wildcards**
-(`*`, `?`, bracket expressions); app IDs can also be excluded. IME cache names
-are used if available; otherwise SelfX takes the name from the app policies in
-the IME logs (`AppWorkload.log`, since 2.6.0) and only then shows the app ID.
-Supply an `Application Id="..." Name="..."` mapping when you need name-based
-exclusions but no name is found. Excluded probes are not executed. Excluding all apps
-does not manufacture an OK result. Since 2.6.0 the row is labelled **Company apps
-(Intune)**; its detail names the apps that failed with their error code (for
-example `Monitoring Agent (error 0x87D1041C)`), and apps that do not apply to the
-device (EnforcementState 3000-3999, requirements not met) are not counted. The
-app ID is read from the key `Win32Apps\<user>\<app id>_<revision>`; before 2.6.0
-the user ID could be shown instead of the app.
+Ausschlüsse vergleichen Namen **ohne Beachtung der Groß-/Kleinschreibung mit
+PowerShell-Platzhaltern** (`*`, `?`, Klammerausdrücke); auch App-IDs können
+ausgeschlossen werden. Namen aus dem IME-Cache werden verwendet, wenn sie verfügbar
+sind; sonst übernimmt SelfX den Namen aus den App-Richtlinien in den IME-Protokollen
+(`AppWorkload.log`, seit 2.6.0) und zeigt erst dann die App-ID. Geben Sie eine
+Zuordnung `Application Id="..." Name="..."` an, wenn Sie namensbasierte Ausschlüsse
+brauchen, aber kein Name gefunden wird. Ausgeschlossene Prüfungen werden nicht
+ausgeführt. Der Ausschluss aller Apps erzeugt kein In-Ordnung-Ergebnis. Seit 2.6.0
+heißt die Zeile **Unternehmens-Apps (Intune)**; ihr Detail nennt die Apps, die mit
+ihrem Fehlercode fehlgeschlagen sind (zum Beispiel `Monitoring Agent (error
+0x87D1041C)`), und Apps, die für das Gerät nicht gelten (EnforcementState
+3000-3999, Voraussetzungen nicht erfüllt), werden nicht gezählt. Die App-ID wird aus
+dem Schlüssel `Win32Apps\<Nutzer>\<App-ID>_<Revision>` gelesen; vor 2.6.0 konnte
+statt der App die Nutzer-ID angezeigt werden.
 
-Create `Sources\HealthChecks` and put extension `.ps1` files there. Only simple
-filenames are accepted (no subdirectories, absolute paths or `..`); reparse
-points in that folder or the script are rejected. The default package contains
-only `Check-Compliance.ps1` (see the Compliance row above). Example read-only application probe:
+Legen Sie `Sources\HealthChecks` an und legen Sie dort Erweiterungs-`.ps1`-Dateien
+ab. Es werden nur einfache Dateinamen akzeptiert (keine Unterverzeichnisse,
+absoluten Pfade oder `..`); Reparse Points in diesem Ordner oder am Skript werden
+abgewiesen. Das Standardpaket enthält nur `Check-Compliance.ps1` (siehe die Zeile
+Compliance oben). Beispiel für eine nur lesende Anwendungsprüfung:
 
 ```powershell
 <#
@@ -485,40 +519,44 @@ try {
 } catch { exit 1 }
 ```
 
-**Security and runtime contract:** checks execute non-interactively as SYSTEM
-on each refresh, without a confirmation prompt. They must be read-only,
-idempotent and must never reboot, sign out, modify settings, prompt for input
-or launch detached work. Review/sign them before deployment; arbitrary
-administrator-supplied scripts cannot be proven read-only by SelfX. No
-credentials should be stored in scripts. Exit codes define their status; the
-last non-empty stdout line (at most 400 characters) is shown as detail text,
-otherwise `Exit code: N`. stderr is drained but not included in the report.
-Timeout is 1-30 seconds per script, default 30; at most 5 script checks total
-(compliance, app probes and custom combined), and 16 additional services.
-On timeout SelfX attempts to terminate that process tree. The entire service
-request is capped at 240 seconds and 20,000 characters; oversize results are
-rejected explicitly, not shown as OK. Repair actions and checks requested by
-SelfX share a lock: a concurrent request returns Busy; retry after it finishes.
-A check requested while a background check runs waits until it has finished.
+**Sicherheit und Laufzeitvertrag:** Die Prüfungen laufen bei jeder Aktualisierung
+nicht interaktiv als SYSTEM, ohne Bestätigungsabfrage. Sie müssen nur lesend und
+idempotent sein und dürfen nie neu starten, abmelden, Einstellungen ändern, Eingaben
+abfragen oder losgelöste Arbeit starten. Prüfen/signieren Sie sie vor der
+Bereitstellung; beliebige vom Administrator gelieferte Skripte kann SelfX nicht als
+nur lesend beweisen. In Skripten sollten keine Anmeldedaten stehen. Exitcodes legen
+ihren Status fest; die letzte nicht leere stdout-Zeile (höchstens 400 Zeichen) wird
+als Detailtext angezeigt, sonst `Exit code: N`. stderr wird geleert, aber nicht in
+den Bericht aufgenommen. Der Timeout beträgt 1–30 Sekunden pro Skript, Standard 30;
+höchstens 5 Skriptprüfungen insgesamt (Compliance, App-Prüfungen und eigene
+zusammen) und 16 zusätzliche Dienste. Bei einem Timeout versucht SelfX, diesen
+Prozessbaum zu beenden. Die gesamte Dienstanfrage ist auf 240 Sekunden und 20.000
+Zeichen begrenzt; zu große Ergebnisse werden ausdrücklich abgewiesen, nicht als In
+Ordnung angezeigt. Reparaturaktionen und von SelfX angeforderte Prüfungen teilen
+eine Sperre: Eine gleichzeitige Anfrage liefert Busy; versuchen Sie es nach dem
+Ende erneut. Eine Prüfung, die angefordert wird, während eine Hintergrundprüfung
+läuft, wartet bis zu deren Ende.
 
-Run all tests of the package before packaging, see the
-[release checklist](Installation.md#release-checklist-selfx-service). The
-catalogue and the health configuration are also checked by `Test-Catalog.ps1`
-(2.6.10).
+Führen Sie vor dem Paketieren alle Tests des Pakets aus, siehe die
+[Release-Checkliste](Installation.md#release-checkliste-selfx-service). Der Katalog
+und die Gesundheitskonfiguration werden außerdem von `Test-Catalog.ps1` (2.6.10)
+geprüft.
 
-Tests mock all system probes and script execution. They do not install a
-service or execute real custom scripts; `Test-ServicePipe.ps1` only starts the
-pipe listener of the service under a test pipe name. `Test-Scripts.ps1` (2.6.0) runs every
-action and repair script in a temporary sandbox with mocked commands (no
-process is closed, nothing is started or restarted) and checks its result and
-its log; only the read-only scripts `Check-Compliance.ps1`, `Detection.ps1`
-and `HealthStatus.ps1` run for real.
+Die Tests ersetzen alle Systemprüfungen und Skriptausführungen durch Mocks. Sie
+installieren keinen Dienst und führen keine echten eigenen Skripte aus;
+`Test-ServicePipe.ps1` startet nur den Pipe-Listener des Dienstes unter einem
+Test-Pipe-Namen. `Test-Scripts.ps1` (2.6.0) führt jedes Aktions- und
+Reparaturskript in einer temporären Sandbox mit Mocks für die Befehle aus (es wird
+kein Prozess geschlossen, nichts gestartet oder neu gestartet) und prüft Ergebnis
+und Protokoll; nur die nur lesenden Skripte `Check-Compliance.ps1`, `Detection.ps1`
+und `HealthStatus.ps1` laufen echt.
 
-### Health remediation
+### Reparaturen der Gesundheitsprüfung
 
-Health checks remain read-only. To offer a user-triggered **Fix** button on a
-status row, install a repair script under `Sources\Scripts_to_run` and add it
-to `Health_Config.xml`:
+Die Gesundheitsprüfungen bleiben nur lesend. Um eine vom Nutzer ausgelöste
+Schaltfläche **Beheben** an einer Statuszeile anzubieten, legen Sie ein
+Reparaturskript unter `Sources\Scripts_to_run` ab und tragen es in
+`Health_Config.xml` ein:
 
 ```xml
 <Remediations>
@@ -530,193 +568,224 @@ to `Health_Config.xml`:
 </Remediations>
 ```
 
-`Id` matches a result type (`IME`, `Defender`, `Compliance`, `Applications`,
-`Disk`, `BitLocker`, `PendingReboot`, `Updates`, `Service`, `Custom`). Optional `Name` matches the exact
-technical name, not the translated label. With no Name, the mapping applies
-to every row of that type. Do not configure overlapping mappings for a row:
-ambiguous mappings are reported as configuration errors. Optional
-`When="NotOK"` offers the repair only while the row is not OK (Pending, Error
-or Unknown); the default `Always` offers it on every status.
+`Id` entspricht einem Ergebnistyp (`IME`, `Defender`, `Compliance`, `Applications`,
+`Disk`, `BitLocker`, `PendingReboot`, `Updates`, `Service`, `Custom`). Das optionale
+`Name` entspricht dem genauen technischen Namen, nicht der übersetzten Beschriftung.
+Ohne Name gilt die Zuordnung für jede Zeile dieses Typs. Konfigurieren Sie für eine
+Zeile keine sich überschneidenden Zuordnungen: Mehrdeutige Zuordnungen werden als
+Konfigurationsfehler gemeldet. Das optionale `When="NotOK"` bietet die Reparatur nur
+an, solange die Zeile nicht in Ordnung ist (Ausstehend, Fehler oder Unbekannt); der
+Standard `Always` bietet sie bei jedem Status an.
 
-**Default remediation (2.3.4):** the package ships
-`Scripts_to_run\SelfX_Defender_UpdateSignature.ps1`, which runs
-`Update-MpSignature` as SYSTEM with the update sources defined by Defender
-policy, and enables it in the default `Health_Config.xml`:
+**Standardreparatur (2.3.4):** Das Paket enthält
+`Scripts_to_run\SelfX_Defender_UpdateSignature.ps1`, das `Update-MpSignature` als
+SYSTEM mit den durch die Defender-Richtlinie festgelegten Update-Quellen ausführt,
+und aktiviert es in der mitgelieferten `Health_Config.xml`:
 
 ```xml
 <Remediation Id="Defender" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
 <Remediation Id="Compliance" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
 ```
 
-Since 2.5.4 the Defender and Compliance rows show **Fix** only while they are
-not OK, because outdated signatures after a longer absence
-are a frequent cause of non-compliance. To offer the signature update on an OK
-Defender row as well, remove `When="NotOK"` from the Defender line. The update needs a reachable update
-source; offline it fails (exit 1) and the status stays unchanged. Remove the
-two lines to disable this.
+Seit 2.5.4 zeigen die Zeilen Defender und Compliance **Beheben** nur, solange sie
+nicht in Ordnung sind, weil veraltete Signaturen nach längerer Abwesenheit eine
+häufige Ursache für fehlende Compliance sind. Um das Signatur-Update auch bei einer
+Defender-Zeile in Ordnung anzubieten, entfernen Sie `When="NotOK"` aus der
+Defender-Zeile. Das Update braucht eine erreichbare Update-Quelle; offline schlägt es
+fehl (Exit 1) und der Status bleibt unverändert. Entfernen Sie die beiden Zeilen, um
+es zu deaktivieren.
 
-**Updates remediation (2.5.6, fixed in 2.6.3 and 2.6.9):** the package ships
-`Scripts_to_run\SelfX_Updates_Install.ps1` and enables it in the default `Health_Config.xml`:
+**Reparatur der Updates (2.5.6, korrigiert in 2.6.3 und 2.6.9):** Das Paket enthält
+`Scripts_to_run\SelfX_Updates_Install.ps1` und aktiviert es in der mitgelieferten
+`Health_Config.xml`:
 
 ```xml
 <Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" />
 ```
 
-While updates are pending, the **Updates to install** row offers **Fix**. While the installation
-runs, the button shows **Running…** and the message bar says that the updates are being searched,
-downloaded and installed; afterwards SelfX reports that Windows Update has finished and checks the
-whole device status again (updates, restart pending, compliance). The script runs as SYSTEM and
+Solange Updates ausstehen, bietet die Zeile **Zu installierende Updates**
+**Beheben** an. Während die Installation läuft, zeigt die Schaltfläche **Läuft…**,
+und die Meldungsleiste sagt, dass die Updates gesucht, geladen und installiert
+werden; danach meldet SelfX, dass Windows Update fertig ist, und prüft den gesamten
+Gerätestatus erneut (Updates, Neustart ausstehend, Compliance). Das Skript läuft als
+SYSTEM und
 
-1. starts the Microsoft Store app update scan of the MDM bridge
-   (`MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod`). This also works when the
-   Store is blocked for users. The Store updates the apps asynchronously in the background.
-2. on Windows 11 24H2 and newer (2.6.9) starts **"Check for updates" of the Windows Update
-   orchestrator** through the documented WinRT API `Windows.Management.Update.WindowsUpdateManager`
-   (`StartScan(userInitiated: true)`, the same as the button in Settings). Windows downloads and
-   installs the updates itself, with the policies of the device, and **Settings > Windows Update
-   shows the progress**. The script waits until no update is downloaded or installed any more (at
-   most 90 minutes) and logs each update with its action, progress and the reason why it waits, for
-   example `2026-11 Security Update (KB5132061): action Install, progress Install 70` or
-   `Optional driver: waiting: SeekerUpdate`. Updates that only wait for the restart (`ReadyToReboot`)
-   are done. Feature updates (new Windows version) are left to the update policy.
-3. installs what the orchestrator left (and on older Windows everything) through the documented
-   **Windows Update Agent API**: online search at the
-   update source of the device policy (Intune update rings / Windows Update for Business, WSUS or
-   Microsoft Update), EULAs accepted, download and quiet installation of every not-installed,
-   not-hidden update. Optional (browse-only) updates, updates that need user input, feature updates
-   (category *Upgrades*) and updates that only wait for the restart are skipped. If Windows Update is
-   installing right now, the script
-   waits for it (at most 10 minutes). Every update is logged in
-   `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<date>.log` with its title and result, for example
-   `Installed: 2026-10 .NET Framework Security Update (restart required)`, and the summary names the
-   KB numbers (`Windows Update: 2 of 2 update(s) installed (KB5127690, KB890830); restart required to
-   complete`). Afterwards a background scan of the orchestrator updates the page in Settings. While
-   the orchestrator is still working after 90 minutes, the WUA step is skipped (two installations at
-   the same time would conflict) and the repair ends with exit `1`; Windows continues in the
-   background.
+1. startet den Update-Scan für Microsoft-Store-Apps der MDM-Bridge
+   (`MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod`). Das
+   funktioniert auch, wenn der Store für Nutzer gesperrt ist. Der Store aktualisiert
+   die Apps asynchron im Hintergrund.
+2. startet unter Windows 11 24H2 und neuer (2.6.9) **„Nach Updates suchen“ des
+   Windows-Update-Orchestrators** über die dokumentierte WinRT-API
+   `Windows.Management.Update.WindowsUpdateManager`
+   (`StartScan(userInitiated: true)`, dasselbe wie die Schaltfläche in den
+   Einstellungen). Windows lädt und installiert die Updates selbst, mit den
+   Richtlinien des Geräts, und **Einstellungen > Windows Update zeigt den
+   Fortschritt**. Das Skript wartet, bis kein Update mehr geladen oder installiert
+   wird (höchstens 90 Minuten), und protokolliert jedes Update mit seiner Aktion, dem
+   Fortschritt und dem Grund, warum es wartet, zum Beispiel
+   `2026-11 Security Update (KB5132061): action Install, progress Install 70` oder
+   `Optional driver: waiting: SeekerUpdate`. Updates, die nur noch auf den Neustart
+   warten (`ReadyToReboot`), gelten als erledigt. Feature-Updates (neue
+   Windows-Version) überlässt es der Update-Richtlinie.
+3. installiert, was der Orchestrator übrig lässt (und unter älteren Windows-Versionen
+   alles), über die dokumentierte **Windows-Update-Agent-API**: Online-Suche an der
+   Update-Quelle der Geräterichtlinie (Intune-Update-Ringe / Windows Update for
+   Business, WSUS oder Microsoft Update), EULAs akzeptiert, Download und stille
+   Installation jedes nicht installierten, nicht ausgeblendeten Updates. Optionale
+   (Browse-only-)Updates, Updates, die Nutzereingaben brauchen, Feature-Updates
+   (Kategorie *Upgrades*) und Updates, die nur auf den Neustart warten, werden
+   übersprungen. Installiert Windows Update gerade, wartet das Skript darauf
+   (höchstens 10 Minuten). Jedes Update wird in
+   `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<Datum>.log` mit Titel und
+   Ergebnis protokolliert, zum Beispiel
+   `Installed: 2026-10 .NET Framework Security Update (restart required)`, und die
+   Zusammenfassung nennt die KB-Nummern (`Windows Update: 2 of 2 update(s) installed
+   (KB5127690, KB890830); restart required to complete`). Danach aktualisiert ein
+   Hintergrundscan des Orchestrators die Seite in den Einstellungen. Arbeitet der
+   Orchestrator nach 90 Minuten noch, wird der WUA-Schritt übersprungen (zwei
+   gleichzeitige Installationen würden kollidieren) und die Reparatur endet mit Exit
+   `1`; Windows arbeitet im Hintergrund weiter.
 
-2.6.0 to 2.6.2 used `UsoClient.exe StartDownload` / `StartInstall`. Windows 11 24H2 rejects these
-commands (exit code `-2147024809` / `0x80070057` in the log), so only a scan ran and nothing was
-installed; a restart that was already pending was even reported as installed. 2.6.3 no longer uses
-`UsoClient.exe`. 2.6.3 to 2.6.8 used only the Windows Update Agent API. Microsoft documents that the
-Windows Update page in Settings shows only updates of the orchestrator and that updates handled
-through the WUA API do not appear there and can conflict with it, so the updates could still be
-shown as pending in Settings. Before 2.6.9 a click on **Fix** was also refused with "Another action
-is still running" while SelfX read the cached status (once a minute, for a moment).
+Die Versionen 2.6.0 bis 2.6.2 nutzten `UsoClient.exe StartDownload` /
+`StartInstall`. Windows 11 24H2 weist diese Befehle ab (Exitcode `-2147024809` /
+`0x80070057` im Protokoll), sodass nur ein Scan lief und nichts installiert wurde;
+ein bereits ausstehender Neustart wurde sogar als installiert gemeldet. 2.6.3
+verwendet `UsoClient.exe` nicht mehr. Die Versionen 2.6.3 bis 2.6.8 nutzten nur die
+Windows-Update-Agent-API. Microsoft dokumentiert, dass die Seite Windows Update in
+den Einstellungen nur Updates des Orchestrators zeigt und dass über die WUA-API
+behandelte Updates dort nicht erscheinen und mit ihm kollidieren können, sodass die
+Updates in den Einstellungen weiterhin als ausstehend angezeigt werden konnten. Vor
+2.6.9 wurde ein Klick auf **Beheben** außerdem mit „Eine andere Aktion läuft noch“
+abgewiesen, während SelfX den zwischengespeicherten Status las (einmal pro Minute,
+für einen Moment).
 
-The script **never restarts** Windows. If an update needs a restart, the **Restart pending** row
-shows it. Exit `0` = all selected updates installed (or nothing to install); exit `1` = search,
-download or installation failed for at least one update (the failed KB numbers are in the log). A
-Store scan that cannot be started (for example without the MDM bridge) is logged but does not fail
-the repair. Remove the line to disable it.
+Das Skript startet Windows **nie neu**. Braucht ein Update einen Neustart, zeigt ihn
+die Zeile **Neustart ausstehend**. Exit `0` = alle ausgewählten Updates installiert
+(oder nichts zu installieren); Exit `1` = Suche, Download oder Installation ist bei
+mindestens einem Update fehlgeschlagen (die fehlgeschlagenen KB-Nummern stehen im
+Protokoll). Ein Store-Scan, der sich nicht starten lässt (zum Beispiel ohne
+MDM-Bridge), wird protokolliert, lässt die Reparatur aber nicht fehlschlagen.
+Entfernen Sie die Zeile, um sie zu deaktivieren.
 
-**Restart remediation (2.6.0):** the **Restart pending** row offers **Restart now**:
+**Reparatur Neustart (2.6.0):** Die Zeile **Neustart ausstehend** bietet **Jetzt neu
+starten** an:
 
 ```xml
 <Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" />
 ```
 
-SelfX recognises this script and asks with its own warning: Windows restarts to complete the
-pending updates and changes, the user should save the work and close all programs, the restart
-begins about 30 seconds after the confirmation (**Restart now** / **Cancel**). After the
-confirmation the service runs `shutdown.exe /r /t 30 /d p:4:1` as SYSTEM; Windows shows its restart
-notification. The restart is **never** part of **Fix all problems**. Remove the line to hide the
-button.
+SelfX erkennt dieses Skript und fragt mit einer eigenen Warnung: Windows startet neu,
+um die ausstehenden Updates und Änderungen abzuschließen, der Nutzer soll seine
+Arbeit speichern und alle Programme schließen, der Neustart beginnt etwa 30 Sekunden
+nach der Bestätigung (**Jetzt neu starten** / **Abbrechen**). Nach der Bestätigung
+führt der Dienst `shutdown.exe /r /t 30 /d p:4:1` als SYSTEM aus; Windows zeigt seine
+Neustart-Benachrichtigung. Der Neustart ist **nie** Teil von **Alle Probleme
+beheben**. Entfernen Sie die Zeile, um die Schaltfläche auszublenden.
 
-**App retry remediation (2.6.0):** the **Company apps (Intune)** row offers **Try again** while an app
-installation failed:
+**Reparatur App-Wiederholung (2.6.0):** Die Zeile **Unternehmens-Apps (Intune)**
+bietet **Erneut versuchen** an, solange eine App-Installation fehlgeschlagen ist:
 
 ```xml
 <Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" />
 ```
 
-The Intune Management Extension retries a failed Win32 app only after its retry schedule (by default
-24 hours). `SelfX_Apps_RetryInstall.ps1` removes, for every app whose last result in the local IME
-cache is an error, this cached result and the retry schedule entries (GRS) of the app, and restarts
-the IntuneManagementExtension service. The IME then checks in with Intune and installs the app again
-within a few minutes; the user sees the progress in the Company Portal. No app is uninstalled and
-only the IME cache under `HKLM\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps` is changed.
-When the installation fails again, the problem is in the app or its assignment; the user can send
-the device logs to the support, and the support team sees the error code in Intune.
+Die Intune Management Extension wiederholt eine fehlgeschlagene Win32-App erst nach
+ihrem Wiederholungsplan (standardmäßig 24 Stunden). `SelfX_Apps_RetryInstall.ps1`
+entfernt für jede App, deren letztes Ergebnis im lokalen IME-Cache ein Fehler ist,
+dieses zwischengespeicherte Ergebnis und die Einträge des Wiederholungsplans (GRS)
+der App und startet den Dienst IntuneManagementExtension neu. Die IME meldet sich
+dann bei Intune und installiert die App innerhalb weniger Minuten erneut; der Nutzer
+sieht den Fortschritt im Unternehmensportal. Es wird keine App deinstalliert, und
+geändert wird nur der IME-Cache unter
+`HKLM\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps`. Schlägt die
+Installation erneut fehl, liegt das Problem in der App oder ihrer Zuweisung; der
+Nutzer kann die Geräteprotokolle an den Support senden, und das Support-Team sieht
+den Fehlercode in Intune.
 
-Optional `TimeoutSeconds` on a `Remediation` (since 2.5.6) sets the run time limit of the service
-for this repair: a positive number, capped at 7200 seconds; the default is 900 seconds.
+Das optionale `TimeoutSeconds` an einer `Remediation` (seit 2.5.6) legt das
+Laufzeitlimit des Dienstes für diese Reparatur fest: eine positive Zahl, auf 7200
+Sekunden begrenzt; der Standard sind 900 Sekunden.
 
-Optional `OtherSessions="Block"` on a `Remediation` works like the catalog element `OtherSessions`: a
-normal user cannot start the repair while another user has an active session. The delivered
-configuration sets it for `Updates` and for the restart (`PendingReboot`). A script that is also a
-catalog `System` action uses the catalog entry first; set `Block` there as well.
+Das optionale `OtherSessions="Block"` an einer `Remediation` wirkt wie das
+Katalogelement `OtherSessions`: Ein normaler Nutzer kann die Reparatur nicht
+starten, solange ein anderer Nutzer eine aktive Sitzung hat. Die mitgelieferte
+Konfiguration setzt es für `Updates` und für den Neustart (`PendingReboot`). Ein
+Skript, das zugleich eine `System`-Aktion im Katalog ist, verwendet zuerst den
+Katalogeintrag; setzen Sie `Block` auch dort.
 
-The **Fix** button is shown only on cards with a configured repair (including OK and
-Unknown cards unless `When="NotOK"`). It is labelled **Beheben** in German and **Fix** in English;
-the restart and the app retry use **Neu starten** / **Restart now** and **Erneut versuchen** /
-**Try again**. Button and confirmation texts are included in all 24 UI languages. Every card also has a
-**check again** button (arrows) that re-checks only that status
-without confirmation and without running any repair (see
-[Single-status recheck](#single-status-recheck)). Before 2.5.0 rows without a
-repair showed a button labelled Ok, Pending or Error instead.
-The user must confirm before execution. The local service validates the script
-against the protected remediation allowlist (or existing System action
-catalogue), then runs it as SYSTEM with the existing repair timeout and logging.
-No arbitrary paths, command arguments or user-supplied scripts are accepted.
-Remediation scripts do not need an additional troubleshooting catalogue entry.
-Any local signed-in user can request these approved repairs, just like
-existing System actions.
+Die Schaltfläche **Beheben** erscheint nur auf Karten mit einer konfigurierten
+Reparatur (auch auf Karten In Ordnung und Unbekannt, sofern nicht `When="NotOK"`
+gilt). Der Neustart und die App-Wiederholung nutzen **Jetzt neu starten** und
+**Erneut versuchen**. Die Texte der Schaltflächen und Bestätigungen sind in allen 24
+Sprachen der Oberfläche enthalten. Jede Karte hat außerdem eine Schaltfläche
+**Erneut prüfen** (Pfeile), die nur diesen Status ohne Bestätigung und ohne
+Ausführung einer Reparatur erneut prüft (siehe [Einzelprüfung](#einzelprüfung)). Vor
+2.5.0 zeigten Zeilen ohne Reparatur eine Schaltfläche mit der Beschriftung In
+Ordnung, Ausstehend oder Fehler. Der Nutzer muss vor der Ausführung bestätigen. Der
+lokale Dienst prüft das Skript gegen die geschützte Positivliste der Reparaturen
+(oder den vorhandenen Katalog der System-Aktionen) und führt es dann als SYSTEM mit
+dem vorhandenen Zeitlimit und der Protokollierung aus. Es werden keine beliebigen
+Pfade, Befehlsargumente oder vom Nutzer gelieferten Skripte akzeptiert.
+Reparaturskripte brauchen keinen zusätzlichen Eintrag im Fehlerbehebungskatalog.
+Jeder lokale angemeldete Nutzer kann diese freigegebenen Reparaturen anfordern,
+genau wie die vorhandenen System-Aktionen.
 
-The window prevents a second repair while one is running. On completion,
-including failure or timeout, it re-checks the repaired status only (rows of
-the collection itself fall back to a full refresh). The action result stays in
-the message bar; the fresh check result,
-not the script exit code, determines the displayed health status. A repair
-that returns 0 can therefore still leave a red status. If the check or service
-is unavailable, the refreshed result is Unknown rather than fabricated OK.
+Das Fenster verhindert eine zweite Reparatur, solange eine läuft. Nach dem Ende,
+auch bei Fehler oder Timeout, prüft es nur den reparierten Status erneut (Zeilen der
+Erfassung selbst fallen auf eine vollständige Aktualisierung zurück). Das Ergebnis
+der Aktion bleibt in der Meldungsleiste; der angezeigte Gesundheitsstatus wird vom
+frischen Prüfergebnis bestimmt, nicht vom Exitcode des Skripts. Eine Reparatur, die
+0 zurückgibt, kann daher einen roten Status hinterlassen. Ist die Prüfung oder der
+Dienst nicht verfügbar, ist das aktualisierte Ergebnis Unbekannt statt eines
+erfundenen In-Ordnung.
 
-### Single-status recheck
+### Einzelprüfung
 
-Since 2.3.2 the client can request one check with
-`HEALTH <Id> [<base64 UTF-8 name>]`, for example `HEALTH Disk Qzo=` for drive
-`C:`. The service accepts only the known Ids (`IME`, `Defender`, `Compliance`,
-`Applications`, `Disk`, `BitLocker`, `PendingReboot`, `Updates`, `Service`, `Custom`) and a strictly
-base64-encoded name; anything else is rejected. `HealthStatus.ps1` then runs
-only that check from the protected `Health_Config.xml`: a name that is not
-configured there is never probed and returns an Unknown row. The UI replaces
-only the affected card and the service updates only these rows in the status
-cache; all other information is kept. Rows of
-type `Collection` (collector errors) trigger a full refresh instead.
+Seit 2.3.2 kann der Client eine einzelne Prüfung mit
+`HEALTH <Id> [<Base64-UTF-8-Name>]` anfordern, zum Beispiel `HEALTH Disk Qzo=` für
+das Laufwerk `C:`. Der Dienst akzeptiert nur die bekannten Ids (`IME`, `Defender`,
+`Compliance`, `Applications`, `Disk`, `BitLocker`, `PendingReboot`, `Updates`,
+`Service`, `Custom`) und einen streng Base64-codierten Namen; alles andere wird
+abgewiesen. `HealthStatus.ps1` führt dann nur diese Prüfung aus der geschützten
+`Health_Config.xml` aus: Ein Name, der dort nicht konfiguriert ist, wird nie
+geprüft und ergibt eine Zeile Unbekannt. Die Oberfläche ersetzt nur die betroffene
+Karte, und der Dienst aktualisiert nur diese Zeilen im Status-Cache; alle anderen
+Informationen bleiben erhalten. Zeilen vom Typ `Collection` (Fehler des Collectors)
+lösen stattdessen eine vollständige Aktualisierung aus.
 
-Repairs must be suitable for execution without user interaction. Never use
-sign-out, restart, shutdown, sleep or detached actions in these scripts. This
-also applies to `PendingReboot`: the recheck only shows whether a restart is
-still pending; the user restarts the device themselves.
-Administrators must review, deploy and, where required, sign them. Since
-2.3.4 only the Defender signature update (Defender always, Compliance when
-not OK) is enabled by default.
+Reparaturen müssen ohne Nutzerinteraktion ausführbar sein. Verwenden Sie in diesen
+Skripten nie Abmelden, Neustart, Herunterfahren, Energiesparmodus oder losgelöste
+Aktionen. Das gilt auch für `PendingReboot`: Die erneute Prüfung zeigt nur, ob noch
+ein Neustart aussteht; den Neustart führt der Nutzer selbst aus. Administratoren
+müssen sie prüfen, bereitstellen und, wo nötig, signieren. Seit 2.3.4 ist standardmäßig
+nur das Defender-Signatur-Update aktiviert (Defender immer, Compliance wenn nicht in
+Ordnung).
 
 ### Branding
 
-Company logo, icon and colors are set in the `Branding` section of
-`Tool_Config.xml`. Copy the image files into `SelfX Service\Sources`, or into a
-subfolder such as `Sources\Branding`, before you build the package. Paths are
-relative to the install folder. All keys are optional; if a value is empty,
-invalid or the file is missing, SelfX uses the default.
+Firmenlogo, Symbol und Farben werden im Abschnitt `Branding` von `Tool_Config.xml`
+festgelegt. Kopieren Sie die Bilddateien vor dem Bau des Pakets nach
+`SelfX Service\Sources` oder in einen Unterordner wie `Sources\Branding`. Pfade sind
+relativ zum Installationsordner. Alle Schlüssel sind optional; ist ein Wert leer oder
+ungültig oder fehlt die Datei, verwendet SelfX den Standard.
 
-The delivered `Tool_Config.xml` contains placeholders (2.6.8): the logo
-`Branding\company_logo.png` ("YOUR LOGO"), the blue of the SelfX logo
-(`#0072BC`) and the support contacts `Mon-Fri 08:00-17:00`, `+1 555 0100`,
-`support@example.com` and `https://support.example.com`. Replace them with the
-values of your company before you build the package, or empty them to hide them.
+Die mitgelieferte `Tool_Config.xml` enthält Platzhalter (2.6.8): das Logo
+`Branding\company_logo.png` („YOUR LOGO“), das Blau des SelfX-Logos (`#0072BC`) und
+die Support-Kontakte `Mon-Fri 08:00-17:00`, `+1 555 0100`, `support@example.com` und
+`https://support.example.com`. Ersetzen Sie sie vor dem Bau des Pakets durch die
+Werte Ihres Unternehmens oder leeren Sie sie, um sie auszublenden.
 
-| Key | Default | Purpose |
+| Schlüssel | Standard | Zweck |
 |---|---|---|
-| `Brand_Logo` | empty (no logo) | Company logo at the top of the navigation bar and in the About dialog. PNG, JPG, BMP, GIF or ICO, at most 196 pixels wide in the navigation. A transparent PNG works best on both themes. If empty, the About dialog shows `About_Logo`. |
-| `Brand_Logo_Height` | `40` | Height of the logo in the navigation bar, in pixels (16–120). The width is scaled to fit. |
-| `Brand_Icon` | `Repair.ico` | Icon of the window, the taskbar and the tray icon. If it is an `.ico` file, `Install.ps1` also uses it for the shortcuts and the Apps & Features entry. Since 2.6.2 SelfX has its own taskbar button (AppUserModelID `SelfX.SelfService`) with this icon instead of the PowerShell icon; a SelfX pinned to the taskbar starts `SelfX.exe`. Use an `.ico` with 256 × 256 pixels for a sharp taskbar icon. |
-| `Brand_Accent_Color` | empty (uses `Tool_Color`) | Company color as `#RRGGBB` for buttons, selections, the navigation marker, links and icons. The text color on the accent (white or black) is chosen automatically; a very dark or very light color is lightened or darkened for text and icons so it stays readable on both themes. |
-| `Brand_TitleBar_Color` | window background | Title bar background as `#RRGGBB`, for example the corporate color. The text color is chosen automatically. |
-| `Brand_Run_Button_Color` | accent color | Run (play) and **Fix** buttons. |
-| `Brand_Info_Button_Color` | accent color | "More information" icons. |
+| `Brand_Logo` | leer (kein Logo) | Firmenlogo oben in der Navigationsleiste und im Info-Dialog. PNG, JPG, BMP, GIF oder ICO, in der Navigation höchstens 196 Pixel breit. Ein transparentes PNG passt am besten zu beiden Designs. Ist es leer, zeigt der Info-Dialog `About_Logo`. |
+| `Brand_Logo_Height` | `40` | Höhe des Logos in der Navigationsleiste in Pixeln (16–120). Die Breite wird passend skaliert. |
+| `Brand_Icon` | `Repair.ico` | Symbol des Fensters, der Taskleiste und des Statussymbols. Ist es eine `.ico`-Datei, verwendet `Install.ps1` es auch für die Verknüpfungen und den Eintrag unter Apps & Features. Seit 2.6.2 hat SelfX eine eigene Taskleistenschaltfläche (AppUserModelID `SelfX.SelfService`) mit diesem Symbol statt des PowerShell-Symbols; ein an die Taskleiste angeheftetes SelfX startet `SelfX.exe`. Verwenden Sie eine `.ico` mit 256 × 256 Pixeln für ein scharfes Taskleistensymbol. |
+| `Brand_Accent_Color` | leer (nutzt `Tool_Color`) | Firmenfarbe als `#RRGGBB` für Schaltflächen, Auswahlen, die Markierung der Navigation, Links und Symbole. Die Textfarbe auf der Akzentfarbe (weiß oder schwarz) wird automatisch gewählt; eine sehr dunkle oder sehr helle Farbe wird für Text und Symbole aufgehellt oder abgedunkelt, damit sie auf beiden Designs lesbar bleibt. |
+| `Brand_TitleBar_Color` | Fensterhintergrund | Hintergrund der Titelleiste als `#RRGGBB`, zum Beispiel die Unternehmensfarbe. Die Textfarbe wird automatisch gewählt. |
+| `Brand_Run_Button_Color` | Akzentfarbe | Start-Schaltflächen (Play) und **Beheben**. |
+| `Brand_Info_Button_Color` | Akzentfarbe | Symbole „Mehr Informationen“. |
 
-Example:
+Beispiel:
 
 ```xml
 <Brand_Logo>Branding\contoso.png</Brand_Logo>
@@ -728,100 +797,104 @@ Example:
 <Brand_Info_Button_Color>#6C6C6C</Brand_Info_Button_Color>
 ```
 
-`Tool_Theme` (`Auto`, `Dark` or `Light`) selects the default theme; since 2.6.7
-the default is `Auto` (also when the value is missing or unknown). Each user
-can change it in the settings dialog (if `Show_Theme_Button` is `True`): *Automatic*,
-*Dark* or *Light*. *Automatic* (`Auto`, 2.6.6) uses the app mode of Windows
-(Settings > Personalization > Colors, `AppsUseLightTheme` in
-`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`; light if
-the value is missing) and follows a change while SelfX is open. The choice of
-the user is stored in `HKCU\Software\SelfX\Theme` and wins over `Tool_Theme`;
-users who chose *Dark* or *Light* before keep their choice. The
-branding colors apply to both themes. `Tool_Color` accepts the former MahApps
-color names (`Cyan`, `Teal`, `Blue` ...). Since 2.5.0 SelfX Service no longer
-uses MahApps.Metro; no file is written for the colors and no network access
-is used.
+`Tool_Theme` (`Auto`, `Dark` oder `Light`) wählt das Standarddesign; seit 2.6.7 ist
+der Standard `Auto` (auch wenn der Wert fehlt oder unbekannt ist). Jeder Nutzer kann
+es im Einstellungsdialog ändern (wenn `Show_Theme_Button` `True` ist):
+*Automatisch*, *Dunkel* oder *Hell*. *Automatisch* (`Auto`, 2.6.6) nutzt den
+App-Modus von Windows (Einstellungen > Personalisierung > Farben,
+`AppsUseLightTheme` in `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`;
+hell, wenn der Wert fehlt) und folgt einer Änderung, während SelfX geöffnet ist. Die
+Wahl des Nutzers wird in `HKCU\Software\SelfX\Theme` gespeichert und hat Vorrang vor
+`Tool_Theme`; Nutzer, die zuvor *Dunkel* oder *Hell* gewählt haben, behalten ihre
+Wahl. Die Branding-Farben gelten für beide Designs. `Tool_Color` akzeptiert die
+früheren MahApps-Farbnamen (`Cyan`, `Teal`, `Blue` ...). Seit 2.5.0 verwendet
+SelfX Service MahApps.Metro nicht mehr; für die Farben wird keine Datei geschrieben
+und kein Netzwerkzugriff genutzt.
 
-### Languages
+### Sprachen
 
-By default the user interface follows the Windows display language of the
-signed-in user. Users can choose another language themselves in SelfX >
-Settings (gear). The texts are in `Sources\Languages\<culture>.xml`. Included languages:
+Die Basissprache der Oberfläche ist Deutsch (2.6.12). Mit `Tool_Language` auf `Auto`
+folgt sie der Anzeigesprache von Windows des angemeldeten Nutzers. Nutzer können in
+SelfX > Einstellungen (Zahnrad) selbst eine andere Sprache wählen. Die Texte stehen
+in `Sources\Languages\<Kultur>.xml`. Enthaltene Sprachen:
 
-| File | Language | File | Language | File | Language |
+| Datei | Sprache | Datei | Sprache | Datei | Sprache |
 |---|---|---|---|---|---|
-| `en.xml` | English (reference) | `pl.xml` | Polish | `hi.xml` | Hindi |
-| `de.xml` | German | `ru.xml` | Russian | `bn.xml` | Bengali |
-| `fr.xml` | French | `uk.xml` | Ukrainian | `zh-Hans.xml` | Chinese (Simplified) |
-| `es.xml` | Spanish | `tr.xml` | Turkish | `zh-Hant.xml` | Chinese (Traditional) |
-| `it.xml` | Italian | `ar.xml` | Arabic (right to left) | `ja.xml` | Japanese |
-| `pt.xml` | Portuguese | `fa.xml` | Persian (right to left) | `ko.xml` | Korean |
-| `nl.xml` | Dutch | `ur.xml` | Urdu (right to left) | `vi.xml` | Vietnamese |
-| `id.xml` | Indonesian | `th.xml` | Thai | `sw.xml` | Swahili |
+| `en.xml` | Englisch (Referenz) | `pl.xml` | Polnisch | `hi.xml` | Hindi |
+| `de.xml` | Deutsch (Basissprache) | `ru.xml` | Russisch | `bn.xml` | Bengalisch |
+| `fr.xml` | Französisch | `uk.xml` | Ukrainisch | `zh-Hans.xml` | Chinesisch (vereinfacht) |
+| `es.xml` | Spanisch | `tr.xml` | Türkisch | `zh-Hant.xml` | Chinesisch (traditionell) |
+| `it.xml` | Italienisch | `ar.xml` | Arabisch (rechts nach links) | `ja.xml` | Japanisch |
+| `pt.xml` | Portugiesisch | `fa.xml` | Persisch (rechts nach links) | `ko.xml` | Koreanisch |
+| `nl.xml` | Niederländisch | `ur.xml` | Urdu (rechts nach links) | `vi.xml` | Vietnamesisch |
+| `id.xml` | Indonesisch | `th.xml` | Thailändisch | `sw.xml` | Suaheli |
 
-English is the reference; the other files were machine translated. Have them
-reviewed by native speakers before a rollout.
+Englisch ist die Referenz für die Schlüssel und der Rückfall; die anderen Dateien
+wurden maschinell übersetzt. Lassen Sie sie vor einem Rollout von Muttersprachlern
+prüfen.
 
-How the language is selected (`Localization.ps1`):
+So wird die Sprache gewählt (`Localization.ps1`):
 
-1. The language chosen by the user (2.5.9). The settings dialog lists
-   **Automatic (<language>)** and every language file, each by its own name,
-   for example *Deutsch*, *français*, *日本語*. The choice is stored per user
-   in `HKCU\Software\SelfX\Language`. *Automatic* stores `Auto`, which
-   means "use step 2". After a change, SelfX restarts on the same page in the
-   new language, and the status icon follows. If a repair is still running,
-   the new language is used the next time SelfX is opened. The choice is
-   ignored when `Show_Language_Setting` is `False`, when the value is not a
-   culture name, or when its language file no longer exists.
-2. `Tool_Language` in `Tool_Config.xml`: `de` (default) is German, `Auto` uses
-   the Windows display language, any other value is used as the culture name.
-3. The culture and its parent cultures are tried in order. For example
-   `de-CH` uses `de.xml`, `pt-BR` uses `pt.xml`, `zh-CN` uses `zh-Hans.xml` and
-   `zh-TW` uses `zh-Hant.xml`. Swiss German (`gsw`, including `gsw-CH`)
-   also uses `de.xml` when no Swiss German language file is available.
-4. If no file matches, `de.xml` (the base language) is used. A text that is
-   missing in the selected language is shown in English (`en.xml`).
+1. Die vom Nutzer gewählte Sprache (2.5.9). Der Einstellungsdialog listet
+   **Automatisch (<Sprache>)** und jede Sprachdatei unter ihrem eigenen Namen, zum
+   Beispiel *Deutsch*, *français*, *日本語*. Die Wahl wird pro Nutzer in
+   `HKCU\Software\SelfX\Language` gespeichert. *Automatisch* speichert `Auto`, das
+   „Schritt 2 verwenden“ bedeutet. Nach einer Änderung startet SelfX auf derselben
+   Seite in der neuen Sprache neu, und das Statussymbol folgt. Läuft noch eine
+   Reparatur, wird die neue Sprache beim nächsten Öffnen von SelfX verwendet. Die
+   Wahl wird ignoriert, wenn `Show_Language_Setting` `False` ist, wenn der Wert kein
+   Kulturname ist oder wenn seine Sprachdatei nicht mehr existiert.
+2. `Tool_Language` in `Tool_Config.xml`: `de` (Standard) ist Deutsch, `Auto` nutzt
+   die Anzeigesprache von Windows, jeder andere Wert wird als Kulturname verwendet.
+3. Die Kultur und ihre übergeordneten Kulturen werden der Reihe nach versucht. Zum
+   Beispiel nutzt `de-CH` die `de.xml`, `pt-BR` die `pt.xml`, `zh-CN` die
+   `zh-Hans.xml` und `zh-TW` die `zh-Hant.xml`. Schweizerdeutsch (`gsw`, auch
+   `gsw-CH`) nutzt ebenfalls `de.xml`, wenn keine Sprachdatei für Schweizerdeutsch
+   vorhanden ist.
+4. Passt keine Datei, wird `de.xml` (die Basissprache) verwendet. Ein Text, der in
+   der gewählten Sprache fehlt, erscheint auf Englisch (`en.xml`).
 
-Each text is looked up in the selected language first and then in English, so a
-missing entry never leaves an empty label. Catalogue texts fall back to the
-English base text in `Issues_List.xml`.
+Jeder Text wird zuerst in der gewählten Sprache und dann auf Englisch gesucht,
+sodass ein fehlender Eintrag nie eine leere Beschriftung hinterlässt. Katalogtexte
+fallen auf den englischen Basistext in `Issues_List.xml` zurück.
 
-A language file has four parts:
+Eine Sprachdatei hat vier Teile:
 
-| Section | Content |
+| Abschnitt | Inhalt |
 |---|---|
-| `UI` | Texts of the main window, dialogs, tooltips, message bar, Device status and System information pages and the tray icon. `{0}`, `{1}` are placeholders, for example the action name. |
-| `SystemInfo` | Labels and values of the System information page and the status checks |
-| `Catalog/Categories` | Display names of the category Ids |
-| `Catalog/Messages`, `Catalog/Actions` | Translations of the shared messages and of `Name`, `Explanation` and `Alerte_MSG` per action `Id`. Fields that use `Ref` take the translated message. |
+| `UI` | Texte des Hauptfensters, der Dialoge, Kurzinfos, der Meldungsleiste, der Seiten Gerätestatus und Systeminformationen und des Statussymbols. `{0}`, `{1}` sind Platzhalter, zum Beispiel für den Aktionsnamen. |
+| `SystemInfo` | Beschriftungen und Werte der Seite Systeminformationen und der Statusprüfungen |
+| `Catalog/Categories` | Anzeigenamen der Kategorie-Ids |
+| `Catalog/Messages`, `Catalog/Actions` | Übersetzungen der gemeinsamen Meldungen und von `Name`, `Explanation` und `Alerte_MSG` pro Aktions-`Id`. Felder mit `Ref` übernehmen die übersetzte Meldung. |
 
-To add a language:
+Um eine Sprache hinzuzufügen:
 
-1. Copy `en.xml` (or a complete translation such as `de.xml`) to
-   `<culture>.xml`. Use the neutral culture name, for example `cs.xml` for
-   Czech, so that all regional variants use it.
-2. Set `Culture`, `Name` and `NativeName` on the root element. Set
-   `FlowDirection="RightToLeft"` for right-to-left scripts.
-3. Translate the texts. Keep the element names, Ids and placeholders. Keep the
-   `|*.txt|` pattern in `SystemInfo_Export_Filter`.
-4. Check the file, then build the package:
+1. Kopieren Sie `en.xml` (oder eine vollständige Übersetzung wie `de.xml`) nach
+   `<Kultur>.xml`. Verwenden Sie den neutralen Kulturnamen, zum Beispiel `cs.xml`
+   für Tschechisch, damit alle regionalen Varianten sie nutzen.
+2. Setzen Sie `Culture`, `Name` und `NativeName` am Wurzelelement. Setzen Sie
+   `FlowDirection="RightToLeft"` für Schriften von rechts nach links.
+3. Übersetzen Sie die Texte. Behalten Sie Elementnamen, Ids und Platzhalter bei.
+   Behalten Sie das Muster `|*.txt|` in `SystemInfo_Export_Filter` bei.
+4. Prüfen Sie die Datei und bauen Sie dann das Paket:
 
    ```powershell
    & '.\SelfX Service\Test-LanguageFiles.ps1' -Culture cs
    ```
 
-   The check reports missing or unknown keys, broken placeholders and
-   catalogue entries that do not exist. Run it without `-Culture` to check all
-   files.
+   Die Prüfung meldet fehlende oder unbekannte Schlüssel, defekte Platzhalter und
+   Katalogeinträge, die nicht existieren. Ohne `-Culture` prüft sie alle Dateien.
 
-No code change is needed. To change a text for your company, for example the
-main title, edit it in the language files.
+Es ist keine Codeänderung nötig. Um einen Text für Ihr Unternehmen zu ändern, zum
+Beispiel den Haupttitel, bearbeiten Sie ihn in den Sprachdateien.
 
-## Editing and publishing safely
+## Änderungen sicher bearbeiten und veröffentlichen
 
-1. Back up the current XML and scripts.
-2. Validate that the XML remains well-formed.
-3. Confirm each referenced script exists in the corresponding package.
-4. Test action behavior and user confirmation text on a test device.
-5. For remote updates, publish the XML and ZIP from a trusted HTTPS location
-   and update the XML version.
+1. Sichern Sie die aktuellen XML-Dateien und Skripte.
+2. Prüfen Sie, dass das XML wohlgeformt bleibt.
+3. Prüfen Sie, dass jedes referenzierte Skript im entsprechenden Paket existiert.
+4. Testen Sie das Verhalten der Aktionen und die Bestätigungstexte auf einem
+   Testgerät.
+5. Liefern Sie Änderungen nur als neue Paketversion aus (Intune-Paket, siehe
+   [Installation](Installation.md#intune-paket-erstellen)). SelfX lädt keine
+   Konfiguration aus dem Netzwerk nach.
