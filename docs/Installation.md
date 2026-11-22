@@ -120,6 +120,7 @@ the language files. The script exits with code 1 if a file has errors:
 & '.\SelfX Service\Test-LanguageFiles.ps1'
 powershell.exe -NoProfile -File '.\SelfX Service\Test-HealthStatus.ps1'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-DeviceLogs.ps1'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-Catalog.ps1'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-UI.ps1'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-Scripts.ps1'
 ```
