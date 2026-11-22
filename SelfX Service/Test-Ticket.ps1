@@ -9,13 +9,14 @@
     Name    : Test-Ticket.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.6
+    Version : 2.8.7
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.4    2026-11-22  fubu2k               Initial version
     2.8.6    2026-11-22  fubu2k               Routing (Ticket_Config.xml), Cc, device values
+    2.8.7    2026-11-22  fubu2k               Recipient and Cc from the registry
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -264,6 +265,21 @@ try {
 	Assert-Equal "$($t.To)|$($t.Cc)|$($t.Unit)|$($t.Source)" 'default@example.com|||Default' 'target: no match gives the default recipient'
 	$t = Get-SelfXTicketTarget -DefaultMail 'default@example.com' -DeviceValues ([pscustomobject]@{ GroupTag = 'DE-IT1-BER'; Category = ''; OU = '' })
 	Assert-Equal $t.To 'default@example.com' 'target: no configuration gives the default recipient'
+
+	# --- addresses set per device in the registry
+	$script:regValues['HKLM:\SOFTWARE\SelfX\Support'] = @{ GroupTag = 'DE-IT1-BER'; TicketMail = ' func@example.com '; TicketCc = 'cc@example.com' }
+	$dev = Get-SelfXTicketDeviceValues
+	Assert-Equal "$($dev.Mail)|$($dev.Cc)" 'func@example.com|cc@example.com' 'device values: TicketMail and TicketCc are read (trimmed)'
+	$script:regValues['HKLM:\SOFTWARE\SelfX\Support'] = @{ TicketMail = 'a@b.de,c@d.de'; TicketCc = 'cc@example.com' }
+	$dev = Get-SelfXTicketDeviceValues
+	Assert-Equal "$($dev.Mail)|$($dev.Cc)" '|' 'device values: an invalid TicketMail is ignored, and the Cc with it'
+	$script:regValues['HKLM:\SOFTWARE\SelfX\Support'] = @{ TicketMail = 'func@example.com'; TicketCc = 'a@b.de;c@d.de' }
+	$dev = Get-SelfXTicketDeviceValues
+	Assert-Equal "$($dev.Mail)|$($dev.Cc)" 'func@example.com|' 'device values: an invalid TicketCc is ignored'
+	$t = Get-SelfXTicketTarget -DefaultMail 'default@example.com' -Config $cfg2 -DeviceValues ([pscustomobject]@{ GroupTag = 'DE-IT1-BER'; Category = ''; OU = ''; Mail = 'func@example.com'; Cc = 'cc2@example.com' })
+	Assert-Equal "$($t.To)|$($t.Cc)|$($t.Source)" 'func@example.com|cc2@example.com|Registry' 'target: the registry address wins over a rule of Ticket_Config.xml'
+	$t = Get-SelfXTicketTarget -DefaultMail 'default@example.com' -Config $cfg2 -DeviceValues ([pscustomobject]@{ GroupTag = 'DE-IT1-BER'; Category = ''; OU = ''; Mail = ''; Cc = 'cc2@example.com' })
+	Assert-Equal "$($t.To)|$($t.Source)" 'it1@example.com|Rule 1 (GroupTag)' 'target: without a registry address the rules apply'
 } finally {
 	Remove-Item function:Get-ItemProperty -ErrorAction SilentlyContinue
 }

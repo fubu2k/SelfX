@@ -21,40 +21,47 @@
     Name    : TicketSend.ps1
     Package : SelfX Service
     Context : GUI helper (signed-in user)
-    Version : 2.8.6
+    Version : 2.8.7
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.5    2026-11-22  fubu2k               Initial version
     2.8.6    2026-11-22  fubu2k               Recipient and Cc from the routing (Get-SelfXTicketTarget), device values for the routing
+    2.8.7    2026-11-22  fubu2k               Recipient and Cc can be set per device in the registry (TicketMail, TicketCc)
 #>
 
 function Get-SelfXTicketDeviceValues {
     # Reads the values for the routing (read only): group tag and category as set by the administrator in
-    # HKLM\SOFTWARE\SelfX\Support (GroupTag, Category; only administrators can write there) and the OU of the
-    # computer account (Distinguished-Name of the Group Policy state, hybrid devices). Invalid values become empty.
+    # HKLM\SOFTWARE\SelfX\Support (GroupTag, Category, and the addresses TicketMail and TicketCc of the responsible unit;
+    # only administrators can write there) and the OU of the computer account (Distinguished-Name of the Group Policy
+    # state, hybrid devices). Invalid values become empty; an address must be exactly one plain address.
     param(
         [string]$SupportKey = 'HKLM:\SOFTWARE\SelfX\Support',
         [string]$PolicyKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine'
     )
     $support = Get-ItemProperty -LiteralPath $SupportKey -ErrorAction SilentlyContinue
     $policy = Get-ItemProperty -LiteralPath $PolicyKey -ErrorAction SilentlyContinue
-    $groupTag = ''; $category = ''; $ou = ''
+    $groupTag = ''; $category = ''; $ou = ''; $mail = ''; $cc = ''
     if ($support) {
         $groupTag = ConvertTo-SelfXTicketDeviceValue $support.GroupTag 'GroupTag'
         $category = ConvertTo-SelfXTicketDeviceValue $support.Category 'Category'
+        $mailValue = ("$($support.TicketMail)").Trim()
+        $ccValue = ("$($support.TicketCc)").Trim()
+        if (Test-SelfXTicketAddress $mailValue) { $mail = $mailValue }
+        if ($mail -and (Test-SelfXTicketAddress $ccValue)) { $cc = $ccValue }
     }
     if ($policy) {
         $distinguishedName = "$($policy.'Distinguished-Name')"
         # OU part of the distinguished name (without the computer name)
         $ou = ConvertTo-SelfXTicketDeviceValue ($distinguishedName -replace '^[^,]*,', '') 'OU'
     }
-    return [pscustomobject]@{ GroupTag = $groupTag; Category = $category; OU = $ou }
+    return [pscustomobject]@{ GroupTag = $groupTag; Category = $category; OU = $ou; Mail = $mail; Cc = $cc }
 }
 
 function Get-SelfXTicketTarget {
-    # Recipient, Cc and support unit for this device: the first matching rule of Ticket_Config.xml, otherwise DefaultMail.
+    # Recipient, Cc and support unit for this device: 1. the address set for this device in the registry (TicketMail,
+    # TicketCc), 2. the first matching rule of Ticket_Config.xml, 3. DefaultMail.
     param(
         [Parameter(Mandatory = $true)][string]$DefaultMail,
         $Config,
@@ -62,6 +69,10 @@ function Get-SelfXTicketTarget {
     )
     $target = [pscustomobject]@{
         To = $DefaultMail; Cc = ''; Unit = ''; GroupTag = $DeviceValues.GroupTag; Category = $DeviceValues.Category; Source = 'Default'
+    }
+    if ($DeviceValues.Mail) {
+        $target.To = $DeviceValues.Mail; $target.Cc = $DeviceValues.Cc; $target.Source = 'Registry'
+        return $target
     }
     if ($Config) {
         $resolved = Resolve-SelfXTicketUnit -Config $Config -GroupTag $DeviceValues.GroupTag -Category $DeviceValues.Category -OU $DeviceValues.OU

@@ -330,29 +330,39 @@ The result is in `%ProgramData%\SelfX\Logs\Install.log`.
 
 ### Ticket routing: set the values with Intune (since 2.8.6)
 
-Only needed when the ticket function (`Ticket_Enabled`) is used with rules for group tag or category in `Ticket_Config.xml` (see [Configuration](Configuration.md#ticket-by-e-mail-selfx-service-285-assignment-286)). SelfX only reads the values; they are in `HKLM\SOFTWARE\SelfX\Support` (`GroupTag`, `Category`, each REG_SZ, up to 64 characters: letters, digits, spaces, `.`, `_`, `-`). The SelfX package does not create the key. Hybrid devices can also be assigned by OU; nothing has to be set for that.
+Only needed when the ticket function (`Ticket_Enabled`) is used with rules for group tag or category in `Ticket_Config.xml` (see [Configuration](Configuration.md#ticket-by-e-mail-selfx-service-285-assignment-286)). SelfX only reads the values; they are in `HKLM\SOFTWARE\SelfX\Support`: `GroupTag` and `Category` (each REG_SZ, up to 64 characters: letters, digits, spaces, `.`, `_`, `-`) and the addresses `TicketMail` and `TicketCc` of the responsible unit (exactly one plain address each; shared mailboxes only, no personal mailboxes). The SelfX package does not create the key. Hybrid devices can also be assigned by OU; nothing has to be set for that.
 
 Example with an Intune platform script (*Devices > Scripts and remediations > Platform scripts*):
-1. Copy the script below for each unit or category and change the two values at the top.
+1. Copy the script below for each unit and change the values at the top (`TicketMail` is the recipient of the unit).
 2. Settings: *Run this script using the logged on credentials* = **No** (runs as SYSTEM), *Run script in 64 bit PowerShell Host* = **Yes**.
-3. Assign it to an Entra device group whose members match this value (for example a dynamic group by group tag or device category). The script can be repeated: running it again sets the same values.
+3. Assign it to an Entra device group whose members match this value (for example a dynamic group by group tag or device category). The script can be repeated: running it again sets the same values. It always sets all four values; when a device moves to another group, the script of the new group replaces what the old one set. The groups should exclude each other, so a device belongs to one script only.
 4. With many units: one script per unit, or one script that picks the value from a table by device name or group. Number and names of the tags are free; they only have to match the rules in `Ticket_Config.xml`.
 5. Check on the device (read only): `Get-ItemProperty 'HKLM:\SOFTWARE\SelfX\Support'`. Before distribution, `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ...` shows which unit results.
 
-The script runs in Windows PowerShell 5.1 and in PowerShell 7 and changes only these two values; invalid values stop it before anything is written.
+The script runs in Windows PowerShell 5.1 and in PowerShell 7 and changes only these four values; invalid values stop it before anything is written.
 
 ```powershell
 # Set-SelfXSupportUnit.ps1 (example) - sets the values SelfX reads for the ticket routing.
 # Intune platform script: run as SYSTEM (not as the signed-in user), 64-bit, one copy per assignment.
-$GroupTag = 'DE-IT1-BER'   # up to 64 characters: letters, digits, space, . _ -   (empty = remove the value)
-$Category = 'Category-A'   # same rules                                              (empty = remove the value)
+# Use shared (functional) mailboxes only, no personal mailboxes.
+$GroupTag   = 'DE-IT1-BER'          # optional, up to 64 characters: letters, digits, space, . _ -
+$Category   = 'Category-A'          # optional, same rules
+$TicketMail = 'it1-service@example.com'   # recipient of the ticket e-mail: exactly one plain address
+$TicketCc   = ''                    # optional second address (needs TicketMail)
+# An empty value removes the registry value. All four values are always set, so a script of a new
+# group replaces what a script of the old group set when a device moves to another group.
 
 $ErrorActionPreference = 'Stop'
 $key = 'HKLM:\SOFTWARE\SelfX\Support'    # below HKLM\SOFTWARE: only administrators can write, users can only read
-$values = [ordered]@{ GroupTag = $GroupTag; Category = $Category }
+$tag = '^[A-Za-z0-9._ -]{1,64}\z'
+$mail = '^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,}\z'
+$values = [ordered]@{ GroupTag = @($GroupTag, $tag); Category = @($Category, $tag); TicketMail = @($TicketMail, $mail); TicketCc = @($TicketCc, $mail) }
 foreach ($name in $values.Keys) {
-    $value = "$($values[$name])".Trim()
-    if ($value -and $value -notmatch '^[A-Za-z0-9._ -]{1,64}\z') { Write-Output "$name has an invalid value."; exit 1 }
+    $value = ("$($values[$name][0])").Trim()
+    if ($value -and $value -notmatch $values[$name][1]) { Write-Output "$name has an invalid value."; exit 1 }
+}
+foreach ($name in $values.Keys) {
+    $value = ("$($values[$name][0])").Trim()
     if ($value) {
         if (-not (Test-Path -LiteralPath $key)) { New-Item -Path $key -Force | Out-Null }
         New-ItemProperty -LiteralPath $key -Name $name -Value $value -PropertyType String -Force | Out-Null
@@ -360,7 +370,7 @@ foreach ($name in $values.Keys) {
         Remove-ItemProperty -LiteralPath $key -Name $name -ErrorAction SilentlyContinue
     }
 }
-Write-Output "SelfX support values set: GroupTag='$GroupTag', Category='$Category'."
+Write-Output 'SelfX support values set.'
 exit 0
 ```
 
