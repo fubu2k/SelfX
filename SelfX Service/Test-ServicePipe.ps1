@@ -36,18 +36,19 @@ function Assert-True($Condition, $Message) {
 	if (-not $Condition) { $script:errors.Add($Message) }
 }
 
-# Compiles the service source. Windows PowerShell 5.1 uses the .NET Framework compiler; PowerShell 7 (.NET 10) needs the
-# branch that is built for .NET (#define NET, as in the project file) and the runtime assemblies of PowerShell.
+# Makes the service type available. Windows PowerShell 5.1 compiles the source with the .NET Framework compiler.
+# PowerShell 7 (.NET 10) loads the program built from the real project file (same compiler settings and packages as the
+# release build), because Add-Type cannot reproduce the reference assemblies of the project reliably. Needs the .NET SDK 10.
 function Add-SelfXServiceType {
 	param([string]$Path, [string[]]$FrameworkReferences)
-	$text = [IO.File]::ReadAllText($Path)
-	if ($PSVersionTable.PSEdition -ne 'Core') { Add-Type -TypeDefinition $text -ReferencedAssemblies $FrameworkReferences; return }
-	$names = 'System.IO.Pipes', 'System.IO.Pipes.AccessControl', 'System.Security.AccessControl', 'System.Security.Principal.Windows',
-		'System.ServiceProcess.ServiceController', 'System.Diagnostics.Process', 'System.Diagnostics.EventLog', 'System.ComponentModel.Primitives',
-		'System.Private.Xml', 'System.Xml.ReaderWriter', 'System.Collections', 'System.Linq', 'System.Memory', 'System.Runtime.InteropServices',
-		'System.Threading', 'System.Threading.Thread', 'System.Text.Encoding.Extensions', 'System.Console', 'System.Runtime.Extensions'
-	$references = @(foreach ($name in $names) { $file = Join-Path $PSHOME "$name.dll"; if (Test-Path -LiteralPath $file) { $file } })
-	Add-Type -TypeDefinition ("#define NET`n" + $text) -ReferencedAssemblies $references
+	if ($PSVersionTable.PSEdition -ne 'Core') { Add-Type -TypeDefinition ([IO.File]::ReadAllText($Path)) -ReferencedAssemblies $FrameworkReferences; return }
+	$project = Join-Path (Split-Path -Parent $Path) 'Projects\SelfXService\SelfXService.csproj'
+	$output = Join-Path ([IO.Path]::GetTempPath()) ('SelfXServiceBuild_' + [guid]::NewGuid().ToString('N'))
+	# global.json in the repository root selects the SDK.
+	Push-Location (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $Path)))
+	try { $log = @(& dotnet build $project -c Release -o $output --nologo -v q 2>&1); $code = $LASTEXITCODE } finally { Pop-Location }
+	if ($code -ne 0) { throw ("dotnet build of the service failed:`n" + (($log | Select-Object -Last 15) -join "`n")) }
+	[void][Reflection.Assembly]::LoadFrom((Join-Path $output 'SelfXService.dll'))
 }
 
 $source = Join-Path $PSScriptRoot 'Service\SelfXService.cs'
