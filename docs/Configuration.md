@@ -139,7 +139,7 @@ Fenster in den Vordergrund.
   Meldungsleiste und wird protokolliert. Die Schaltfläche **Beheben** einer
   Statuskarte verhält sich ebenso, solange ihre Reparatur läuft.
 - **Gerätestatus**: eine Karte pro Prüfung, Probleme zuerst. Farbe und Beschriftung
-  zeigen In Ordnung, Ausstehend (Warnung), Fehler oder Unbekannt. **Beheben**
+  zeigen In Ordnung, Bald erledigen (technisch „Pending“, Warnung), Fehler oder Unbekannt. **Beheben**
   (Schraubenschlüssel) führt nach Bestätigung die konfigurierte Reparatur aus; die
   Pfeil-Schaltfläche prüft nur diesen Status erneut; die Pfeil-Schaltfläche oben
   prüft alles. **Alle Probleme beheben** (2.5.3) erscheint, wenn mindestens eine
@@ -418,8 +418,8 @@ nicht verwendet werden kann) gehen die Nutzerprotokolle nach
 Die Seite Gerätestatus (seit 2.5.0; zuvor im Reiter Systeminformationen) zeigt das
 Ergebnis der lokalen Gesundheitsprüfungen des Dienstes. Sie liest den Status-Cache
 der Hintergrundprüfungen, wenn SelfX geöffnet wird, und fordert `HEALTH` an, wenn der
-Nutzer erneut prüft. Sie zeigt **In Ordnung** (grün), **Ausstehend** (gelbe Warnung),
-**Fehler** (rot) oder **Unbekannt** (grau). Ausstehend bedeutet eine offene Aktion
+Nutzer erneut prüft. Sie zeigt **In Ordnung** (grün), **Bald erledigen** (technisch „Pending“, gelbe Warnung),
+**Fehler** (rot) oder **Unbekannt** (grau). Bald erledigen bedeutet eine offene Aktion
 (zu installierende Updates, Gerät noch nicht konform); das ist eine Warnung, kein
 Fehler. Unbekannt bedeutet fehlende Daten, eine nicht unterstützte Quelle oder einen
 nicht verfügbaren Dienst; es ist keine erfolgreiche Prüfung. Technische Details
