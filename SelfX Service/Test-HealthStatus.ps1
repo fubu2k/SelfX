@@ -446,6 +446,16 @@ try {
         $script:recheckFails = $false
     }
     Assert-Equal $info[0].Status Error 'Status preserved for row styling'
+    $manualScript = [pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'proxy.internal.example:8080'; AutoConfigURL = 'http://wpad.internal.example/proxy.pac' }
+    $proxyText = ConvertTo-SelfXProxyText $manualScript
+    Assert-Equal "$($proxyText.Contains($script:SelfXInfoText.Proxy_Manual))/$($proxyText.Contains($script:SelfXInfoText.Proxy_Script))" 'True/True' 'Proxy: manual proxy and configuration script are named'
+    Assert-Equal "$($proxyText.Contains('internal.example'))/$($proxyText.Contains('8080'))" 'False/False' 'Proxy: no server name, port or address in the text'
+    Assert-Equal (ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 0; ProxyServer = 'x:1'; AutoConfigURL = '' })) $script:SelfXInfoText.Proxy_None 'Proxy: switched off server means no proxy'
+    Assert-Equal (ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = ''; AutoConfigURL = '' })) $script:SelfXInfoText.Proxy_None 'Proxy: enabled without server means no proxy'
+    Assert-Equal (ConvertTo-SelfXProxyText $null) '' 'Proxy: unreadable setting stays empty (shown as n/a)'
+    Assert-Equal (Get-SelfXNetworkDriveText @('Z:', 'H:')) 'H:, Z:' 'Network drives: sorted letters only'
+    Assert-Equal (Get-SelfXNetworkDriveText @()) $script:SelfXInfoText.Network_Drives_None 'Network drives: none'
+    Assert-Equal (Get-SelfXNetworkDriveText $null) $script:SelfXInfoText.Network_Drives_None 'Network drives: unreadable list shows none'
     Assert-Equal $info[0].Category $script:SelfXInfoText.Category_Health 'Localized health category'
     Assert-Equal $info[0].Value.StartsWith($script:SelfXInfoText.Health_Error) $true 'Localized error text'
     Assert-Equal (ConvertTo-SelfXSystemInfoText $info).Contains('90%') $true 'Text export includes health'

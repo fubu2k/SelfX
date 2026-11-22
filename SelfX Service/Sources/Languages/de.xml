@@ -230,6 +230,12 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Gateway>Standardgateway</Gateway>
 		<DNS>DNS-Server</DNS>
 		<MAC>MAC-Adresse(n)</MAC>
+		<Proxy>Proxy (Benutzereinstellung)</Proxy>
+		<Proxy_None>Kein Proxy</Proxy_None>
+		<Proxy_Manual>Manueller Proxy</Proxy_Manual>
+		<Proxy_Script>Automatisches Konfigurationsskript</Proxy_Script>
+		<Network_Drives>Netzlaufwerke</Network_Drives>
+		<Network_Drives_None>Keine</Network_Drives_None>
 		<Collected_At>Erfasst am</Collected_At>
 		<Error>Fehler</Error>
 		<Yes>Ja</Yes>

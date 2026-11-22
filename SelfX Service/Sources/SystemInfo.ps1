@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.6.0
+    Version : 2.8.2
 
     History:
     Version  Date        Author               Change
@@ -45,6 +45,7 @@
                                               fix: last Intune sync was shown one hour (UTC offset) too late, the OMA-DM
                                               time is local time despite its "Z" (ConvertFrom-SelfXOmaDmTime)
     2.6.0    2026-11-06  Wolfgang Baeck       Label "Company apps (Intune)" instead of "Applications (local IME cache)"
+    2.8.2    2026-11-22  fubu2k               Network: proxy type of the user and mapped network drive letters (read-only, no addresses or paths)
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -62,6 +63,8 @@ $Script:SelfXInfoDefaultText = @{
 	LAN_Connected = 'LAN connected'; WiFi_Connected = 'Wi-Fi connected'; WWAN_Connected = 'Mobile broadband connected'
 	WiFi_SSID = 'Wi-Fi network (SSID)'; VPN_Connected = 'VPN connected'; Internet_Reachable = 'Internet reachable'
 	IPv4 = 'IPv4 address(es)'; IPv6 = 'IPv6 address(es)'; Gateway = 'Default gateway'; DNS = 'DNS server(s)'; MAC = 'MAC address(es)'
+	Proxy = 'Proxy (user setting)'; Proxy_None = 'No proxy'; Proxy_Manual = 'Manual proxy'; Proxy_Script = 'Automatic configuration script'
+	Network_Drives = 'Network drives'; Network_Drives_None = 'None'
 	Collected_At = 'Collected at'; Error = 'Error'; Yes = 'Yes'; No = 'No'; Not_Available = 'n/a'
 	Not_Enrolled = 'Not enrolled / unknown'; No_WiFi = 'No Wi-Fi connection'
 	Category_Health = 'Health status'; Health_IME = 'IME service'; Health_Defender = 'Microsoft Defender'
@@ -90,6 +93,28 @@ function Get-SelfXInfoText {
 		catch { return [string]::Format($Script:SelfXInfoDefaultText[$Key], $Arguments) }
 	}
 	return $value
+}
+
+# Proxy setting of the signed-in user as text. Only the kind of setting is shown, never the server name,
+# port or script address (they can reveal internal host names in exports). Settings: object with
+# ProxyEnable, ProxyServer and AutoConfigURL (values of HKCU\...\Internet Settings); $null = not readable.
+function ConvertTo-SelfXProxyText {
+	param($Settings)
+	if ($null -eq $Settings) { return '' }
+	$kinds = New-Object System.Collections.Generic.List[string]
+	if ([int]$Settings.ProxyEnable -eq 1 -and -not [string]::IsNullOrWhiteSpace("$($Settings.ProxyServer)")) { $kinds.Add((Get-SelfXInfoText 'Proxy_Manual')) }
+	if (-not [string]::IsNullOrWhiteSpace("$($Settings.AutoConfigURL)")) { $kinds.Add((Get-SelfXInfoText 'Proxy_Script')) }
+	if (-not $kinds.Count) { return (Get-SelfXInfoText 'Proxy_None') }
+	return ($kinds -join ', ')
+}
+
+# Drive letters of the mapped network drives of the signed-in user (also disconnected ones). Only the letters,
+# never the share paths. No network access: the drive type is a local information.
+function Get-SelfXNetworkDriveText {
+	param([string[]]$Letters)
+	$valid = @($Letters | Where-Object { $_ })
+	if (-not $valid.Count) { return (Get-SelfXInfoText 'Network_Drives_None') }
+	return (($valid | Sort-Object) -join ', ')
 }
 
 function New-SelfXInfoItem {
@@ -494,6 +519,10 @@ function Get-SelfXSystemInfo {
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Gateway') $gateways))
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'DNS') $dns))
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'MAC') (@($nics | ForEach-Object { $_.MACAddress } | Where-Object { $_ } | Sort-Object -Unique))))
+	$proxySettings = Invoke-SelfXSafe { Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -ErrorAction Stop }
+	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Proxy') (ConvertTo-SelfXProxyText $proxySettings)))
+	$driveLetters = Invoke-SelfXSafe { @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq [IO.DriveType]::Network } | ForEach-Object { $_.Name.TrimEnd('\') }) }
+	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Network_Drives') (Get-SelfXNetworkDriveText $driveLetters)))
 
 	$items.Add((New-SelfXInfoItem $catReport (& $L 'Collected_At') (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')))
 	if ($IncludeHealth) {
