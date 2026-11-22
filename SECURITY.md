@@ -37,8 +37,3 @@ Im Geltungsbereich, mit Priorität:
 Außerhalb des Geltungsbereichs: Schwachstellen, die vorher Administratorrechte auf
 dem Gerät voraussetzen, und Binärdateien von Drittanbietern (melden Sie diese dem
 jeweiligen Hersteller).
-
-## Unterstützte Versionen
-
-Unterstützt wird nur die neueste Version auf `main` dieses Forks. Upstream:
-https://github.com/wbaeck/SelfX
