@@ -43,7 +43,7 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.3.0
+    Version : 1.4.0
 
     History:
     Version  Date        Author               Change
@@ -53,6 +53,7 @@
                                               repository (license); the Microsoft tool is optional (-ToolPath)
     1.2.0    2026-11-20  Wolfgang Baeck       Use only the Microsoft tool; remove the module dependency and verify its signature
     1.3.0    2026-11-22  fubu2k               Only SelfX Service (SelfX Admin and SelfX Standard are no longer part of this repository)
+    1.4.0    2026-11-22  fubu2k               Bin (.NET 10 programs) is required and fully checked; the .NET project files are not packaged
 #>
 
 [CmdletBinding()]
@@ -106,20 +107,21 @@ function Test-StagedPackage {
         $detection = Get-Content -LiteralPath (Join-Path $Stage 'Detection.ps1') -Raw
         if ($detection -notmatch "\`$ExpectedVersion\s*=\s*'([^']+)'") { throw 'No $ExpectedVersion found in Detection.ps1.' }
         if ($Matches[1] -ne $Version) { throw "Detection.ps1 expects version $($Matches[1]), Tool_Config.xml has $Version. Set both to the same value." }
-        # Prebuilt programs (F9): they must have been built from the sources of this package, otherwise
-        # Install.ps1 would refuse them on every device.
+        # Prebuilt programs (F9, .NET 10): Bin is required, and it must have been built from the sources of this
+        # package, otherwise Install.ps1 would refuse it on every device.
         $bin = Join-Path $Stage 'Bin'
-        if (Test-Path -LiteralPath $bin -PathType Container) {
-            $manifest = Get-Content -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -Raw | ConvertFrom-Json
-            foreach ($source in @('Service/SelfXService.cs', 'Service/SelfXLauncher.cs', 'Service/SelfXSessionStarter.cs')) {
-                $hash = (Get-FileHash -LiteralPath (Join-Path $Stage ($source.Replace('/', '\'))) -Algorithm SHA256).Hash
-                if ($hash -ne "$($manifest.Sources.$source)") { throw "Bin was not built from the current $source. Run tools\Build-SelfXBinaries.ps1 again." }
-            }
-            Write-Host 'Service: prebuilt programs from Bin (checked against the manifest).'
+        if (-not (Test-Path -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -PathType Leaf)) { throw 'The folder Bin with SelfX.Binaries.json is missing. Run tools\Build-SelfXBinaries.ps1 first (docs\Installation.md).' }
+        $manifest = Get-Content -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -Raw | ConvertFrom-Json
+        if ("$($manifest.ManifestVersion)" -ne '2') { throw 'Bin was built by an older Build-SelfXBinaries.ps1. Run tools\Build-SelfXBinaries.ps1 again.' }
+        foreach ($source in @('Service/SelfXService.cs', 'Service/SelfXLauncher.cs', 'Service/SelfXSessionStarter.cs')) {
+            $hash = (Get-FileHash -LiteralPath (Join-Path $Stage ($source.Replace('/', '\'))) -Algorithm SHA256).Hash
+            if ($hash -ne "$($manifest.Sources.$source)") { throw "Bin was not built from the current $source. Run tools\Build-SelfXBinaries.ps1 again." }
         }
-        else {
-            Write-Host 'Service: no Bin folder, the devices compile the programs (see docs\Installation.md).'
+        foreach ($file in @('SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll')) {
+            $hash = (Get-FileHash -LiteralPath (Join-Path $bin $file) -Algorithm SHA256).Hash
+            if ($hash -ne "$($manifest.Binaries.$file)") { throw "Bin\$file does not match the manifest. Run tools\Build-SelfXBinaries.ps1 again." }
         }
+        Write-Host "Service: programs from Bin (.NET SDK $($manifest.SdkVersion), checked against the manifest)."
     }
 }
 
@@ -163,6 +165,9 @@ try {
             foreach ($pattern in $ExcludedFiles) {
                 Get-ChildItem -LiteralPath $stage -Recurse -File -Filter $pattern | Remove-Item -Force
             }
+            # The .NET project files (and build leftovers next to them) are only needed on the build machine.
+            $projectsInStage = Join-Path $stage 'Service\Projects'
+            if (Test-Path -LiteralPath $projectsInStage) { Remove-Item -LiteralPath $projectsInStage -Recurse -Force }
             Test-StagedPackage -Stage $stage -Name $name -Definition $definition -Version $version
 
             $created = New-PackageFile -Stage $stage -SetupFile $definition.Setup -OutputDir $toolOutput

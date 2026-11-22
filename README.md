@@ -24,7 +24,7 @@ Service** weiterentwickelt.
 Die Arbeit in diesem Fork konzentriert sich auf
 Sicherheit, Tests und Bereitstellung von SelfX Service: siehe
 [Sicherheitshärtung in diesem Fork](#sicherheitshärtung-in-diesem-fork) und das
-[Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **2.6.12**.
+[Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **2.7.0**.
 
 Deutsch ist die Basissprache der Oberfläche und dieser Dokumentation; Englisch
 ist der Rückfall für fehlende Texte und die Übersetzung der Dokumentation (Dateien
@@ -202,9 +202,10 @@ Menü öffnet SelfX, prüft den Status oder sendet die Protokolle.
   - Skripte für Installation, Deinstallation und Erkennung. Erhöhen Sie bei jedem
     Release `Tool_Version` und `$ExpectedVersion` in `Detection.ps1`, sonst
     verteilt Intune das Update nicht.
-  - Optionale vorkompilierte Programme, die `Install.ps1` per SHA256 prüft, mit
-    fertigen AppLocker-Hashregeln (`tools\Build-SelfXBinaries.ps1`); ohne sie
-    kompiliert das Gerät die Programme wie bisher.
+  - Dienst und Starter sind .NET-10-Programme (self-contained, LTS), die einmal auf
+    einem Build-Rechner gebaut werden (`tools\Build-SelfXBinaries.ps1`, mit
+    fertigen AppLocker-Hashregeln). `Install.ps1` prüft sie per SHA256, bevor es
+    etwas auf dem Gerät ändert; auf dem Gerät wird nichts kompiliert.
   - Ein Update oder eine Deinstallation schließt die laufenden SelfX-Fenster und
     Statussymbole; nach der Installation startet das Statussymbol sofort für alle
     angemeldeten Nutzer.
@@ -245,10 +246,10 @@ Einzelheiten stehen im [Änderungsprotokoll](CHANGELOG.md) und im
 - **Sorgfältiger Umgang mit Dateien.** SYSTEM liest keine Protokolle aus
   Ordnern, die Nutzer ändern können, und die Deinstallation folgt keinen
   Junctions.
-- **Kontrollierter Bau und Rollout.** Optionale vorkompilierte Programme werden
-  bei der Installation per Hash geprüft und können mit AppLocker-Hashregeln
-  zugelassen werden. Ohne sie nutzt der Compiler auf dem Gerät einen
-  geschützten temporären Ordner.
+- **Kontrollierter Bau und Rollout.** Die .NET-10-Programme werden einmal gebaut
+  (reproduzierbar, NuGet-Paket per Lock-Datei festgelegt), bei der Installation
+  per Hash geprüft und mit AppLocker-Hashregeln zugelassen. Auf dem Gerät läuft
+  kein Compiler.
 - **Automatische Prüfungen.** Jeder Pull Request kompiliert den Dienst und führt
   die Tests und eine Skriptanalyse aus.
 
@@ -272,7 +273,7 @@ beschrieben.
 | Verzeichnis | Inhalt |
 |---|---|
 | `SelfX Service` | Das Paket: Installer, lokaler Windows-Dienst (C#-Quelltext), Aktionskatalog mit Nutzer- und Systemaktionen, WPF-Anwendung, Skripte und Tests |
-| `tools` | `New-SelfXIntuneWin.ps1`, das das Intune-Paket mit dem signierten Win32 Content Prep Tool von Microsoft erstellt (siehe [Intune-Paket erstellen](docs/Installation.md#intune-paket-erstellen)), und `Build-SelfXBinaries.ps1`, das die optionalen vorkompilierten Programme von SelfX Service erstellt (siehe [Vorkompilierte Programme](docs/Installation.md#vorkompilierte-programme-selfx-service-2611)) |
+| `tools` | `New-SelfXIntuneWin.ps1`, das das Intune-Paket mit dem signierten Win32 Content Prep Tool von Microsoft erstellt (siehe [Intune-Paket erstellen](docs/Installation.md#intune-paket-erstellen)), und `Build-SelfXBinaries.ps1`, das die .NET-10-Programme von SelfX Service baut (siehe [Programme bauen](docs/Installation.md#programme-bauen-selfx-service-ab-270)) |
 | `docs` | Installation, Konfiguration und Benutzerhandbuch (Deutsch); `docs/en` enthält die englischen Fassungen, `docs/images` die Bildschirmfotos |
 | `.github` | GitHub-Actions-Workflow (Kompilieren, Tests, Skriptanalyse), `CODEOWNERS`, Dependabot-Konfiguration |
 | `build` | Nicht eingecheckt. Ausgabe von `New-SelfXIntuneWin.ps1`: `SelfX-Service-<Version>.intunewin`; und von `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
@@ -299,7 +300,7 @@ XML-Aktionskatalog und die Skripte zur Fehlerbehebung. Vielen Dank an Wolfgang
 Baeck: Ohne sein SelfX Service, seine klare Struktur, seine Dokumentation und
 seine Tests gäbe es diesen Fork nicht, und die Sicherheitsarbeit wäre nicht
 möglich gewesen. Die Sicherheitshärtung, die zusätzlichen Tests, die
-vorkompilierten Programme und die CI wurden in diesem Fork ergänzt (siehe das
+gebauten .NET-10-Programme und die CI wurden in diesem Fork ergänzt (siehe das
 [Änderungsprotokoll](CHANGELOG.md)). Die Lizenz des ursprünglichen Projekts
 bleibt in [LICENSE.md](LICENSE.md) erhalten.
 

@@ -3,7 +3,7 @@
 [English](README.en.md) | **Deutsch**
 
 SelfX Service wird für das ganze Gerät installiert und arbeitet ohne
-Netzwerkverbindung. Aktuelle Version: **2.6.12** (siehe das
+Netzwerkverbindung. Aktuelle Version: **2.7.0** (siehe das
 [Änderungsprotokoll](../CHANGELOG.md)).
 
 - Eine moderne Oberfläche mit änderbarer Größe für Nutzer ohne technisches Wissen
@@ -82,7 +82,7 @@ Netzwerkverbindung. Aktuelle Version: **2.6.12** (siehe das
 | `Install.ps1` | Installer für das ganze Gerät. Als Administrator ausführen. |
 | `Uninstall.ps1` | Schließt offene SelfX-Fenster und Statussymbole und entfernt dann den Dienst, die Dateien, die Verknüpfungen und den Eintrag unter Apps & Features. |
 | `Detection.ps1` | Erkennungsskript für Intune oder SCCM. `$ExpectedVersion` bei jedem Release anpassen. |
-| `Test-InstallBinaries.ps1` | Löst die Prüfung der vorkompilierten Programme und den geschützten TEMP-Ordner des Compilers aus `Install.ps1` heraus und testet sie gegen ein gefälschtes Paket (fehlende oder geänderte Dateien, geänderte Quellen, defektes Manifest). Es wird nichts kompiliert oder installiert (2.6.11). |
+| `Test-InstallBinaries.ps1` | Löst die Prüfung der vorgebauten Programme aus `Install.ps1` heraus und testet sie gegen ein gefälschtes Paket (fehlender `Bin`-Ordner, fehlende oder geänderte Dateien, geänderte Quellen, defektes oder altes Manifest). Es wird nichts gebaut oder installiert (2.6.11, ab 2.7.0 Manifestformat 2). |
 | `Test-LanguageFiles.ps1` | Prüft die Sprachdateien gegen `en.xml` und den Katalog. Vor dem Bau des Pakets ausführen. |
 | `Test-HealthStatus.ps1` | Isolierte Tests der Gesundheitsprüfung; Systemdaten und die Ausführung von Erweiterungen sind durch Mocks ersetzt. |
 | `Test-DeviceLogs.ps1` | Isolierte Tests der Funktion Geräteprotokolle (Wrapper, E-Mail-Helfer, Katalog, GUI-Schritt); Collector, ACLs, Outlook und Prozesse sind durch Mocks ersetzt. |
@@ -96,10 +96,11 @@ Netzwerkverbindung. Aktuelle Version: **2.6.12** (siehe das
 | `Sources\SelfX_Tray.ps1` | Statussymbol im Infobereich (beim Anmelden über den HKLM-Run-Eintrag `SelfXTray` gestartet, und direkt nach der Installation für angemeldete Nutzer). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Geräteprotokolle: nur lesender Collector, System-Wrapper und der E-Mail-Helfer der Oberfläche. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Collector auf Dienstseite und vom Administrator gesteuerte Gesundheitseinstellungen. Optionale Skripte kommen nach `Sources\HealthChecks`. |
-| `Service\SelfXService.cs` | Quelltext des Windows-Dienstes. Wird bei der Installation auf dem Gerät kompiliert oder einmal mit `tools\Build-SelfXBinaries.ps1` gebaut (2.6.11, siehe [Installation](../docs/Installation.md#vorkompilierte-programme-selfx-service-2611)). |
-| `Service\SelfXLauncher.cs` | Quelltext von `SelfX.exe` (2.5.3), dem Starter ohne Konsolenfenster, den die Verknüpfungen und der Autostart des Statussymbols verwenden. Wird bei der Installation auf dem Gerät kompiliert oder wie der Dienst vorkompiliert. |
-| `Service\SelfXSessionStarter.cs` | Von `Install.ps1` verwendet (2.5.8, im Speicher kompiliert): startet das Statussymbol direkt nach der Installation in den Sitzungen der angemeldeten Nutzer, mit deren normalen Rechten. |
-| `Bin\` (optional, nicht in Git) | Vorkompilierte `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` und das Manifest `SelfX.Binaries.json` aus `tools\Build-SelfXBinaries.ps1`. Ist der Ordner vorhanden, prüft und installiert `Install.ps1` die Dateien, statt zu kompilieren (F9, 2.6.11). |
+| `Service\SelfXService.cs` | Quelltext des Windows-Dienstes. Wird einmal mit `tools\Build-SelfXBinaries.ps1` als .NET-10-Programm gebaut (ab 2.7.0, siehe [Installation](../docs/Installation.md#programme-bauen-selfx-service-ab-270)). |
+| `Service\SelfXLauncher.cs` | Quelltext von `SelfX.exe` (2.5.3), dem Starter ohne Konsolenfenster, den die Verknüpfungen und der Autostart des Statussymbols verwenden. Wird wie der Dienst als .NET-10-Programm gebaut (ab 2.7.0). |
+| `Service\SelfXSessionStarter.cs` | Von `Install.ps1` verwendet (2.5.8; ab 2.7.0 als `SelfXSessionStarter.dll` aus `Bin`, netstandard2.0): startet das Statussymbol direkt nach der Installation in den Sitzungen der angemeldeten Nutzer, mit deren normalen Rechten. |
+| `Bin\` (Pflicht, nicht in Git) | Gebaute `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` und das Manifest `SelfX.Binaries.json` aus `tools\Build-SelfXBinaries.ps1`. `Install.ps1` prüft die Dateien vor allem anderen und installiert sie; ohne `Bin` bricht die Installation ab (F9, ab 2.7.0 Pflicht). |
+| `Service\Projects\` | .NET-10-Projektdateien (Dienst, Starter, Session-Starter) und die NuGet-Lock-Datei. Nur für den Build-Rechner; das Intune-Paket enthält sie nicht (2.7.0). |
 | `Sources\` | Oberfläche (`Self_X.ps1`, reines WPF ohne zusätzliche Assemblies), Dienst-Client (`SelfXServiceClient.ps1`), Branding und Designs (`Branding.ps1`), Sprachen (`Localization.ps1`, `Languages\`), Katalog, Konfiguration und `Scripts_to_run`. |
 
 ## Funktionsweise
@@ -179,11 +180,12 @@ nach ihrer `TimeoutSeconds` gestoppt: Standard ist 900, Maximum 7200. Der Dienst
   Client-Prozesses, wie Windows ihn meldet; Verbindungen, deren Besitzer sich nicht
   lesen lässt, teilen sich ein Limit von 8. `Test-ServicePipe.ps1` prüft diese
   Limits mit dem echten Dienstcode unter einem Test-Pipe-Namen.
-- Programme (2.6.11): `SelfXService.exe` und `SelfX.exe` sind entweder
-  vorkompiliert (Ordner `Bin`, bei der Installation gegen das SHA256-Manifest
-  geprüft, mit AppLocker-Hashregeln zugelassen) oder werden auf dem Gerät
-  kompiliert, mit den temporären Dateien in einem geschützten Ordner. Siehe
-  [Installation](../docs/Installation.md#vorkompilierte-programme-selfx-service-2611).
+- Programme (ab 2.7.0): `SelfXService.exe` und `SelfX.exe` sind .NET-10-Programme,
+  die einmal auf einem Build-Rechner gebaut werden (Ordner `Bin`). Die
+  Installation prüft sie vor jeder Änderung gegen das SHA256-Manifest; sie
+  werden mit AppLocker-Hashregeln zugelassen. Auf dem Gerät wird nichts
+  kompiliert. Siehe
+  [Installation](../docs/Installation.md#programme-bauen-selfx-service-ab-270).
 - Text aus Anfragen wird vor dem Protokollieren bereinigt (Steuerzeichen und
   Zeilentrenner werden zu `?`, langer Text wird gekürzt), und abgelehnte Anfragen
   werden höchstens 20-mal pro Minute protokolliert, sodass ein Nutzer weder

@@ -89,7 +89,8 @@ try {
     $installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
     Assert-Equal ($installText -match '\$Shortcut\.TargetPath = \$LauncherExe') $true 'Shortcut starts SelfX.exe'
     Assert-Equal ($installText.Contains('''SelfXTray'' -Value "`"$LauncherExe`" /tray"')) $true 'Run entry starts SelfX.exe /tray'
-    Assert-Equal ($installText -match '-OutputType WindowsApplication') $true 'SelfX.exe is a Windows application (no console)'
+    $launcherProject = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Service\Projects\SelfXLauncher\SelfXLauncher.csproj'))
+    Assert-Equal ($launcherProject -match '<OutputType>WinExe</OutputType>') $true 'SelfX.exe is a Windows application (no console)'
     foreach ($file in 'Self_X.ps1', 'SelfX_Tray.ps1') {
         $text = [IO.File]::ReadAllText("$sources\$file")
         Assert-Equal ($text -match '(?i)Start-Process[^\r\n]*(powershell|cmd)\.exe') $false "$file starts no console process with Start-Process"
