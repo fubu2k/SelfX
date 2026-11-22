@@ -17,6 +17,8 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 
 ### Neu
 
+- Neue Aktion „Microsoft Edge: Zwischenspeicher leeren“ (Nutzerkontext, Kategorie Browser, `SelfX_Browser_ClearEdgeCache.ps1`): schließt Edge der eigenen Sitzung und löscht nur die Ordner `Cache`, `Code Cache` und `GPUCache` des Standardprofils; Cookies, Verlauf, Kennwörter und Lesezeichen bleiben. Verknüpfte Ordner (Junctions) werden übersprungen. Deutscher Text in `de.xml`, andere Sprachen zeigen den englischen Text.
+
 - Neue Aktion „Outlook reagiert nicht mehr“ (Nutzerkontext, Kategorie Outlook, `SelfX_Outlook_Reboot.ps1`): beendet das klassische Outlook der eigenen Sitzung und startet es wieder. Profil, Datendateien und Add-ins bleiben unverändert; das neue Outlook (`olk.exe`) ist nicht betroffen. Deutscher Text in `de.xml`, andere Sprachen zeigen den englischen Text.
 
 ### Geändert
