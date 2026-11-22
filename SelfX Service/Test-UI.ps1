@@ -165,7 +165,8 @@ try {
     . ([scriptblock]::Create((Get-FunctionText $gui 'Set-SelfXUserLanguage').Replace('Local\SelfX.Tray.Command', 'Local\SelfX.Test.' + [guid]::NewGuid().ToString('N'))))
     $choices = @(Get-SelfXLanguageChoices)
     Assert-Equal $choices[0].Culture 'Auto' 'Automatic is the first choice'
-    $defaultCulture = Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'Auto'
+    # The test configuration has no Tool_Language: the default of SelfX is German.
+    $defaultCulture = Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'de'
     Assert-Equal $choices[0].Text (Get-SelfXString 'Settings_Language_Auto' (($list | Where-Object Culture -eq $defaultCulture).Name)) 'Automatic shows the default language'
     Assert-Equal $choices.Count ($list.Count + 1) 'All languages can be chosen'
     $Nav_Status = [pscustomobject]@{ IsChecked = $true }
