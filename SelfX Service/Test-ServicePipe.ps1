@@ -44,7 +44,7 @@ function Add-SelfXServiceType {
 	if ($PSVersionTable.PSEdition -ne 'Core') { Add-Type -TypeDefinition $text -ReferencedAssemblies $FrameworkReferences; return }
 	# PowerShell already references the common framework assemblies; only these are not part of its default set.
 	$names = 'System.IO.Pipes', 'System.IO.Pipes.AccessControl', 'System.Security.AccessControl', 'System.Security.Principal.Windows',
-		'System.ServiceProcess.ServiceController', 'System.Diagnostics.EventLog'
+		'System.ServiceProcess.ServiceController', 'System.Diagnostics.EventLog', 'System.Text.RegularExpressions', 'System.Private.Xml'
 	$references = @(foreach ($name in $names) { $file = Join-Path $PSHOME "$name.dll"; if (Test-Path -LiteralPath $file) { $file } })
 	Add-Type -TypeDefinition ("#define NET`n" + $text) -ReferencedAssemblies $references
 }
