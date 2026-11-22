@@ -183,6 +183,7 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Ticket_Opened_Text>Die E-Mail wurde mit den Geräteinformationen als Anhang geöffnet. Prüfen Sie sie und senden Sie sie ab.</Ticket_Opened_Text>
 		<Ticket_Manual_Text>Ihr Mailprogramm wurde geöffnet. Hängen Sie die Datei {0} (im Explorer markiert) an die E-Mail an, prüfen Sie sie und senden Sie sie ab.</Ticket_Manual_Text>
 		<Ticket_Error_Text>Die E-Mail konnte nicht vorbereitet werden: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>Die E-Mail geht an: {0}</Ticket_Recipient_Text>
 		<Service_Short_Running>SelfX-Dienst aktiv</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX-Dienst läuft nicht</Service_Short_Unavailable>
 		<Version_Text>Version {0}</Version_Text>

@@ -343,7 +343,7 @@ and write the report as `DeviceLogs-*.zip` or `DeviceLogs-*.txt` to
 catalogue actions to hide the feature; the System information button is shown
 only when a `System` action with `MailReport` exists.
 
-### Ticket by e-mail (SelfX Service 2.8.5)
+### Ticket by e-mail (SelfX Service 2.8.5, assignment 2.8.6)
 
 Optional and off by default (`Ticket_Enabled` = `False`). When enabled and a valid address is set, the help dialog (?) shows the row *Report an issue* with the button *Create ticket*.
 
@@ -357,9 +357,17 @@ Optional and off by default (`Ticket_Enabled` = `False`). When enabled and a val
 - New Outlook and other mail programs (mailto): recipient, subject and text; the link length is limited, so the text is cut if needed (description and core fields first, device information last). The complete file is selected in Explorer and the user attaches it (the dialog says so).
 - The file is in `%LOCALAPPDATA%\SelfX\Reports` (user only); older `TicketInfo-*` files are deleted with the next ticket.
 
-**E-mail layout (for filters and automation):** subject `[<Ticket_Subject_Tag>][<kind>] <device>` (kind in the language of the user, for example *Incident*); body with fixed English field names (`Time (UTC)`, `Computer`, `Windows build`, `SelfX version`), then `Description of the user:` and `Device information:`, both as fenced blocks. Assignment to the responsible IT unit (group tag, device category) follows in a later step.
+**E-mail layout (for filters and automation):** subject `[<Ticket_Subject_Tag>][<kind>] <device>` (kind in the language of the user, for example *Incident*); body with fixed English field names (`Time (UTC)`, `Computer`, `Windows build`, `SelfX version`), then `Description of the user:` and `Device information:`, both as fenced blocks.
 
-**Security:** The recipient comes only from `Tool_Config.xml` (`Ticket_Mail`, otherwise `Support_Mail`) and must be exactly one plain address; the user cannot change it. Fields are cleaned (no line breaks in the subject, fixed lengths, the device name must be a valid name). Free text and device information are in code blocks so a ticket system does not run commands from them (for example GitLab quick actions); test whether this works in your GitLab version before enabling. The device information contains addresses (for example the proxy) and device data and is meant for IT: clarify privacy and works council questions before enabling. The log names only the result (`Outlook`, `Manual`, `Error`) and the number of rows, never the text.
+**Assignment to the IT unit (`Ticket_Config.xml`):** The file is in the install folder (only administrators can change it) and contains **any number** of IT units and rules. Nothing is fixed in the code.
+- `<Unit Id="IT1" Mail="it1@example.com" Cc="" />`: unit with recipient and optional Cc (Id: letters, digits, `.`, `_`, `-`, up to 40 characters; exactly one plain address each).
+- `<Rule Source="GroupTag|OU|Category" Match="..." Unit="IT1" />` or `<Rule Source="..." Regex="..." />`: `Match` is an exact value (case is ignored), `Regex` a .NET expression (up to 300 characters, time limit 200 ms). With `Regex`, `Unit` can be left out when the expression has a named group `(?'unit'...)`; its text is then the unit, for example `^[A-Z]{2}-(?'unit'IT[0-9]+)-[A-Z]{3}$` for group tags like `DE-IT1-BER`. Rules are checked from top to bottom and the **first match wins**; without a match the e-mail goes to `Ticket_Mail` (otherwise `Support_Mail`) of `Tool_Config.xml`.
+- Values of the device (read only): `GroupTag` and `Category` from `HKLM\SOFTWARE\SelfX\Support` (REG_SZ, only administrators can write, for example set by Intune; letters, digits, spaces, `.`, `_`, `-`, up to 64 characters), `OU` from the distinguished name of the computer account (hybrid devices, `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine`). Invalid values count as empty.
+- Entries that are not valid (wrong address, unknown unit, invalid expression, duplicate Id, more than 500 units or 2000 rules) are skipped and named as a warning in the SelfX log; if the file cannot be read, the default address is used. The recipient is shown in the dialog ("The e-mail goes to: ..."), the user cannot change it.
+- Group tag, unit and category are fields of the ticket (`Group tag`, `Support unit`, `Device category`).
+- Check before distribution: `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ... -OU ...` shows errors of the file and the result for the given values (sends nothing, reads no registry).
+
+**Security:** Recipient and Cc come only from `Tool_Config.xml` and `Ticket_Config.xml` (writable by administrators only) and must be exactly one plain address each; the user cannot change them. Fields are cleaned (no line breaks in the subject, fixed lengths, the device name must be a valid name). Free text and device information are in code blocks so a ticket system does not run commands from them (for example GitLab quick actions); test whether this works in your GitLab version before enabling. The device information contains addresses (for example the proxy) and device data and is meant for IT: clarify privacy and works council questions before enabling. The log names only the result (`Outlook`, `Manual`, `Error`) and the number of rows, never the text.
 
 ### Logging and log housekeeping (SelfX Service 2.6.0)
 

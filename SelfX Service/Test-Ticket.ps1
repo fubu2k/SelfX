@@ -9,12 +9,13 @@
     Name    : Test-Ticket.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.4
+    Version : 2.8.6
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.4    2026-11-22  fubu2k               Initial version
+    2.8.6    2026-11-22  fubu2k               Routing (Ticket_Config.xml), Cc, device values
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -102,7 +103,7 @@ Assert-Equal (Test-SelfXTicketAddress $null) $false 'address: null rejected'
 # --- opening the mail (TicketSend.ps1, mail program and Explorer replaced by stubs) ------------
 $temp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXTicketTest-' + [guid]::NewGuid().ToString('N'))
 $script:outlookCalls = @(); $script:started = @(); $script:outlookFails = $false
-function New-SelfXOutlookMail { param($To, $Subject, $Body, $Attachment) if ($script:outlookFails) { throw 'no COM' }; $script:outlookCalls += [pscustomobject]@{ To = $To; Subject = $Subject; Body = $Body; Attachment = $Attachment } }
+function New-SelfXOutlookMail { param($To, $Subject, $Body, $Attachment, $Cc) if ($script:outlookFails) { throw 'no COM' }; $script:outlookCalls += [pscustomobject]@{ To = $To; Cc = $Cc; Subject = $Subject; Body = $Body; Attachment = $Attachment } }
 function Start-Process { param($FilePath, $ArgumentList) $script:started += [pscustomobject]@{ FilePath = $FilePath; Args = "$ArgumentList" } }
 try {
 	$result = Send-SelfXTicket -To 'service-desk@example.com' -Ticket $withInfo -DeviceInfoText 'Name : PC-1' -DeviceName 'PC-1' -Destination $temp
@@ -135,6 +136,167 @@ try {
 } finally {
 	Remove-Item function:New-SelfXOutlookMail, function:Start-Process -ErrorAction SilentlyContinue
 	if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+
+# --- routing: Ticket_Config.xml -------------------------------------------------------------------
+$cfgTemp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXTicketCfg-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $cfgTemp -Force | Out-Null
+function Write-TestConfig($Name, $Xml) { $path = Join-Path $cfgTemp $Name; [IO.File]::WriteAllText($path, $Xml); return $path }
+try {
+	$shipped = Read-SelfXTicketConfig -Path (Join-Path $PSScriptRoot 'Sources\Ticket_Config.xml')
+	Assert-Equal @($shipped.Errors).Count 0 'config: the shipped file is valid'
+	Assert-Equal @($shipped.Rules).Count 0 'config: the shipped file has no active rules (default recipient)'
+
+	$xml = @"
+<Ticket_Config>
+  <Units>
+    <Unit Id="IT1" Mail="it1@example.com" Cc="" />
+    <Unit Id="IT2" Mail="it2@example.com" Cc="service@example.com" />
+    <Unit Id="IT3" Mail="it3@example.com" />
+    <Unit Id="IT1" Mail="double@example.com" />
+    <Unit Id="BAD1" Mail="a@b.de,c@d.de" />
+    <Unit Id="BAD2" Mail="ok@example.com" Cc="x y@example.com" />
+    <Unit Id="bad id" Mail="ok@example.com" />
+  </Units>
+  <Rules>
+    <Rule Source="GroupTag" Match="de-it1-ber" Unit="IT1" />
+    <Rule Source="GroupTag" Regex="^[A-Z]{2}-(?'unit'IT[0-9]+)-[A-Z]{3}`$" />
+    <Rule Source="OU" Regex="OU=IT2," Unit="IT2" />
+    <Rule Source="Category" Match="Category-A" Unit="IT3" />
+    <Rule Source="Floor" Match="x" Unit="IT1" />
+    <Rule Source="GroupTag" Unit="IT1" />
+    <Rule Source="GroupTag" Match="a" Regex="b" Unit="IT1" />
+    <Rule Source="GroupTag" Regex="(" Unit="IT1" />
+    <Rule Source="GroupTag" Regex="^x`$" />
+    <Rule Source="GroupTag" Match="z" Unit="NOPE" />
+    <Rule Source="GroupTag" Match="late" Unit="IT3" />
+  </Rules>
+</Ticket_Config>
+"@
+	$config = Read-SelfXTicketConfig -Path (Write-TestConfig 'a.xml' $xml)
+	Assert-Equal @($config.Units.Keys).Count 3 'config: three valid units (duplicate, bad address, bad Cc and bad Id are skipped)'
+	Assert-Equal $config.Units['IT1'].Mail 'it1@example.com' 'config: the first entry of a duplicate unit is used'
+	Assert-Equal $config.Units['IT2'].Cc 'service@example.com' 'config: Cc is read'
+	Assert-Equal @($config.Rules).Count 5 'config: five valid rules (the others are skipped)'
+	Assert-Equal @($config.Errors).Count 10 'config: every skipped entry is named in the errors'
+	Assert-Equal ($config.Errors -join '|' -match 'a@b.de') $false 'config: errors do not repeat the invalid addresses'
+
+	# --- resolving: first match wins, any number of rules
+	$r = Resolve-SelfXTicketUnit -Config $config -GroupTag 'DE-IT1-BER'
+	Assert-Equal $r.Unit 'IT1' 'resolve: exact match ignores case'
+	Assert-Equal $r.Source 'Rule 1 (GroupTag)' 'resolve: source names the rule'
+	$r = Resolve-SelfXTicketUnit -Config $config -GroupTag 'FR-IT2-PAR'
+	Assert-Equal $r.Unit 'IT2' 'resolve: unit from the named group of the Regex'
+	Assert-Equal $r.Mail 'it2@example.com' 'resolve: mail of the unit'
+	Assert-Equal $r.Cc 'service@example.com' 'resolve: Cc of the unit'
+	$r = Resolve-SelfXTicketUnit -Config $config -GroupTag 'FR-IT9-PAR'
+	Assert-Equal $null $r 'resolve: group names an unknown unit, no other rule matches: default'
+	$r = Resolve-SelfXTicketUnit -Config $config -OU 'OU=IT2,OU=Clients,DC=example,DC=com'
+	Assert-Equal $r.Unit 'IT2' 'resolve: OU rule'
+	$r = Resolve-SelfXTicketUnit -Config $config -Category 'Category-A'
+	Assert-Equal $r.Unit 'IT3' 'resolve: category rule'
+	$r = Resolve-SelfXTicketUnit -Config $config -GroupTag 'DE-IT1-BER' -Category 'Category-A'
+	Assert-Equal $r.Unit 'IT1' 'resolve: the earlier rule wins'
+	$r = Resolve-SelfXTicketUnit -Config $config -GroupTag 'late'
+	Assert-Equal $r.Unit 'IT3' 'resolve: a rule behind skipped rules still works'
+	Assert-Equal $null (Resolve-SelfXTicketUnit -Config $config) 'resolve: no values, no unit'
+	Assert-Equal $null (Resolve-SelfXTicketUnit -Config $config -GroupTag "DE-IT1-BER`r`nBcc: x") 'resolve: a value with control characters is not used'
+	Assert-Equal $null (Resolve-SelfXTicketUnit -Config $config -GroupTag ('A' * 65)) 'resolve: a value longer than 64 characters is not used'
+
+	# --- any number of units and rules
+	$many = New-Object System.Text.StringBuilder
+	[void]$many.Append('<Ticket_Config><Units>')
+	foreach ($i in 1..300) { [void]$many.Append("<Unit Id=`"U$i`" Mail=`"u$i@example.com`" />") }
+	[void]$many.Append('</Units><Rules>')
+	foreach ($i in 1..300) { [void]$many.Append("<Rule Source=`"GroupTag`" Match=`"TAG-$i`" Unit=`"U$i`" />") }
+	[void]$many.Append('</Rules></Ticket_Config>')
+	$big = Read-SelfXTicketConfig -Path (Write-TestConfig 'big.xml' $many.ToString())
+	Assert-Equal @($big.Errors).Count 0 'config: 300 units and 300 rules are read without errors'
+	Assert-Equal (Resolve-SelfXTicketUnit -Config $big -GroupTag 'TAG-299').Mail 'u299@example.com' 'resolve: rule 299 of 300'
+	$limited = Read-SelfXTicketConfig -Path (Write-TestConfig 'big2.xml' $many.ToString()) -MaxUnits 10 -MaxRules 10
+	Assert-Equal @($limited.Units.Keys).Count 10 'config: the unit limit is applied'
+	Assert-Equal @($limited.Rules).Count 10 'config: the rule limit is applied'
+
+	# --- files that cannot be used give an empty configuration
+	$missing = Read-SelfXTicketConfig -Path (Join-Path $cfgTemp 'missing.xml')
+	Assert-Equal (@($missing.Rules).Count + @($missing.Units.Keys).Count) 0 'config: missing file gives an empty configuration'
+	Assert-Equal @($missing.Errors).Count 1 'config: missing file is named in the errors'
+	$broken = Read-SelfXTicketConfig -Path (Write-TestConfig 'broken.xml' '<Ticket_Config><Units>')
+	Assert-Equal @($broken.Errors).Count 1 'config: invalid XML is named in the errors'
+	$dtd = Read-SelfXTicketConfig -Path (Write-TestConfig 'dtd.xml' '<!DOCTYPE x [<!ENTITY e "boom">]><Ticket_Config><Units><Unit Id="A" Mail="a@example.com"/></Units></Ticket_Config>')
+	Assert-Equal @($dtd.Units.Keys).Count 0 'config: a DTD is refused'
+	Assert-Equal $null (Resolve-SelfXTicketUnit -Config $broken -GroupTag 'x') 'resolve: empty configuration gives the default'
+
+	# --- a regex that needs too long is stopped
+	$slow = Read-SelfXTicketConfig -Path (Write-TestConfig 'slow.xml' '<Ticket_Config><Units><Unit Id="A" Mail="a@example.com"/></Units><Rules><Rule Source="GroupTag" Regex="^(a+)+$" Unit="A"/></Rules></Ticket_Config>')
+	$watch = [Diagnostics.Stopwatch]::StartNew()
+	$null = Resolve-SelfXTicketUnit -Config $slow -GroupTag (('a' * 40) + '-')
+	Assert-Equal ($watch.ElapsedMilliseconds -lt 5000) $true 'resolve: a catastrophic Regex is stopped by the timeout'
+} finally {
+	Remove-Item -LiteralPath $cfgTemp -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# --- device values (registry replaced by a stub) ----------------------------------------------------
+$script:regValues = @{}
+function Get-ItemProperty { param($LiteralPath, $ErrorAction) if ($script:regValues.ContainsKey($LiteralPath)) { return [pscustomobject]$script:regValues[$LiteralPath] } }
+try {
+	$script:regValues['HKLM:\SOFTWARE\SelfX\Support'] = @{ GroupTag = 'DE-IT1-BER'; Category = 'Category-A' }
+	$script:regValues['HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine'] = @{ 'Distinguished-Name' = 'CN=PC-1,OU=IT2,OU=Clients,DC=example,DC=com' }
+	$dev = Get-SelfXTicketDeviceValues
+	Assert-Equal $dev.GroupTag 'DE-IT1-BER' 'device values: group tag'
+	Assert-Equal $dev.Category 'Category-A' 'device values: category'
+	Assert-Equal $dev.OU 'OU=IT2,OU=Clients,DC=example,DC=com' 'device values: OU without the computer name'
+	$script:regValues['HKLM:\SOFTWARE\SelfX\Support'] = @{ GroupTag = "x`r`ny"; Category = ('c' * 80) }
+	$dev = Get-SelfXTicketDeviceValues
+	Assert-Equal ($dev.GroupTag + $dev.Category) '' 'device values: invalid values become empty'
+	$script:regValues = @{}
+	$dev = Get-SelfXTicketDeviceValues
+	Assert-Equal ($dev.GroupTag + $dev.Category + $dev.OU) '' 'device values: no keys, no values'
+
+	$cfg2 = [pscustomobject]@{
+		Units = @{ IT1 = [pscustomobject]@{ Id = 'IT1'; Mail = 'it1@example.com'; Cc = 'cc@example.com' } }
+		Rules = @([pscustomobject]@{ Index = 1; Source = 'GroupTag'; Match = 'DE-IT1-BER'; Regex = $null; Unit = 'IT1' })
+	}
+	$t = Get-SelfXTicketTarget -DefaultMail 'default@example.com' -Config $cfg2 -DeviceValues ([pscustomobject]@{ GroupTag = 'DE-IT1-BER'; Category = 'Category-A'; OU = '' })
+	Assert-Equal "$($t.To)|$($t.Cc)|$($t.Unit)|$($t.GroupTag)|$($t.Category)" 'it1@example.com|cc@example.com|IT1|DE-IT1-BER|Category-A' 'target: unit of the rule, tag and category'
+	$t = Get-SelfXTicketTarget -DefaultMail 'default@example.com' -Config $cfg2 -DeviceValues ([pscustomobject]@{ GroupTag = 'OTHER'; Category = ''; OU = '' })
+	Assert-Equal "$($t.To)|$($t.Cc)|$($t.Unit)|$($t.Source)" 'default@example.com|||Default' 'target: no match gives the default recipient'
+	$t = Get-SelfXTicketTarget -DefaultMail 'default@example.com' -DeviceValues ([pscustomobject]@{ GroupTag = 'DE-IT1-BER'; Category = ''; OU = '' })
+	Assert-Equal $t.To 'default@example.com' 'target: no configuration gives the default recipient'
+} finally {
+	Remove-Item function:Get-ItemProperty -ErrorAction SilentlyContinue
+}
+
+# --- Cc in the mail ---------------------------------------------------------------------------------
+$ccLink = ConvertTo-SelfXTicketMailto -To 'a@example.com' -Cc 'cc@example.com' -Subject 'S' -Body 'B'
+Assert-Equal $ccLink 'mailto:a@example.com?subject=S&cc=cc@example.com&body=B' 'mailto: Cc is added'
+foreach ($badCc in 'a@b.de,c@d.de', 'a@b.de?bcc=x@y.de', 'no-at') {
+	$threw = $false
+	try { $null = ConvertTo-SelfXTicketMailto -To 'a@example.com' -Cc $badCc -Subject 'S' -Body 'B' } catch { $threw = $true }
+	Assert-Equal $threw $true "mailto: Cc '$badCc' is rejected"
+}
+$withGroup = New-SelfXTicket -DeviceName 'PC-1' -Unit 'IT1' -GroupTag 'DE-IT1-BER' -Category 'Category-A' -Timestamp $time
+Assert-Equal ($withGroup.Body -match '(?m)^Group tag: DE-IT1-BER\r?$') $true 'ticket: group tag field'
+Assert-Equal ($withGroup.Body -match '(?m)^Support unit: IT1\r?$') $true 'ticket: support unit field'
+$ccTemp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXTicketCc-' + [guid]::NewGuid().ToString('N'))
+$script:outlookCalls = @(); $script:started = @(); $script:outlookFails = $false
+function New-SelfXOutlookMail { param($To, $Subject, $Body, $Attachment, $Cc) if ($script:outlookFails) { throw 'no COM' }; $script:outlookCalls += [pscustomobject]@{ To = $To; Cc = $Cc } }
+function Start-Process { param($FilePath, $ArgumentList) $script:started += [pscustomobject]@{ FilePath = $FilePath } }
+try {
+	$result = Send-SelfXTicket -To 'it1@example.com' -Cc 'cc@example.com' -Ticket $withGroup -DeviceInfoText 'x' -DeviceName 'PC-1' -Destination $ccTemp
+	Assert-Equal $result.Status 'Outlook' 'send: Outlook with Cc'
+	Assert-Equal $script:outlookCalls[0].Cc 'cc@example.com' 'send: Cc is passed to Outlook'
+	$script:outlookFails = $true
+	$result = Send-SelfXTicket -To 'it1@example.com' -Cc 'cc@example.com' -Ticket $withGroup -DeviceInfoText 'x' -DeviceName 'PC-1' -Destination $ccTemp
+	Assert-Equal ($script:started[0].FilePath -like '*&cc=cc@example.com&body=*') $true 'send: Cc is in the mailto link'
+	$script:started = @()
+	$result = Send-SelfXTicket -To 'it1@example.com' -Cc 'a@b.de,c@d.de' -Ticket $withGroup -DeviceInfoText 'x' -Destination $ccTemp
+	Assert-Equal $result.Status 'Error' 'send: invalid Cc is rejected'
+	Assert-Equal $script:started.Count 0 'send: nothing is opened for an invalid Cc'
+} finally {
+	Remove-Item function:New-SelfXOutlookMail, function:Start-Process -ErrorAction SilentlyContinue
+	if (Test-Path -LiteralPath $ccTemp) { Remove-Item -LiteralPath $ccTemp -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 # --- the file has no side effects ---------------------------------------------------------------

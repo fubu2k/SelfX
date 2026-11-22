@@ -366,7 +366,7 @@ Katalogaktionen, um die Funktion auszublenden; die Schaltfläche in den
 Systeminformationen erscheint nur, wenn eine `System`-Aktion mit `MailReport`
 existiert.
 
-### Ticket per E-Mail (SelfX Service 2.8.5)
+### Ticket per E-Mail (SelfX Service 2.8.5, Zuordnung 2.8.6)
 
 Optional und standardmäßig aus (`Ticket_Enabled` = `False`). Wenn eingeschaltet und eine gültige Adresse gesetzt ist, zeigt der Hilfe-Dialog (?) die Zeile *Problem melden* mit der Schaltfläche *Ticket erstellen*.
 
@@ -380,9 +380,17 @@ Optional und standardmäßig aus (`Ticket_Enabled` = `False`). Wenn eingeschalte
 - Neues Outlook und andere Mailprogramme (mailto): Empfänger, Betreff und Text; der Link ist in der Länge begrenzt, deshalb wird der Text bei Bedarf gekürzt (Beschreibung und Kernfelder zuerst, Geräteinformationen zuletzt). Die vollständige Datei wird im Explorer markiert und muss vom Nutzer angehängt werden (die Oberfläche sagt das).
 - Die Datei liegt in `%LOCALAPPDATA%\SelfX\Reports` (nur der Nutzer); ältere `TicketInfo-*`-Dateien werden beim nächsten Ticket gelöscht.
 
-**Aufbau der E-Mail (für Filter und Automatisierung):** Betreff `[<Ticket_Subject_Tag>][<Art>] <Gerät>` (Art in der Sprache des Nutzers, z. B. *Störung*); Text mit festen englischen Feldnamen (`Time (UTC)`, `Computer`, `Windows build`, `SelfX version`), danach `Description of the user:` und `Device information:`, beide als abgesetzter Block. Zuordnung zur zuständigen IT-Einheit (Group-Tag, Gerätekategorie) folgt in einem späteren Schritt.
+**Aufbau der E-Mail (für Filter und Automatisierung):** Betreff `[<Ticket_Subject_Tag>][<Art>] <Gerät>` (Art in der Sprache des Nutzers, z. B. *Störung*); Text mit festen englischen Feldnamen (`Time (UTC)`, `Computer`, `Windows build`, `SelfX version`), danach `Description of the user:` und `Device information:`, beide als abgesetzter Block.
 
-**Sicherheit:** Der Empfänger kommt nur aus `Tool_Config.xml` (`Ticket_Mail`, sonst `Support_Mail`) und muss genau eine einfache Adresse sein; der Nutzer kann ihn nicht ändern. Felder werden bereinigt (keine Zeilenumbrüche im Betreff, feste Längen, Gerätename muss ein gültiger Name sein). Freitext und Geräteinformationen stehen in Codeblöcken, damit ein Ticketsystem daraus keine Befehle (z. B. GitLab-Quick-Actions) ausführt; ob das in der eigenen GitLab-Version greift, vor dem Einschalten testen. Die Geräteinformationen enthalten Adressen (z. B. Proxy) und Gerätedaten und sind für die IT bestimmt: vor dem Einschalten Datenschutz/Personalrat klären. Das Protokoll nennt nur das Ergebnis (`Outlook`, `Manual`, `Error`) und die Zeilenzahl, nie den Text.
+**Zuordnung zur IT-Einheit (`Ticket_Config.xml`):** Die Datei liegt im Installationsordner (nur Administratoren können sie ändern) und enthält **beliebig viele** IT-Einheiten und Regeln. Nichts ist im Code festgelegt.
+- `<Unit Id="IT1" Mail="it1@example.com" Cc="" />`: Einheit mit Empfänger und optionaler Kopie (Id: Buchstaben, Ziffern, `.`, `_`, `-`, bis 40 Zeichen; je genau eine einfache Adresse).
+- `<Rule Source="GroupTag|OU|Category" Match="..." Unit="IT1" />` oder `<Rule Source="..." Regex="..." />`: `Match` ist ein exakter Wert (Groß-/Kleinschreibung egal), `Regex` ein .NET-Ausdruck (bis 300 Zeichen, mit Zeitlimit von 200 ms). Mit `Regex` kann `Unit` entfallen, wenn der Ausdruck eine benannte Gruppe `(?'unit'...)` enthält; deren Text ist dann die Einheit, z. B. `^[A-Z]{2}-(?'unit'IT[0-9]+)-[A-Z]{3}$` für Group-Tags wie `DE-IT1-BER`. Regeln werden von oben nach unten geprüft, die **erste passende gewinnt**; ohne Treffer geht die E-Mail an `Ticket_Mail` (sonst `Support_Mail`) aus `Tool_Config.xml`.
+- Werte des Geräts (nur lesen): `GroupTag` und `Category` aus `HKLM\SOFTWARE\SelfX\Support` (REG_SZ, nur Administratoren können schreiben, z. B. per Intune gesetzt; erlaubt sind Buchstaben, Ziffern, Leerzeichen, `.`, `_`, `-`, bis 64 Zeichen), `OU` aus dem Distinguished Name des Computerkontos (Hybrid-Geräte, `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine`). Ungültige Werte zählen als leer.
+- Ungültige Einträge (falsche Adresse, unbekannte Einheit, ungültiger Ausdruck, doppelte Id, mehr als 500 Einheiten oder 2000 Regeln) werden übersprungen und im SelfX-Protokoll als Warnung genannt; ist die Datei nicht lesbar, gilt die Standardadresse. Der Empfänger steht im Dialog („Die E-Mail geht an: …“), der Nutzer kann ihn nicht ändern.
+- Gruppen-Tag, Einheit und Kategorie stehen als Felder im Ticket (`Group tag`, `Support unit`, `Device category`).
+- Prüfung vor der Verteilung: `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ... -OU ...` zeigt Fehler der Datei und das Ergebnis für die angegebenen Werte (sendet nichts, liest keine Registry).
+
+**Sicherheit:** Empfänger und Kopie kommen nur aus `Tool_Config.xml` und `Ticket_Config.xml` (nur Administratoren schreibbar) und müssen je genau eine einfache Adresse sein; der Nutzer kann sie nicht ändern. Felder werden bereinigt (keine Zeilenumbrüche im Betreff, feste Längen, Gerätename muss ein gültiger Name sein). Freitext und Geräteinformationen stehen in Codeblöcken, damit ein Ticketsystem daraus keine Befehle (z. B. GitLab-Quick-Actions) ausführt; ob das in der eigenen GitLab-Version greift, vor dem Einschalten testen. Die Geräteinformationen enthalten Adressen (z. B. Proxy) und Gerätedaten und sind für die IT bestimmt: vor dem Einschalten Datenschutz/Personalrat klären. Das Protokoll nennt nur das Ergebnis (`Outlook`, `Manual`, `Error`) und die Zeilenzahl, nie den Text.
 
 ### Protokollierung und Aufbewahrung (SelfX Service 2.6.0)
 

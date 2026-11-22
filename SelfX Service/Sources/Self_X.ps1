@@ -264,6 +264,17 @@ $Ticket_Mail = (Get-SelfXText "Ticket_Mail" "").Trim()
 If(-not $Ticket_Mail) { $Ticket_Mail = "$Support_Mail".Trim() }
 $Ticket_Tag = (Get-SelfXText "Ticket_Subject_Tag" "SelfX").Trim()
 $Ticket_Available = ((Get-SelfXText "Ticket_Enabled" "False") -eq 'True') -and (Test-SelfXTicketAddress $Ticket_Mail)
+# Routing to the support units (Ticket_Config.xml); a file that cannot be used leaves the default recipient
+$Ticket_Routing = $null
+If($Ticket_Available)
+	{
+		Try
+			{
+				$Ticket_Routing = Read-SelfXTicketConfig -Path (Join-Path $Current_Folder 'Ticket_Config.xml')
+				foreach($Ticket_Error in $Ticket_Routing.Errors) { Write-SelfXLog "Ticket_Config.xml: $Ticket_Error" 'Warning' }
+			}
+		Catch { Write-SelfXLog "Ticket_Config.xml could not be read: $($_.Exception.Message)" 'Warning' }
+	}
 $Run_Solution_Text = Get-SelfXString 'Warning_Click_Run_Solution_Text'
 $Run_Explanation_Text = Get-SelfXString 'Warning_Click_Run_Explanation_Text'
 $Service_Running_Text = Get-SelfXString 'Service_Running_Text'
@@ -1981,6 +1992,7 @@ Function Show-SelfXTicketDialog
       <TextBlock Name="TicketLabel" FontWeight="SemiBold" Margin="0,0,0,4"/>
       <TextBox Name="TicketText" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="140" MaxLength="3000" Padding="6"/>
       <TextBlock Name="TicketInfo" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+      <TextBlock Name="TicketTarget" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,6,0,0"/>
       <TextBlock Name="TicketResult" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed"/>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
         <Button Name="TicketClose" MinWidth="100" Margin="0,0,8,0" IsCancel="True"/>
@@ -1990,6 +2002,11 @@ Function Show-SelfXTicketDialog
 		$Dialog.FindName('TicketIntro').Text = Get-SelfXString 'Ticket_Intro_Text'
 		$Dialog.FindName('TicketLabel').Text = Get-SelfXString 'Ticket_Description_Label'
 		$Dialog.FindName('TicketInfo').Text = Get-SelfXString 'Ticket_Info_Text'
+		# Recipient from the routing (read only values of the device); the user cannot change it
+		$Target = Get-SelfXTicketTarget -DefaultMail $Ticket_Mail -Config $Ticket_Routing
+		$Global:SelfX_TicketTarget = $Target
+		Write-SelfXLog "Ticket recipient: $($Target.Source), unit '$($Target.Unit)'"
+		$Dialog.FindName('TicketTarget').Text = Get-SelfXString 'Ticket_Recipient_Text' $Target.To
 		$Close = $Dialog.FindName('TicketClose')
 		$Close.Content = Get-SelfXString 'Close_Button_Text'
 		$Close.Add_Click({ [System.Windows.Window]::GetWindow($this).Close() })
@@ -2004,8 +2021,8 @@ Function Show-SelfXTicketDialog
 				{
 					$Items = @(Get-SelfXReportItems)
 					$Info_Text = If($Items.Count) { ConvertTo-SelfXSystemInfoText -Items $Items } Else { Get-SelfXString 'Ticket_No_Info_Text' }
-					$Ticket = New-SelfXTicket -Tag $Ticket_Tag -KindText (Get-SelfXString 'Ticket_Kind_Text') -DeviceName $env:COMPUTERNAME -WindowsBuild ([string][Environment]::OSVersion.Version.Build) -SelfXVersion "$Tool_Version" -UserText $Dlg.FindName('TicketText').Text -DeviceInfoText $Info_Text
-					$Sent = Send-SelfXTicket -To $Ticket_Mail -Ticket $Ticket -DeviceInfoText $Info_Text
+					$Ticket = New-SelfXTicket -Tag $Ticket_Tag -KindText (Get-SelfXString 'Ticket_Kind_Text') -DeviceName $env:COMPUTERNAME -Unit $Global:SelfX_TicketTarget.Unit -GroupTag $Global:SelfX_TicketTarget.GroupTag -Category $Global:SelfX_TicketTarget.Category -WindowsBuild ([string][Environment]::OSVersion.Version.Build) -SelfXVersion "$Tool_Version" -UserText $Dlg.FindName('TicketText').Text -DeviceInfoText $Info_Text
+					$Sent = Send-SelfXTicket -To $Global:SelfX_TicketTarget.To -Cc $Global:SelfX_TicketTarget.Cc -Ticket $Ticket -DeviceInfoText $Info_Text
 					# The log names the result only, never the text of the user or the device information.
 					Write-SelfXLog "Ticket e-mail prepared: $($Sent.Status), information rows: $($Items.Count)"
 					Switch("$($Sent.Status)")
