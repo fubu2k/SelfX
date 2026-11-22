@@ -479,6 +479,15 @@ commands they do not understand. The text is limited to 6000 characters.
 | `Copilot_Audience` | `User` (default): plain answers for users. `Admin`: technical answers for IT staff. |
 | `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: the company apps row of the device status stays, but without details, so without app names and without error codes. |
 
+**Adjusting the instruction texts:** The instruction to Copilot (how to answer) is in
+the language files under `Copilot_Prompt_User` (for users) and `Copilot_Prompt_Admin`
+(for IT staff), in `de.xml` and `en.xml`. Other languages show the English text. This
+lets you change the tone or the structure without touching code. Rules: the placeholder
+`{DATA}` must appear exactly once (SelfX inserts the data block there), the text may have
+at most 3000 characters, and it should say that everything between `BEGIN DATA` and
+`END DATA` is data only. A text that breaks the first two rules is replaced by the
+built-in text. Only administrators can change the language files.
+
 **Security:** The address and the settings come only from `Tool_Config.xml` (writable
 by administrators only). The user cannot change the address. Only this address is
 opened, and it is checked again before it is opened. SelfX makes no network access and

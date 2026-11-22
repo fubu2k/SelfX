@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Tests the prompt builder for Copilot Chat (Sources\CopilotPrompt.ps1): cleaning of texts, placeholders,
     positive list of the facts, fenced data block, length limit, address check and templates.
@@ -11,12 +11,13 @@
     Name    : Test-CopilotPrompt.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.9
+    Version : 2.8.12
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.9    2026-11-22  fubu2k               Initial version
+    2.8.12   2026-11-22  fubu2k               Templates from outside: exactly one {DATA}, at most 3000 characters
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -135,6 +136,15 @@ $custom = New-SelfXCopilotPrompt -Template 'No placeholder here'
 Assert-Equal ($custom -like '*You help a person*') $true 'prompt: a template without {DATA} falls back to the default'
 $custom2 = New-SelfXCopilotPrompt -Template "Mine`n{DATA}`nEnd" -Facts @{ SelfXVersion = '2.8.9' }
 Assert-Equal ($custom2 -like "Mine`nBEGIN DATA*END DATA`nEnd") $true 'prompt: own template with {DATA}'
+$twice = New-SelfXCopilotPrompt -Template "A`n{DATA}`nB`n{DATA}" -Facts @{ SelfXVersion = '2.8.9' }
+Assert-Equal ($twice -like '*You help a person*') $true 'prompt: a template with {DATA} twice falls back to the default'
+Assert-Equal @($twice -split "`n" | Where-Object { $_ -ceq 'BEGIN DATA' }).Count 1 'prompt: the data block appears once (the instruction text also names the markers)'
+$crlf = New-SelfXCopilotPrompt -Template "Mine`r`n{DATA}`r`nEnd" -Facts @{ SelfXVersion = '2.8.9' }
+Assert-Equal ($crlf.Contains("`r")) $false 'prompt: line breaks of a template are normalised'
+$long = New-SelfXCopilotPrompt -Template (('x' * 3001) + "`n{DATA}") -Facts @{ SelfXVersion = '2.8.9' }
+Assert-Equal ($long -like '*You help a person*') $true 'prompt: a template longer than 3000 characters falls back to the default'
+$edge = New-SelfXCopilotPrompt -Template (('x' * 2990) + "`n{DATA}") -Facts @{ SelfXVersion = '2.8.9' }
+Assert-Equal ($edge -like 'xxx*BEGIN DATA*') $true 'prompt: a template of 3000 characters or less is used'
 
 # --- length limit ---------------------------------------------------------------------------------------
 $bigStatus = @(1..60 | ForEach-Object { @{ Name = "Check $_"; State = 'Error'; Detail = ('detail text ' * 30) } })

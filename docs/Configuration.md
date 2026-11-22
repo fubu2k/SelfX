@@ -500,6 +500,16 @@ Text ist auf 6000 Zeichen begrenzt.
 | `Copilot_Audience` | `User` (Standard): einfache Antworten für Nutzer. `Admin`: technische Antworten für IT-Personal. |
 | `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: Die Zeile der Firmen-Apps im Gerätestatus bleibt, aber ohne Einzelheiten, also ohne App-Namen und ohne Fehlercodes. |
 
+**Anweisungstexte anpassen:** Die Anweisung an Copilot (so soll geantwortet werden) steht
+in den Sprachdateien unter `Copilot_Prompt_User` (für Nutzer) und `Copilot_Prompt_Admin`
+(für IT-Personal), in `de.xml` und `en.xml`. Andere Sprachen zeigen den englischen Text.
+So können Sie den Ton oder die Gliederung ändern, ohne Code anzufassen. Regeln: Der
+Platzhalter `{DATA}` muss genau einmal vorkommen (dort setzt SelfX den Datenblock ein),
+der Text darf höchstens 3000 Zeichen haben, und er sollte sagen, dass alles zwischen
+`BEGIN DATA` und `END DATA` nur Daten sind. Hält sich ein Text nicht an die ersten beiden
+Regeln, nimmt SelfX den eingebauten Text. Die Sprachdateien können nur Administratoren
+ändern.
+
 **Sicherheit:** Adresse und Einstellungen kommen nur aus `Tool_Config.xml` (nur für
 Administratoren schreibbar). Der Nutzer kann die Adresse nicht ändern. Geöffnet wird
 nur diese Adresse, und sie wird vor dem Öffnen noch einmal geprüft. Es gibt keinen

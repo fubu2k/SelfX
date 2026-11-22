@@ -11,13 +11,14 @@
     Name    : Test-CopilotFacts.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.11
+    Version : 2.8.12
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.10   2026-11-22  fubu2k               Initial version
     2.8.11   2026-11-22  fubu2k               Company apps row without app names, network facts, note text
+    2.8.12   2026-11-22  fubu2k               Prompt texts in the language files (en, de), same text as the built-in fallback
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -126,12 +127,32 @@ foreach ($file in Get-ChildItem -LiteralPath (Join-Path $sources 'Languages') -F
 	}
 }
 
+$ui = [IO.File]::ReadAllText((Join-Path $sources 'Self_X.ps1'))
+
+# --- Prompt texts in the language files ------------------------------------------------------------------------
+# The built-in text is the fallback; the language file is shown and used first. Both must say the same.
+function ConvertTo-PromptNormal([string]$Text) { return ((($Text -split '\r?\n' | ForEach-Object { $_.Trim() }) -join "`n").Trim()) }
+foreach ($pair in @(@('en', 'en'), @('de', 'de'))) {
+	[xml]$promptLang = [IO.File]::ReadAllText((Join-Path $sources "Languages\$($pair[0]).xml"))
+	foreach ($audience in @('User', 'Admin')) {
+		$node = $promptLang.SelectSingleNode("//UI/Copilot_Prompt_$audience")
+		Assert-Equal ($null -ne $node) $true "language $($pair[0]): Copilot_Prompt_$audience exists"
+		if ($null -eq $node) { continue }
+		$fileText = ConvertTo-PromptNormal $node.InnerText
+		Assert-Equal ([regex]::Matches($fileText, '\{DATA\}').Count) 1 "language $($pair[0]): Copilot_Prompt_$audience contains {DATA} once"
+		Assert-Equal ($fileText -like '*BEGIN DATA*END DATA*') $true "language $($pair[0]): Copilot_Prompt_$audience names the data block markers"
+		Assert-Equal ($fileText.Length -le 3000) $true "language $($pair[0]): Copilot_Prompt_$audience has at most 3000 characters"
+		Assert-Equal ($fileText -ceq (ConvertTo-PromptNormal (Get-SelfXCopilotTemplate -Audience $audience -Language $pair[1]))) $true "language $($pair[0]): Copilot_Prompt_$audience equals the built-in fallback text"
+	}
+}
+Assert-Equal ($ui -match 'Get-SelfXString \$\(If\(\$Copilot_Audience -eq ''Admin''\) \{ ''Copilot_Prompt_Admin'' \} Else \{ ''Copilot_Prompt_User'' \}\)') $true 'window: the prompt text comes from the language file by audience'
+Assert-Equal ($ui -match 'New-SelfXCopilotPrompt [^\r\n]*-Template \$Template') $true 'window: the text is passed to the prompt builder'
+
 # --- Static checks: nothing is sent, only the configured address is opened -------------------------------------
 $factsCode = [IO.File]::ReadAllText((Join-Path $sources 'CopilotFacts.ps1'))
 foreach ($pattern in @('Start-Process', 'Invoke-WebRequest', 'Invoke-RestMethod', 'Invoke-Expression', 'Set-Content', 'Out-File', 'Add-Content', 'Set-Clipboard', 'New-Object System.Net')) {
 	Assert-Equal ($factsCode -match [regex]::Escape($pattern)) $false "CopilotFacts.ps1 does not use $pattern"
 }
-$ui = [IO.File]::ReadAllText((Join-Path $sources 'Self_X.ps1'))
 $start = $ui.IndexOf('Function Show-SelfXCopilotDialog')
 $end = $ui.IndexOf('Function Show-SelfXHelpDialog')
 Assert-Equal (($start -ge 0) -and ($end -gt $start)) $true 'window: Copilot dialog found'
