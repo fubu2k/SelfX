@@ -10,7 +10,7 @@ ersetzt sie aber nicht.
 |------|------------------|--------|
 | SelfX (Idee, WPF-Oberfläche, XML-Aktionskatalog, Skripte zur Fehlerbehebung) | Damien Van Robaeys, [damienvanrobaeys/SelfX](https://github.com/damienvanrobaeys/SelfX), vorgestellt auf [Syst & Deploy (August 2022)](https://www.systanddeploy.com/2022/08/selfx-tool-allowing-users-to-solve.html) | MIT laut seinem Repository (`LICENSE.md`, hinzugefügt am 21.05.2024). Der Blogbeitrag nennt keine Lizenz. |
 | SelfX Service (Dienst, Installer, Health-Prüfungen, Tests, Doku) | Wolfgang Baeck, [wbaeck/SelfX](https://github.com/wbaeck/SelfX), Fork von damienvanrobaeys/SelfX | Sein README verweist auf die Lizenz des Originalprojekts in `LICENSE.md`; eine eigene Lizenzdatei für seine Ergänzungen gibt es dort nicht. |
-| Änderungen in diesem Fork (Sicherheitshärtung, .NET-10-Dienst, PowerShell-7-Umstellung, Tests, CI, Doku) | fubu2k, mit Unterstützung von Claude Code (Anthropic) | Copyright (c) 2026 fubu2k, zu den Bedingungen der MIT-Lizenz in [LICENSE.md](LICENSE.md). |
+| Änderungen in diesem Fork (Sicherheitshärtung, .NET-10-Dienst, PowerShell-7-Umstellung, Tests, CI, Doku) | fubu2k, mit Unterstützung von Claude Code (Anthropic) | Copyright (c) 2026 fubu2k, lizenziert unter der MIT-Lizenz (Text in [LICENSE.md](LICENSE.md)). |
 
 ## Weitere Quellen
 
@@ -27,3 +27,18 @@ ersetzt sie aber nicht.
   mit, prüft aber vor der Verwendung die Authenticode-Signatur von Microsoft.
 - **Gebaute Programme** (Dienst und Starter, .NET 10 self-contained) enthalten Teile der Microsoft-.NET-Laufzeit und das
   NuGet-Paket `System.ServiceProcess.ServiceController` (beide Microsoft, MIT-Lizenz).
+
+## Haftungsausschluss
+
+Die Software wird so bereitgestellt, wie sie ist, ohne jede ausdrückliche oder stillschweigende Gewährleistung, unter
+anderem ohne Gewähr für Marktgängigkeit, Eignung für einen bestimmten Zweck, Freiheit von Mängeln und Fehlern oder
+Nichtverletzung von Rechten Dritter. Die Autoren und Rechteinhaber haften nicht für Ansprüche, Schäden oder sonstige
+Haftung, die aus der Software oder ihrer Nutzung entstehen. SelfX Service läuft mit SYSTEM-Rechten und ändert
+Einstellungen auf dem Gerät: Prüfen und testen Sie jede Version vor dem Einsatz in Ihrer Umgebung.
+
+Verbindlich ist der englische Wortlaut der MIT-Lizenz:
+
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+> WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+> COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+> ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
