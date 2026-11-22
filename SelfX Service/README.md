@@ -73,6 +73,7 @@ installed locally and works without any network connection.
 | `Install.ps1` | Machine-wide installer. Run it as administrator. |
 | `Uninstall.ps1` | Closes open SelfX windows and status icons, then removes the service, files, shortcuts and Apps & Features entry. |
 | `Detection.ps1` | Detection script for Intune or SCCM. Update `$ExpectedVersion` for each release. |
+| `Test-InstallBinaries.ps1` | Takes the check of the prebuilt programs and the protected compiler TEMP out of `Install.ps1` and tests them against a fake package (missing or changed files, changed sources, broken manifest). Nothing is compiled or installed (2.6.11). |
 | `Test-LanguageFiles.ps1` | Checks the language files against `en.xml` and the catalogue. Run it before you build the package. |
 | `Test-HealthStatus.ps1` | Isolated health tests; system data and extension execution are mocked. |
 | `Test-DeviceLogs.ps1` | Isolated tests of the device logs feature (wrapper, e-mail helper, catalogue, GUI step); collector, ACLs, Outlook and processes are mocked. |
@@ -85,9 +86,10 @@ installed locally and works without any network connection.
 | `Sources\SelfX_Tray.ps1` | Status icon in the notification area (started at sign-in through the HKLM Run entry `SelfXTray`, and right after the installation for signed-in users). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Device logs: read-only collector, System wrapper and the GUI e-mail helper. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Service-side collector and administrator-controlled health settings. Optional scripts go in `Sources\HealthChecks`. |
-| `Service\SelfXService.cs` | Source of the Windows service. It is compiled on the device during installation. |
-| `Service\SelfXLauncher.cs` | Source of `SelfX.exe` (2.5.3), the starter without console window used by the shortcuts and the status icon autostart. Compiled on the device during installation. |
+| `Service\SelfXService.cs` | Source of the Windows service. Compiled on the device during installation, or built once with `tools\Build-SelfXBinaries.ps1` (2.6.11, see [Installation](../docs/Installation.md#prebuilt-programs-selfx-service-2611)). |
+| `Service\SelfXLauncher.cs` | Source of `SelfX.exe` (2.5.3), the starter without console window used by the shortcuts and the status icon autostart. Compiled on the device during installation, or prebuilt like the service. |
 | `Service\SelfXSessionStarter.cs` | Used by `Install.ps1` (2.5.8, compiled in memory): starts the status icon right after the installation in the sessions of the signed-in users, with their normal rights. |
+| `Bin\` (optional, not in Git) | Prebuilt `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` and the manifest `SelfX.Binaries.json` from `tools\Build-SelfXBinaries.ps1`. When present, `Install.ps1` checks and installs them instead of compiling (F9, 2.6.11). |
 | `Sources\` | GUI (`Self_X.ps1`, plain WPF without additional assemblies), service client (`SelfXServiceClient.ps1`), branding and themes (`Branding.ps1`), languages (`Localization.ps1`, `Languages\`), catalogue, configuration and `Scripts_to_run`. |
 
 ## How it works

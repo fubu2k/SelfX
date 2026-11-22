@@ -112,6 +112,20 @@ function Test-StagedPackage {
         $detection = Get-Content -LiteralPath (Join-Path $Stage 'Detection.ps1') -Raw
         if ($detection -notmatch "\`$ExpectedVersion\s*=\s*'([^']+)'") { throw 'No $ExpectedVersion found in Detection.ps1.' }
         if ($Matches[1] -ne $Version) { throw "Detection.ps1 expects version $($Matches[1]), Tool_Config.xml has $Version. Set both to the same value." }
+        # Prebuilt programs (F9): they must have been built from the sources of this package, otherwise
+        # Install.ps1 would refuse them on every device.
+        $bin = Join-Path $Stage 'Bin'
+        if (Test-Path -LiteralPath $bin -PathType Container) {
+            $manifest = Get-Content -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -Raw | ConvertFrom-Json
+            foreach ($source in @('Service/SelfXService.cs', 'Service/SelfXLauncher.cs', 'Service/SelfXSessionStarter.cs')) {
+                $hash = (Get-FileHash -LiteralPath (Join-Path $Stage ($source.Replace('/', '\'))) -Algorithm SHA256).Hash
+                if ($hash -ne "$($manifest.Sources.$source)") { throw "Bin was not built from the current $source. Run tools\Build-SelfXBinaries.ps1 again." }
+            }
+            Write-Host 'Service: prebuilt programs from Bin (checked against the manifest).'
+        }
+        else {
+            Write-Host 'Service: no Bin folder, the devices compile the programs (see docs\Installation.md).'
+        }
     }
 }
 

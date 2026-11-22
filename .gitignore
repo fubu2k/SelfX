@@ -1,2 +1,4 @@
 # Output of tools\New-SelfXIntuneWin.ps1 (.intunewin packages); the script creates the folder
 /build/
+# Prebuilt programs of SelfX Service (tools\Build-SelfXBinaries.ps1); they belong into the package, not into Git
+/SelfX Service/Bin/
