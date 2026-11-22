@@ -208,6 +208,7 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Last_Boot>Letzter Start</Last_Boot>
 		<Uptime>Betriebszeit</Uptime>
 		<Uptime_Value>{0} Tag(e) {1:D2}:{2:D2} Std.</Uptime_Value>
+		<Uptime_Restart_Hint>Neustart empfohlen (nicht „Herunterfahren“)</Uptime_Restart_Hint>
 		<Last_Update>Zuletzt installiertes Update</Last_Update>
 		<Time_Zone>Zeitzone</Time_Zone>
 		<Current_User>Aktueller Benutzer</Current_User>
