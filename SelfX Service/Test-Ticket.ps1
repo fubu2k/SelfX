@@ -25,6 +25,8 @@ function Assert-Equal($Actual, $Expected, $Message) {
 	if ($Actual -ne $Expected) { $script:errors.Add("$Message : expected '$Expected', got '$Actual'.") }
 }
 . (Join-Path $PSScriptRoot 'Sources\TicketMail.ps1')
+. (Join-Path $PSScriptRoot 'Sources\SupportReport.ps1')
+. (Join-Path $PSScriptRoot 'Sources\TicketSend.ps1')
 $time = [datetime]::new(2026, 11, 22, 14, 30, 0, [DateTimeKind]::Utc)
 
 # --- single-line fields -----------------------------------------------------------------------
@@ -84,6 +86,56 @@ foreach ($badAddress in 'a@b.de,c@d.de', 'a@b.de;c@d.de', 'a@b.de?bcc=x@y.de', '
 $long = ConvertTo-SelfXTicketMailto -To 'a@example.com' -Subject 'S' -Body ('word ' * 2000)
 Assert-Equal ($long.Length -le 1800) $true 'mailto: long body is cut to the link limit'
 Assert-Equal $long.EndsWith([uri]::EscapeDataString("`r`n[...]")) $true 'mailto: cut body ends with a marker'
+
+
+# --- device information block ---------------------------------------------------------------------
+$withInfo = New-SelfXTicket -DeviceName 'PC-1' -UserText 'Problem' -DeviceInfoText "[System]`r`nName : PC-1`r`n/close" -Timestamp $time
+Assert-Equal ($withInfo.Body -match 'Device information:\r\n```\n\[System\]\nName : PC-1\n /close\n```$') $true 'ticket: device information comes last in a fenced block, quick action neutralised'
+Assert-Equal ($withInfo.Body.IndexOf('Description of the user:') -lt $withInfo.Body.IndexOf('Device information:')) $true 'ticket: description comes before the device information'
+$noInfo = New-SelfXTicket -DeviceName 'PC-1' -Timestamp $time
+Assert-Equal ($noInfo.Body -match 'Device information') $false 'ticket: no device information, no block'
+$cutLink = ConvertTo-SelfXTicketMailto -To 'a@example.com' -Subject 'S' -Body $withInfo.Body
+Assert-Equal ($cutLink.Length -le 1800) $true 'mailto: link with device information stays within the limit'
+Assert-Equal (Test-SelfXTicketAddress 'service-desk@example.com') $true 'address: valid address accepted'
+Assert-Equal (Test-SelfXTicketAddress $null) $false 'address: null rejected'
+
+# --- opening the mail (TicketSend.ps1, mail program and Explorer replaced by stubs) ------------
+$temp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXTicketTest-' + [guid]::NewGuid().ToString('N'))
+$script:outlookCalls = @(); $script:started = @(); $script:outlookFails = $false
+function New-SelfXOutlookMail { param($To, $Subject, $Body, $Attachment) if ($script:outlookFails) { throw 'no COM' }; $script:outlookCalls += [pscustomobject]@{ To = $To; Subject = $Subject; Body = $Body; Attachment = $Attachment } }
+function Start-Process { param($FilePath, $ArgumentList) $script:started += [pscustomobject]@{ FilePath = $FilePath; Args = "$ArgumentList" } }
+try {
+	$result = Send-SelfXTicket -To 'service-desk@example.com' -Ticket $withInfo -DeviceInfoText 'Name : PC-1' -DeviceName 'PC-1' -Destination $temp
+	Assert-Equal $result.Status 'Outlook' 'send: classic Outlook is used first'
+	Assert-Equal $script:outlookCalls.Count 1 'send: one Outlook mail'
+	Assert-Equal $script:outlookCalls[0].To 'service-desk@example.com' 'send: recipient from the parameter'
+	Assert-Equal $script:outlookCalls[0].Body $withInfo.Body 'send: complete body is used with Outlook (no cut)'
+	Assert-Equal (Test-Path -LiteralPath $result.Path -PathType Leaf) $true 'send: device information file exists'
+	Assert-Equal ((Split-Path -Leaf $result.Path) -match '^TicketInfo-PC-1-\d{8}-\d{6}\.txt$') $true 'send: fixed file name'
+	Assert-Equal ([IO.File]::ReadAllText($result.Path)) 'Name : PC-1' 'send: file contains the device information'
+	Assert-Equal $script:started.Count 0 'send: no other program is started when Outlook works'
+
+	$script:outlookFails = $true; $script:started = @()
+	$result = Send-SelfXTicket -To 'service-desk@example.com' -Ticket $withInfo -DeviceInfoText 'Name : PC-1' -DeviceName 'PC-1' -Destination $temp
+	Assert-Equal $result.Status 'Manual' 'send: without classic Outlook the default mail app is used'
+	Assert-Equal $script:started.Count 2 'send: mailto link and Explorer'
+	Assert-Equal ($script:started[0].FilePath -like 'mailto:service-desk@example.com?subject=*') $true 'send: mailto link with the configured address'
+	Assert-Equal ($script:started[1].FilePath -like '*\explorer.exe') $true 'send: Explorer selects the file'
+	Assert-Equal ($script:started[1].Args -like '/select,"*TicketInfo-PC-1-*.txt"') $true 'send: Explorer shows the device information file'
+	Assert-Equal @(Get-ChildItem -LiteralPath $temp -Filter 'TicketInfo-*').Count 1 'send: older device information files are removed'
+
+	$script:started = @(); $script:outlookCalls = @()
+	foreach ($badTo in 'a@b.de,c@d.de', 'a@b.de?bcc=x@y.de', 'nobody') {
+		$result = Send-SelfXTicket -To $badTo -Ticket $withInfo -DeviceInfoText 'x' -Destination $temp
+		Assert-Equal $result.Status 'Error' "send: address '$badTo' is rejected"
+	}
+	Assert-Equal ($script:started.Count + $script:outlookCalls.Count) 0 'send: nothing is opened for a rejected address'
+	$result = Send-SelfXTicket -To 'a@example.com' -Ticket $withInfo -DeviceInfoText 'x' -DeviceName "PC`r`n..\x" -Destination $temp
+	Assert-Equal ((Split-Path -Leaf $result.Path) -match '^TicketInfo-device-\d{8}-\d{6}\.txt$') $true 'send: invalid device name cannot reach the file name'
+} finally {
+	Remove-Item function:New-SelfXOutlookMail, function:Start-Process -ErrorAction SilentlyContinue
+	if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue }
+}
 
 # --- the file has no side effects ---------------------------------------------------------------
 $text = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Sources\TicketMail.ps1'))

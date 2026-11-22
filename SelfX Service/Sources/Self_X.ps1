@@ -210,6 +210,10 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 . "$Current_Folder\Branding.ps1"
 . "$Current_Folder\Localization.ps1"
 . "$Current_Folder\SelfXNetwork.ps1"
+# Ticket e-mail (functions only, nothing runs when they are loaded)
+. "$Current_Folder\SupportReport.ps1"
+. "$Current_Folder\TicketMail.ps1"
+. "$Current_Folder\TicketSend.ps1"
 . "$Current_Folder\SystemInfo.ps1"
 # Logging of the window to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1)
 . "$Current_Folder\SelfXLog.ps1"
@@ -255,6 +259,11 @@ Write-SelfXLog "SelfX $Tool_Version opened: language $($SelfX_UI_Language.Cultur
 $Tool_Name = Get-SelfXText "Tool_Name" "SelfX"
 $Support_Phone_number = Get-SelfXText "Support_Phone_number" ""
 $Support_Mail = Get-SelfXText "Support_Mail" ""
+# Ticket by e-mail (off by default): recipient only from the configuration, Ticket_Mail empty = Support_Mail
+$Ticket_Mail = (Get-SelfXText "Ticket_Mail" "").Trim()
+If(-not $Ticket_Mail) { $Ticket_Mail = "$Support_Mail".Trim() }
+$Ticket_Tag = (Get-SelfXText "Ticket_Subject_Tag" "SelfX").Trim()
+$Ticket_Available = ((Get-SelfXText "Ticket_Enabled" "False") -eq 'True') -and (Test-SelfXTicketAddress $Ticket_Mail)
 $Run_Solution_Text = Get-SelfXString 'Warning_Click_Run_Solution_Text'
 $Run_Explanation_Text = Get-SelfXString 'Warning_Click_Run_Explanation_Text'
 $Service_Running_Text = Get-SelfXString 'Service_Running_Text'
@@ -1963,6 +1972,60 @@ Function Open-SelfXUri
 		Try { Start-Process $Uri } Catch { $msgbar.SetDangerAlert($_.Exception.Message) }
 	}
 
+# Ticket by e-mail: the user describes the issue, the device information is always added (text and file).
+# The e-mail is only displayed (classic Outlook through COM, otherwise the default mail app), the user sends it.
+Function Show-SelfXTicketDialog
+	{
+		$Dialog = New-SelfXDialog -Title (Get-SelfXString 'Ticket_Window_Title') -Width 560 -ContentXaml @'
+      <TextBlock Name="TicketIntro" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+      <TextBlock Name="TicketLabel" FontWeight="SemiBold" Margin="0,0,0,4"/>
+      <TextBox Name="TicketText" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="140" MaxLength="3000" Padding="6"/>
+      <TextBlock Name="TicketInfo" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+      <TextBlock Name="TicketResult" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <Button Name="TicketClose" MinWidth="100" Margin="0,0,8,0" IsCancel="True"/>
+        <Button Name="TicketOpen" Style="{StaticResource PrimaryButton}" MinWidth="130" IsDefault="True"/>
+      </StackPanel>
+'@
+		$Dialog.FindName('TicketIntro').Text = Get-SelfXString 'Ticket_Intro_Text'
+		$Dialog.FindName('TicketLabel').Text = Get-SelfXString 'Ticket_Description_Label'
+		$Dialog.FindName('TicketInfo').Text = Get-SelfXString 'Ticket_Info_Text'
+		$Close = $Dialog.FindName('TicketClose')
+		$Close.Content = Get-SelfXString 'Close_Button_Text'
+		$Close.Add_Click({ [System.Windows.Window]::GetWindow($this).Close() })
+		$Open = $Dialog.FindName('TicketOpen')
+		$Open.Content = Get-SelfXString 'Ticket_Open_Button'
+		$Open.Add_Click({
+			$Dlg = [System.Windows.Window]::GetWindow($this)
+			$Result = $Dlg.FindName('TicketResult')
+			$this.IsEnabled = $False
+			$Dlg.Cursor = [System.Windows.Input.Cursors]::Wait
+			Try
+				{
+					$Items = @(Get-SelfXReportItems)
+					$Info_Text = If($Items.Count) { ConvertTo-SelfXSystemInfoText -Items $Items } Else { Get-SelfXString 'Ticket_No_Info_Text' }
+					$Ticket = New-SelfXTicket -Tag $Ticket_Tag -KindText (Get-SelfXString 'Ticket_Kind_Text') -DeviceName $env:COMPUTERNAME -WindowsBuild ([string][Environment]::OSVersion.Version.Build) -SelfXVersion "$Tool_Version" -UserText $Dlg.FindName('TicketText').Text -DeviceInfoText $Info_Text
+					$Sent = Send-SelfXTicket -To $Ticket_Mail -Ticket $Ticket -DeviceInfoText $Info_Text
+					# The log names the result only, never the text of the user or the device information.
+					Write-SelfXLog "Ticket e-mail prepared: $($Sent.Status), information rows: $($Items.Count)"
+					Switch("$($Sent.Status)")
+						{
+							'Outlook' { $Result.Text = Get-SelfXString 'Ticket_Opened_Text' }
+							'Manual'  { $Result.Text = Get-SelfXString 'Ticket_Manual_Text' $Sent.Path }
+							Default   { $Result.Text = Get-SelfXString 'Ticket_Error_Text' "$($Sent.Message)" }
+						}
+				}
+			Catch { $Result.Text = Get-SelfXString 'Ticket_Error_Text' $_.Exception.Message }
+			Finally
+				{
+					$Dlg.Cursor = $null
+					$this.IsEnabled = $True
+				}
+			$Result.Visibility = 'Visible'
+		})
+		[void]$Dialog.ShowDialog()
+	}
+
 Function Show-SelfXHelpDialog
 	{
 		$Dialog = New-SelfXDialog -Title (Get-SelfXString 'Support_Window_Title') -Width 520 -ContentXaml @'
@@ -1977,6 +2040,7 @@ Function Show-SelfXHelpDialog
 		$Close.Add_Click({ [System.Windows.Window]::GetWindow($this).Close() })
 
 		$Entries = New-Object System.Collections.Generic.List[object]
+		If($Ticket_Available) { $Entries.Add(@(0xE7C3, (Get-SelfXString 'Ticket_Row_Label'), (Get-SelfXString 'Ticket_Row_Text'), (Get-SelfXString 'Ticket_Button'), 'selfx:ticket')) }
 		$Hours = Get-SelfXText "Support_Hours" ""
 		If($Hours) { $Entries.Add(@(0xE823, (Get-SelfXString 'Support_Hours_Label'), $Hours, '', '')) }
 		If($Support_Phone_number) { $Entries.Add(@(0xE717, (Get-SelfXString 'Support_Phone_Label'), $Support_Phone_number, '', '')) }
@@ -2024,7 +2088,7 @@ Function Show-SelfXHelpDialog
 						$Go.Content = $Entry[3]
 						$Go.Tag = $Entry[4]
 						$Go.Visibility = 'Visible'
-						$Go.Add_Click({ Open-SelfXUri ([string]$this.Tag) })
+						$Go.Add_Click({ If(([string]$this.Tag) -eq 'selfx:ticket') { Show-SelfXTicketDialog } Else { Open-SelfXUri ([string]$this.Tag) } })
 					}
 				[void]$Rows.Children.Add($Row)
 			}

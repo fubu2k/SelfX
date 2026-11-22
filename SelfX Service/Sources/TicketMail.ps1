@@ -19,19 +19,20 @@
       - Field labels in the body are fixed English words, so tickets can be filtered and
         automated; they are not translated.
 
-    Not part of this file yet: user interface, configuration file, assignment to the support unit
-    (concept in the project document "Ticket aus SelfX"). Nothing calls these functions yet.
+    Not part of this file: user interface (Self_X.ps1), opening the mail (TicketSend.ps1), assignment to the support unit
+    (concept in the project document "Ticket aus SelfX"). Sending is done by TicketSend.ps1.
 
 .NOTES
     Name    : TicketMail.ps1
     Package : SelfX Service
     Context : GUI helper (signed-in user), functions only
-    Version : 2.8.4
+    Version : 2.8.5
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.4    2026-11-22  fubu2k               Initial version: ticket model and mailto link (no user interface yet)
+    2.8.5    2026-11-22  fubu2k               Device information block, Test-SelfXTicketAddress
 #>
 
 function ConvertTo-SelfXTicketField {
@@ -82,6 +83,7 @@ function New-SelfXTicket {
         [string]$ActionResult,
         [string]$DeviceStatus,
         [string]$UserText,
+        [string]$DeviceInfoText,
         [datetime]$Timestamp = [datetime]::UtcNow
     )
     if ($Tag -notmatch '^[A-Za-z0-9._-]{1,20}\z') { $Tag = 'SelfX' }
@@ -114,10 +116,23 @@ function New-SelfXTicket {
         $lines.Add('Description of the user:')
         $lines.Add($freeText)
     }
+    # Device information (all rows of System information and Device status) comes last, so a cut mailto link loses it first.
+    $deviceBlock = ConvertTo-SelfXTicketFreeText $DeviceInfoText 20000
+    if ($deviceBlock) {
+        $lines.Add('')
+        $lines.Add('Device information:')
+        $lines.Add($deviceBlock)
+    }
     return [pscustomobject]@{
         Subject = $subject
         Body    = ($lines -join "`r`n")
     }
+}
+
+function Test-SelfXTicketAddress {
+    # One plain e-mail address (no list, no display name, no mailto parameters).
+    param($Address)
+    return ("$Address" -match '^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,}\z')
 }
 
 function ConvertTo-SelfXTicketMailto {
@@ -129,7 +144,7 @@ function ConvertTo-SelfXTicketMailto {
         [Parameter(Mandatory = $true)][string]$Body,
         [int]$MaxLength = 1800
     )
-    if ($To -notmatch '^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,}\z') { throw 'Invalid recipient address.' }
+    if (-not (Test-SelfXTicketAddress $To)) { throw 'Invalid recipient address.' }
     $subjectPart = [uri]::EscapeDataString($Subject)
     $build = { param($text) 'mailto:{0}?subject={1}&body={2}' -f $To, $subjectPart, [uri]::EscapeDataString($text) }
     $link = & $build $Body

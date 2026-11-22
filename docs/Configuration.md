@@ -106,6 +106,7 @@ Installations-Benachrichtigungen werden nicht verwendet.
 | `Show_Language_Setting` | `True` (Standard, 2.5.9): Nutzer können die Sprache von SelfX im Einstellungsdialog wählen. `False` blendet die Auswahl aus und verwendet immer `Tool_Language`; eine zuvor von einem Nutzer gespeicherte Sprache wird dann ignoriert. |
 | `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | Hilfe-Schaltfläche (?) und die Kontakte des Hilfe-Dialogs, siehe [Benutzeroberfläche](#benutzeroberfläche-selfx-service-250). `Support_Mail` ist auch der Empfänger der E-Mail mit den Geräteprotokollen. |
 | `DeviceLogs_Days`, `DeviceLogs_Compress` | Bericht mit Geräteprotokollen: Tage des Ereignisprotokoll-Verlaufs (1–60, Standard 7) und `.zip` (`True`, Standard) oder `.txt` als Anhang |
+| `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket per E-Mail (Standard aus): Schaltfläche *Ticket erstellen* im Hilfe-Dialog. `Ticket_Mail` ist der Empfänger (leer = `Support_Mail`, genau eine Adresse, nur aus dieser Konfiguration), `Ticket_Subject_Tag` die Kennung am Betreffanfang für Filter (Buchstaben, Ziffern, `.`, `_`, `-`, bis 20 Zeichen, sonst `SelfX`) |
 | `Log_Retention_Days` | Protokolldateien, die älter sind als diese Anzahl Tage, werden gelöscht (1–3650, Standard 90, 2.6.0); siehe [Protokollierung](#protokollierung-und-aufbewahrung-selfx-service-260) |
 | `Show_Status_Page` | `True` (Standard): die Seite Gerätestatus anzeigen |
 | `Show_SystemInfo_Tab`, `Show_SystemInfo_Intune_Actions`, `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | Seite Systeminformationen und ihre Werkzeuge |
@@ -364,6 +365,24 @@ oder `DeviceLogs-*.txt` mit derselben ACL nach
 Katalogaktionen, um die Funktion auszublenden; die Schaltfläche in den
 Systeminformationen erscheint nur, wenn eine `System`-Aktion mit `MailReport`
 existiert.
+
+### Ticket per E-Mail (SelfX Service 2.8.5)
+
+Optional und standardmäßig aus (`Ticket_Enabled` = `False`). Wenn eingeschaltet und eine gültige Adresse gesetzt ist, zeigt der Hilfe-Dialog (?) die Zeile *Problem melden* mit der Schaltfläche *Ticket erstellen*.
+
+**Ablauf (Nutzerkontext, keine erhöhten Rechte):**
+1. Der Nutzer beschreibt das Problem (bis 3000 Zeichen).
+2. SelfX fügt **immer** die Geräteinformationen hinzu: alle Zeilen aus *Systeminformationen* und *Gerätestatus*, dazu Gerätename, Windows-Build und SelfX-Version. Der Nutzer kann sie nicht abwählen, sieht sie aber in der geöffneten E-Mail.
+3. Die E-Mail wird nur **angezeigt, nie automatisch gesendet**. Der Nutzer prüft sie und sendet selbst.
+
+**Übergabe an das Mailprogramm:**
+- Klassisches Outlook (COM): Empfänger, Betreff, vollständiger Text und die Datei `TicketInfo-<Gerät>-<Zeit>.txt` als Anhang.
+- Neues Outlook und andere Mailprogramme (mailto): Empfänger, Betreff und Text; der Link ist in der Länge begrenzt, deshalb wird der Text bei Bedarf gekürzt (Beschreibung und Kernfelder zuerst, Geräteinformationen zuletzt). Die vollständige Datei wird im Explorer markiert und muss vom Nutzer angehängt werden (die Oberfläche sagt das).
+- Die Datei liegt in `%LOCALAPPDATA%\SelfX\Reports` (nur der Nutzer); ältere `TicketInfo-*`-Dateien werden beim nächsten Ticket gelöscht.
+
+**Aufbau der E-Mail (für Filter und Automatisierung):** Betreff `[<Ticket_Subject_Tag>][<Art>] <Gerät>` (Art in der Sprache des Nutzers, z. B. *Störung*); Text mit festen englischen Feldnamen (`Time (UTC)`, `Computer`, `Windows build`, `SelfX version`), danach `Description of the user:` und `Device information:`, beide als abgesetzter Block. Zuordnung zur zuständigen IT-Einheit (Group-Tag, Gerätekategorie) folgt in einem späteren Schritt.
+
+**Sicherheit:** Der Empfänger kommt nur aus `Tool_Config.xml` (`Ticket_Mail`, sonst `Support_Mail`) und muss genau eine einfache Adresse sein; der Nutzer kann ihn nicht ändern. Felder werden bereinigt (keine Zeilenumbrüche im Betreff, feste Längen, Gerätename muss ein gültiger Name sein). Freitext und Geräteinformationen stehen in Codeblöcken, damit ein Ticketsystem daraus keine Befehle (z. B. GitLab-Quick-Actions) ausführt; ob das in der eigenen GitLab-Version greift, vor dem Einschalten testen. Die Geräteinformationen enthalten Adressen (z. B. Proxy) und Gerätedaten und sind für die IT bestimmt: vor dem Einschalten Datenschutz/Personalrat klären. Das Protokoll nennt nur das Ergebnis (`Outlook`, `Manual`, `Error`) und die Zeilenzahl, nie den Text.
 
 ### Protokollierung und Aufbewahrung (SelfX Service 2.6.0)
 

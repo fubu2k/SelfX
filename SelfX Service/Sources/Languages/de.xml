@@ -170,6 +170,19 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Support_Website_Button>Öffnen</Support_Website_Button>
 		<Support_Mail_Button>E-Mail schreiben</Support_Mail_Button>
 		<Support_None_Text>Es sind keine Kontaktdaten hinterlegt. Bitte wenden Sie sich an Ihre IT-Abteilung.</Support_None_Text>
+		<Ticket_Row_Label>Problem melden</Ticket_Row_Label>
+		<Ticket_Row_Text>Öffnet eine E-Mail an den IT-Support mit Ihrer Beschreibung und den Geräteinformationen dieses PCs.</Ticket_Row_Text>
+		<Ticket_Button>Ticket erstellen</Ticket_Button>
+		<Ticket_Window_Title>Ticket erstellen</Ticket_Window_Title>
+		<Ticket_Intro_Text>Beschreiben Sie, was nicht funktioniert. SelfX bereitet eine E-Mail an den IT-Support vor.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Ihre Beschreibung</Ticket_Description_Label>
+		<Ticket_Info_Text>Die E-Mail enthält immer die Geräteinformationen dieses PCs (Systeminformationen und Gerätestatus), im Text und als angehängte Datei. Sie können alles prüfen, bevor Sie die E-Mail senden. Es wird nichts automatisch gesendet.</Ticket_Info_Text>
+		<Ticket_Open_Button>E-Mail öffnen</Ticket_Open_Button>
+		<Ticket_Kind_Text>Störung</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Die Geräteinformationen wurden noch nicht erfasst.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>Die E-Mail wurde mit den Geräteinformationen als Anhang geöffnet. Prüfen Sie sie und senden Sie sie ab.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Ihr Mailprogramm wurde geöffnet. Hängen Sie die Datei {0} (im Explorer markiert) an die E-Mail an, prüfen Sie sie und senden Sie sie ab.</Ticket_Manual_Text>
+		<Ticket_Error_Text>Die E-Mail konnte nicht vorbereitet werden: {0}</Ticket_Error_Text>
 		<Service_Short_Running>SelfX-Dienst aktiv</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX-Dienst läuft nicht</Service_Short_Unavailable>
 		<Version_Text>Version {0}</Version_Text>

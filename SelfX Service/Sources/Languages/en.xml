@@ -170,6 +170,19 @@ Description of the issue:</Report_Mail_Body>
 		<Support_Website_Button>Open</Support_Website_Button>
 		<Support_Mail_Button>Write e-mail</Support_Mail_Button>
 		<Support_None_Text>No contact details have been configured. Please contact your IT department.</Support_None_Text>
+		<Ticket_Row_Label>Report an issue</Ticket_Row_Label>
+		<Ticket_Row_Text>Opens an e-mail to the IT support with your description and the device information of this PC.</Ticket_Row_Text>
+		<Ticket_Button>Create ticket</Ticket_Button>
+		<Ticket_Window_Title>Create a ticket</Ticket_Window_Title>
+		<Ticket_Intro_Text>Describe what does not work. SelfX prepares an e-mail to the IT support.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Your description</Ticket_Description_Label>
+		<Ticket_Info_Text>The e-mail always contains the device information of this PC (system information and device status), in the text and as an attached file. You can check everything before you send it. Nothing is sent automatically.</Ticket_Info_Text>
+		<Ticket_Open_Button>Open e-mail</Ticket_Open_Button>
+		<Ticket_Kind_Text>Incident</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>The device information has not been collected yet.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>The e-mail has been opened with the device information attached. Check it and send it.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Your mail program has been opened. Attach the file {0} (selected in Explorer) to the e-mail, check it and send it.</Ticket_Manual_Text>
+		<Ticket_Error_Text>The e-mail could not be prepared: {0}</Ticket_Error_Text>
 		<Service_Short_Running>SelfX service running</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX service not available</Service_Short_Unavailable>
 		<Version_Text>Version {0}</Version_Text>
