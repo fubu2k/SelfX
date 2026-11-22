@@ -13,11 +13,13 @@ einzelnen Dateien zeigen, wo eine Änderung gemacht wurde. Änderungen, die mit 
 gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mit
 **2.6.11** ausgeliefert, der ersten Paketversion dieses Forks.
 
-## Nicht veröffentlicht (SelfX Service, Phase 2 der Umstellung)
+## 2.8.0 - 2026-11-22 (SelfX Service)
 
-Dienst, Fenster und Statussymbol starten PowerShell 7 statt Windows PowerShell 5.1.
-Wird zusammen mit dem Ersatz für die Windows-Update-Schnittstelle (WinRT) und der
-Anhebung der Version ausgeliefert.
+Dienst, Fenster und Statussymbol starten PowerShell 7 (ab 7.6) statt Windows PowerShell 5.1.
+Mindestversion ist Windows 11 25H2 (Build 26200). `Tool_Version` und `$ExpectedVersion`
+wurden angehoben: Paket neu bauen und verteilen. Vor dem Verteilen PowerShell 7 als
+Win32-App bereitstellen und die Voraussetzungsregel für Build 26200 setzen
+(siehe [Installation](docs/Installation.md#windows-version-und-powershell-7-ab-280)).
 
 ### Geändert
 

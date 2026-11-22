@@ -37,7 +37,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.7.0
+    Version : 2.8.0
 
     History:
     Version  Date        Author               Change
@@ -58,6 +58,9 @@
                                               compiling uses a protected TEMP (F9)
     2.7.0    2026-11-22  fubu2k               .NET 10 programs: Bin is required and checked before the old installation
                                               is touched; compiling on the device was removed
+    2.8.0    2026-11-22  fubu2k               Windows 11 25H2 (build 26200) is required and checked first; PowerShell 7.6+
+                                              (machine-wide, not changeable by users) is checked: missing or old = warning,
+                                              unsafe rights = abort; WinRT library installed from Bin\WinRT
 #>
 
 [CmdletBinding()]

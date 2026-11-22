@@ -13,11 +13,13 @@ histories of the single files show where a change was made. Changes marked
 2.6.10 were made before the package version was raised; they are delivered with
 **2.6.11**, the first package version of this fork.
 
-## Unreleased (SelfX Service, phase 2 of the migration)
+## 2.8.0 - 2026-11-22 (SelfX Service)
 
-The service, the window and the status icon start PowerShell 7 instead of Windows
-PowerShell 5.1. Shipped together with the replacement for the Windows Update interface
-(WinRT) and the version bump.
+The service, the window and the status icon start PowerShell 7 (7.6 or newer) instead of
+Windows PowerShell 5.1. The minimum version is Windows 11 25H2 (build 26200). `Tool_Version`
+and `$ExpectedVersion` were raised: rebuild and redeploy the package. Before deploying,
+provide PowerShell 7 as a Win32 app and set the requirement rule for build 26200
+(see [Installation](docs/en/Installation.md#windows-version-and-powershell-7-since-280)).
 
 ### Changed
 
