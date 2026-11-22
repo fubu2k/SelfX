@@ -42,12 +42,13 @@
     Name    : CopilotPrompt.ps1
     Package : SelfX Service
     Context : GUI helper (signed-in user), functions only
-    Version : 2.8.9
+    Version : 2.8.12
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.9    2026-11-22  fubu2k               Initial version: prompt builder with cleaning, placeholders, length limit and URL check (no user interface yet)
+    2.8.12   2026-11-22  fubu2k               A template passed in (language files) is used only with exactly one {DATA} and at most 3000 characters, otherwise the built-in text
 #>
 
 # File extensions that are not host names ("setup.exe", "report.txt").
@@ -390,7 +391,10 @@ function New-SelfXCopilotPrompt {
 		[string]$Template = '',
 		[ValidateRange(2500, 20000)][int]$MaxLength = 6000
 	)
-	if (-not $Template -or -not $Template.Contains('{DATA}')) { $Template = Get-SelfXCopilotTemplate -Audience $Audience -Language $Language }
+	# A template from outside (language file) must contain {DATA} exactly once and stay short, otherwise the built-in text is used.
+	if (-not $Template -or $Template.Length -gt 3000 -or ($Template.Split(@('{DATA}'), [StringSplitOptions]::None).Count -ne 2)) { $Template = Get-SelfXCopilotTemplate -Audience $Audience -Language $Language }
+	# Texts from the language files use Windows line breaks; the whole prompt uses one kind.
+	$Template = $Template.Replace("`r`n", "`n")
 	$frame = $Template.Replace('{DATA}', '').TrimEnd().Length + 2
 
 	$prompt = ''

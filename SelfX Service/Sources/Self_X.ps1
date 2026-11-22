@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.11
+    Version : 2.8.12
 
     History:
     Version  Date        Author               Change
@@ -83,6 +83,7 @@
     2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
     2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, off by default): preview of the prompt, copy, open the configured https address
     2.8.11   2026-11-22  fubu2k               Copilot Chat: notes for the user in the dialog; Copilot_Include_AppNames also applies to the company apps row; network facts
+    2.8.12   2026-11-22  fubu2k               Copilot Chat: the instruction texts of the prompt come from the language files (Copilot_Prompt_User, Copilot_Prompt_Admin)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -2091,7 +2092,8 @@ Function Show-SelfXCopilotDialog
 				{
 					$Facts = Get-SelfXCopilotFacts -HealthItems @($Global:Health_Items) -SelfXVersion "$Tool_Version" -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames
 					$Context = @{ ComputerName = $env:COMPUTERNAME; UserName = $env:USERNAME; DomainName = @($env:USERDOMAIN, $env:USERDNSDOMAIN) }
-					$Prompt = New-SelfXCopilotPrompt -Facts $Facts -Description $Dlg.FindName('CopilotText').Text -Context $Context -Audience $Copilot_Audience -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames
+					$Template = Get-SelfXString $(If($Copilot_Audience -eq 'Admin') { 'Copilot_Prompt_Admin' } Else { 'Copilot_Prompt_User' })
+					$Prompt = New-SelfXCopilotPrompt -Facts $Facts -Description $Dlg.FindName('CopilotText').Text -Context $Context -Audience $Copilot_Audience -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames -Template $Template
 					$Dlg.FindName('CopilotPreview').Text = $Prompt
 					$Dlg.FindName('CopilotOpen').IsEnabled = $True
 					$Result.Visibility = 'Collapsed'
