@@ -147,7 +147,6 @@ jobs:
     name: Build with .NET 10 (self-contained)
     runs-on: windows-latest
     timeout-minutes: 30
-    continue-on-error: true
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -178,8 +177,6 @@ jobs:
             if ($a -ne $b) { $failed = $true }
           }
           if ($failed) { throw 'The two builds are not identical.' }
-          # NuGet lock file (package versions and hashes); committed to the repository, restore then runs in locked mode.
-          Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Service\Projects') -Filter packages.lock.json -Recurse | ForEach-Object { "::group::$($_.FullName)"; Get-Content -LiteralPath $_.FullName -Raw; '::endgroup::' }
 
       - name: Start the service in console mode
         shell: pwsh
