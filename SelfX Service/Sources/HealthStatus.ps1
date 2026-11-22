@@ -11,7 +11,7 @@
     -CacheFile (set by the service) also stores the result for the background status cache:
     a full collection replaces the file, a single check replaces only its own rows.
 .NOTES
-    Version: 2.6.9
+    Version: 2.6.10
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial local health checks and extension contract.
     2.3.1  2026-10-28  Wolfgang Baeck  Expose configured remediation mappings without running repairs.
@@ -31,6 +31,9 @@
                                        and the orchestrator (ReadyToReboot, Windows 11 24H2+): Settings showed
                                        "Restart now" while SelfX reported no restart; updates that only wait for
                                        the restart are no longer listed as "to install".
+    2.6.10 2026-11-22  fubu2k          Security: a single check (HEALTH <Id> <name>) never adds rows to the shared status
+                                       cache; an unknown name could be appended by any user and made the cache invalid
+                                       for all users. The placeholder result "Collection" is never stored.
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -478,8 +481,12 @@ function Update-SelfXHealthCache {
     # Stores results for the background status cache. A full collection replaces the file; a single
     # check replaces only the rows of that check and keeps their position. Without a full cache a
     # single check is not stored, so the cache never contains only part of the checks.
+    # The cache is shared by all users and every signed-in user can request a single check (HEALTH <Id> <name>),
+    # so a single check never ADDS rows: an unknown name or Id leaves the cache unchanged.
     param([Parameter(Mandatory = $true)][string]$Path, [object[]]$Results, [string]$OnlyId = '', [string]$OnlyName = '')
     $items = @($Results)
+    # 'Collection' is only the placeholder for "no result" and is never stored.
+    if (@($items | Where-Object { "$($_.Id)" -eq 'Collection' }).Count) { return }
     if ($OnlyId) {
         if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
         # Windows PowerShell 5.1 returns a JSON array as one object; assigning it first unrolls the items.
@@ -492,7 +499,7 @@ function Update-SelfXHealthCache {
                 if (-not $inserted) { foreach ($result in $items) { $merged.Add($result) }; $inserted = $true }
             } else { $merged.Add($entry) }
         }
-        if (-not $inserted) { foreach ($result in $items) { $merged.Add($result) } }
+        if (-not $inserted) { return }
         $items = $merged.ToArray()
     }
     # Write a temporary file and rename it, so readers never see a half-written cache.
