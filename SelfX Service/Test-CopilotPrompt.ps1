@@ -138,7 +138,7 @@ $custom2 = New-SelfXCopilotPrompt -Template "Mine`n{DATA}`nEnd" -Facts @{ SelfXV
 Assert-Equal ($custom2 -like "Mine`nBEGIN DATA*END DATA`nEnd") $true 'prompt: own template with {DATA}'
 $twice = New-SelfXCopilotPrompt -Template "A`n{DATA}`nB`n{DATA}" -Facts @{ SelfXVersion = '2.8.9' }
 Assert-Equal ($twice -like '*You help a person*') $true 'prompt: a template with {DATA} twice falls back to the default'
-Assert-Equal ([regex]::Matches($twice, 'BEGIN DATA').Count) 1 'prompt: the data block appears once'
+Assert-Equal @($twice -split "`n" | Where-Object { $_ -ceq 'BEGIN DATA' }).Count 1 'prompt: the data block appears once (the instruction text also names the markers)'
 $crlf = New-SelfXCopilotPrompt -Template "Mine`r`n{DATA}`r`nEnd" -Facts @{ SelfXVersion = '2.8.9' }
 Assert-Equal ($crlf.Contains("`r")) $false 'prompt: line breaks of a template are normalised'
 $long = New-SelfXCopilotPrompt -Template (('x' * 3001) + "`n{DATA}") -Facts @{ SelfXVersion = '2.8.9' }
