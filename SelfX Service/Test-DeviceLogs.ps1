@@ -515,8 +515,8 @@ try {
         @('Outlook', 'SetSuccessAlert', 'Eine neue E-Mail mit den Protokollen im Anhang ist geöffnet*'),
         @('OutlookCommandLine', 'SetSuccessAlert', '*Empfänger „help@contoso.com“ ein*'),
         @('Manual', 'SetWarningAlert', 'Die Protokolle sind unter C:\x.zip gespeichert*help@contoso.com*'),
-        @('NotFound', 'SetDangerAlert', '*nicht vorbereitet werden: C:\r'),
-        @('Error', 'SetDangerAlert', '*nicht vorbereitet werden: C:\r'))) {
+        @('NotFound', 'SetDangerAlert', '*sich nicht vorbereiten: C:\r'),
+        @('Error', 'SetDangerAlert', '*sich nicht vorbereiten: C:\r'))) {
         $script:alerts = @()
         Show-SelfXReportMailResult -Report ([pscustomobject]@{ Status = $case[0]; Path = 'C:\x.zip'; Message = 'C:\r' })
         Assert-Equal $script:alerts[0][0] $case[1] "Alert type for $($case[0])"
