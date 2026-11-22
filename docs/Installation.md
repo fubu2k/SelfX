@@ -159,7 +159,7 @@ Regel besonders:
 
 | Version | Neu | Was bei einem alten Dienst passiert |
 |---|---|---|
-| 2.3.0 bis 2.3.4 | Gesundheitsbericht (`HEALTH`), Positivliste der Reparaturen, Einzelprüfung, Defender-Signatur-Update | Der Gerätestatus fehlt oder zeigt Fehler. |
+| 2.3.0 bis 2.3.4 | Gesundheitsbericht (`HEALTH`), Positivliste der Reparaturen, Einzelprüfung, Defender-Signatur-Update | Der Dienst muss `HEALTH` und die neuen Prüfungen unterstützen. Nur die neue Oberfläche auf eine ältere Installation zu kopieren, genügt nicht. |
 | 2.4.0 | Geräteprotokolle für den Support | Die Aktion endet mit Exitcode 2, weil der alte Dienst den anfragenden Nutzer nicht übergibt. Tragen Sie in `Tool_Config.xml` bei `Support_Mail` die Helpdesk-Adresse ein. |
 | 2.5.0 | Neue Oberfläche, Hintergrundprüfungen mit Status-Cache (`STATUS`), Statussymbol | SelfX liest den Status mit `STATUS`, das ältere Dienste nicht kennen. |
 | 2.6.0 | Protokollierung, Reparaturen Neustart und App-Wiederholung, Windows-Updates | Der Installer legt `Logs\Users` an, und der Dienst bereinigt die Protokolle. |
