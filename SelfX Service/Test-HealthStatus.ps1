@@ -705,12 +705,12 @@ try {
         function Get-SelfXPipeServerState { param($Pipe, $ServiceName) if ($script:pipeStateFails) { throw 'Mock failure' }; $script:pipeState }
         $script:pipeStateFails = $false
         $script:pipeState = 1
-        Test-SelfXPipeServer -Pipe $null
-        Assert-Throws { $script:pipeState = 0; Test-SelfXPipeServer -Pipe $null } 'Pipe server check: a process that is not the service is refused'
+        Test-SelfXPipeServer -Pipe 'pipe'
+        Assert-Throws { $script:pipeState = 0; Test-SelfXPipeServer -Pipe 'pipe' } 'Pipe server check: a process that is not the service is refused'
         $script:pipeState = -1
-        Test-SelfXPipeServer -Pipe $null
+        Test-SelfXPipeServer -Pipe 'pipe'
         $script:pipeState = 1; $script:pipeStateFails = $true
-        Test-SelfXPipeServer -Pipe $null
+        Test-SelfXPipeServer -Pipe 'pipe'
         $script:pipeStateFails = $false
         Assert-Equal $true $true 'Pipe server check: undetermined state and errors do not stop the request'
         $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
