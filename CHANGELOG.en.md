@@ -21,6 +21,10 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- Network without the NetAdapter module: adapters, default routes and the adapter restart ("Restart network")
+  use CIM (`root\StandardCimv2`, new file `Sources\SelfXNetwork.ps1`) instead of `Get-NetAdapter`,
+  `Get-NetRoute` and `Restart-NetAdapter`. PowerShell 7 no longer starts Windows PowerShell 5.1 for it.
+  Also fixes that devices without an IPv6 default route lost all default routes.
 - CI: the tests now run in PowerShell 7 as a blocking job. Windows PowerShell 5.1 only checks
   `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` and the log collector (Intune starts them there).
   The health check and the support report no longer contain PowerShell 5.1 branches.

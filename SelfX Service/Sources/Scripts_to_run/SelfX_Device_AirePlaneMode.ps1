@@ -35,7 +35,7 @@ if (Test-Path -LiteralPath $SelfXLogScript) { . $SelfXLogScript; Initialize-Self
 else { function Write-SelfXLog { param($Message, $Level) } }
 trap { Write-SelfXLog "Failed: $($_.Exception.Message)" Error; break }
 
-# Selects the adapters to restart from Get-NetAdapter objects and the interface indexes with a default route.
+# Selects the adapters to restart from the objects of Get-SelfXNetAdapters (SelfXNetwork.ps1) and the interface indexes with a default route.
 function Select-SelfXRestartAdapters {
 	param([object[]]$Adapters = @(), [int[]]$GatewayIndexes = @())
 	$enabled = @($Adapters | Where-Object { $_ -and "$($_.Status)" -notin @('Disabled', 'Not Present') })
@@ -51,9 +51,10 @@ function Select-SelfXRestartAdapters {
 
 # Dot-sourcing (tests) only defines the function.
 if ($MyInvocation.InvocationName -ne '.') {
-	$gateways = @(Get-NetRoute -DestinationPrefix '0.0.0.0/0', '::/0' -ErrorAction SilentlyContinue |
-		Where-Object { "$($_.NextHop)" -notin @('0.0.0.0', '::', '') } | ForEach-Object { [int]$_.ifIndex } | Sort-Object -Unique)
-	$adapters = @(Select-SelfXRestartAdapters -Adapters @(Get-NetAdapter -ErrorAction Stop) -GatewayIndexes $gateways)
+	. (Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXNetwork.ps1')
+	$gateways = @()
+	try { $gateways = @(Get-SelfXDefaultRouteInterfaceIndexes) } catch { Write-SelfXLog "Default routes not readable: $($_.Exception.Message)" Warning }
+	$adapters = @(Select-SelfXRestartAdapters -Adapters @(Get-SelfXNetAdapters) -GatewayIndexes $gateways)
 	if (-not $adapters.Count) {
 		Write-SelfXLog 'No network adapter to restart was found.' Warning
 		Write-Output 'No network adapter to restart was found.'
@@ -62,7 +63,7 @@ if ($MyInvocation.InvocationName -ne '.') {
 	$failed = 0
 	foreach ($adapter in $adapters) {
 		try {
-			Restart-NetAdapter -Name $adapter.Name -Confirm:$false -ErrorAction Stop
+			Restart-SelfXNetAdapter -Adapter $adapter
 			Write-SelfXLog "Restarted '$($adapter.Name)' ($($adapter.InterfaceDescription))."
 		} catch {
 			$failed++

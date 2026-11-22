@@ -347,14 +347,14 @@ function Test-SelfXVpnConnection {
 	$vpn = @(Invoke-SelfXSafe { Get-VpnConnection -ErrorAction Stop }) + @(Invoke-SelfXSafe { Get-VpnConnection -AllUserConnection -ErrorAction Stop })
 	if ($vpn | Where-Object { $_.ConnectionStatus -eq 'Connected' }) { return $true }
 	$vpnAdapters = Invoke-SelfXSafe {
-		Get-NetAdapter -ErrorAction Stop | Where-Object {
+		Get-SelfXNetAdapters | Where-Object {
 			$_.Status -eq 'Up' -and $_.InterfaceDescription -match $Script:SelfXVpnAdapterPattern
 		}
 	}
 	return [bool]$vpnAdapters
 }
 
-# Classifies the connected adapters (Get-NetAdapter objects) into LAN, Wi-Fi and mobile broadband.
+# Classifies the connected adapters (objects of Get-SelfXNetAdapters, SelfXNetwork.ps1) into LAN, Wi-Fi and mobile broadband.
 # An adapter counts when it is Up and either a hardware adapter or carries a default route (GatewayIndexes).
 # Virtual network adapters of virtual machines (Hyper-V, VMware, VirtualBox guests) report the physical
 # medium "Unspecified" and are no hardware adapters, so the default route identifies them as LAN connection.
@@ -382,8 +382,7 @@ function Get-SelfXConnectionTypes {
 
 # Interface indexes with a default route (IPv4 or IPv6), i.e. adapters that connect to other networks.
 function Get-SelfXGatewayInterfaceIndexes {
-	$routes = @(Invoke-SelfXSafe { Get-NetRoute -DestinationPrefix '0.0.0.0/0', '::/0' -ErrorAction Stop })
-	return @($routes | Where-Object { "$($_.NextHop)" -notin @('0.0.0.0', '::', '') } | ForEach-Object { [int]$_.ifIndex } | Sort-Object -Unique)
+	return @(Invoke-SelfXSafe { Get-SelfXDefaultRouteInterfaceIndexes })
 }
 
 # Collects all information and returns a list of Category/Property/Value objects.
@@ -473,7 +472,7 @@ function Get-SelfXSystemInfo {
 	$items.Add((New-SelfXInfoItem $catUser (& $L 'Intune_Last_Sync') (Get-SelfXIntuneLastSync)))
 
 	# Network: connection types, VPN, internet test and addresses of all IP-enabled adapters
-	$connections = Get-SelfXConnectionTypes -Adapters @(Invoke-SelfXSafe { Get-NetAdapter -ErrorAction Stop }) -GatewayIndexes (Get-SelfXGatewayInterfaceIndexes)
+	$connections = Get-SelfXConnectionTypes -Adapters @(Invoke-SelfXSafe { Get-SelfXNetAdapters }) -GatewayIndexes (Get-SelfXGatewayInterfaceIndexes)
 	$lanUp  = $connections.Lan
 	$wifiUp = $connections.WiFi
 	$wwanUp = $connections.Wwan

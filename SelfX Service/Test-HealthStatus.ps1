@@ -28,6 +28,7 @@ $PSModuleAutoLoadingPreference = 'None'
 $sources = Join-Path $PSScriptRoot 'Sources'
 . "$sources\HealthStatus.ps1"
 . "$sources\SelfXServiceClient.ps1"
+. "$sources\SelfXNetwork.ps1"
 . "$sources\SystemInfo.ps1"
 . "$sources\Localization.ps1"
 # Logger functions without Initialize-SelfXLog: they write nothing during the tests.

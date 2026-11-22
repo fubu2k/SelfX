@@ -60,16 +60,27 @@ function global:Start-Process {
 function global:Start-Sleep { param([int]$Seconds, [int]$Milliseconds) }
 function global:Restart-Service { param($Name, [switch]$Force, $ErrorAction) $global:SelfXTestCalls.Add("Restart-Service $Name") }
 function global:Get-Service { param($Name, $ErrorAction) [pscustomobject]@{ Name = $Name; Status = 'Running' } }
-function global:Restart-NetAdapter { param($Name, $Confirm, $ErrorAction) $global:SelfXTestCalls.Add("Restart-NetAdapter $Name") }
-function global:Get-NetAdapter { param($ErrorAction) $global:FakeAdapters }
-function global:Get-NetRoute { param($DestinationPrefix, $ErrorAction) $global:FakeRoutes }
+# The network cmdlets (compatibility layer in PowerShell 7) are not used any more: calling them fails the test. SelfXNetwork.ps1 reads CIM.
+function global:Restart-NetAdapter { throw 'Restart-NetAdapter is not allowed (use SelfXNetwork.ps1)' }
+function global:Get-NetAdapter { throw 'Get-NetAdapter is not allowed (use SelfXNetwork.ps1)' }
+function global:Get-NetRoute { throw 'Get-NetRoute is not allowed (use SelfXNetwork.ps1)' }
 function global:Repair-Volume { param($DriveLetter, [switch]$OfflineScanAndFix, [switch]$Scan, [switch]$SpotFix, $ErrorAction) $global:SelfXTestCalls.Add("Repair-Volume $DriveLetter offline=$OfflineScanAndFix"); 'ScanScheduled' }
 function global:Clear-RecycleBin { param([switch]$Force, $Confirm, $ErrorAction) $global:SelfXTestCalls.Add('Clear-RecycleBin'); throw 'The system cannot find the path specified.' }
 function global:Clear-DnsClientCache { param($ErrorAction) $global:SelfXTestCalls.Add('Clear-DnsClientCache'); if ($global:DnsFails) { throw 'Access denied' } }
 function global:Get-MpComputerStatus { param($ErrorAction) [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00' } }
 function global:Update-MpSignature { param($ErrorAction) $global:SelfXTestCalls.Add('Update-MpSignature'); if ($global:UpdateFails) { throw 'No connection' }; $global:SignatureVersion = '1.441.99.0' }
-function global:Get-CimInstance { param($Namespace, $ClassName, $Filter, $ErrorAction) throw "Get-CimInstance is not allowed in tests ($ClassName)" }
-function global:Invoke-CimMethod { throw 'Invoke-CimMethod is not allowed in tests' }
+# Only the two network classes are simulated (raw CIM objects of root\StandardCimv2); every other class or method fails the test.
+function global:Get-CimInstance {
+	param($Namespace, $ClassName, $Filter, $ErrorAction)
+	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetAdapter') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeAdapters }
+	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetRoute') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeRoutes }
+	throw "Get-CimInstance is not allowed in tests ($ClassName)"
+}
+function global:Invoke-CimMethod {
+	param($InputObject, $MethodName, $ErrorAction)
+	if ($MethodName -ne 'Restart' -or -not $InputObject.InterfaceIndex) { throw 'Invoke-CimMethod is not allowed in tests' }
+	$global:SelfXTestCalls.Add("Restart-NetAdapter $($InputObject.Name)")
+}
 function global:Register-ScheduledTask { throw 'Forbidden in tests' }
 function global:New-ScheduledTask { throw 'Forbidden in tests' }
 function global:New-ScheduledTaskAction { throw 'Forbidden in tests' }
@@ -254,21 +265,31 @@ try {
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Repair-Volume $("$env:SystemDrive".TrimEnd(':')) offline=True" 'Disk check: offline scan and fix scheduled (language independent)'
 
 	# Network adapters: host with cable, Wi-Fi, hidden cellular profiles and a Hyper-V switch; then a virtual machine.
+	function New-FakeCimAdapter($Name, $Description, $Index, $Operational, $Admin, [bool]$Disconnected, $Ndis, $NdisMedium, [bool]$Hardware, [bool]$Virtual, [bool]$Hidden = $false) {
+		[pscustomobject]@{ Name = $Name; InterfaceDescription = $Description; InterfaceIndex = $Index; InterfaceOperationalStatus = $Operational; InterfaceAdminStatus = $Admin
+			OperationalStatusDownMediaDisconnected = $Disconnected; NdisPhysicalMedium = $Ndis; NdisMedium = $NdisMedium; HardwareInterface = $Hardware; ConnectorPresent = $Hardware; Virtual = $Virtual; Hidden = $Hidden }
+	}
+	function New-FakeCimRoute($Prefix, $Index, $NextHop) { [pscustomobject]@{ DestinationPrefix = $Prefix; InterfaceIndex = $Index; NextHop = $NextHop } }
+	$global:FakeCimFails = $false
 	$global:FakeAdapters = @(
-		[pscustomobject]@{ Name = 'Ethernet'; InterfaceDescription = 'Realtek USB GbE'; Status = 'Up'; HardwareInterface = $true; ConnectorPresent = $true; Virtual = $false; ifIndex = 11 }
-		[pscustomobject]@{ Name = 'Wi-Fi'; InterfaceDescription = 'Intel Wi-Fi 6E'; Status = 'Disconnected'; HardwareInterface = $true; ConnectorPresent = $true; Virtual = $false; ifIndex = 5 }
-		[pscustomobject]@{ Name = 'Cellular 7'; InterfaceDescription = 'Fibocom L860'; Status = 'Not Present'; HardwareInterface = $true; ConnectorPresent = $true; Virtual = $false; ifIndex = 41 }
-		[pscustomobject]@{ Name = 'vEthernet (Default Switch)'; InterfaceDescription = 'Hyper-V Virtual Ethernet Adapter'; Status = 'Up'; HardwareInterface = $false; ConnectorPresent = $false; Virtual = $true; ifIndex = 60 }
-		[pscustomobject]@{ Name = 'Ethernet 2'; InterfaceDescription = 'Disabled NIC'; Status = 'Disabled'; HardwareInterface = $true; ConnectorPresent = $true; Virtual = $false; ifIndex = 12 })
-	$global:FakeRoutes = @([pscustomobject]@{ ifIndex = 11; NextHop = '192.168.10.1' })
+		(New-FakeCimAdapter 'Ethernet' 'Realtek USB GbE' 11 1 1 $false 14 0 $true $false)
+		(New-FakeCimAdapter 'Wi-Fi' 'Intel Wi-Fi 6E' 5 2 1 $true 9 16 $true $false)
+		(New-FakeCimAdapter 'Cellular 7' 'Fibocom L860' 41 2 1 $false 8 0 $true $false -Hidden $true)
+		(New-FakeCimAdapter 'vEthernet (Default Switch)' 'Hyper-V Virtual Ethernet Adapter' 60 1 1 $false 0 0 $false $true)
+		(New-FakeCimAdapter 'Ethernet 2' 'Disabled NIC' 12 2 2 $false 14 0 $true $false))
+	$global:FakeRoutes = @((New-FakeCimRoute '0.0.0.0/0' 11 '192.168.10.1'), (New-FakeCimRoute '192.168.10.0/24' 5 '0.0.0.0'))
 	$run = Invoke-TestScript 'SelfX_Device_AirePlaneMode.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Restart-NetAdapter Ethernet;Restart-NetAdapter Wi-Fi' 'Network restart: physical present adapters only'
-	$global:FakeAdapters = @([pscustomobject]@{ Name = 'Ethernet'; InterfaceDescription = 'Microsoft Hyper-V Network Adapter'; Status = 'Up'; HardwareInterface = $false; ConnectorPresent = $false; Virtual = $false; ifIndex = 4 })
-	$global:FakeRoutes = @([pscustomobject]@{ ifIndex = 4; NextHop = '192.168.250.1' })
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Restart-NetAdapter Ethernet;Restart-NetAdapter Wi-Fi' 'Network restart: physical present adapters only (hidden and disabled adapters are kept)'
+	$global:FakeAdapters = @((New-FakeCimAdapter 'Ethernet' 'Microsoft Hyper-V Network Adapter' 4 1 1 $false 0 0 $false $false))
+	$global:FakeRoutes = @((New-FakeCimRoute '0.0.0.0/0' 4 '192.168.250.1'))
 	$run = Invoke-TestScript 'SelfX_Device_AirePlaneMode.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Restart-NetAdapter Ethernet' 'Network restart: virtual machine adapter with default route'
 	$global:FakeRoutes = @()
 	Assert-Equal (Invoke-TestScript 'SelfX_Device_AirePlaneMode.ps1').ExitCode 1 'Network restart: no adapter is exit 1'
+	$global:FakeCimFails = $true
+	$run = Invoke-TestScript 'SelfX_Device_AirePlaneMode.ps1'
+	Assert-Equal ($run.ExitCode -ne 0 -and @($script:calls).Count -eq 0) $true 'Network restart: unreadable adapters are an error and nothing is restarted'
+	$global:FakeCimFails = $false
 
 	# Restart: only the function is called, with a non-existent shutdown.exe; the script body never runs.
 	. (Join-Path $scripts 'SelfX_Device_Restart.ps1')

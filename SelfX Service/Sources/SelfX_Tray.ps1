@@ -92,6 +92,7 @@ Add-Type -Namespace SelfXTray -Name Native -MemberDefinition '[DllImport("user32
 
 . (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1')
 . (Join-Path $Global:Tray_Folder 'Localization.ps1')
+. (Join-Path $Global:Tray_Folder 'SelfXNetwork.ps1')
 . (Join-Path $Global:Tray_Folder 'SystemInfo.ps1')
 # Logging to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1)
 . (Join-Path $Global:Tray_Folder 'SelfXLog.ps1')
@@ -105,7 +106,7 @@ Function Get-TrayLanguageSetting
 $Global:Tray_Language_Setting = Get-TrayLanguageSetting
 $Language = Initialize-SelfXLanguage -LanguageFolder (Join-Path $Global:Tray_Folder 'Languages') -Language $Global:Tray_Language_Setting
 $Global:Tray_Texts = Get-SelfXSystemInfoTexts
-$Global:Tray_Job_Script = (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SystemInfo.ps1') -Raw)
+$Global:Tray_Job_Script = (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXNetwork.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SystemInfo.ps1') -Raw)
 $Global:Tray_Tool_Name = Get-TrayConfig 'Tool_Name' 'SelfX'
 $Global:Tray_Notify = (Get-TrayConfig 'Tray_Notifications' 'True') -eq 'True'
 # Windows notifications about new problems: allowed by the administrator (Tray_Notifications) and switched on by
