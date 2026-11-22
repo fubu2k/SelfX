@@ -32,18 +32,23 @@
 	  2.0.0    2026-10-28  Wolfgang Baeck       Merged SelfX Standard and SelfX Admin actions, added Context and TimeoutSeconds
 	  2.2.0    2026-10-28  Wolfgang Baeck       Added Id and shared messages for translations, all base texts in English
 	  2.4.0    2026-11-02  Wolfgang Baeck       Post_Action field; send device logs to the support (Collect-DeviceLogs.ps1)
+	  2.4.1    2026-11-22  fubu2k               Base texts match the scripts: Chrome (default profile, cookies, history, autofill), Teams (cache is cleared), Word and Excel (documents are not reopened)
 -->
 <Actions>
-	<XML_Version>2.4.0</XML_Version>
+	<XML_Version>2.4.1</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
-		<Message Id="Msg_Teams_Restart">Teams will close and then open again automatically.
+		<Message Id="Msg_Teams_Restart">Teams will close and its cache will be cleared. Then Teams starts again.
+
+A running call or meeting ends. You may have to sign in again. Your messages and files are kept, they are stored in the cloud.
 
 If the issue persists, sign out of Teams and sign in again. If it still persists after that, please contact your support.
 
 Do you want to continue?</Message>
-		<Message Id="Msg_Teams_Restart_Short">Teams will close and then open again automatically.
+		<Message Id="Msg_Teams_Restart_Short">Teams will close and its cache will be cleared. Then Teams starts again.
+
+A running call or meeting ends. You may have to sign in again.
 
 Do you want to continue?</Message>
 		<Message Id="Msg_OneDrive_Restart">OneDrive will close and then open again automatically.
@@ -96,7 +101,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Word_Reboot.ps1</Script>
 			<Context>User</Context>
 			<Category>Office</Category>
-			<Alerte_MSG>Word will close and reopen automatically. Unsaved work may be lost.
+			<Alerte_MSG>Word will close and start again. Documents are not reopened automatically. Unsaved work is lost.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>
@@ -108,7 +113,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Excel_Reboot.ps1</Script>
 			<Context>User</Context>
 			<Category>Office</Category>
-			<Alerte_MSG>Excel will close and reopen automatically. Unsaved work may be lost.
+			<Alerte_MSG>Excel will close and start again. Workbooks are not reopened automatically. Unsaved work is lost.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>
@@ -240,25 +245,25 @@ Do you want to continue?</Alerte_MSG>
 
 	<Detailed_Solution>
 		<Action Id="D_Chrome_Cache">
-			<Name>Clear Google Chrome browsing data (cache)</Name>
+			<Name>Google Chrome: delete browsing data</Name>
 			<Buttons>Ok_Cancel</Buttons>
-			<Explanation>Websites do not load or display correctly in Google Chrome. The browser cache of all Chrome profiles will be cleared.</Explanation>
+			<Explanation>Websites do not load or display correctly in Google Chrome. The action deletes saved browsing data of the default profile.</Explanation>
 			<Script>SelfX_Browser_ClearChromeCache.ps1</Script>
 			<Context>User</Context>
 			<Category>Browser</Category>
-			<Alerte_MSG>Google Chrome will close and its cached browsing data will be deleted.
+			<Alerte_MSG>Google Chrome will close immediately; unsaved input on websites is lost. In the default profile the cache, cookies, history, visited links, top sites and saved form data (autofill) are deleted. You will be signed out of many websites. Bookmarks and saved passwords are kept. Other Chrome profiles are not affected.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>
 
 		<Action Id="D_Firefox_Cache">
-			<Name>Clear Firefox browsing data (cache)</Name>
+			<Name>Firefox: delete browsing data</Name>
 			<Buttons>Ok_Cancel</Buttons>
-			<Explanation>Websites do not load or display correctly in Firefox. The browser cache of all Firefox profiles will be cleared.</Explanation>
+			<Explanation>Websites do not load or display correctly in Firefox. The action deletes saved browsing data of all Firefox profiles.</Explanation>
 			<Script>SelfX_Browser_ClearFirefoxCache.ps1</Script>
 			<Context>User</Context>
 			<Category>Browser</Category>
-			<Alerte_MSG>Firefox will close and its cached browsing data will be deleted.
+			<Alerte_MSG>Firefox will close immediately; unsaved input on websites is lost. In all profiles the cache, cookies and stored website data are deleted. You will be signed out of many websites. Bookmarks and saved passwords are kept.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>
