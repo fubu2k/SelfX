@@ -457,10 +457,18 @@ try {
     $proxyText = ConvertTo-SelfXProxyText $manualScript
     $hasManual = $proxyText.Contains($script:SelfXInfoText.Proxy_Manual)
     $hasScript = $proxyText.Contains($script:SelfXInfoText.Proxy_Script)
-    $hasHost = $proxyText.Contains('internal.example')
-    $hasPort = $proxyText.Contains('8080')
+    $hasServer = $proxyText.Contains('proxy.internal.example:8080')
+    $hasPac = $proxyText.Contains('http://wpad.internal.example/proxy.pac')
     Assert-Equal "$hasManual/$hasScript" 'True/True' 'Proxy: manual proxy and configuration script are named'
-    Assert-Equal "$hasHost/$hasPort" 'False/False' 'Proxy: no server name, port or address in the text'
+    Assert-Equal "$hasServer/$hasPac" 'True/True' 'Proxy: server with port and script address are shown'
+    $secret = ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'user1:Secret123@proxy.internal.example:8080'; AutoConfigURL = 'http://svc:Pw456@wpad.internal.example/p.pac' })
+    $leaksSecret = $secret.Contains('Secret123') -or $secret.Contains('Pw456') -or $secret.Contains('user1') -or $secret.Contains('svc:')
+    $keepsHost = $secret.Contains('proxy.internal.example:8080') -and $secret.Contains('wpad.internal.example/p.pac')
+    Assert-Equal "$leaksSecret/$keepsHost" 'False/True' 'Proxy: credentials in addresses are masked, host stays visible'
+    $perProtocol = ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'http=p1:80;https=p1:443'; AutoConfigURL = '' })
+    Assert-Equal $perProtocol.Contains('http=p1:80;https=p1:443') $true 'Proxy: per-protocol list is not mistaken for credentials'
+    $longText = ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = ('a' * 500); AutoConfigURL = '' })
+    Assert-Equal ($longText.Length -lt 260) $true 'Proxy: very long value is cut'
     Assert-Equal (ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 0; ProxyServer = 'x:1'; AutoConfigURL = '' })) $script:SelfXInfoText.Proxy_None 'Proxy: switched off server means no proxy'
     Assert-Equal (ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = ''; AutoConfigURL = '' })) $script:SelfXInfoText.Proxy_None 'Proxy: enabled without server means no proxy'
     Assert-Equal (ConvertTo-SelfXProxyText $null) '' 'Proxy: unreadable setting stays empty (shown as n/a)'

@@ -46,7 +46,7 @@
                                               time is local time despite its "Z" (ConvertFrom-SelfXOmaDmTime)
     2.6.0    2026-11-06  Wolfgang Baeck       Label "Company apps (Intune)" instead of "Applications (local IME cache)"
     2.8.2    2026-11-22  fubu2k               Uptime row shows a restart hint (warning status) from 7 days without a restart (Get-SelfXUptimeInfo)
-    2.8.3    2026-11-22  fubu2k               Network: proxy type of the user and mapped network drive letters (read-only, no addresses or paths)
+    2.8.3    2026-11-22  fubu2k               Network: proxy setting of the user (server and port, configuration script address; credentials masked) and mapped network drive letters
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -96,17 +96,31 @@ function Get-SelfXInfoText {
 	return $value
 }
 
-# Proxy setting of the signed-in user as text. Only the kind of setting is shown, never the server name,
-# port or script address (they can reveal internal host names in exports). Settings: object with
-# ProxyEnable, ProxyServer and AutoConfigURL (values of HKCU\...\Internet Settings); $null = not readable.
+# Proxy setting of the signed-in user as text: the kind of setting with its value (server and port, address of
+# the configuration script). Credentials in an address (user:password@host) are masked and long values are cut,
+# so a password never reaches the screen or an export. Settings: object with ProxyEnable, ProxyServer and
+# AutoConfigURL (values of HKCU\...\Internet Settings); $null = not readable.
+function Hide-SelfXAddressCredentials {
+	param([string]$Text)
+	$clean = "$Text".Trim()
+	$clean = [regex]::Replace($clean, '(?<=://)[^/@\s;]+@', '***@')
+	$clean = [regex]::Replace($clean, '(?<=^|[;=\s])[^/@\s;=]+:[^/@\s;=]*@', '***@')
+	if ($clean.Length -gt 200) { $clean = $clean.Substring(0, 200) + '...' }
+	return $clean
+}
+
 function ConvertTo-SelfXProxyText {
 	param($Settings)
 	if ($null -eq $Settings) { return '' }
 	$kinds = New-Object System.Collections.Generic.List[string]
-	if ([int]$Settings.ProxyEnable -eq 1 -and -not [string]::IsNullOrWhiteSpace("$($Settings.ProxyServer)")) { $kinds.Add((Get-SelfXInfoText 'Proxy_Manual')) }
-	if (-not [string]::IsNullOrWhiteSpace("$($Settings.AutoConfigURL)")) { $kinds.Add((Get-SelfXInfoText 'Proxy_Script')) }
+	if ([int]$Settings.ProxyEnable -eq 1 -and -not [string]::IsNullOrWhiteSpace("$($Settings.ProxyServer)")) {
+		$kinds.Add(('{0}: {1}' -f (Get-SelfXInfoText 'Proxy_Manual'), (Hide-SelfXAddressCredentials "$($Settings.ProxyServer)")))
+	}
+	if (-not [string]::IsNullOrWhiteSpace("$($Settings.AutoConfigURL)")) {
+		$kinds.Add(('{0}: {1}' -f (Get-SelfXInfoText 'Proxy_Script'), (Hide-SelfXAddressCredentials "$($Settings.AutoConfigURL)")))
+	}
 	if (-not $kinds.Count) { return (Get-SelfXInfoText 'Proxy_None') }
-	return ($kinds -join ', ')
+	return ($kinds -join '; ')
 }
 
 # Drive letters of the mapped network drives of the signed-in user (also disconnected ones). Only the letters,
