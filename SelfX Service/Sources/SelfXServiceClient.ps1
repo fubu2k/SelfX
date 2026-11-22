@@ -116,6 +116,14 @@ function Test-SelfXPipeServer {
 	if ($state -eq 0) { throw 'The pipe is not served by the running SelfX service.' }
 }
 
+function Get-SelfXPowerShellPath {
+	# PowerShell 7 at its fixed machine-wide location (writable only by administrators). No PATH search:
+	# a user cannot put another pwsh.exe in front of it.
+	$path = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'
+	if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw 'PowerShell 7 is not installed (expected: %ProgramFiles%\PowerShell\7\pwsh.exe).' }
+	return $path
+}
+
 function Start-SelfXHiddenPowerShell {
 	# Starts a PowerShell script in the user context without a console window. CREATE_NO_WINDOW
 	# (CreateNoWindow) creates no console at all, so nothing flashes and Windows Terminal (default
@@ -128,7 +136,7 @@ function Start-SelfXHiddenPowerShell {
 		[switch]$PassThru
 	)
 	$start = New-Object System.Diagnostics.ProcessStartInfo
-	$start.FileName = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+	$start.FileName = Get-SelfXPowerShellPath
 	$start.Arguments = ("-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Path`" $Arguments").TrimEnd()
 	$start.WorkingDirectory = $WorkingDirectory
 	$start.UseShellExecute = $false

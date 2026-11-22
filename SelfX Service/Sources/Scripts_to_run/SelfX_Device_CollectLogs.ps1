@@ -125,7 +125,9 @@ function Set-ReportAcl {
 # Runs the collector in a separate 64-bit process, which keeps its settings and exit away from this script.
 function Invoke-DeviceLogCollector {
     param([string]$CollectorPath, [string]$OutputPath, [int]$Days, [switch]$UserView, [string]$CallerSid)
-    $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    # PowerShell 7 at its fixed machine-wide path (64-bit); Collect-DeviceLogs.ps1 runs in 7 and in Windows PowerShell 5.1.
+    $powershell = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'
+    if (-not (Test-Path -LiteralPath $powershell -PathType Leaf)) { throw 'PowerShell 7 is not installed (expected: %ProgramFiles%\PowerShell\7\pwsh.exe).' }
     $arguments = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $CollectorPath, '-OutputPath', $OutputPath, '-Days', $Days)
     # Normal users get the reduced report of their own data only (2.6.10).
     if ($UserView) { $arguments += @('-UserView', '-CallerSid', $CallerSid) }

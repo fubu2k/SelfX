@@ -13,6 +13,34 @@ histories of the single files show where a change was made. Changes marked
 2.6.10 were made before the package version was raised; they are delivered with
 **2.6.11**, the first package version of this fork.
 
+## Unreleased (SelfX Service, phase 2 of the migration)
+
+The service, the window and the status icon start PowerShell 7 instead of Windows
+PowerShell 5.1. Shipped together with the replacement for the Windows Update interface
+(WinRT) and the version bump.
+
+### Changed
+
+- The service starts every script with `%ProgramFiles%\PowerShell\7\pwsh.exe` (fixed
+  path, no PATH search). For the script it sets only the machine-wide module folders
+  (`PSModulePath`) and turns off PowerShell telemetry and the update check. When
+  PowerShell 7 is missing it starts nothing and reports "PowerShell 7 is not installed".
+- `SelfX.exe`, `Start-SelfXHiddenPowerShell`, the health check and the log collector use
+  the same fixed path.
+- `Install.ps1` checks before it changes anything: PowerShell 7.6 or newer is installed
+  machine-wide, and normal users cannot change the folder or `pwsh.exe`. Otherwise the
+  installation stops and the existing installation stays untouched. `Install.ps1` and
+  `Uninstall.ps1` still run in Windows PowerShell 5.1 and close windows and status icons
+  of `powershell.exe` and `pwsh.exe`.
+- `Test-ServicePipe.ps1` and `Test-HealthStatus.ps1` also compile the service in
+  PowerShell 7; `Test-InstallBinaries.ps1` tests the new prerequisite.
+
+### Known limitation
+
+- PowerShell 7 does not have the orchestrator interface of Windows Update (WinRT,
+  Windows 11 24H2 and newer) yet. The scripts fall back to the Windows Update Agent.
+  The replacement follows in the next step.
+
 ## 2.7.0 - 2026-11-22 (SelfX Service)
 
 The service and the starter run on .NET 10 (LTS, supported until 14 Nov 2028). The

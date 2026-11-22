@@ -337,7 +337,9 @@ function Get-SelfXApplicationHealth {
 
 function Invoke-SelfXHealthScript {
     param([string]$Path, [int]$TimeoutSeconds)
-    $exe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    # Same PowerShell 7 (fixed machine-wide path) that the service uses for this script.
+    $exe = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'
+    if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'PowerShell 7 is not installed (expected: %ProgramFiles%\PowerShell\7\pwsh.exe).' }
     $start = New-Object Diagnostics.ProcessStartInfo
     $start.FileName = $exe
     $start.Arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$Path`""

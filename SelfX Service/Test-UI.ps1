@@ -101,6 +101,9 @@ try {
     Assert-Equal ([SelfX.Launcher].GetMethod('Main').ReturnType) ([int]) 'Launcher compiles'
     $hidden = (Get-Command Start-SelfXHiddenPowerShell).ScriptBlock.ToString()
     Assert-Equal ($hidden.Contains('$start.CreateNoWindow = $true')) $true 'Start-SelfXHiddenPowerShell creates no console'
+    Assert-Equal ($hidden.Contains('Get-SelfXPowerShellPath')) $true 'Start-SelfXHiddenPowerShell starts PowerShell 7 from the fixed path'
+    Assert-Equal ($launcherSource.Contains('@"PowerShell\7\pwsh.exe"')) $true 'Launcher starts pwsh.exe from Program Files'
+    Assert-Equal ($launcherSource -match '(?i)windowspowershell') $false 'Launcher no longer starts Windows PowerShell'
 
     # --- XAML of the main window, the templates and the dialogs (loaded, never shown) -------------
     $gui = Get-ScriptAst "$sources\Self_X.ps1"

@@ -12,7 +12,7 @@
     never the folder it points to), because users can create links in their own Logs\Users folder.
     Device logs reports (ProgramData\SelfX\Reports) and the status cache (ProgramData\SelfX\Cache)
     are always deleted. The HKLM Run entry of the status icon is removed. Open SelfX windows
-    and status icons of all signed-in users (powershell.exe running Self_X.ps1 or
+    and status icons of all signed-in users (powershell.exe or pwsh.exe running Self_X.ps1 or
     SelfX_Tray.ps1 from InstallFolder) are closed first, because they keep the install
     folder in use. Per-user settings and caches (HKCU\Software\SelfX,
     LOCALAPPDATA\SelfX) are not removed.
@@ -120,7 +120,7 @@ Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' 
 # Close open SelfX windows and status icons of all signed-in users: they use the install folder (working
 # directory, scripts) and would otherwise make the uninstallation fail.
 $SelfXPattern = [regex]::Escape($InstallFolder.TrimEnd('\')) + '\\(Self_X|SelfX_Tray)\.ps1'
-$SelfXProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
+$SelfXProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name = 'powershell.exe' OR Name = 'pwsh.exe'" -ErrorAction SilentlyContinue |
 	Where-Object { ($_.ProcessId -ne $PID) -and ("$($_.CommandLine)" -match $SelfXPattern) })
 ForEach($Process in $SelfXProcesses)
 {

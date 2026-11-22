@@ -13,6 +13,34 @@ einzelnen Dateien zeigen, wo eine Änderung gemacht wurde. Änderungen, die mit 
 gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mit
 **2.6.11** ausgeliefert, der ersten Paketversion dieses Forks.
 
+## Nicht veröffentlicht (SelfX Service, Phase 2 der Umstellung)
+
+Dienst, Fenster und Statussymbol starten PowerShell 7 statt Windows PowerShell 5.1.
+Wird zusammen mit dem Ersatz für die Windows-Update-Schnittstelle (WinRT) und der
+Anhebung der Version ausgeliefert.
+
+### Geändert
+
+- Der Dienst startet alle Skripte mit `%ProgramFiles%\PowerShell\7\pwsh.exe` (fester
+  Pfad, keine PATH-Suche). Er setzt für das Skript nur die maschinenweiten Modulordner
+  (`PSModulePath`) und schaltet Telemetrie und Update-Prüfung von PowerShell aus. Fehlt
+  PowerShell 7, startet er nichts und meldet „PowerShell 7 is not installed“.
+- `SelfX.exe`, `Start-SelfXHiddenPowerShell`, die Health-Prüfung und der Log-Sammler
+  nutzen denselben festen Pfad.
+- `Install.ps1` prüft vor allen Änderungen: PowerShell 7.6 oder neuer ist maschinenweit
+  installiert, und Normalnutzer können den Ordner und `pwsh.exe` nicht ändern. Sonst
+  bricht die Installation ab, und die bestehende Installation bleibt unberührt.
+  `Install.ps1` und `Uninstall.ps1` laufen weiter in Windows PowerShell 5.1 und
+  beenden Fenster und Statussymbole von `powershell.exe` und `pwsh.exe`.
+- Die Tests `Test-ServicePipe.ps1` und `Test-HealthStatus.ps1` übersetzen den Dienst auch
+  in PowerShell 7; `Test-InstallBinaries.ps1` prüft die neue Voraussetzung.
+
+### Bekannte Einschränkung
+
+- In PowerShell 7 gibt es die Windows-Update-Schnittstelle des Orchestrators (WinRT,
+  Windows 11 24H2 und neuer) noch nicht. Die Skripte fallen auf den Windows Update
+  Agent zurück. Der Ersatz folgt im nächsten Schritt.
+
 ## 2.7.0 - 2026-11-22 (SelfX Service)
 
 Dienst und Starter laufen auf .NET 10 (LTS, Support bis 14.11.2028). Die Programme
