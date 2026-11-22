@@ -251,6 +251,12 @@ Description of the issue:</Report_Mail_Body>
 		<Proxy_Script>Automatic configuration script</Proxy_Script>
 		<Network_Drives>Network drives</Network_Drives>
 		<Network_Drives_None>None</Network_Drives_None>
+		<Latency_Gateway>Latency: default gateway</Latency_Gateway>
+		<Latency_Dns>DNS lookup: {0}</Latency_Dns>
+		<Latency_Connection>Connection: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (min {1}, max {2}, {3} of {4} lost)</Latency_Value>
+		<Latency_Failed>not reachable ({0} of {1} failed)</Latency_Failed>
+		<Latency_Skipped>not measured (time limit reached)</Latency_Skipped>
 		<Collected_At>Collected at</Collected_At>
 		<Error>Error</Error>
 		<Yes>Yes</Yes>

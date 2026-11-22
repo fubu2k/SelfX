@@ -366,6 +366,45 @@ Katalogaktionen, um die Funktion auszublenden; die Schaltfläche in den
 Systeminformationen erscheint nur, wenn eine `System`-Aktion mit `MailReport`
 existiert.
 
+### Netzwerk-Messungen (SelfX Service 2.8.8)
+
+Optional und standardmäßig aus. Die Datei `Network_Test_Config.xml` (im Installationsordner, nur Administratoren schreibbar) schaltet auf der Seite *Systeminformationen* zusätzliche Zeilen im Bereich Netzwerk ein: Antwortzeit zum Standardgateway, Dauer einer Namensauflösung (DNS) und Dauer eines TCP-Verbindungsaufbaus zu Zielen, die in der Datei stehen. Die Messungen laufen im Nutzerkontext, nur lesend, im Hintergrund zusammen mit den übrigen Systeminformationen. Es gibt keine Nutzereingabe: Der Nutzer kann keine Ziele hinzufügen oder ändern.
+
+```xml
+<Network_Test_Config>
+  <Settings Enabled="True" Gateway="True" Samples="3" TimeoutMs="2000" />
+  <Targets>
+    <Target Label="Intranet" Host="intranet.example.org" Port="443" />
+    <Target Label="Internet" Host="www.example.org" Port="443" />
+  </Targets>
+</Network_Test_Config>
+```
+
+| Einstellung | Bedeutung |
+|---|---|
+| `Enabled` | `True` schaltet die Messungen ein (Standard `False`). |
+| `Gateway` | `True` (Standard): Ping zum Standardgateway. |
+| `Samples` | Messungen je Wert, 1 bis 5 (Standard 3). |
+| `TimeoutMs` | Wartezeit je Messung, 200 bis 5000 ms (Standard 2000). |
+| `Target` | Bis zu 5 Ziele. `Label` (Anzeigename, Buchstaben, Ziffern, `. _ -` und Leerzeichen, bis 40 Zeichen), `Host` (DNS-Name oder IPv4-Adresse), `Port` (optional, 1 bis 65535). |
+
+**Domainname frei wählbar:** Der Name des Ziels steht nur in der Konfiguration, nicht im Code. So lässt sich festlegen, was gemessen wird:
+- Ein **interner Name** (nur im Firmennetz oder über VPN erreichbar) zeigt die Qualität der internen Verbindung (Büro, VPN).
+- Ein **aus dem Internet erreichbarer Name** zeigt die Verbindung eines Geräts, das mobil ohne VPN arbeitet. Dafür eine Adresse verwenden, die die Organisation selbst betreibt oder die für solche Tests vorgesehen ist.
+- Beides lässt sich kombinieren (zum Beispiel ein internes und ein externes Ziel).
+
+**Messwerte:**
+- *Latenz: Standardgateway*: Mittelwert, Minimum und Maximum aus den Ping-Antworten, dazu die Zahl der verlorenen Antworten. Ist keine IPv4-Gateway-Adresse bekannt, fehlt die Zeile.
+- *DNS-Abfrage: <Label>*: Dauer der Namensauflösung über den Windows-Resolver. Dessen Zwischenspeicher gilt, wiederholte Messungen können deshalb schneller sein als die erste. Für eine IPv4-Adresse als `Host` entfällt diese Zeile.
+- *Verbindung: <Label>*: Dauer, bis eine TCP-Verbindung zu `Host:Port` steht. Die Verbindung wird sofort wieder geschlossen, es werden keine Daten gesendet. Ohne `Port` entfällt die Zeile. Verbunden wird mit der bei der DNS-Abfrage gefundenen Adresse.
+- Gehen alle Messungen eines Werts verloren, ist die Zeile ein Fehler; gehen einige verloren, eine Warnung.
+- Die Messungen eines Durchlaufs dürfen höchstens 20 Sekunden dauern. Danach steht bei den übrigen Zeilen „nicht gemessen (Zeitlimit erreicht)“.
+- Gemessen wird kein Durchsatz (Bandbreite).
+
+**Sicherheit und Datenschutz:** Ziele kommen nur aus der Datei (Administratoren), `Host` wird streng geprüft (nur Buchstaben, Ziffern, Bindestrich und Punkte; kein Schema, kein Pfad, kein Port, keine Leerzeichen), höchstens 5 Ziele, DTD in der XML ist verboten. Ungültige Einträge werden übersprungen, eine nicht lesbare Datei schaltet die Messungen aus. Die Zeilen stehen auch in Kopie, Export und Ticket der Systeminformationen, einschließlich der konfigurierten Hostnamen. Das Gerät sendet nur eine Namensabfrage, Ping-Pakete zum Gateway und den TCP-Verbindungsaufbau zu den eingetragenen Zielen.
+
+**Prüfen vor der Verteilung:** `tools\Test-SelfXNetworkMeasure.ps1` zeigt Einstellungen, Ziele und ungültige Einträge. Mit `-Run` führt es die Messungen einmal auf dem aktuellen Gerät aus (auch bei `Enabled="False"`).
+
 ### Ticket per E-Mail (SelfX Service 2.8.5, Zuordnung 2.8.6)
 
 Optional und standardmäßig aus (`Ticket_Enabled` = `False`). Wenn eingeschaltet und eine gültige Adresse gesetzt ist, zeigt der Hilfe-Dialog (?) die Zeile *Problem melden* mit der Schaltfläche *Ticket erstellen*.
