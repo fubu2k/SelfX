@@ -10,11 +10,93 @@ Windows-Geräten, insbesondere mit Microsoft Intune.
 - Ein unterstützter Windows-Desktop mit Windows PowerShell und WPF.
 - Das vollständige Paketverzeichnis, einschließlich der Inhalte von `assembly` und
   `Scripts_to_run`.
-- Für SelfX Service: 64-Bit-Windows-PowerShell 5.1 und .NET Framework 4.x. Der
-  Installer installiert entweder die vorkompilierten Programme des Pakets (Ordner
-  `Bin`, siehe [Vorkompilierte Programme](#vorkompilierte-programme-selfx-service-2611))
-  oder kompiliert den Dienst mit dem C#-Compiler, der zum .NET Framework gehört.
-  Ein Internetzugang oder ein SDK ist nicht nötig.
+- Für SelfX Service auf dem Gerät: 64-Bit-Windows und die in Windows enthaltene
+  64-Bit-Windows-PowerShell 5.1. Eine .NET-Installation ist **nicht** nötig: Dienst
+  und Starter sind .NET-10-Programme, die alles Nötige selbst mitbringen
+  (self-contained). Ob Ihre Windows-Version von .NET 10 unterstützt wird, steht in
+  der Support-Richtlinie von Microsoft.
+- Für das Bauen des Pakets (nicht auf den Geräten): ein Windows-Rechner mit dem
+  .NET SDK 10, siehe [Schnellstart](#schnellstart-eine-neue-version-ausrollen). Der
+  Installer installiert nur die vorgebauten Programme aus dem Ordner `Bin` des
+  Pakets (siehe [Programme bauen](#programme-bauen-selfx-service-ab-270)). Er
+  kompiliert nichts auf dem Gerät und braucht dort weder Internet noch SDK.
+
+## Schnellstart: eine neue Version ausrollen
+
+Diese Schritte gelten für jede neue Version von SelfX Service. Sie brauchen dafür
+**einen Windows-Rechner zum Bauen** (den „Build-Rechner"). Auf den Geräten Ihrer
+Nutzer wird nichts gebaut oder kompiliert.
+
+### Einmal vorbereiten: der Build-Rechner
+
+1. Nehmen Sie einen Windows-Rechner mit Internetzugang. Ein normaler
+   Administrator-Arbeitsplatz reicht. Er muss nicht zu den verwalteten Geräten
+   gehören.
+2. Installieren Sie das **.NET SDK 10** („SDK", nicht nur „Runtime"). Download:
+   <https://dotnet.microsoft.com/download/dotnet/10.0>. Öffnen Sie danach ein neues
+   PowerShell-Fenster und prüfen Sie:
+
+   ```powershell
+   dotnet --version
+   ```
+
+   Die Ausgabe muss mit `10.` beginnen. Eine andere Hauptversion lehnt das
+   Bauskript ab.
+3. Laden Sie das Repository auf den Rechner (`git clone` oder ZIP von GitHub).
+4. Laden Sie `IntuneWinAppUtil.exe` aus dem offiziellen Microsoft-Repository
+   (<https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool>) und merken Sie
+   sich den Pfad, zum Beispiel `C:\Tools\IntuneWinAppUtil.exe`.
+
+### Bei jeder neuen Version
+
+1. **Repository aktualisieren.** Mit `git pull` oder einem neuen ZIP. Wechseln Sie
+   danach im PowerShell-Fenster in den Ordner des Repositorys.
+2. **Einstellungen prüfen.** Branding und Support-Kontakte stehen in
+   `SelfX Service\Sources\Tool_Config.xml` und `Health_Config.xml`.
+3. **Versionsnummer erhöhen.** Tragen Sie dieselbe neue Nummer an zwei Stellen ein:
+   `Tool_Version` in `Sources\Tool_Config.xml` und `$ExpectedVersion` in
+   `Detection.ps1`. Sonst hält Intune das Gerät für aktuell und verteilt nichts.
+4. **Tests prüfen.** Wenn Sie über einen Pull Request arbeiten, laufen die Tests
+   automatisch auf GitHub. Sie sehen dort grüne Häkchen. Bei einem roten Test nicht
+   weitermachen.
+5. **Programme bauen.** Dieser Befehl erzeugt den Ordner `SelfX Service\Bin`:
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
+   ```
+
+   Am Ende zeigt das Skript drei Dateien mit ihrem Hash an (`SelfXService.exe`,
+   `SelfX.exe`, `SelfXSessionStarter.dll`). Der erste Lauf lädt das Microsoft-Paket
+   `System.ServiceProcess.ServiceController` aus dem Internet; die Version ist
+   festgelegt und wird geprüft.
+6. **AppLocker anpassen** (nur wenn Sie AppLocker nutzen). Das Skript schreibt
+   `build\SelfX.AppLocker.xml`. Übernehmen Sie diese Regeln in Ihre Richtlinie und
+   löschen Sie die Regeln der vorherigen Version. Tun Sie das, bevor das Paket die
+   Geräte erreicht.
+7. **Intune-Paket erstellen.** Der Pfad hinter `-ToolPath` ist der aus Schritt 4 der
+   Vorbereitung:
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXIntuneWin.ps1 -ToolPath C:\Tools\IntuneWinAppUtil.exe
+   ```
+
+   Ergebnis: `build\SelfX-Service-<Version>.intunewin`. Das Skript bricht ab, wenn
+   `Bin` fehlt oder nicht zu den Quelltexten passt.
+8. **Auf einem Testgerät prüfen.** Installieren Sie das Paket auf einem Gerät, das
+   nicht produktiv ist: Neuinstallation, Update von der Vorversion, Deinstallation.
+   Prüfen Sie SelfX als normaler Nutzer ohne Administratorrechte.
+9. **In Intune hochladen.** Als Win32-App mit den Befehlen aus der Tabelle unter
+   [SelfX Service](#selfx-service). Erkennung: das Skript `Detection.ps1`.
+
+### Wenn etwas schiefgeht
+
+| Meldung | Bedeutung und Lösung |
+|---|---|
+| `The command dotnet was not found` | Das .NET SDK 10 ist nicht installiert, oder das PowerShell-Fenster ist älter als die Installation. SDK installieren und ein neues Fenster öffnen. |
+| `The .NET SDK 10 is required, found '9.…'` | Eine andere SDK-Version ist aktiv. SDK 10 installieren; mit mehreren SDKs wählt eine `global.json` die Version. |
+| `The folder Bin is missing …` | Schritt 5 wurde nicht ausgeführt, oder das Paket wurde vorher gebaut. Schritt 5 und 7 wiederholen. |
+| `Bin was not built from the current …` | Ein Quelltext wurde nach dem Bauen geändert. Schritt 5 und 7 wiederholen. |
+| Die Installation auf dem Gerät endet mit Exitcode 1 | Den Grund nennt die letzte Zeile von `%ProgramData%\SelfX\Logs\Install.log`. Die bisherige Installation bleibt dann unverändert. |
 
 ## SelfX Service
 
@@ -39,12 +121,11 @@ Von einem 32-Bit-Agenten aus verwenden Sie
    Installer die vererbten Berechtigungen, sodass SYSTEM und Administratoren
    Vollzugriff haben und Benutzer nur lesen und ausführen dürfen.
 3. Installiert `%ProgramFiles%\SelfX\SelfXService.exe` (den Dienst) und
-   `%ProgramFiles%\SelfX\SelfX.exe` (2.5.3). Enthält das Paket den Ordner `Bin`,
-   prüft der Installer zuerst die vorkompilierten Programme gegen ihr
-   SHA256-Manifest und kopiert sie (2.6.11); eine fehlgeschlagene Prüfung stoppt
-   die Installation. Ohne `Bin` kompiliert er `Service\SelfXService.cs` und
-   `Service\SelfXLauncher.cs`; der Compiler schreibt seine temporären Dateien dann
-   in einen Ordner unterhalb des Installationsordners, nicht nach `C:\Windows\Temp`.
+   `%ProgramFiles%\SelfX\SelfX.exe` (2.5.3). Beide kommen aus dem Ordner `Bin` des
+   Pakets. Der Installer prüft sie **ganz am Anfang**, bevor er etwas auf dem Gerät
+   ändert, gegen ihr SHA256-Manifest. Fehlt `Bin` oder passt eine Datei nicht, endet
+   die Installation mit Exitcode 1 und die bisherige Installation bleibt unverändert
+   (2.7.0). Auf dem Gerät wird nichts kompiliert.
    `SelfX.exe` ist ein kleiner Starter ohne Konsole: Er startet SelfX
    (`/page:<Seite>` optional) oder das Statussymbol (`/tray`) mit einer
    versteckten Windows PowerShell, sodass kein Befehlsfenster erscheint, auch nicht
@@ -194,10 +275,11 @@ Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20   # als Admi
    `$ExpectedVersion` in `Detection.ps1` setzen; in den Verlauf beider Dateien eine
    Zeile eintragen.
 3. Alle Tests ausführen (siehe oben). Jeden Fehler beheben, bevor es weitergeht.
-4. Optional: die vorkompilierten Programme mit `tools\Build-SelfXBinaries.ps1` bauen
-   (siehe unten) und die Hashregeln aus `build\SelfX.AppLocker.xml` in die
-   AppLocker-Richtlinie übernehmen. Ein neuer Build hat neue Hashes: Ersetzen Sie
-   die Regeln des vorherigen Builds.
+4. Die Programme mit `tools\Build-SelfXBinaries.ps1` bauen (Pflicht, siehe
+   [Programme bauen](#programme-bauen-selfx-service-ab-270)) und, wenn Sie AppLocker
+   nutzen, die Hashregeln aus `build\SelfX.AppLocker.xml` in die Richtlinie
+   übernehmen. Ein neuer Build hat neue Hashes: Ersetzen Sie die Regeln des
+   vorherigen Builds.
 5. Das Paket mit `tools\New-SelfXIntuneWin.ps1` bauen (siehe
    [Intune-Paket erstellen](#intune-paket-erstellen)).
 6. Auf einem Gerät testen, das nicht produktiv ist: Neuinstallation, Update von der
@@ -205,45 +287,63 @@ Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20   # als Admi
    Sie gemeinsam genutzte Geräte haben, mit einem zweiten angemeldeten Nutzer.
 7. Das Paket in Intune veröffentlichen.
 
-### Vorkompilierte Programme (SelfX Service 2.6.11)
+### Programme bauen (SelfX Service ab 2.7.0)
 
-Ohne weitere Schritte kompiliert `Install.ps1` `SelfXService.exe` und `SelfX.exe`
-auf jedem Gerät. Die Dateien haben dann auf jedem Gerät einen anderen Hash, sodass
-AppLocker oder WDAC sie nicht mit einer Hashregel zulassen können. Bauen Sie sie
-stattdessen einmal auf einem Build-Rechner mit Windows PowerShell 5.1:
+`SelfXService.exe` (der Dienst) und `SelfX.exe` (der Starter) sind .NET-10-Programme.
+Sie werden **einmal** auf einem Build-Rechner mit dem .NET SDK 10 gebaut und mit dem
+Paket verteilt. So haben alle Geräte dieselben Dateien mit demselben Hash. AppLocker
+oder WDAC können sie dann mit einer Hashregel zulassen, und auf den Geräten läuft
+kein Compiler als SYSTEM. Der Befehl:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
 ```
 
+Das Skript prüft zuerst, ob das SDK 10 installiert ist, und baut dann die drei
+Projekte aus `SelfX Service\Service\Projects` mit `dotnet publish`:
+
+- Die Programme sind *self-contained* und bestehen aus einer Datei (je etwa 36 MB).
+  Die .NET-Laufzeit steckt darin. Updates der Laufzeit kommen mit einer neuen
+  SelfX-Version, nicht über Windows Update.
+- Das einzige NuGet-Paket (`System.ServiceProcess.ServiceController` von Microsoft)
+  ist in `packages.lock.json` mit Version und Hash festgelegt. Eine andere Version
+  lässt den Bau scheitern.
+- Der Bau ist reproduzierbar: Dieselben Quelltexte und dasselbe SDK ergeben
+  dieselben Dateien. Die CI auf GitHub prüft das bei jedem Pull Request.
+
 Das Skript schreibt `SelfX Service\Bin` (nicht eingecheckt): `SelfXService.exe`,
 `SelfX.exe`, `SelfXSessionStarter.dll` (nur vom Installer verwendet) und das
-Manifest `SelfX.Binaries.json` mit dem SHA256 der drei Quellen und der drei
-Dateien. Die Dateien sind nicht signiert. Sind auf dem Build-Rechner die
-AppLocker-Cmdlets verfügbar, schreibt das Skript außerdem `SelfX.AppLocker.xml`
-neben den Ordner `Bin` (in `build\`, nicht im Paket): Hashregeln für die drei
-Dateien, bereit zum Zusammenführen mit Ihrer AppLocker-Richtlinie
-(`Set-AppLockerPolicy -XmlPolicy ... -Merge` oder Import im Richtlinien-Editor /
-in Intune). AppLocker verwendet einen eigenen Hash der Datei (Authenticode SHA256),
+Manifest `SelfX.Binaries.json` mit dem SHA256 der drei Quelltexte und der drei
+Dateien (Manifestformat 2). Die Dateien sind nicht signiert. Sind auf dem
+Build-Rechner die AppLocker-Cmdlets verfügbar, schreibt das Skript außerdem
+`SelfX.AppLocker.xml` in den Ordner `build\` (nicht im Paket): Hashregeln für die
+drei Dateien, bereit zum Zusammenführen mit Ihrer AppLocker-Richtlinie
+(`Set-AppLockerPolicy -XmlPolicy ... -Merge` oder Import im Richtlinien-Editor / in
+Intune). AppLocker verwendet einen eigenen Hash der Datei (Authenticode SHA256),
 nicht den SHA256 des Manifests; übernehmen Sie die Regeln immer aus dieser Datei.
 Bauen Sie danach das Intune-Paket; der Ordner `Bin` ist Teil davon.
 
-Enthält das Paket `Bin`, prüft `Install.ps1` vor der Installation:
+`Install.ps1` verlangt `Bin` und prüft vor der Installation:
 
-- das Manifest und alle drei Dateien sind vorhanden;
-- die Quellen des Pakets (`Service\*.cs`) haben die Hashes des Manifests, die
-  Programme wurden also aus genau diesen Quellen gebaut;
+- der Ordner `Bin`, das Manifest und alle drei Dateien sind vorhanden;
+- das Manifest hat das Format 2 (Pakete, die mit 2.6.x gebaut wurden, werden
+  abgelehnt);
+- die Quelltexte des Pakets (`Service\*.cs`) haben die Hashes des Manifests, die
+  Programme wurden also aus genau diesen Quelltexten gebaut;
 - jede Datei hat den Hash des Manifests.
 
-Jede fehlgeschlagene Prüfung stoppt die Installation mit Exitcode `1`; stattdessen
-wird nichts kompiliert. Der Grund steht in `%ProgramData%\SelfX\Logs\Install.log`.
-Ohne `Bin` kompiliert das Gerät wie bisher; die temporären Dateien des Compilers
-werden dann in einen Ordner unterhalb des Installationsordners statt nach
-`C:\Windows\Temp` geschrieben. `tools\New-SelfXIntuneWin.ps1` weigert sich, einen
-Ordner `Bin` zu paketieren, der aus anderen Quellen gebaut wurde. Bauen Sie `Bin`
-nach jeder Änderung von `Service\*.cs` neu und ersetzen Sie gleichzeitig die
-Hashregeln in AppLocker: Ein neuer Build hat neue Hashes, die alten Regeln passen
-nicht mehr.
+Jede fehlgeschlagene Prüfung stoppt die Installation mit Exitcode `1`, **bevor** der
+alte Dienst oder die alten Dateien angefasst werden. Der Grund steht in
+`%ProgramData%\SelfX\Logs\Install.log`. `tools\New-SelfXIntuneWin.ps1` bricht ab,
+wenn `Bin` fehlt oder nicht zu den Quelltexten passt, und packt die
+.NET-Projektdateien nicht mit ein. Bauen Sie `Bin` nach jeder Änderung von
+`Service\*.cs` neu und ersetzen Sie gleichzeitig die Hashregeln in AppLocker.
+
+> **Hinweis zum Wechsel von 2.6.x:** Version 2.6.x hat den Dienst auf dem Gerät mit
+> dem .NET Framework kompiliert. Ab 2.7.0 ist das nicht mehr möglich. Verteilen Sie
+> immer das ganze Paket (siehe [Update: immer das ganze Paket
+> verteilen](#update-immer-das-ganze-paket-verteilen)). Der Dienst startet
+> weiterhin die Skripte mit Windows PowerShell 5.1.
 
 ## Intune-Paket erstellen
 

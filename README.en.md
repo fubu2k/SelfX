@@ -184,9 +184,10 @@ menu opens SelfX, checks the status or sends the logs.
   - Install, uninstall and detection scripts. Raise `Tool_Version` and
     `$ExpectedVersion` of `Detection.ps1` for every release, otherwise Intune
     does not roll out the update.
-  - Optional prebuilt programs that `Install.ps1` checks by SHA256, with ready
-    AppLocker hash rules (`tools\Build-SelfXBinaries.ps1`); without them, the
-    device compiles the programs as before.
+  - The service and the starter are .NET 10 programs (self-contained, LTS) that
+    are built once on a build machine (`tools\Build-SelfXBinaries.ps1`, with
+    ready AppLocker hash rules). `Install.ps1` checks them by SHA256 before it
+    changes anything on the device; nothing is compiled on the device.
   - An update or uninstall closes the running SelfX windows and status icons;
     after the installation the status icon starts right away for all signed-in
     users.
@@ -223,9 +224,10 @@ November 2026 and hardened in versions 2.6.10 and 2.6.11; the details are in the
   another user is signed in (`OtherSessions`).
 - **Careful file handling.** SYSTEM does not read logs from folders that users
   can change, and the uninstallation does not follow junctions.
-- **Controlled build and deployment.** Optional prebuilt programs are checked by
-  hash during installation and can be allowed with AppLocker hash rules. Without
-  them, the compiler on the device uses a protected temporary folder.
+- **Controlled build and deployment.** The .NET 10 programs are built once
+  (reproducible, the NuGet package fixed by a lock file), checked by hash during
+  installation and allowed with AppLocker hash rules. No compiler runs on the
+  device.
 - **Automatic checks.** Every pull request compiles the service and runs the
   tests and a script analysis.
 
@@ -245,7 +247,7 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.en.md).
 | Directory | Contents |
 |---|---|
 | `SelfX Service` | The package: installer, local Windows service (C# source), action catalogue with User and System actions, WPF application, scripts and tests |
-| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/en/Installation.md#building-the-intune-package)), and `Build-SelfXBinaries.ps1`, which builds the optional prebuilt programs of SelfX Service (see [Prebuilt programs](docs/en/Installation.md#prebuilt-programs-selfx-service-2611)) |
+| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/en/Installation.md#building-the-intune-package)), and `Build-SelfXBinaries.ps1`, which builds the .NET 10 programs of SelfX Service (see [Building the programs](docs/en/Installation.md#building-the-programs-selfx-service-since-270)) |
 | `.github` | GitHub Actions workflow (compile, tests, script analysis), `CODEOWNERS`, Dependabot configuration |
 | `build` | Not committed. Output of `New-SelfXIntuneWin.ps1`: `SelfX-Service-<version>.intunewin`; and of `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 
@@ -269,7 +271,7 @@ Many thanks to Damien for the idea, the original WPF interface, the XML action
 catalogue and the troubleshooting scripts. Many thanks to Wolfgang Baeck: this
 fork would not exist without his SelfX Service, his clear structure, his
 documentation and his tests, which made the security work possible. The
-security hardening, the additional tests, the prebuilt programs and the CI were
+security hardening, the additional tests, the built .NET 10 programs and the CI were
 added in this fork (see the [Changelog](CHANGELOG.en.md)). The license of the
 original project is kept in [LICENSE.md](LICENSE.md).
 

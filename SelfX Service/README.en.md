@@ -77,7 +77,7 @@ SelfX Service is installed machine-wide and works without any network connection
 | `Install.ps1` | Machine-wide installer. Run it as administrator. |
 | `Uninstall.ps1` | Closes open SelfX windows and status icons, then removes the service, files, shortcuts and Apps & Features entry. |
 | `Detection.ps1` | Detection script for Intune or SCCM. Update `$ExpectedVersion` for each release. |
-| `Test-InstallBinaries.ps1` | Takes the check of the prebuilt programs and the protected compiler TEMP out of `Install.ps1` and tests them against a fake package (missing or changed files, changed sources, broken manifest). Nothing is compiled or installed (2.6.11). |
+| `Test-InstallBinaries.ps1` | Takes the check of the prebuilt programs out of `Install.ps1` and tests it against a fake package (missing `Bin` folder, missing or changed files, changed sources, broken or old manifest). Nothing is built or installed (2.6.11, manifest format 2 since 2.7.0). |
 | `Test-LanguageFiles.ps1` | Checks the language files against `en.xml` and the catalogue. Run it before you build the package. |
 | `Test-HealthStatus.ps1` | Isolated health tests; system data and extension execution are mocked. |
 | `Test-DeviceLogs.ps1` | Isolated tests of the device logs feature (wrapper, e-mail helper, catalogue, GUI step); collector, ACLs, Outlook and processes are mocked. |
@@ -91,10 +91,11 @@ SelfX Service is installed machine-wide and works without any network connection
 | `Sources\SelfX_Tray.ps1` | Status icon in the notification area (started at sign-in through the HKLM Run entry `SelfXTray`, and right after the installation for signed-in users). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Device logs: read-only collector, System wrapper and the GUI e-mail helper. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Service-side collector and administrator-controlled health settings. Optional scripts go in `Sources\HealthChecks`. |
-| `Service\SelfXService.cs` | Source of the Windows service. Compiled on the device during installation, or built once with `tools\Build-SelfXBinaries.ps1` (2.6.11, see [Installation](../docs/en/Installation.md#prebuilt-programs-selfx-service-2611)). |
-| `Service\SelfXLauncher.cs` | Source of `SelfX.exe` (2.5.3), the starter without console window used by the shortcuts and the status icon autostart. Compiled on the device during installation, or prebuilt like the service. |
-| `Service\SelfXSessionStarter.cs` | Used by `Install.ps1` (2.5.8, compiled in memory): starts the status icon right after the installation in the sessions of the signed-in users, with their normal rights. |
-| `Bin\` (optional, not in Git) | Prebuilt `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` and the manifest `SelfX.Binaries.json` from `tools\Build-SelfXBinaries.ps1`. When present, `Install.ps1` checks and installs them instead of compiling (F9, 2.6.11). |
+| `Service\SelfXService.cs` | Source of the Windows service. Built once as a .NET 10 program with `tools\Build-SelfXBinaries.ps1` (since 2.7.0, see [Installation](../docs/en/Installation.md#building-the-programs-selfx-service-since-270)). |
+| `Service\SelfXLauncher.cs` | Source of `SelfX.exe` (2.5.3), the starter without console window used by the shortcuts and the status icon autostart. Built like the service as a .NET 10 program (since 2.7.0). |
+| `Service\SelfXSessionStarter.cs` | Used by `Install.ps1` (2.5.8; since 2.7.0 as `SelfXSessionStarter.dll` from `Bin`, netstandard2.0): starts the status icon right after the installation in the sessions of the signed-in users, with their normal rights. |
+| `Bin\` (required, not in Git) | Built `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` and the manifest `SelfX.Binaries.json` from `tools\Build-SelfXBinaries.ps1`. `Install.ps1` checks the files before anything else and installs them; without `Bin` the installation stops (F9, required since 2.7.0). |
+| `Service\Projects\` | .NET 10 project files (service, starter, session starter) and the NuGet lock file. For the build machine only; the Intune package does not contain them (2.7.0). |
 | `Sources\` | GUI (`Self_X.ps1`, plain WPF without additional assemblies), service client (`SelfXServiceClient.ps1`), branding and themes (`Branding.ps1`), languages (`Localization.ps1`, `Languages\`), catalogue, configuration and `Scripts_to_run`. |
 
 ## How it works
@@ -170,11 +171,11 @@ user, for example the device logs report.
   is the owner of the client process as reported by Windows; connections whose
   owner cannot be read share one limit of 8. `Test-ServicePipe.ps1` checks these
   limits with the real service code under a test pipe name.
-- Programs (2.6.11): `SelfXService.exe` and `SelfX.exe` are either prebuilt
-  (folder `Bin`, checked against the SHA256 manifest during the installation,
-  allowed with AppLocker hash rules) or compiled on the device with the
-  temporary files in a protected folder. See
-  [Installation](../docs/en/Installation.md#prebuilt-programs-selfx-service-2611).
+- Programs (since 2.7.0): `SelfXService.exe` and `SelfX.exe` are .NET 10 programs
+  that are built once on a build machine (folder `Bin`). The installation checks
+  them against the SHA256 manifest before it changes anything; they are allowed
+  with AppLocker hash rules. Nothing is compiled on the device. See
+  [Installation](../docs/en/Installation.md#building-the-programs-selfx-service-since-270).
 - Text from requests is cleaned before it is logged (control characters and line
   separators become `?`, long text is shortened), and rejected requests are
   logged at most 20 times per minute, so a user cannot forge log lines or push
