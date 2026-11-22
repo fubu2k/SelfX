@@ -44,6 +44,7 @@ foreach ($name in 'Start-Process', 'Register-ScheduledTask', 'New-ScheduledTask'
 . "$sources\Branding.ps1"
 . "$sources\Localization.ps1"
 . "$sources\SelfXServiceClient.ps1"
+. "$sources\SelfXNetwork.ps1"
 . "$sources\SystemInfo.ps1"
 # Logger functions without Initialize-SelfXLog: they write nothing during the tests.
 . "$sources\SelfXLog.ps1"
@@ -326,6 +327,38 @@ try {
     Assert-Equal (Read-SelfXSystemInfoCache -Culture 'fr' -Path $cachePath) $null 'Cache of another language is ignored'
     [IO.File]::WriteAllText($cachePath, 'not json')
     Assert-Equal (Read-SelfXSystemInfoCache -Culture 'de' -Path $cachePath) $null 'Broken cache is ignored'
+
+    # --- CIM adapters (SelfXNetwork.ps1): raw values as read on Windows 11 build 26300, converted to the Get-NetAdapter shape ---
+    function New-RawAdapter($Name, $Description, $Index, $Operational, $Admin, $Disconnected, $Ndis, $NdisMedium, $Hardware, $Virtual) {
+        [pscustomobject]@{ Name = $Name; InterfaceDescription = $Description; InterfaceIndex = $Index; InterfaceOperationalStatus = $Operational; InterfaceAdminStatus = $Admin
+            OperationalStatusDownMediaDisconnected = $Disconnected; NdisPhysicalMedium = $Ndis; NdisMedium = $NdisMedium; HardwareInterface = $Hardware; ConnectorPresent = $Hardware; Virtual = $Virtual; Hidden = $false }
+    }
+    $rawBluetooth = ConvertTo-SelfXNetAdapter (New-RawAdapter 'Bluetooth-Netzwerkverbindung' 'Bluetooth Device (Personal Area Network)' 16 2 1 $true 10 0 $false $true)
+    $rawTunnel = ConvertTo-SelfXNetAdapter (New-RawAdapter 'Mullvad' 'Mullvad Tunnel' 35 1 1 $false 0 19 $false $true)
+    $rawEthernet = ConvertTo-SelfXNetAdapter (New-RawAdapter 'Ethernet' 'Intel(R) Ethernet Controller X550' 13 1 1 $false 14 0 $true $false)
+    $rawWifi = ConvertTo-SelfXNetAdapter (New-RawAdapter 'WLAN' 'Intel(R) Wi-Fi 6 AX200 160MHz' 5 2 1 $true 9 16 $true $false)
+    $rawDisabled = ConvertTo-SelfXNetAdapter (New-RawAdapter 'Ethernet 2' 'Disabled NIC' 12 2 2 $false 14 0 $true $false)
+    Assert-Equal "$($rawBluetooth.Status)|$($rawBluetooth.PhysicalMediaType)|$($rawBluetooth.MediaType)|$($rawBluetooth.ifIndex)" 'Disconnected|BlueTooth|802.3|16' 'CIM adapter: Bluetooth like Get-NetAdapter'
+    Assert-Equal "$($rawTunnel.Status)|$($rawTunnel.PhysicalMediaType)|$($rawTunnel.MediaType)" 'Up|Unspecified|IP' 'CIM adapter: VPN tunnel like Get-NetAdapter'
+    Assert-Equal "$($rawEthernet.Status)|$($rawEthernet.PhysicalMediaType)|$($rawEthernet.MediaType)|$($rawEthernet.HardwareInterface)" 'Up|802.3|802.3|True' 'CIM adapter: cable like Get-NetAdapter'
+    Assert-Equal "$($rawWifi.Status)|$($rawWifi.PhysicalMediaType)|$($rawWifi.MediaType)" 'Disconnected|Native 802.11|Native 802.11' 'CIM adapter: Wi-Fi like Get-NetAdapter'
+    Assert-Equal $rawDisabled.Status 'Disabled' 'CIM adapter: administratively disabled'
+    $c = Get-SelfXConnectionTypes -Adapters @($rawBluetooth, $rawTunnel, $rawEthernet, $rawWifi) -GatewayIndexes @(35, 13)
+    Assert-Equal "$($c.Lan)|$($c.WiFi)|$($c.Wwan)" 'True|False|False' 'CIM adapters: cable is LAN, tunnel and disconnected Wi-Fi are not'
+    function Get-CimInstance {
+        param($Namespace, $ClassName, $ErrorAction)
+        if ($ClassName -eq 'MSFT_NetAdapter') { return @((New-RawAdapter 'Ethernet' 'NIC' 13 1 1 $false 14 0 $true $false), ([pscustomobject]@{ Name = 'Old'; InterfaceDescription = 'Removed'; InterfaceIndex = 99; Hidden = $true })) }
+        if ($ClassName -eq 'MSFT_NetRoute') { return @(
+            [pscustomobject]@{ DestinationPrefix = '0.0.0.0/0'; InterfaceIndex = 13; NextHop = '10.0.0.1' }
+            [pscustomobject]@{ DestinationPrefix = '::/0'; InterfaceIndex = 13; NextHop = 'fe80::1' }
+            [pscustomobject]@{ DestinationPrefix = '0.0.0.0/0'; InterfaceIndex = 35; NextHop = '0.0.0.0' }
+            [pscustomobject]@{ DestinationPrefix = '10.0.0.0/24'; InterfaceIndex = 5; NextHop = '10.0.0.1' }) }
+        throw "unexpected class $ClassName"
+    }
+    Assert-Equal (@(Get-SelfXNetAdapters).Count) 1 'CIM adapters: hidden adapters (removed hardware) are left out'
+    Assert-Equal ((Get-SelfXDefaultRouteInterfaceIndexes) -join ',') '13' 'CIM routes: only default routes with a real next hop'
+    Assert-Equal ((Get-SelfXGatewayInterfaceIndexes) -join ',') '13' 'Gateway interface indexes come from CIM'
+    Remove-Item Function:\Get-CimInstance
 
     # --- Connection types of the network section (adapters simulated, nothing is queried) --------
     function New-TestAdapter($Index, $Description, $Status, $Media, $Physical, $Ndis, [bool]$Hardware) {

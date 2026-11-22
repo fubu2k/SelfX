@@ -209,11 +209,12 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 . "$Current_Folder\SelfXServiceClient.ps1"
 . "$Current_Folder\Branding.ps1"
 . "$Current_Folder\Localization.ps1"
+. "$Current_Folder\SelfXNetwork.ps1"
 . "$Current_Folder\SystemInfo.ps1"
 # Logging of the window to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1)
 . "$Current_Folder\SelfXLog.ps1"
 Initialize-SelfXLog -Component 'SelfX'
-$Global:SysInfo_Script = $Global:SelfXClient_Script + "`r`n" + (Get-Content -LiteralPath "$Current_Folder\SystemInfo.ps1" -Raw)
+$Global:SysInfo_Script = $Global:SelfXClient_Script + "`r`n" + (Get-Content -LiteralPath "$Current_Folder\SelfXNetwork.ps1" -Raw) + "`r`n" + (Get-Content -LiteralPath "$Current_Folder\SystemInfo.ps1" -Raw)
 
 #******************************************************************************
 # Settings (Tool_Config.xml), language and action catalogue
