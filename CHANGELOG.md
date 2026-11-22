@@ -15,6 +15,10 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 
 ## Nicht veröffentlicht (SelfX Service)
 
+### Neu
+
+- Neue Aktion „Microsoft Edge: Zwischenspeicher leeren“ (Nutzerkontext, Kategorie Browser, `SelfX_Browser_ClearEdgeCache.ps1`): schließt Edge der eigenen Sitzung und löscht nur die Ordner `Cache`, `Code Cache` und `GPUCache` des Standardprofils; Cookies, Verlauf, Kennwörter und Lesezeichen bleiben. Verknüpfte Ordner (Junctions) werden übersprungen. Deutscher Text in `de.xml`, andere Sprachen zeigen den englischen Text.
+
 ### Geändert
 
 - Statuszeile „Neustart ausstehend“: Der Text nennt jetzt den letzten Neustart und, wenn die letzte Update-Installation danach lag, deren Zeitpunkt (nur lesend, Zeiten in der Zeitzone des Nutzers). Fehlen die Quellen, entfällt nur der Zusatz.
