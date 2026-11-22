@@ -78,6 +78,7 @@ installed locally and works without any network connection.
 | `Test-DeviceLogs.ps1` | Isolated tests of the device logs feature (wrapper, e-mail helper, catalogue, GUI step); collector, ACLs, Outlook and processes are mocked. |
 | `Test-Catalog.ps1` | Static security check of the action catalogue, `Health_Config.xml` and the scripts that run as SYSTEM (plain file names, one context per script, no mandatory parameters, header context, remediation timeouts). Nothing is executed; run it before every release (2.6.10). |
 | `Test-Uninstall.ps1` | Takes the delete function out of `Uninstall.ps1` and checks in a temporary folder that junctions are removed and never followed (2.6.10). `Uninstall.ps1` itself is not run. |
+| `Test-ServicePipe.ps1` | Compiles the service in memory and starts only its pipe listener under a test pipe name: checks the read deadline, slow senders, oversized requests and the per-user connection limit (2.6.11). Nothing is installed, no action runs; no administrator rights needed. |
 | `Test-UI.ps1` | Isolated tests of the user interface (XAML, theme, texts), the tray icon notifications and the information cache; no window is shown. |
 | `Test-Scripts.ps1` | Runs every action and repair script in a temporary sandbox with mocked commands and checks result and log (2.6.0); nothing on the device is changed. |
 | `Sources\SelfXLog.ps1` | Shared logging of all scripts to `%ProgramData%\SelfX\Logs` and the user-side log housekeeping (2.6.0). |
@@ -150,6 +151,13 @@ user, for example the device logs report.
   seconds for the next one, and after an action 15 seconds before the same
   action can be started again; the service then answers *busy*. This keeps one
   user from using up the connections or the run slot of all other users.
+  Since 2.6.11 the 5 seconds are one deadline for the whole request (sending
+  slowly does not extend it), the pipe uses overlapped I/O so that the deadline
+  ends a hanging read or write reliably, and the limit of 8 connections per user
+  is applied when the connection is accepted, before anything is read. The user
+  is the owner of the client process as reported by Windows; connections whose
+  owner cannot be read share one limit of 8. `Test-ServicePipe.ps1` checks these
+  limits with the real service code under a test pipe name.
 - Text from requests is cleaned before it is logged (control characters and line
   separators become `?`, long text is shortened), and rejected requests are
   logged at most 20 times per minute, so a user cannot forge log lines or push
