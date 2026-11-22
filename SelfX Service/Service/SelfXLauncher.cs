@@ -9,7 +9,7 @@ Description:
     A shortcut or Run entry that starts powershell.exe directly always creates a console
     window first: "-WindowStyle Hidden" hides it only after PowerShell has started (the
     window flashes), and on Windows 11 with Windows Terminal as default terminal a terminal
-    window can even stay open. SelfX.exe starts the Windows PowerShell 5.1 of the system
+    window can even stay open. SelfX.exe starts the PowerShell 7 (pwsh.exe) of the system
     with CREATE_NO_WINDOW, so no console is created at all, and exits immediately.
     Only the two scripts next to SelfX.exe can be started: Self_X.ps1 (default, optional
     /page:<Troubleshooting|Status|SystemInfo|SendLogs>) and SelfX_Tray.ps1 (/tray). Other
@@ -37,7 +37,7 @@ using System.IO;
 namespace SelfX
 {
     /// <summary>
-    /// Start Self_X.ps1 or SelfX_Tray.ps1 with a hidden Windows PowerShell and no console.
+    /// Start Self_X.ps1 or SelfX_Tray.ps1 with a hidden PowerShell 7 and no console.
     /// </summary>
     public static class Launcher
     {
@@ -73,8 +73,11 @@ namespace SelfX
                 if (!File.Exists(script)) { return 1; }
 
                 string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                // PowerShell 7 at its fixed machine-wide location; without it nothing is started (exit code 1).
+                string pwsh = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"PowerShell\7\pwsh.exe");
+                if (!File.Exists(pwsh)) { return 1; }
                 ProcessStartInfo start = new ProcessStartInfo();
-                start.FileName = Path.Combine(windows, @"System32\WindowsPowerShell\v1.0\powershell.exe");
+                start.FileName = pwsh;
                 start.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"" + script + "\"" +
                     (page.Length > 0 ? " -Page " + page : "");
                 start.WorkingDirectory = tray ? windows : folder;

@@ -36,7 +36,7 @@ $tokens = $null
 $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Install.ps1'), [ref]$tokens, [ref]$parseErrors)
 Assert-Equal @($parseErrors).Count 0 'Install.ps1 parses'
-foreach ($name in 'Test-SelfXPrebuiltBinaries') {
+foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7') {
 	$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
 	Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
 	if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
@@ -119,6 +119,29 @@ try {
 	$manifest.Binaries.'SelfX.exe' = ''
 	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
 	Assert-Equal ((Test-Accepted) -like 'refused*SHA256*') $true 'Empty hash in the manifest is refused'
+	# --- PowerShell 7 prerequisite (fixed path, minimum version, folder not writable by normal users) ---
+	$ps7Folder = Join-Path $root 'ps7'
+	New-Item -ItemType Directory -Path $ps7Folder -Force | Out-Null
+	$fakeExe = Join-Path $ps7Folder 'pwsh.exe'
+	# cmd.exe is a signed system program with a known version: a stand-in for a version check.
+	Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'System32\cmd.exe') -Destination $fakeExe
+	$currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+	# Only SYSTEM, administrators and the current user: the same as an installation below Program Files.
+	& icacls.exe $ps7Folder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' "*$($currentUser):(OI)(CI)F" | Out-Null
+	function Test-PowerShell7Result {
+		param([string]$Path, [string]$Minimum = '7.6.0')
+		try { $null = Test-SelfXPowerShell7 -Executable $Path -MinimumVersion $Minimum; return 'accepted' }
+		catch { return 'refused: ' + $_.Exception.Message }
+	}
+	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'PowerShell 7 check accepts a protected folder with a new enough version'
+	Assert-Equal ((Test-PowerShell7Result (Join-Path $ps7Folder 'missing.exe')) -like 'refused*was not found*') $true 'Missing pwsh.exe is refused'
+	Assert-Equal ((Test-PowerShell7Result $fakeExe '99.0.0') -like 'refused*version 99.0.0 or newer is required*') $true 'Too old version is refused'
+	& icacls.exe $ps7Folder /grant '*S-1-5-32-545:(OI)(CI)M' | Out-Null
+	Assert-Equal ((Test-PowerShell7Result $fakeExe '1.0.0') -like 'refused*can be changed by normal users*') $true 'Folder that Users can change is refused'
+	& icacls.exe $ps7Folder /remove:g '*S-1-5-32-545' | Out-Null
+	& icacls.exe $ps7Folder /grant '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
+	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'Users may read and run the folder'
+
 }
 finally {
 	Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue

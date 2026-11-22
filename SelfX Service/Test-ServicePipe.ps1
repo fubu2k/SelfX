@@ -36,8 +36,22 @@ function Assert-True($Condition, $Message) {
 	if (-not $Condition) { $script:errors.Add($Message) }
 }
 
+# Compiles the service source. Windows PowerShell 5.1 uses the .NET Framework compiler; PowerShell 7 (.NET 10) needs the
+# branch that is built for .NET (#define NET, as in the project file) and the runtime assemblies of PowerShell.
+function Add-SelfXServiceType {
+	param([string]$Path, [string[]]$FrameworkReferences)
+	$text = [IO.File]::ReadAllText($Path)
+	if ($PSVersionTable.PSEdition -ne 'Core') { Add-Type -TypeDefinition $text -ReferencedAssemblies $FrameworkReferences; return }
+	$names = 'System.IO.Pipes', 'System.IO.Pipes.AccessControl', 'System.Security.AccessControl', 'System.Security.Principal.Windows',
+		'System.ServiceProcess.ServiceController', 'System.Diagnostics.Process', 'System.Diagnostics.EventLog', 'System.ComponentModel.Primitives',
+		'System.Private.Xml', 'System.Xml.ReaderWriter', 'System.Collections', 'System.Linq', 'System.Memory', 'System.Runtime.InteropServices',
+		'System.Threading', 'System.Threading.Thread', 'System.Text.Encoding.Extensions', 'System.Console', 'System.Runtime.Extensions'
+	$references = @(foreach ($name in $names) { $file = Join-Path $PSHOME "$name.dll"; if (Test-Path -LiteralPath $file) { $file } })
+	Add-Type -TypeDefinition ("#define NET`n" + $text) -ReferencedAssemblies $references
+}
+
 $source = Join-Path $PSScriptRoot 'Service\SelfXService.cs'
-Add-Type -TypeDefinition (Get-Content -LiteralPath $source -Raw) -ReferencedAssemblies 'System.ServiceProcess', 'System.Xml'
+Add-SelfXServiceType -Path $source -FrameworkReferences 'System.ServiceProcess', 'System.Xml'
 
 $pipeName = 'SelfX.Test.' + [guid]::NewGuid().ToString('N')
 $dataRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXPipeTest_' + [guid]::NewGuid().ToString('N'))

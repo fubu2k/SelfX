@@ -75,6 +75,36 @@ $LogFolder = Join-Path $DataFolder 'Logs'
 $UninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SelfX'
 $PowerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 
+function Test-SelfXPowerShell7 {
+	# Checks the PowerShell 7 that the service, the window and the status icon start (fixed machine-wide path, no PATH
+	# search). Throws with a reason when a check fails; the caller stops the installation then (nothing is changed yet).
+	#  - pwsh.exe exists at %ProgramFiles%\PowerShell\7 (the MSI or Intune installation; the Store version lives in a
+	#    user-specific folder and is not usable for the service);
+	#  - its version is at least the minimum (7.6 is based on .NET 10, the LTS release);
+	#  - neither the folder nor pwsh.exe can be changed by normal users (the service runs it as SYSTEM).
+	param(
+		[string]$Executable = (Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'),
+		[version]$MinimumVersion = '7.6.0'
+	)
+	If(-not (Test-Path -LiteralPath $Executable -PathType Leaf)) { throw "PowerShell 7 was not found at '$Executable'. Install PowerShell $MinimumVersion or newer (MSI, machine-wide) first (docs\Installation.md)." }
+	$Info = [Diagnostics.FileVersionInfo]::GetVersionInfo($Executable)
+	$Found = [version]('{0}.{1}.{2}' -f $Info.FileMajorPart, $Info.FileMinorPart, $Info.FileBuildPart)
+	If($Found -lt $MinimumVersion) { throw "PowerShell $Found was found at '$Executable'; version $MinimumVersion or newer is required." }
+	# Everyone, Authenticated Users, Interactive and Users must not have rights to change files or permissions.
+	$UserSids = @('S-1-1-0', 'S-1-5-11', 'S-1-5-4', 'S-1-5-32-545')
+	$Dangerous = [Security.AccessControl.FileSystemRights]'WriteData, AppendData, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
+	ForEach($Item in @((Split-Path -Parent $Executable), $Executable))
+	{
+		ForEach($Rule in (Get-Acl -LiteralPath $Item).Access)
+		{
+			If($Rule.AccessControlType -ne 'Allow') { continue }
+			Try { $Sid = $Rule.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } Catch { continue }
+			If(($UserSids -contains $Sid) -and ($Rule.FileSystemRights -band $Dangerous)) { throw "'$Item' can be changed by normal users ($($Rule.IdentityReference)). PowerShell 7 must be installed machine-wide in a folder that only administrators can change." }
+		}
+	}
+	return $Found
+}
+
 function Test-SelfXPrebuiltBinaries {
 	# Checks the prebuilt programs of the package (F9). Throws with a reason when any check fails; the caller
 	# stops the installation then (fail closed, nothing is compiled instead).
@@ -136,6 +166,8 @@ Try
 	# installation stays untouched and still works.
 	Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
 	Write-Output 'Programs in Bin checked against the manifest.'
+	$PowerShell7Version = Test-SelfXPowerShell7
+	Write-Output "PowerShell $PowerShell7Version found (machine-wide)."
 
 	# Remove a previous service so its files can be replaced
 	$ExistingService = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
@@ -148,7 +180,7 @@ Try
 
 	# Close running status icons of all users; the new version is started again at the end.
 	$TrayPattern = [regex]::Escape($InstallFolder.TrimEnd('\')) + '\\SelfX_Tray\.ps1'
-	$TrayProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
+	$TrayProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name = 'powershell.exe' OR Name = 'pwsh.exe'" -ErrorAction SilentlyContinue |
 		Where-Object { ($_.ProcessId -ne $PID) -and ("$($_.CommandLine)" -match $TrayPattern) })
 	ForEach($Process in $TrayProcesses)
 	{

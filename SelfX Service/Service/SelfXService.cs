@@ -23,7 +23,7 @@ Description:
     below-normal priority. STATUS returns the cached result with its time, the interval and
     the background state without running anything, so the GUI and the tray icon show the
     status immediately.
-    Starts non-interactive Windows PowerShell with the service identity and captures
+    Starts non-interactive PowerShell 7 (pwsh.exe) with the service identity and captures
     bounded output in ProgramData\SelfX\Logs by default, rotating SelfXService.log.
     Once a day (also while the background checks are disabled) the log housekeeping deletes
     *.log and *.old files in that folder that are older than Log_Retention_Days of
@@ -903,12 +903,25 @@ namespace SelfX
             finally { WTSFreeMemory(info); }
         }
 
+        /// <summary>Fixed path of PowerShell 7 (machine-wide installation, writable only by administrators).</summary>
+        static string PowerShellPath
+        {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"PowerShell\7\pwsh.exe"); }
+        }
+
         /// <summary>
         /// Run PowerShell under the service identity and log bounded output and completion.
         /// </summary>
         string RunScript(string scriptPath, string scriptName, int timeoutSeconds, string user, bool health = false, string healthFilter = "", string callerSid = null, bool background = false, bool callerIsAdmin = false)
         {
-            string powershell = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");
+            // PowerShell 7 at its fixed machine-wide location (no PATH search, no user-writable folder). A missing
+            // installation fails the action with a clear text instead of running anything else.
+            string powershell = PowerShellPath;
+            if (!File.Exists(powershell))
+            {
+                Log("PowerShell 7 not found at '" + powershell + "'; '" + scriptName + "' was not started.");
+                return "ERROR PowerShell 7 is not installed";
+            }
             // Health runs also update the status cache; the path contains no quotes.
             ProcessStartInfo startInfo = new ProcessStartInfo(powershell,
                 "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"" + scriptPath + "\"" +
@@ -924,6 +937,11 @@ namespace SelfX
             }
             startInfo.WorkingDirectory = health ? installRoot : scriptsRoot;
             // Remove any inherited value so only a SID read from the client token reaches the script.
+            // Only machine-wide module folders: the module path of the service environment is not trusted for SYSTEM.
+            startInfo.EnvironmentVariables["PSModulePath"] = Path.Combine(Path.GetDirectoryName(powershell), "Modules") + ";" +
+                Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\Modules");
+            startInfo.EnvironmentVariables["POWERSHELL_TELEMETRY_OPTOUT"] = "1";
+            startInfo.EnvironmentVariables["POWERSHELL_UPDATECHECK"] = "Off";
             startInfo.EnvironmentVariables.Remove("SELFX_CALLER_SID");
             startInfo.EnvironmentVariables.Remove("SELFX_CALLER_ADMIN");
             if (!health && callerSid != null)

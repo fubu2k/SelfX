@@ -35,6 +35,20 @@ $sources = Join-Path $PSScriptRoot 'Sources'
 $appReader = (Get-Command Get-SelfXAppReports).ScriptBlock
 $rebootReader = (Get-Command Get-SelfXPendingRebootMarkers).ScriptBlock
 
+# Compiles the service source. Windows PowerShell 5.1 uses the .NET Framework compiler; PowerShell 7 (.NET 10) needs the
+# branch that is built for .NET (#define NET, as in the project file) and the runtime assemblies of PowerShell.
+function Add-SelfXServiceType {
+	param([string]$Path, [string[]]$FrameworkReferences)
+	$text = [IO.File]::ReadAllText($Path)
+	if ($PSVersionTable.PSEdition -ne 'Core') { Add-Type -TypeDefinition $text -ReferencedAssemblies $FrameworkReferences; return }
+	$names = 'System.IO.Pipes', 'System.IO.Pipes.AccessControl', 'System.Security.AccessControl', 'System.Security.Principal.Windows',
+		'System.ServiceProcess.ServiceController', 'System.Diagnostics.Process', 'System.Diagnostics.EventLog', 'System.ComponentModel.Primitives',
+		'System.Private.Xml', 'System.Xml.ReaderWriter', 'System.Collections', 'System.Linq', 'System.Memory', 'System.Runtime.InteropServices',
+		'System.Threading', 'System.Threading.Thread', 'System.Text.Encoding.Extensions', 'System.Console', 'System.Runtime.Extensions'
+	$references = @(foreach ($name in $names) { $file = Join-Path $PSHOME "$name.dll"; if (Test-Path -LiteralPath $file) { $file } })
+	Add-Type -TypeDefinition ("#define NET`n" + $text) -ReferencedAssemblies $references
+}
+
 $script:assertions = 0
 function Assert-Equal($Actual, $Expected, $Message) {
     $script:assertions++
@@ -572,8 +586,7 @@ try {
     & {
         # Compile and call only the read-only whitelist lookup, never ProcessRequest/RunScript.
         $env:SystemRoot = $originalRoot
-        Add-Type -TypeDefinition ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Service\SelfXService.cs'))) `
-            -ReferencedAssemblies @('System.ServiceProcess.dll','System.Xml.dll','System.Core.dll')
+        Add-SelfXServiceType -Path (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -FrameworkReferences @('System.ServiceProcess.dll','System.Xml.dll','System.Core.dll')
         $type = [SelfX.SelfXService]
         $instance = New-Object SelfX.SelfXService('SelfX.Test.NotStarted', $temp)
         try {
