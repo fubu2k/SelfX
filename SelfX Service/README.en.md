@@ -77,6 +77,7 @@ SelfX Service is installed machine-wide and works without any network connection
 | `Install.ps1` | Machine-wide installer. Run it as administrator. |
 | `Uninstall.ps1` | Closes open SelfX windows and status icons, then removes the service, files, shortcuts and Apps & Features entry. |
 | `Detection.ps1` | Detection script for Intune or SCCM. Update `$ExpectedVersion` for each release. |
+| `Test-CollectorOutput.ps1` | Takes the safe creation of the report file out of `Collect-DeviceLogs.ps1` and tests it in a temporary folder (file created in advance, link, hard link, foreign owner, rights of the default report). Nothing is collected (2.8.0). |
 | `Test-InstallBinaries.ps1` | Takes the check of the prebuilt programs out of `Install.ps1` and tests it against a fake package (missing `Bin` folder, missing or changed files, changed sources, broken or old manifest). Nothing is built or installed (2.6.11, manifest format 2 since 2.7.0). |
 | `Test-LanguageFiles.ps1` | Checks the language files against `en.xml` and the catalogue. Run it before you build the package. |
 | `Test-HealthStatus.ps1` | Isolated health tests; system data and extension execution are mocked. |

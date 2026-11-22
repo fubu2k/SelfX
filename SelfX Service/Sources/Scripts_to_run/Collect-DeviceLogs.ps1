@@ -89,6 +89,9 @@
                                        session, profile and user hive; no serial number or console user; join state without tenant
                                        and device IDs; names, SIDs and profile folders of other local users are replaced by
                                        <other user>. Without -UserView nothing changes.
+    1.3.1    fubu2k                    The report file is created safely: a file, link or hard link that was created in advance
+                                       in C:\Windows\Temp (not owned by SYSTEM, administrators or the running account) is
+                                       removed and replaced; the default reports are readable only by SYSTEM and administrators.
 #>
 
 [CmdletBinding()]
@@ -118,7 +121,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.3.0'
+$ScriptVersion = '1.3.1'
 if ($UserView) {
     try { $null = [Security.Principal.SecurityIdentifier]::new("$CallerSid") } catch { Write-Error 'The user view needs a valid -CallerSid.'; exit 2 }
 }
@@ -130,6 +133,47 @@ $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $isAdmin = ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $isSystem = ($identity.User.Value -eq 'S-1-5-18')
 
+# The report is created safely (finding N2): the default places are in C:\Windows\Temp, where a user can create a file with the
+# same name in advance (or a link). Such a file (link, hard link, owner that is not SYSTEM, administrators, TrustedInstaller or
+# the account that runs the script) is removed (the name only, never the target) and the report is created new; an existing
+# file of a trusted owner is overwritten as before. The default reports are readable only by SYSTEM and administrators.
+function Open-SelfXReportWriter {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string[]]$TrustedOwnerSids,
+        [switch]$Protect
+    )
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if ($item) {
+        if ($item.PSIsContainer) { throw "The report path '$Path' is a folder." }
+        $remove = $false
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { $remove = $true }
+        elseif ("$($item.LinkType)" -eq 'HardLink') { $remove = $true }
+        else {
+            try { $owner = (Get-Acl -LiteralPath $Path -ErrorAction Stop).GetOwner([Security.Principal.SecurityIdentifier]).Value } catch { $owner = '' }
+            if ($TrustedOwnerSids -notcontains $owner) { $remove = $true }
+        }
+        if ($remove) { [IO.File]::Delete($Path) }
+    }
+    # CreateNew fails when someone creates the file between the check and now; the report is then not written (fail closed).
+    $mode = if (Test-Path -LiteralPath $Path) { [IO.FileMode]::Truncate } else { [IO.FileMode]::CreateNew }
+    $stream = New-Object System.IO.FileStream($Path, $mode, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+    try {
+        if ($Protect) {
+            $security = New-Object System.Security.AccessControl.FileSecurity
+            $security.SetAccessRuleProtection($true, $false)
+            foreach ($sid in 'S-1-5-18', 'S-1-5-32-544') {
+                $rule = New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier($sid)), 'FullControl', 'Allow')
+                $security.AddAccessRule($rule)
+            }
+            Set-Acl -LiteralPath $Path -AclObject $security -ErrorAction Stop
+        }
+        return (New-Object System.IO.StreamWriter($stream, (New-Object System.Text.UTF8Encoding($true))))
+    }
+    catch { $stream.Dispose(); throw }
+}
+
+$defaultOutput = -not $OutputPath
 if (-not $OutputPath -and $isSystem) {
     # Run by Intune (Win32 app or remediation): fixed name that "Collect diagnostics" uploads (%windir%\temp\%computername%*.log).
     $OutputPath = Join-Path $env:SystemRoot ('Temp\{0}-DeviceLogs.log' -f $env:COMPUTERNAME)
@@ -141,7 +185,8 @@ if (Test-Path -LiteralPath $OutputPath -PathType Container) {
 else {
     $outFile = $OutputPath
 }
-$writer = New-Object System.IO.StreamWriter($outFile, $false, (New-Object System.Text.UTF8Encoding($true)))
+$trustedOwners = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464', $identity.User.Value)
+$writer = Open-SelfXReportWriter -Path $outFile -TrustedOwnerSids $trustedOwners -Protect:$defaultOutput
 $script:Problems = New-Object System.Collections.Generic.List[string]
 
 # User view: names, SIDs and profile folders of the other local users never reach the report.

@@ -82,6 +82,7 @@ Netzwerkverbindung. Aktuelle Version: **2.8.0** (siehe das
 | `Install.ps1` | Installer für das ganze Gerät. Als Administrator ausführen. |
 | `Uninstall.ps1` | Schließt offene SelfX-Fenster und Statussymbole und entfernt dann den Dienst, die Dateien, die Verknüpfungen und den Eintrag unter Apps & Features. |
 | `Detection.ps1` | Erkennungsskript für Intune oder SCCM. `$ExpectedVersion` bei jedem Release anpassen. |
+| `Test-CollectorOutput.ps1` | Löst die sichere Erstellung der Berichtsdatei aus `Collect-DeviceLogs.ps1` heraus und testet sie in einem temporären Ordner (vorab angelegte Datei, Verknüpfung, Hardlink, fremder Besitzer, Rechte des Standardberichts). Es wird nichts gesammelt (2.8.0). |
 | `Test-InstallBinaries.ps1` | Löst die Prüfung der vorgebauten Programme aus `Install.ps1` heraus und testet sie gegen ein gefälschtes Paket (fehlender `Bin`-Ordner, fehlende oder geänderte Dateien, geänderte Quellen, defektes oder altes Manifest). Es wird nichts gebaut oder installiert (2.6.11, ab 2.7.0 Manifestformat 2). |
 | `Test-LanguageFiles.ps1` | Prüft die Sprachdateien gegen `en.xml` und den Katalog. Vor dem Bau des Pakets ausführen. |
 | `Test-HealthStatus.ps1` | Isolierte Tests der Gesundheitsprüfung; Systemdaten und die Ausführung von Erweiterungen sind durch Mocks ersetzt. |
