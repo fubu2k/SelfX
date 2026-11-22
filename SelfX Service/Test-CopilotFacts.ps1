@@ -1,0 +1,122 @@
+﻿<#
+.SYNOPSIS
+    Tests the collection of the facts for Copilot Chat (Sources\CopilotFacts.ps1), the configuration keys and the
+    hand-over in the window (static checks of Self_X.ps1).
+
+.DESCRIPTION
+    Reads only local values (registry, drives, files of the package) and changes nothing. All names, addresses and
+    identifiers in this test are invented examples.
+
+.NOTES
+    Name    : Test-CopilotFacts.ps1
+    Package : SelfX Service
+    Context : Build machine / CI (any user)
+    Version : 2.8.10
+
+    History:
+    Version  Date        Author               Change
+    -------  ----------  -------------------  ------------------------------------------------------------
+    2.8.10   2026-11-22  fubu2k               Initial version
+#>
+$ErrorActionPreference = 'Stop'
+$script:checks = 0
+$script:errors = New-Object System.Collections.Generic.List[string]
+function Assert-Equal($Actual, $Expected, $Message) {
+	$script:checks++
+	if ($env:SELFX_TEST_TRACE) { [Console]::Out.WriteLine("ok: $Message") }
+	if ($Actual -ne $Expected) { $script:errors.Add("$Message : expected '$Expected', got '$Actual'.") }
+}
+$sources = Join-Path $PSScriptRoot 'Sources'
+. (Join-Path $sources 'CopilotPrompt.ps1')
+. (Join-Path $sources 'CopilotFacts.ps1')
+
+# --- Status rows from the health items of the window ---------------------------------------------------------
+$items = @(
+	[pscustomobject]@{ Category = 'Health'; Property = 'Defender'; Value = 'OK - Signatures current'; Status = 'OK'; HealthId = 'Defender'; HealthName = ''; Detail = 'Signatures current' },
+	[pscustomobject]@{ Category = 'Health'; Property = 'Disk'; Value = 'Error - 96 % used'; Status = 'Error'; HealthId = 'Disk'; HealthName = 'C:'; Detail = '96 % used' },
+	[pscustomobject]@{ Category = 'Health'; Property = 'Sync'; Value = 'Error - contact to mail.fabrikam.example failed'; Status = 'error'; HealthId = 'IntuneSync'; HealthName = ''; Detail = 'contact to mail.fabrikam.example failed' },
+	[pscustomobject]@{ Category = 'Health'; Property = 'Odd'; Value = 'x'; Status = 'Strange'; HealthId = 'Odd'; HealthName = ''; Detail = 'x' },
+	[pscustomobject]@{ Category = 'Health'; Property = 'Bad id'; Value = 'x'; Status = 'OK'; HealthId = 'bad id; rm'; HealthName = ''; Detail = 'x' },
+	[pscustomobject]@{ Category = 'Device'; Property = 'Computer name'; Value = 'PC-ANNA-01'; Status = '' },
+	[pscustomobject]@{ Category = 'User'; Property = 'User name'; Value = 'anna.beispiel'; Status = ''; HealthId = ''; HealthName = ''; Detail = '' }
+)
+$rows = @(ConvertTo-SelfXCopilotStatusRows -HealthItems $items)
+Assert-Equal $rows.Count 4 'status rows: items without a valid check id are skipped (information items, bad id, empty id)'
+Assert-Equal $rows[0].Name 'Defender' 'status rows: name is the technical id'
+Assert-Equal $rows[1].Name 'Disk (C:)' 'status rows: name with the check name'
+Assert-Equal ($rows[2].State -ceq 'Error') $true 'status rows: state is normalised (error -> Error)'
+Assert-Equal $rows[3].State 'Unknown' 'status rows: an unknown state becomes Unknown'
+Assert-Equal @(ConvertTo-SelfXCopilotStatusRows -HealthItems @()).Count 0 'status rows: empty input'
+Assert-Equal @(ConvertTo-SelfXCopilotStatusRows -HealthItems @($null)).Count 0 'status rows: null item'
+$many = @(1..60 | ForEach-Object { [pscustomobject]@{ Status = 'OK'; HealthId = "Check$_"; HealthName = ''; Detail = '' } })
+Assert-Equal @(ConvertTo-SelfXCopilotStatusRows -HealthItems $many).Count 40 'status rows: at most 40 rows'
+
+# --- Facts ---------------------------------------------------------------------------------------------------
+$facts = Get-SelfXCopilotFacts -HealthItems $items -SelfXVersion '2.8.10' -Language 'de'
+$allowed = @('WindowsEdition', 'WindowsVersion', 'WindowsBuild', 'SelfXVersion', 'Language', 'UptimeDays', 'Disks', 'Status')
+$unknown = @($facts.Keys | Where-Object { $_ -notin $allowed })
+Assert-Equal $unknown.Count 0 'facts: only keys of the positive list'
+Assert-Equal $facts.SelfXVersion '2.8.10' 'facts: SelfX version'
+Assert-Equal $facts.Language 'de' 'facts: language'
+Assert-Equal @($facts.Status).Count 4 'facts: status rows'
+foreach ($disk in @($facts.Disks)) {
+	Assert-Equal ("$($disk.Drive)" -match '^[A-Z]:$') $true "facts: drive '$($disk.Drive)' is a drive letter only"
+	Assert-Equal (($disk.UsedPercent -ge 0) -and ($disk.UsedPercent -le 100)) $true 'facts: percent used between 0 and 100'
+}
+if ($facts.ContainsKey('UptimeDays')) { Assert-Equal ($facts.UptimeDays -ge 0) $true 'facts: uptime is not negative' }
+
+# --- Facts to prompt (end to end) -----------------------------------------------------------------------------
+$context = @{ ComputerName = 'PC-ANNA-01'; UserName = 'anna.beispiel'; DomainName = @('CONTOSO', 'contoso.example') }
+$prompt = New-SelfXCopilotPrompt -Facts $facts -Description 'Teams hakt, mein Laptop PC-ANNA-01 ist langsam. anna.beispiel@contoso.example' -Context $context -Audience User -Language 'de'
+Assert-Equal ($prompt -match 'fabrikam') $false 'prompt: host name of a status detail is replaced'
+Assert-Equal ($prompt -match 'anna|PC-ANNA') $false 'prompt: user and device names are replaced'
+Assert-Equal ($prompt -like '*- Defender: OK*') $true 'prompt: status row is present'
+Assert-Equal ($prompt -like '*- IntuneSync: Error*') $true 'prompt: error status row is present'
+Assert-Equal ($prompt.Length -le 6000) $true 'prompt: length limit'
+
+# --- Configuration -------------------------------------------------------------------------------------------
+[xml]$config = [IO.File]::ReadAllText((Join-Path $sources 'Tool_Config.xml'))
+Assert-Equal "$($config.GUI_Config.Copilot_Enabled)" 'False' 'config: Copilot_Enabled is off by default'
+Assert-Equal "$($config.GUI_Config.Copilot_Url)" 'https://m365.cloud.microsoft/chat' 'config: default address'
+Assert-Equal (Test-SelfXCopilotUrl "$($config.GUI_Config.Copilot_Url)") $true 'config: default address passes the address check'
+Assert-Equal "$($config.GUI_Config.Copilot_Audience)" 'User' 'config: audience User by default'
+Assert-Equal "$($config.GUI_Config.Copilot_Include_AppNames)" 'True' 'config: app names are included by default'
+
+# --- Texts in all language files -----------------------------------------------------------------------------
+$keys = @('Copilot_Row_Label', 'Copilot_Row_Text', 'Copilot_Button', 'Copilot_Window_Title', 'Copilot_Intro_Text', 'Copilot_Description_Label', 'Copilot_Preview_Label', 'Copilot_Preview_Button', 'Copilot_Target_Text', 'Copilot_Open_Button', 'Copilot_Opened_Text', 'Copilot_Error_Text')
+foreach ($file in Get-ChildItem -LiteralPath (Join-Path $sources 'Languages') -Filter '*.xml') {
+	[xml]$lang = [IO.File]::ReadAllText($file.FullName)
+	foreach ($key in $keys) {
+		$node = $lang.SelectSingleNode("//UI/$key")
+		Assert-Equal (($null -ne $node) -and (-not [string]::IsNullOrWhiteSpace($node.InnerText))) $true "language $($file.BaseName): text $key exists"
+		if ($key -in @('Copilot_Target_Text', 'Copilot_Error_Text') -and $node) { Assert-Equal ($node.InnerText -match '\{0\}') $true "language $($file.BaseName): $key keeps the placeholder {0}" }
+	}
+}
+
+# --- Static checks: nothing is sent, only the configured address is opened -------------------------------------
+$factsCode = [IO.File]::ReadAllText((Join-Path $sources 'CopilotFacts.ps1'))
+foreach ($pattern in @('Start-Process', 'Invoke-WebRequest', 'Invoke-RestMethod', 'Invoke-Expression', 'Set-Content', 'Out-File', 'Add-Content', 'Set-Clipboard', 'New-Object System.Net')) {
+	Assert-Equal ($factsCode -match [regex]::Escape($pattern)) $false "CopilotFacts.ps1 does not use $pattern"
+}
+$ui = [IO.File]::ReadAllText((Join-Path $sources 'Self_X.ps1'))
+$start = $ui.IndexOf('Function Show-SelfXCopilotDialog')
+$end = $ui.IndexOf('Function Show-SelfXHelpDialog')
+Assert-Equal (($start -ge 0) -and ($end -gt $start)) $true 'window: Copilot dialog found'
+if (($start -ge 0) -and ($end -gt $start)) {
+	$dialog = $ui.Substring($start, $end - $start)
+	$starts = [regex]::Matches($dialog, 'Start-Process\s+(\S+)')
+	Assert-Equal $starts.Count 1 'window: the Copilot dialog starts exactly one process'
+	Assert-Equal $starts[0].Groups[1].Value '$Copilot_Url' 'window: it opens only the address from the configuration'
+	Assert-Equal ($dialog -match 'Test-SelfXCopilotUrl \$Copilot_Url\)') $true 'window: the address is checked again before it is opened'
+	foreach ($pattern in @('Invoke-WebRequest', 'Invoke-RestMethod', 'Invoke-Expression', 'Send-MailMessage', 'Write-SelfXLog "[^"]*\$Text')) {
+		Assert-Equal ($dialog -match $pattern) $false "window: the Copilot dialog does not use $pattern (no text in the log)"
+	}
+}
+Assert-Equal ($ui -match '\$Copilot_Available = \(\(Get-SelfXText "Copilot_Enabled" "False"\) -eq ''True''\) -and \(Test-SelfXCopilotUrl \$Copilot_Url\)') $true 'window: the button needs Copilot_Enabled and a valid address'
+
+if ($script:errors.Count) {
+	foreach ($e in $script:errors) { [Console]::Out.WriteLine("FAIL: $e") }
+	[Console]::Out.WriteLine("Test-CopilotFacts: $($script:errors.Count) of $($script:checks) checks failed.")
+	exit 1
+}
+[Console]::Out.WriteLine("Test-CopilotFacts: all $($script:checks) checks passed.")

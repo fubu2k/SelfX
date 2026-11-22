@@ -186,6 +186,18 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Ticket_Manual_Text>메일 프로그램이 열렸습니다. 파일 {0}(파일 탐색기에서 선택됨)을 메일에 첨부하고 확인한 후 보내세요.</Ticket_Manual_Text>
 		<Ticket_Error_Text>메일을 준비하지 못했습니다: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>메일 받는 사람: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Copilot Chat에 문의</Copilot_Row_Label>
+		<Copilot_Row_Text>이 PC에 대한 짧은 텍스트를 Microsoft 365 Copilot Chat용으로 준비하여 문제를 쉬운 말로 설명할 수 있게 합니다.</Copilot_Row_Text>
+		<Copilot_Button>텍스트 준비</Copilot_Button>
+		<Copilot_Window_Title>Copilot Chat에 문의</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX가 Copilot Chat용 짧은 텍스트를 준비합니다. 텍스트에는 사용자의 설명과 기본 장치 정보가 포함됩니다. 이름, 이메일 주소, 네트워크 주소는 자리 표시자로 바뀝니다.</Copilot_Intro_Text>
+		<Copilot_Description_Label>무엇이 작동하지 않나요? (선택 사항)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Copilot Chat용 텍스트 (수정할 수 있음)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>텍스트 만들기</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX가 텍스트를 복사하고 {0}을(를) 엽니다. 텍스트를 그곳에 붙여넣고 직접 보내세요. SelfX는 아무것도 보내지 않습니다.</Copilot_Target_Text>
+		<Copilot_Open_Button>복사하고 Copilot 열기</Copilot_Open_Button>
+		<Copilot_Opened_Text>텍스트가 클립보드에 있고 Copilot Chat이 열렸습니다. 그곳에 붙여넣고(Ctrl+V) 보내세요.</Copilot_Opened_Text>
+		<Copilot_Error_Text>텍스트를 준비할 수 없습니다: {0}</Copilot_Error_Text>
 		<Version_Text>버전 {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 모두 정상</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: 문제 {0}개, 경고 {1}개</Tray_Tooltip_Issues>

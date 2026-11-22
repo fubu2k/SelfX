@@ -186,6 +186,18 @@ Description du problème :</Report_Mail_Body>
 		<Ticket_Manual_Text>Votre programme de messagerie a été ouvert. Joignez le fichier {0} (sélectionné dans l’Explorateur) à l’e-mail, vérifiez-le et envoyez-le.</Ticket_Manual_Text>
 		<Ticket_Error_Text>L’e-mail n’a pas pu être préparé : {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>L’e-mail est envoyé à : {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Demander à Copilot Chat</Copilot_Row_Label>
+		<Copilot_Row_Text>Prépare un court texte sur ce PC pour Microsoft 365 Copilot Chat, afin qu’il puisse expliquer le problème en langage simple.</Copilot_Row_Text>
+		<Copilot_Button>Préparer le texte</Copilot_Button>
+		<Copilot_Window_Title>Demander à Copilot Chat</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX prépare un court texte pour Copilot Chat. Il contient votre description et des informations de base sur l’appareil. Les noms, adresses e-mail et adresses réseau sont remplacés par des espaces réservés.</Copilot_Intro_Text>
+		<Copilot_Description_Label>Qu’est-ce qui ne fonctionne pas ? (facultatif)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Texte pour Copilot Chat (vous pouvez le modifier)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>Créer le texte</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX copie le texte et ouvre {0}. Vous collez le texte à cet endroit et l’envoyez vous-même. SelfX n’envoie rien.</Copilot_Target_Text>
+		<Copilot_Open_Button>Copier et ouvrir Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>Le texte est dans le presse-papiers et Copilot Chat est ouvert. Collez-le (Ctrl+V) et envoyez-le.</Copilot_Opened_Text>
+		<Copilot_Error_Text>Le texte n’a pas pu être préparé : {0}</Copilot_Error_Text>
 		<Version_Text>Version {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX : tout est en ordre</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX : {0} problème(s), {1} avertissement(s)</Tray_Tooltip_Issues>

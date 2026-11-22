@@ -186,6 +186,18 @@
 		<Ticket_Manual_Text>برنامه ایمیل شما باز شد. فایل {0} (انتخاب‌شده در File Explorer) را به ایمیل پیوست کنید، بررسی کنید و ارسال کنید.</Ticket_Manual_Text>
 		<Ticket_Error_Text>آماده‌سازی ایمیل ممکن نشد: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>ایمیل به این نشانی ارسال می‌شود: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>از Copilot Chat بپرسید</Copilot_Row_Label>
+		<Copilot_Row_Text>یک متن کوتاه درباره این رایانه برای Microsoft 365 Copilot Chat آماده می‌کند تا بتواند مشکل را به زبان ساده توضیح دهد.</Copilot_Row_Text>
+		<Copilot_Button>آماده‌سازی متن</Copilot_Button>
+		<Copilot_Window_Title>از Copilot Chat بپرسید</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX یک متن کوتاه برای Copilot Chat آماده می‌کند. این متن شامل توضیح شما و اطلاعات پایهٔ دستگاه است. نام‌ها، نشانی‌های ایمیل و نشانی‌های شبکه با جایگزین‌ها عوض می‌شوند.</Copilot_Intro_Text>
+		<Copilot_Description_Label>چه چیزی کار نمی‌کند؟ (اختیاری)</Copilot_Description_Label>
+		<Copilot_Preview_Label>متن برای Copilot Chat (می‌توانید آن را تغییر دهید)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>ایجاد متن</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX متن را کپی می‌کند و {0} را باز می‌کند. شما متن را آنجا جای‌گذاری می‌کنید و خودتان ارسال می‌کنید. SelfX چیزی ارسال نمی‌کند.</Copilot_Target_Text>
+		<Copilot_Open_Button>کپی و باز کردن Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>متن در کلیپ‌بورد است و Copilot Chat باز شد. آن را آنجا جای‌گذاری کنید (Ctrl+V) و ارسال کنید.</Copilot_Opened_Text>
+		<Copilot_Error_Text>آماده‌سازی متن ممکن نشد: {0}</Copilot_Error_Text>
 		<Version_Text>نسخه {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: همه چیز درست است</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} مشکل، {1} هشدار</Tray_Tooltip_Issues>

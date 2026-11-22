@@ -186,6 +186,18 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Ticket_Manual_Text>E-posta programınız açıldı. {0} dosyasını (Dosya Gezgini’nde seçili) e-postaya ekleyin, kontrol edin ve gönderin.</Ticket_Manual_Text>
 		<Ticket_Error_Text>E-posta hazırlanamadı: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>E-posta şu adrese gider: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Copilot Chat’e sor</Copilot_Row_Label>
+		<Copilot_Row_Text>Bu bilgisayar hakkında Microsoft 365 Copilot Chat için kısa bir metin hazırlar; böylece sorunu basit bir dille açıklayabilir.</Copilot_Row_Text>
+		<Copilot_Button>Metni hazırla</Copilot_Button>
+		<Copilot_Window_Title>Copilot Chat’e sor</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX, Copilot Chat için kısa bir metin hazırlar. Metin açıklamanızı ve temel cihaz bilgilerini içerir. Adlar, e-posta adresleri ve ağ adresleri yer tutucularla değiştirilir.</Copilot_Intro_Text>
+		<Copilot_Description_Label>Ne çalışmıyor? (isteğe bağlı)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Copilot Chat için metin (değiştirebilirsiniz)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>Metin oluştur</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX metni kopyalar ve {0} adresini açar. Metni orada siz yapıştırır ve kendiniz gönderirsiniz. SelfX hiçbir şey göndermez.</Copilot_Target_Text>
+		<Copilot_Open_Button>Kopyala ve Copilot’u aç</Copilot_Open_Button>
+		<Copilot_Opened_Text>Metin panoda ve Copilot Chat açıldı. Metni oraya yapıştırın (Ctrl+V) ve gönderin.</Copilot_Opened_Text>
+		<Copilot_Error_Text>Metin hazırlanamadı: {0}</Copilot_Error_Text>
 		<Version_Text>Sürüm {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: her şey yolunda</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} sorun, {1} uyarı</Tray_Tooltip_Issues>

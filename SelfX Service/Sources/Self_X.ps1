@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.8
+    Version : 2.8.10
 
     History:
     Version  Date        Author               Change
@@ -81,6 +81,7 @@
     2.6.7    2026-11-16  Wolfgang Baeck       Default appearance Automatic (Tool_Theme missing or unknown value)
     2.6.9    2026-11-19  Wolfgang Baeck       Fix, Fix all and Check all are no longer refused while the cached status is read (every minute)
     2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
+    2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, off by default): preview of the prompt, copy, open the configured https address
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -216,6 +217,9 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 . "$Current_Folder\TicketMail.ps1"
 . "$Current_Folder\TicketSend.ps1"
 . "$Current_Folder\SystemInfo.ps1"
+# Optional hand-over to Copilot Chat (functions only, nothing runs when they are loaded)
+. "$Current_Folder\CopilotPrompt.ps1"
+. "$Current_Folder\CopilotFacts.ps1"
 # Logging of the window to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1)
 . "$Current_Folder\SelfXLog.ps1"
 Initialize-SelfXLog -Component 'SelfX'
@@ -276,6 +280,12 @@ If($Ticket_Available)
 			}
 		Catch { Write-SelfXLog "Ticket_Config.xml could not be read: $($_.Exception.Message)" 'Warning' }
 	}
+# Hand-over to Copilot Chat (off by default): only an https address from the configuration is opened, the user pastes the text
+$Copilot_Url = (Get-SelfXText "Copilot_Url" "https://m365.cloud.microsoft/chat").Trim()
+$Copilot_Available = ((Get-SelfXText "Copilot_Enabled" "False") -eq 'True') -and (Test-SelfXCopilotUrl $Copilot_Url)
+If(((Get-SelfXText "Copilot_Enabled" "False") -eq 'True') -and -not $Copilot_Available) { Write-SelfXLog 'Copilot_Url is not a valid https address: the Copilot Chat button is not shown.' 'Warning' }
+$Copilot_Audience = If((Get-SelfXText "Copilot_Audience" "User") -eq 'Admin') { 'Admin' } Else { 'User' }
+$Copilot_AppNames = (Get-SelfXText "Copilot_Include_AppNames" "True") -eq 'True'
 $Run_Solution_Text = Get-SelfXString 'Warning_Click_Run_Solution_Text'
 $Run_Explanation_Text = Get-SelfXString 'Warning_Click_Run_Explanation_Text'
 $Service_Running_Text = Get-SelfXString 'Service_Running_Text'
@@ -2044,6 +2054,75 @@ Function Show-SelfXTicketDialog
 		[void]$Dialog.ShowDialog()
 	}
 
+# Copilot Chat hand-over: the user sees the prompt (descriptions and device facts, names and addresses replaced by placeholders),
+# can change it, copies it and opens the configured address. Nothing is sent by SelfX; the user pastes and sends it.
+Function Show-SelfXCopilotDialog
+	{
+		$Dialog = New-SelfXDialog -Title (Get-SelfXString 'Copilot_Window_Title') -Width 640 -ContentXaml @'
+      <TextBlock Name="CopilotIntro" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+      <TextBlock Name="CopilotLabel" FontWeight="SemiBold" Margin="0,0,0,4"/>
+      <TextBox Name="CopilotText" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="80" MaxLength="1000" Padding="6"/>
+      <Button Name="CopilotPreviewButton" HorizontalAlignment="Left" MinWidth="130" Margin="0,8,0,0"/>
+      <TextBlock Name="CopilotPreviewLabel" FontWeight="SemiBold" Margin="0,12,0,4"/>
+      <TextBox Name="CopilotPreview" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="190" MaxLength="8000" Padding="6" FontFamily="Consolas"/>
+      <TextBlock Name="CopilotTarget" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+      <TextBlock Name="CopilotResult" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <Button Name="CopilotClose" MinWidth="100" Margin="0,0,8,0" IsCancel="True"/>
+        <Button Name="CopilotOpen" Style="{StaticResource PrimaryButton}" MinWidth="170" IsDefault="True" IsEnabled="False"/>
+      </StackPanel>
+'@
+		$Dialog.FindName('CopilotIntro').Text = Get-SelfXString 'Copilot_Intro_Text'
+		$Dialog.FindName('CopilotLabel').Text = Get-SelfXString 'Copilot_Description_Label'
+		$Dialog.FindName('CopilotPreviewLabel').Text = Get-SelfXString 'Copilot_Preview_Label'
+		$Dialog.FindName('CopilotTarget').Text = Get-SelfXString 'Copilot_Target_Text' (Get-SelfXCopilotUrlHost $Copilot_Url)
+		$Close = $Dialog.FindName('CopilotClose')
+		$Close.Content = Get-SelfXString 'Close_Button_Text'
+		$Close.Add_Click({ [System.Windows.Window]::GetWindow($this).Close() })
+		$Preview_Button = $Dialog.FindName('CopilotPreviewButton')
+		$Preview_Button.Content = Get-SelfXString 'Copilot_Preview_Button'
+		$Preview_Button.Add_Click({
+			$Dlg = [System.Windows.Window]::GetWindow($this)
+			$Result = $Dlg.FindName('CopilotResult')
+			Try
+				{
+					$Facts = Get-SelfXCopilotFacts -HealthItems @($Global:Health_Items) -SelfXVersion "$Tool_Version" -Language "$($SelfX_UI_Language.Culture)"
+					$Context = @{ ComputerName = $env:COMPUTERNAME; UserName = $env:USERNAME; DomainName = @($env:USERDOMAIN, $env:USERDNSDOMAIN) }
+					$Prompt = New-SelfXCopilotPrompt -Facts $Facts -Description $Dlg.FindName('CopilotText').Text -Context $Context -Audience $Copilot_Audience -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames
+					$Dlg.FindName('CopilotPreview').Text = $Prompt
+					$Dlg.FindName('CopilotOpen').IsEnabled = $True
+					$Result.Visibility = 'Collapsed'
+					# The log names the size only, never the text of the user or the device facts.
+					Write-SelfXLog "Copilot prompt prepared: audience $Copilot_Audience, $($Prompt.Length) characters, status rows: $(@($Facts.Status).Count)"
+				}
+			Catch
+				{
+					$Result.Text = Get-SelfXString 'Copilot_Error_Text' $_.Exception.Message
+					$Result.Visibility = 'Visible'
+				}
+		})
+		$Open = $Dialog.FindName('CopilotOpen')
+		$Open.Content = Get-SelfXString 'Copilot_Open_Button'
+		$Open.Add_Click({
+			$Dlg = [System.Windows.Window]::GetWindow($this)
+			$Result = $Dlg.FindName('CopilotResult')
+			$Text = $Dlg.FindName('CopilotPreview').Text
+			If([string]::IsNullOrWhiteSpace($Text)) { return }
+			Try
+				{
+					[System.Windows.Clipboard]::SetText($Text)
+					# Only the address from the configuration (checked when SelfX started) is opened.
+					If(-not (Test-SelfXCopilotUrl $Copilot_Url)) { Throw 'Copilot_Url' }
+					Start-Process $Copilot_Url
+					Write-SelfXLog "Copilot Chat opened (host $(Get-SelfXCopilotUrlHost $Copilot_Url)), prompt copied to the clipboard"
+					$Result.Text = Get-SelfXString 'Copilot_Opened_Text'
+				}
+			Catch { $Result.Text = Get-SelfXString 'Copilot_Error_Text' $_.Exception.Message }
+			$Result.Visibility = 'Visible'
+		})
+		[void]$Dialog.ShowDialog()
+	}
+
 Function Show-SelfXHelpDialog
 	{
 		$Dialog = New-SelfXDialog -Title (Get-SelfXString 'Support_Window_Title') -Width 520 -ContentXaml @'
@@ -2059,6 +2138,7 @@ Function Show-SelfXHelpDialog
 
 		$Entries = New-Object System.Collections.Generic.List[object]
 		If($Ticket_Available) { $Entries.Add(@(0xE7C3, (Get-SelfXString 'Ticket_Row_Label'), (Get-SelfXString 'Ticket_Row_Text'), (Get-SelfXString 'Ticket_Button'), 'selfx:ticket')) }
+		If($Copilot_Available) { $Entries.Add(@(0xE8F2, (Get-SelfXString 'Copilot_Row_Label'), (Get-SelfXString 'Copilot_Row_Text'), (Get-SelfXString 'Copilot_Button'), 'selfx:copilot')) }
 		$Hours = Get-SelfXText "Support_Hours" ""
 		If($Hours) { $Entries.Add(@(0xE823, (Get-SelfXString 'Support_Hours_Label'), $Hours, '', '')) }
 		If($Support_Phone_number) { $Entries.Add(@(0xE717, (Get-SelfXString 'Support_Phone_Label'), $Support_Phone_number, '', '')) }
@@ -2106,7 +2186,7 @@ Function Show-SelfXHelpDialog
 						$Go.Content = $Entry[3]
 						$Go.Tag = $Entry[4]
 						$Go.Visibility = 'Visible'
-						$Go.Add_Click({ If(([string]$this.Tag) -eq 'selfx:ticket') { Show-SelfXTicketDialog } Else { Open-SelfXUri ([string]$this.Tag) } })
+						$Go.Add_Click({ Switch(([string]$this.Tag)) { 'selfx:ticket' { Show-SelfXTicketDialog } 'selfx:copilot' { Show-SelfXCopilotDialog } Default { Open-SelfXUri ([string]$this.Tag) } } })
 					}
 				[void]$Rows.Children.Add($Row)
 			}

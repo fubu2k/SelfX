@@ -109,6 +109,7 @@ Sprachdateien (siehe [Sprachen](#sprachen)).
 | `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | Hilfe-Schaltfläche (?) und ihre Kontakte (siehe [Benutzeroberfläche](#benutzeroberfläche)). `Support_Mail` ist auch der Empfänger der E-Mail mit den Geräteprotokollen. |
 | `DeviceLogs_Days`, `DeviceLogs_Compress` | Geräteprotokolle: Tage des Ereignisprotokolls (1 bis 60, Standard 7) und `.zip` (Standard) oder `.txt`. |
 | `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket per E-Mail (siehe [Ticket](#ticket-per-e-mail)). |
+| `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Übergabe an Copilot Chat (siehe [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | Aufbewahrung der Protokolle (siehe [Protokolle](#protokolle-und-aufbewahrung)). |
 | `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | Statussymbol (siehe [Statussymbol](#statussymbol)). |
 | `Brand_*`, `Tool_Theme`, `Tool_Color` | Aussehen (siehe [Branding](#branding)). |
@@ -453,6 +454,57 @@ Befehle ausführt (zum Beispiel GitLab-Quick-Actions). Testen Sie vor dem Einsch
 ob das in Ihrer Version greift. Die Geräteinformationen enthalten Adressen (zum
 Beispiel Proxy) und Gerätedaten und sind für die IT bestimmt. Das Protokoll nennt nur
 das Ergebnis (`Outlook`, `Manual`, `Error`) und die Zeilenzahl, nie den Text.
+
+### Copilot Chat
+
+Optional und standardmäßig aus (`Copilot_Enabled` = `False`). Ist die Funktion an und
+`Copilot_Url` eine gültige Adresse, zeigt der Hilfe-Dialog (?) die Zeile *Copilot Chat
+fragen* mit der Schaltfläche *Text vorbereiten*. Die Hilfe-Schaltfläche muss dafür
+sichtbar sein (`Show_Support_Button` = `True`). Copilot Chat ist die Chat-Funktion in
+Microsoft 365. SelfX nutzt keine Schnittstelle und kein Token: Der Nutzer fügt den
+Text selbst in Copilot Chat ein.
+
+**Ablauf (Nutzerkontext, keine erhöhten Rechte):**
+
+1. Der Nutzer beschreibt das Problem mit eigenen Worten (optional, bis 1000 Zeichen)
+   und wählt *Text erstellen*.
+2. SelfX zeigt den fertigen Text in einer Vorschau. Der Nutzer kann ihn lesen und
+   ändern.
+3. *Kopieren und Copilot öffnen* legt den Text in die Zwischenablage und öffnet die
+   Adresse aus `Copilot_Url`. Der Nutzer fügt den Text ein (Strg+V) und sendet ihn
+   selbst ab. SelfX sendet nichts.
+4. Copilot Chat soll in einfacher Sprache antworten. Mit `Copilot_Audience` = `Admin`
+   antwortet es für IT-Personal mit technischen Schritten.
+
+**Was im Text steht (feste Liste):** Windows-Ausgabe, -Version und -Build, SelfX-Version
+und Sprache, Tage seit dem letzten Neustart, Laufwerke (Buchstabe, belegt in Prozent,
+frei in GB) und der Gerätestatus (Name der Prüfung, Zustand, gekürzte Einzelheiten).
+Der Baukasten kann noch mehr (Apps mit Fehlern, Netzwerk, Updates), diese Daten werden
+in dieser Version aber noch nicht gesammelt.
+
+**Was nicht im Text steht:** Gerätename, Nutzername, Domäne, E-Mail-Adressen,
+IP- und MAC-Adressen, Seriennummern, die Seite *Systeminformationen*, Protokolle.
+Taucht so etwas in der Beschreibung oder in Einzelheiten auf, wird es durch
+Platzhalter ersetzt (`<email>`, `<ip>`, `<device>`, `<user>`, `<server 1>` ...). Das
+Erkennen nach Mustern ist nicht vollständig. Deshalb sieht der Nutzer den Text vor dem
+Kopieren. Der Text ist auf 6000 Zeichen begrenzt.
+
+| Einstellung | Bedeutung |
+|---|---|
+| `Copilot_Enabled` | `False` (Standard) oder `True`. |
+| `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://m365.cloud.microsoft/chat`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
+| `Copilot_Audience` | `User` (Standard): einfache Antworten für Nutzer. `Admin`: technische Antworten für IT-Personal. |
+| `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: nur die Fehlercodes. |
+
+**Sicherheit:** Adresse und Einstellungen kommen nur aus `Tool_Config.xml` (nur für
+Administratoren schreibbar). Der Nutzer kann die Adresse nicht ändern. Geöffnet wird
+nur diese Adresse, und sie wird vor dem Öffnen noch einmal geprüft. Es gibt keinen
+Netzwerkzugriff durch SelfX und keinen Dienstaufruf. Die Datensammlung liest nur
+lokale Werte (Registry, Laufwerke, den bereits erfassten Gerätestatus). Der Text steht
+zwischen `BEGIN DATA` und `END DATA`, und die Anweisung sagt Copilot, dass dort nur
+Daten stehen. Das Protokoll nennt nur Zielgruppe, Länge und Host, nie den Text.
+Entscheiden Sie vor dem Einschalten, ob Ihre Richtlinien erlauben, dass Nutzer Text aus
+SelfX in Copilot Chat einfügen.
 
 ### Protokolle und Aufbewahrung
 

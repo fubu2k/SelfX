@@ -186,6 +186,18 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Ticket_Manual_Text>आपका मेल प्रोग्राम खोल दिया गया है। फ़ाइल {0} (फ़ाइल एक्सप्लोरर में चयनित) को ईमेल में संलग्न करें, जाँचें और भेजें।</Ticket_Manual_Text>
 		<Ticket_Error_Text>ईमेल तैयार नहीं किया जा सका: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>ईमेल यहाँ भेजा जाएगा: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Copilot Chat से पूछें</Copilot_Row_Label>
+		<Copilot_Row_Text>इस पीसी के बारे में Microsoft 365 Copilot Chat के लिए एक छोटा पाठ तैयार करता है, ताकि वह समस्या को आसान भाषा में समझा सके।</Copilot_Row_Text>
+		<Copilot_Button>पाठ तैयार करें</Copilot_Button>
+		<Copilot_Window_Title>Copilot Chat से पूछें</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX, Copilot Chat के लिए एक छोटा पाठ तैयार करता है। इसमें आपका विवरण और डिवाइस की बुनियादी जानकारी होती है। नाम, ईमेल पते और नेटवर्क पते प्लेसहोल्डर से बदल दिए जाते हैं।</Copilot_Intro_Text>
+		<Copilot_Description_Label>क्या काम नहीं कर रहा? (वैकल्पिक)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Copilot Chat के लिए पाठ (आप इसे बदल सकते हैं)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>पाठ बनाएँ</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX पाठ कॉपी करता है और {0} खोलता है। आप पाठ वहाँ पेस्ट करते हैं और खुद भेजते हैं। SelfX कुछ नहीं भेजता।</Copilot_Target_Text>
+		<Copilot_Open_Button>कॉपी करें और Copilot खोलें</Copilot_Open_Button>
+		<Copilot_Opened_Text>पाठ क्लिपबोर्ड में है और Copilot Chat खुल गया है। उसे वहाँ पेस्ट करें (Ctrl+V) और भेजें।</Copilot_Opened_Text>
+		<Copilot_Error_Text>पाठ तैयार नहीं हो सका: {0}</Copilot_Error_Text>
 		<Version_Text>संस्करण {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: सब कुछ ठीक है</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} समस्याएँ, {1} चेतावनियाँ</Tray_Tooltip_Issues>

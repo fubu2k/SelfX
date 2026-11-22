@@ -186,6 +186,18 @@
 		<Ticket_Manual_Text>เปิดโปรแกรมอีเมลของคุณแล้ว แนบไฟล์ {0} (ที่เลือกไว้ใน File Explorer) ไปกับอีเมล ตรวจสอบ แล้วส่ง</Ticket_Manual_Text>
 		<Ticket_Error_Text>ไม่สามารถเตรียมอีเมลได้: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>อีเมลจะถูกส่งไปที่: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>ถาม Copilot Chat</Copilot_Row_Label>
+		<Copilot_Row_Text>เตรียมข้อความสั้น ๆ เกี่ยวกับพีซีเครื่องนี้สำหรับ Microsoft 365 Copilot Chat เพื่อให้อธิบายปัญหาด้วยภาษาที่เข้าใจง่าย</Copilot_Row_Text>
+		<Copilot_Button>เตรียมข้อความ</Copilot_Button>
+		<Copilot_Window_Title>ถาม Copilot Chat</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX เตรียมข้อความสั้น ๆ สำหรับ Copilot Chat ซึ่งมีคำอธิบายของคุณและข้อมูลพื้นฐานของอุปกรณ์ ชื่อ ที่อยู่อีเมล และที่อยู่เครือข่ายจะถูกแทนที่ด้วยตัวแทน</Copilot_Intro_Text>
+		<Copilot_Description_Label>อะไรที่ใช้งานไม่ได้ (ไม่บังคับ)</Copilot_Description_Label>
+		<Copilot_Preview_Label>ข้อความสำหรับ Copilot Chat (แก้ไขได้)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>สร้างข้อความ</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX คัดลอกข้อความและเปิด {0} คุณวางข้อความที่นั่นและส่งเอง SelfX ไม่ส่งอะไรเลย</Copilot_Target_Text>
+		<Copilot_Open_Button>คัดลอกและเปิด Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>ข้อความอยู่ในคลิปบอร์ดและเปิด Copilot Chat แล้ว วางข้อความที่นั่น (Ctrl+V) แล้วส่ง</Copilot_Opened_Text>
+		<Copilot_Error_Text>เตรียมข้อความไม่สำเร็จ: {0}</Copilot_Error_Text>
 		<Version_Text>เวอร์ชัน {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: ทุกอย่างเรียบร้อย</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: ปัญหา {0} รายการ คำเตือน {1} รายการ</Tray_Tooltip_Issues>
