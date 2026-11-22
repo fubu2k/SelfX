@@ -11,27 +11,19 @@
     1. Microsoft Store apps: starts the Store app update scan of the MDM bridge
        (MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod) as SYSTEM. This also
        works when the Store app is blocked for users. The Store updates the apps in the background.
-    2. Windows Update orchestrator (Windows 11 24H2 and newer, Windows.Management.Update
+    2. Windows Update orchestrator (Windows 11 25H2 and newer, Windows.Management.Update
        .WindowsUpdateManager): StartScan(userInitiated = true) works exactly like "Check for updates"
        in Settings, so the updates are downloaded and installed by Windows itself, with the policies of
        the device, and Settings shows their progress. The script waits while updates are downloaded or
        installed (at most OrchestratorTimeoutSeconds) and logs every update with its action, progress
        and the reason why it waits (for example ReadyToReboot, SeekerUpdate, NeedMoreSpace).
-    3. Windows Update Agent API, for what the orchestrator left (and on older Windows the only path):
-       searches online at the update source configured by policy (Windows Update for Business / Intune
-       update rings, WSUS or Microsoft Update), accepts the EULAs, downloads and installs all
-       not-installed, not-hidden updates. Browse-only (optional) updates, updates that need user input,
-       feature updates (category Upgrades) and updates that only wait for the restart are skipped. When
-       Windows Update itself is installing right now, the script waits for it (at most 10 minutes).
-       Every update is logged with its result; the restart requirement comes from the installation
-       result. Afterwards a new background scan of the orchestrator updates the page in Settings.
-
     Before 2.6.3 the installation was started with "UsoClient StartDownload / StartInstall". Windows 11
     24H2 no longer accepts these commands (error 0x80070057), so only a scan ran and nothing was
     installed; a restart that was already pending was even reported as "updates installed".
     2.6.3 to 2.6.8 used only the Windows Update Agent API. Microsoft documents that the Settings page
     shows only updates of the orchestrator; updates handled through the WUA API do not appear there and
-    can conflict with it. So the updates could still be listed as pending in Settings.
+    can conflict with it. So the updates could still be listed as pending in Settings. Since 2.7.0 only the
+    orchestrator is used (Windows 11 25H2 is the minimum version); the Windows Update Agent API is gone.
 
     Never restarts Windows and never signs out the user. When an update needs a restart, the
     "Restart pending" status row shows it; the user restarts with its button or himself.
@@ -43,7 +35,7 @@
     Name    : SelfX_Updates_Install.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.6.9
+    Version : 2.7.0
 
     History:
     Version  Date        Author               Change
@@ -57,6 +49,9 @@
                                               (WindowsUpdateManager, as "Check for updates" in Settings) and waits
                                               for it; the Windows Update Agent API only installs what is left;
                                               feature updates and updates waiting for the restart are skipped
+    2.7.0    2026-11-22  fubu2k               Windows 11 25H2 minimum: only the orchestrator (SelfXWinRT.dll, PowerShell 7);
+                                              the Windows Update Agent API and the PowerShell 5.1 path are removed;
+                                              a missing orchestrator API is an error (exit 1)
 #>
 
 # Microsoft Store apps: update scan of the MDM bridge (asynchronous).
@@ -71,32 +66,11 @@ function Start-SelfXStoreUpdate {
 	}
 }
 
-# Empty update collection of the Windows Update Agent (replaced in tests).
-function New-SelfXUpdateCollection { New-Object -ComObject Microsoft.Update.UpdateColl }
-
-# Text of an OperationResultCode of the Windows Update Agent.
-function Get-SelfXResultText {
-	param([int]$Code)
-	switch ($Code) { 0 { 'not started' } 1 { 'in progress' } 2 { 'installed' } 3 { 'installed with errors' } 4 { 'failed' } 5 { 'aborted' } default { "result $Code" } }
-}
-
-# Short name of an update for the log and the summary: KB number, otherwise the title.
-function Get-SelfXUpdateName {
-	param($Update)
-	$kb = @($Update.KBArticleIDs) | Where-Object { $_ } | Select-Object -First 1
-	if ($kb) { return "KB$kb" }
-	return "$($Update.Title)"
-}
-
-# Windows Update orchestrator of Windows 11 24H2 and newer (WinRT); $null on older Windows (replaced in tests).
+# Windows Update orchestrator (Windows.Management.Update.WindowsUpdateManager, Windows 11 25H2 and newer) through
+# SelfXWinRT.dll in the folder WinRT of the install folder (Install.ps1 checked it against the manifest). PowerShell 7
+# cannot load the Windows Runtime type by name. Returns $null when the API is not available (replaced in tests).
 function Get-SelfXUpdateManager {
 	try {
-		if ($PSVersionTable.PSEdition -ne 'Core') {
-			# Windows PowerShell 5.1 loads the Windows Runtime type by name.
-			$null = [Windows.Management.Update.WindowsUpdateManager, Windows.Management.Update, ContentType = WindowsRuntime]
-			return (New-Object Windows.Management.Update.WindowsUpdateManager -ArgumentList 'SelfX')
-		}
-		# PowerShell 7 cannot: SelfXWinRT.dll in the folder WinRT of the install folder (checked by Install.ps1 against the manifest).
 		$library = Join-Path (Split-Path -Parent $PSScriptRoot) 'WinRT\SelfXWinRT.dll'
 		if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { return $null }
 		[void][Reflection.Assembly]::LoadFrom($library)
@@ -188,104 +162,6 @@ function Install-SelfXOrchestratorUpdates {
 	[pscustomobject]@{ Ok = (-not $timedOut -and -not $remaining.Count); Text = $text; TimedOut = $timedOut; Remaining = $remaining; Restart = $restart }
 }
 
-# Searches, downloads and installs the updates. Session can be replaced (tests). Returns the summary.
-# SkipTitles: updates that are already installed and only wait for the restart (from the orchestrator).
-function Install-SelfXWindowsUpdates {
-	param(
-		$Session = $null,
-		[int]$BusyWaitSeconds = 600,
-		[int]$PollSeconds = 15,
-		[string[]]$SkipTitles = @()
-	)
-	if (-not $Session) {
-		$Session = New-Object -ComObject Microsoft.Update.Session
-		$Session.ClientApplicationID = 'SelfX'
-	}
-	$installer = $Session.CreateUpdateInstaller()
-	# Windows Update (or another tool) installs right now: wait for it, then search again.
-	for ($waited = 0; $installer.IsBusy -and $waited -lt $BusyWaitSeconds; $waited += $PollSeconds) {
-		if ($waited -eq 0) { Write-SelfXLog 'Windows Update is installing right now; waiting until it has finished.' }
-		Start-Sleep -Seconds $PollSeconds
-	}
-	if ($installer.IsBusy) { throw "Windows Update is still busy after $BusyWaitSeconds seconds; try again later." }
-
-	$searcher = $Session.CreateUpdateSearcher()
-	$searcher.Online = $true
-	Write-SelfXLog 'Searching for updates (online, update source of the device policy).'
-	$result = $searcher.Search('IsInstalled=0 and IsHidden=0')
-	# OperationResultCode: 2 = Succeeded, 3 = SucceededWithErrors.
-	if ($result.ResultCode -notin @(2, 3)) { throw "search failed ($(Get-SelfXResultText $result.ResultCode))" }
-
-	$updates = New-SelfXUpdateCollection
-	$skipped = 0
-	foreach ($update in @($result.Updates)) {
-		if ($update.BrowseOnly -or $update.InstallationBehavior.CanRequestUserInput) {
-			$skipped++
-			Write-SelfXLog "Skipped (optional or needs user input): $($update.Title)"
-			continue
-		}
-		# Feature updates (new Windows version) follow the update policy, never a repair button.
-		if (@($update.Categories | Where-Object { $_ -and "$($_.Name)" -eq 'Upgrades' }).Count) {
-			$skipped++
-			Write-SelfXLog "Skipped (feature update): $($update.Title)"
-			continue
-		}
-		if ($SkipTitles -contains "$($update.Title)") {
-			$skipped++
-			Write-SelfXLog "Skipped (installed, waits for the restart): $($update.Title)"
-			continue
-		}
-		if (-not $update.EulaAccepted) { $update.AcceptEula() }
-		[void]$updates.Add($update)
-		Write-SelfXLog "To install: $($update.Title)"
-	}
-	if ($updates.Count -eq 0) {
-		$text = 'Windows Update: no updates to install'
-		if ($skipped) { $text += " ($skipped optional update(s) skipped)" }
-		return [pscustomobject]@{ Ok = $true; Text = $text }
-	}
-
-	$downloader = $Session.CreateUpdateDownloader()
-	$downloader.Updates = $updates
-	$download = $downloader.Download()
-	Write-SelfXLog "Download: $(Get-SelfXResultText $download.ResultCode)."
-	$toInstall = New-SelfXUpdateCollection
-	$notDownloaded = @()
-	for ($i = 0; $i -lt $updates.Count; $i++) {
-		$update = $updates.Item($i)
-		if ($update.IsDownloaded) { [void]$toInstall.Add($update) }
-		else {
-			$notDownloaded += Get-SelfXUpdateName $update
-			Write-SelfXLog ("Not downloaded: {0} (HRESULT 0x{1:X8})" -f $update.Title, $download.GetUpdateResult($i).HResult) Warning
-		}
-	}
-	if ($toInstall.Count -eq 0) { throw 'no update could be downloaded' }
-
-	$installer = $Session.CreateUpdateInstaller()
-	$installer.Updates = $toInstall
-	# No user interface; a needed restart is only reported (RebootRequired), never started.
-	try { $installer.ForceQuiet = $true } catch { }
-	$install = $installer.Install()
-	$installed = @(); $failed = @()
-	for ($i = 0; $i -lt $toInstall.Count; $i++) {
-		$update = $toInstall.Item($i)
-		$updateResult = $install.GetUpdateResult($i)
-		if ($updateResult.ResultCode -in @(2, 3)) {
-			$installed += Get-SelfXUpdateName $update
-			Write-SelfXLog ("Installed: {0}{1}" -f $update.Title, $(if ($updateResult.RebootRequired) { ' (restart required)' } else { '' }))
-		} else {
-			$failed += Get-SelfXUpdateName $update
-			Write-SelfXLog ("Failed: {0} ({1}, HRESULT 0x{2:X8})" -f $update.Title, (Get-SelfXResultText $updateResult.ResultCode), $updateResult.HResult) Error
-		}
-	}
-	$text = "Windows Update: $($installed.Count) of $($updates.Count) update(s) installed"
-	if ($installed.Count) { $text += ' (' + ($installed -join ', ') + ')' }
-	if ($failed.Count) { $text += '; failed: ' + ($failed -join ', ') }
-	if ($notDownloaded.Count) { $text += '; not downloaded: ' + ($notDownloaded -join ', ') }
-	if ($install.RebootRequired) { $text += '; restart required to complete' }
-	return [pscustomobject]@{ Ok = (-not $failed.Count -and -not $notDownloaded.Count); Text = $text }
-}
-
 # Dot-sourcing (tests) only defines the functions; the service runs the script with -File.
 if ($MyInvocation.InvocationName -ne '.') {
 	# Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -299,40 +175,28 @@ if ($MyInvocation.InvocationName -ne '.') {
 	$summary.Add($store.Text)
 	Write-SelfXLog $store.Text $(if ($store.Ok) { 'Info' } else { 'Warning' })
 
-	# Windows 11 24H2+: Windows installs the updates itself (visible in Settings); the WUA API only completes.
+	# Windows 11 25H2+: Windows installs the updates itself (visible in Settings), with the policies of the device.
+	# There is no second path: the Windows Update Agent API is not used any more (its updates do not appear in Settings
+	# and can conflict with the orchestrator).
 	$manager = Get-SelfXUpdateManager
-	$runAgent = $true
-	$skipTitles = @()
-	if ($manager) {
+	if (-not $manager) {
+		$text = 'Windows Update orchestrator API not available (WinRT\SelfXWinRT.dll missing or not loadable). Reinstall SelfX Service.'
+		$summary.Add($text)
+		Write-SelfXLog $text Error
+		$failed = $true
+	} else {
 		try {
 			$orchestrator = Install-SelfXOrchestratorUpdates -Manager $manager
 			$summary.Add($orchestrator.Text)
 			Write-SelfXLog $orchestrator.Text $(if ($orchestrator.Ok) { 'Info' } else { 'Warning' })
-			$skipTitles = @($orchestrator.Restart)
-			# Still working: a second installation in parallel would conflict.
-			if ($orchestrator.TimedOut) { $runAgent = $false; $failed = $true }
-			elseif ($orchestrator.Ok) { $runAgent = $false }
+			if (-not $orchestrator.Ok) { $failed = $true }
 		} catch {
-			$summary.Add("Windows Update orchestrator not available: $($_.Exception.Message)")
-			Write-SelfXLog "Windows Update orchestrator not available: $($_.Exception.Message)" Warning
-		}
-	} else {
-		Write-SelfXLog 'Windows Update orchestrator API not available (before Windows 11 24H2): Windows Update Agent API only.'
-	}
-
-	if ($runAgent) {
-		try {
-			$windows = Install-SelfXWindowsUpdates -SkipTitles $skipTitles
-			$summary.Add($windows.Text)
-			Write-SelfXLog $windows.Text $(if ($windows.Ok) { 'Info' } else { 'Error' })
-			if (-not $windows.Ok) { $failed = $true }
-		} catch {
-			$summary.Add("Windows Update failed: $($_.Exception.Message)")
-			Write-SelfXLog "Windows Update failed: $($_.Exception.Message)" Error
+			$summary.Add("Windows Update orchestrator failed: $($_.Exception.Message)")
+			Write-SelfXLog "Windows Update orchestrator failed: $($_.Exception.Message)" Error
 			$failed = $true
 		}
-		# Settings shows the state of the orchestrator: a background scan updates it after the WUA installation.
-		if ($manager) { try { $manager.StartScan($false) } catch { } }
+		# Settings shows the state of the orchestrator: a background scan refreshes it.
+		try { $manager.StartScan($false) } catch { }
 	}
 	Write-Output ($summary -join '. ')
 	# The Store scan is optional (blocked Store, no MDM bridge): only Windows Update decides the result.

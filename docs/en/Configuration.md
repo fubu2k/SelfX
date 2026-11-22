@@ -572,7 +572,7 @@ whole device status again (updates, restart pending, compliance). The script run
 1. starts the Microsoft Store app update scan of the MDM bridge
    (`MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod`). This also works when the
    Store is blocked for users. The Store updates the apps asynchronously in the background.
-2. on Windows 11 24H2 and newer (2.6.9) starts **"Check for updates" of the Windows Update
+2. on Windows 11 25H2 and newer (minimum version, 2.7.0) starts **"Check for updates" of the Windows Update
    orchestrator** through the documented WinRT API `Windows.Management.Update.WindowsUpdateManager`
    (`StartScan(userInitiated: true)`, the same as the button in Settings). Windows downloads and
    installs the updates itself, with the policies of the device, and **Settings > Windows Update
@@ -581,21 +581,11 @@ whole device status again (updates, restart pending, compliance). The script run
    example `2026-11 Security Update (KB5132061): action Install, progress Install 70` or
    `Optional driver: waiting: SeekerUpdate`. Updates that only wait for the restart (`ReadyToReboot`)
    are done. Feature updates (new Windows version) are left to the update policy.
-3. installs what the orchestrator left (and on older Windows everything) through the documented
-   **Windows Update Agent API**: online search at the
-   update source of the device policy (Intune update rings / Windows Update for Business, WSUS or
-   Microsoft Update), EULAs accepted, download and quiet installation of every not-installed,
-   not-hidden update. Optional (browse-only) updates, updates that need user input, feature updates
-   (category *Upgrades*) and updates that only wait for the restart are skipped. If Windows Update is
-   installing right now, the script
-   waits for it (at most 10 minutes). Every update is logged in
-   `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<date>.log` with its title and result, for example
-   `Installed: 2026-10 .NET Framework Security Update (restart required)`, and the summary names the
-   KB numbers (`Windows Update: 2 of 2 update(s) installed (KB5127690, KB890830); restart required to
-   complete`). Afterwards a background scan of the orchestrator updates the page in Settings. While
-   the orchestrator is still working after 90 minutes, the WUA step is skipped (two installations at
-   the same time would conflict) and the repair ends with exit `1`; Windows continues in the
-   background.
+   Every update is logged in `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<date>.log`. Afterwards a
+   background scan of the orchestrator refreshes the page in Settings. While the orchestrator is still
+   working after 90 minutes, the repair ends with exit `1`; Windows continues in the background. If the
+   orchestrator API is not available (`WinRT\SelfXWinRT.dll` missing), the repair ends with exit `1` and
+   asks to reinstall SelfX; there is no other update path.
 
 2.6.0 to 2.6.2 used `UsoClient.exe StartDownload` / `StartInstall`. Windows 11 24H2 rejects these
 commands (exit code `-2147024809` / `0x80070057` in the log), so only a scan ran and nothing was
@@ -603,7 +593,7 @@ installed; a restart that was already pending was even reported as installed. 2.
 `UsoClient.exe`. 2.6.3 to 2.6.8 used only the Windows Update Agent API. Microsoft documents that the
 Windows Update page in Settings shows only updates of the orchestrator and that updates handled
 through the WUA API do not appear there and can conflict with it, so the updates could still be
-shown as pending in Settings. Before 2.6.9 a click on **Fix** was also refused with "Another action
+shown as pending in Settings. Since 2.7.0 the Windows Update Agent API is not used any more for installing. Before 2.6.9 a click on **Fix** was also refused with "Another action
 is still running" while SelfX read the cached status (once a minute, for a moment).
 
 The script **never restarts** Windows. If an update needs a restart, the **Restart pending** row

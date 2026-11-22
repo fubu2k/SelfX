@@ -21,6 +21,9 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- "Install updates" uses only the Windows Update orchestrator (`SelfXWinRT.dll`,
+  PowerShell 7). The Windows Update Agent API and the PowerShell 5.1 branch are removed
+  (minimum version Windows 11 25H2). If the orchestrator API is missing, the action ends with exit 1.
 - Minimum version: Windows 11 25H2 (build 26200). `Install.ps1` checks the build number
   (registry) before changing anything and stops hard on older builds; the existing
   installation stays unchanged.

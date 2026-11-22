@@ -614,7 +614,7 @@ SYSTEM und
    (`MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod`). Das
    funktioniert auch, wenn der Store für Nutzer gesperrt ist. Der Store aktualisiert
    die Apps asynchron im Hintergrund.
-2. startet unter Windows 11 24H2 und neuer (2.6.9) **„Nach Updates suchen“ des
+2. startet unter Windows 11 25H2 und neuer (Mindestversion, 2.7.0) **„Nach Updates suchen“ des
    Windows-Update-Orchestrators** über die dokumentierte WinRT-API
    `Windows.Management.Update.WindowsUpdateManager`
    (`StartScan(userInitiated: true)`, dasselbe wie die Schaltfläche in den
@@ -627,24 +627,12 @@ SYSTEM und
    `Optional driver: waiting: SeekerUpdate`. Updates, die nur noch auf den Neustart
    warten (`ReadyToReboot`), gelten als erledigt. Feature-Updates (neue
    Windows-Version) überlässt es der Update-Richtlinie.
-3. installiert, was der Orchestrator übrig lässt (und unter älteren Windows-Versionen
-   alles), über die dokumentierte **Windows-Update-Agent-API**: Online-Suche an der
-   Update-Quelle der Geräterichtlinie (Intune-Update-Ringe / Windows Update for
-   Business, WSUS oder Microsoft Update), EULAs akzeptiert, Download und stille
-   Installation jedes nicht installierten, nicht ausgeblendeten Updates. Optionale
-   (Browse-only-)Updates, Updates, die Nutzereingaben brauchen, Feature-Updates
-   (Kategorie *Upgrades*) und Updates, die nur auf den Neustart warten, werden
-   übersprungen. Installiert Windows Update gerade, wartet das Skript darauf
-   (höchstens 10 Minuten). Jedes Update wird in
-   `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<Datum>.log` mit Titel und
-   Ergebnis protokolliert, zum Beispiel
-   `Installed: 2026-10 .NET Framework Security Update (restart required)`, und die
-   Zusammenfassung nennt die KB-Nummern (`Windows Update: 2 of 2 update(s) installed
-   (KB5127690, KB890830); restart required to complete`). Danach aktualisiert ein
-   Hintergrundscan des Orchestrators die Seite in den Einstellungen. Arbeitet der
-   Orchestrator nach 90 Minuten noch, wird der WUA-Schritt übersprungen (zwei
-   gleichzeitige Installationen würden kollidieren) und die Reparatur endet mit Exit
-   `1`; Windows arbeitet im Hintergrund weiter.
+   Jedes Update wird in `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<Datum>.log`
+   protokolliert. Danach aktualisiert ein Hintergrundscan des Orchestrators die Seite in
+   den Einstellungen. Arbeitet der Orchestrator nach 90 Minuten noch, endet die Reparatur
+   mit Exit `1`; Windows arbeitet im Hintergrund weiter. Ist die Orchestrator-API nicht
+   verfügbar (`WinRT\SelfXWinRT.dll` fehlt), endet die Reparatur mit Exit `1` und bittet,
+   SelfX neu zu installieren; einen anderen Update-Weg gibt es nicht.
 
 Die Versionen 2.6.0 bis 2.6.2 nutzten `UsoClient.exe StartDownload` /
 `StartInstall`. Windows 11 24H2 weist diese Befehle ab (Exitcode `-2147024809` /
@@ -654,7 +642,7 @@ verwendet `UsoClient.exe` nicht mehr. Die Versionen 2.6.3 bis 2.6.8 nutzten nur 
 Windows-Update-Agent-API. Microsoft dokumentiert, dass die Seite Windows Update in
 den Einstellungen nur Updates des Orchestrators zeigt und dass über die WUA-API
 behandelte Updates dort nicht erscheinen und mit ihm kollidieren können, sodass die
-Updates in den Einstellungen weiterhin als ausstehend angezeigt werden konnten. Vor
+Updates in den Einstellungen weiterhin als ausstehend angezeigt werden konnten. Seit 2.7.0 wird die Windows-Update-Agent-API nicht mehr zum Installieren genutzt. Vor
 2.6.9 wurde ein Klick auf **Beheben** außerdem mit „Eine andere Aktion läuft noch“
 abgewiesen, während SelfX den zwischengespeicherten Status las (einmal pro Minute,
 für einen Moment).

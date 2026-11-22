@@ -281,80 +281,16 @@ try {
 	try { [void](Invoke-SelfXRestart -ShutdownExe $dummy -DelaySeconds 30) } catch { $failed = $_.Exception.Message -like 'shutdown.exe not found*' }
 	Assert-Equal $failed $true 'Restart: missing shutdown.exe is reported'
 
-	# Updates: Windows Update Agent flow with a simulated session (search, download, install, per-update result).
+	# Updates: only the Windows Update orchestrator (no Windows Update Agent API).
 	. (Join-Path $scripts 'SelfX_Updates_Install.ps1')
 	function Write-SelfXLog { param($Message, $Level) $script:updateLog.Add("$Level|$Message") }
-	function New-SelfXUpdateCollection {
-		$list = New-Object System.Collections.Generic.List[object]
-		$coll = [pscustomobject]@{ List = $list }
-		$coll | Add-Member ScriptMethod Add { param($u) $this.List.Add($u); $this.List.Count - 1 }
-		$coll | Add-Member ScriptMethod Item { param($i) $this.List[$i] }
-		$coll | Add-Member ScriptProperty Count { $this.List.Count }
-		$coll
-	}
-	function New-FakeUpdate([string]$Title, [string]$Kb, [bool]$Optional = $false, [bool]$Download = $true, [int]$InstallCode = 2, [bool]$Reboot = $false) {
-		$u = [pscustomobject]@{ Title = $Title; KBArticleIDs = @($Kb); BrowseOnly = $Optional; InstallationBehavior = [pscustomobject]@{ CanRequestUserInput = $false }
-			EulaAccepted = $false; IsDownloaded = $false; Download = $Download; InstallCode = $InstallCode; Reboot = $Reboot }
-		$u | Add-Member ScriptMethod AcceptEula { $this.EulaAccepted = $true }
-		$u
-	}
-	function New-FakeSession([object[]]$Updates, [bool]$Busy = $false) {
-		$state = [pscustomobject]@{ Updates = $Updates; Busy = $Busy; Calls = (New-Object System.Collections.Generic.List[string]) }
-		$session = [pscustomobject]@{ State = $state }
-		$session | Add-Member ScriptMethod CreateUpdateSearcher {
-			$searcher = [pscustomobject]@{ Online = $false; State = $this.State }
-			$searcher | Add-Member ScriptMethod Search { param($q) $this.State.Calls.Add("Search online=$($this.Online)"); [pscustomobject]@{ ResultCode = 2; Updates = $this.State.Updates } }
-			$searcher }
-		$session | Add-Member ScriptMethod CreateUpdateDownloader {
-			$downloader = [pscustomobject]@{ Updates = $null; State = $this.State }
-			$downloader | Add-Member ScriptMethod Download {
-				$this.State.Calls.Add("Download $($this.Updates.Count)")
-				foreach ($u in $this.Updates.List) { $u.IsDownloaded = $u.Download }
-				$r = [pscustomobject]@{ ResultCode = 2 }; $r | Add-Member ScriptMethod GetUpdateResult { param($i) [pscustomobject]@{ HResult = -2145107924 } }; $r }
-			$downloader }
-		$session | Add-Member ScriptMethod CreateUpdateInstaller {
-			$installer = [pscustomobject]@{ Updates = $null; ForceQuiet = $false; State = $this.State }
-			$installer | Add-Member ScriptProperty IsBusy { $b = $this.State.Busy; $this.State.Busy = $false; $b }
-			$installer | Add-Member ScriptMethod Install {
-				$this.State.Calls.Add("Install $($this.Updates.Count) quiet=$($this.ForceQuiet)")
-				$list = $this.Updates.List
-				$r = [pscustomobject]@{ RebootRequired = [bool]($list | Where-Object { $_.Reboot -and $_.InstallCode -eq 2 }); List = $list }
-				$r | Add-Member ScriptMethod GetUpdateResult { param($i) [pscustomobject]@{ ResultCode = $this.List[$i].InstallCode; HResult = 0; RebootRequired = $this.List[$i].Reboot } }
-				$r }
-			$installer }
-		$session
-	}
 	$script:updateLog = New-Object System.Collections.Generic.List[string]
-	$session = New-FakeSession @((New-FakeUpdate '2026-10 .NET Framework Security Update' '5127690' -Reboot $true), (New-FakeUpdate 'Audio driver' ''), (New-FakeUpdate 'Optional preview' '5099999' -Optional $true))
-	$result = Install-SelfXWindowsUpdates -Session $session -PollSeconds 1
-	Assert-Equal ($session.State.Calls -join ';') 'Search online=True;Download 2;Install 2 quiet=True' 'Updates: online search, download and quiet install through the Windows Update Agent'
-	Assert-Equal "$($result.Ok)|$($result.Text)" 'True|Windows Update: 2 of 2 update(s) installed (KB5127690, Audio driver); restart required to complete' 'Updates: installed updates and restart reported'
-	Assert-Equal (@($script:updateLog | Where-Object { $_ -like '*Skipped (optional*Optional preview' }).Count) 1 'Updates: optional update skipped and logged'
-	Assert-Equal (@($script:updateLog | Where-Object { $_ -like '*Installed: 2026-10 .NET Framework Security Update (restart required)' }).Count) 1 'Updates: each installed update logged'
-	# A restart that was pending before is not reported as an installation (fault of 2.6.0).
-	$result = Install-SelfXWindowsUpdates -Session (New-FakeSession @()) -PollSeconds 1
-	Assert-Equal "$($result.Ok)|$($result.Text)" 'True|Windows Update: no updates to install' 'Updates: nothing to install is not reported as installed'
-	$session = New-FakeSession @((New-FakeUpdate 'Cumulative update' '5070001' -InstallCode 4), (New-FakeUpdate 'Defender platform' '5007651' -Download $false), (New-FakeUpdate 'Malicious software removal tool' '890830'))
-	$result = Install-SelfXWindowsUpdates -Session $session -PollSeconds 1
-	Assert-Equal "$($result.Ok)|$($result.Text)" 'False|Windows Update: 1 of 3 update(s) installed (KB890830); failed: KB5070001; not downloaded: KB5007651' 'Updates: failed and not downloaded updates are reported (exit 1)'
-	$session = New-FakeSession @((New-FakeUpdate 'Update' '1')) $true
-	$script:updateLog.Clear()
-	[void](Install-SelfXWindowsUpdates -Session $session -PollSeconds 1)
-	Assert-Equal (@($script:updateLog | Where-Object { $_ -like '*installing right now; waiting*' }).Count) 1 'Updates: waits while Windows Update is busy'
 	$updatesText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Updates_Install.ps1'))
 	$updatesCode = $updatesText.Substring($updatesText.IndexOf('#>') + 2)
 	Assert-Equal ($updatesCode -match '(?i)UsoClient|shutdown|Restart-Computer|RebootRequired\\') $false 'Updates: no UsoClient (fails on Windows 11 24H2), never restarts, no registry restart markers'
+	Assert-Equal ($updatesCode -match '(?i)Microsoft\.Update\.(Session|UpdateColl)|CreateUpdateInstaller|PSEdition') $false 'Updates: no Windows Update Agent API and no PowerShell 5.1 branch any more'
 
-	# Feature updates and updates that only wait for the restart are never installed through the WUA API.
-	$feature = New-FakeUpdate 'Windows 11, version 26H2' ''
-	$feature | Add-Member NoteProperty Categories @([pscustomobject]@{ Name = 'Upgrades' })
-	$session = New-FakeSession @($feature, (New-FakeUpdate '2026-11 Security Update (KB5132061)' '5132061'), (New-FakeUpdate 'Audio driver' ''))
-	$script:updateLog.Clear()
-	$result = Install-SelfXWindowsUpdates -Session $session -PollSeconds 1 -SkipTitles @('2026-11 Security Update (KB5132061)')
-	Assert-Equal "$($result.Ok)|$($result.Text)" 'True|Windows Update: 1 of 1 update(s) installed (Audio driver)' 'Updates: WUA skips feature updates and updates waiting for the restart'
-	Assert-Equal (@($script:updateLog | Where-Object { $_ -like '*Skipped (feature update)*' -or $_ -like '*Skipped (installed, waits for the restart)*' }).Count) 2 'Updates: skipped updates are logged'
-
-	# Orchestrator (Windows 11 24H2+): simulated WindowsUpdateManager. Each poll step plays the next state.
+	# Orchestrator (Windows 11 25H2+): simulated WindowsUpdateManager. Each poll step plays the next state.
 	function New-FakeOrchestratorUpdate([string]$Id, [string]$Title, [object[]]$Steps, [bool]$Feature = $false) {
 		$u = [pscustomobject]@{ UpdateId = $Id; Title = $Title; IsEulaAccepted = $false; IsFeatureUpdate = $Feature; Steps = $Steps; Step = 0
 			CurrentAction = ''; ActionProgress = $null; AttentionRequiredInfo = $null }
@@ -396,8 +332,9 @@ try {
 	$busy = New-FakeOrchestratorUpdate 'e5' 'Cumulative update' @(,@('Install', 50, ''))
 	$result = Install-SelfXOrchestratorUpdates -Manager (New-FakeManager @($busy)) -PollSeconds 1 -IdleSeconds 3 -ScanStartSeconds 2 -TimeoutSeconds 6
 	Assert-Equal "$($result.Ok)|$($result.TimedOut)" 'False|True' 'Updates: orchestrator still installing after the time limit (no parallel WUA installation)'
-	Assert-Equal ($updatesCode.Contains('if ($orchestrator.TimedOut) { $runAgent = $false; $failed = $true }') -and $updatesCode.Contains('$manager.StartScan($false)')) $true 'Updates: no WUA installation while the orchestrator works; Settings refreshed after a WUA installation'
-	Assert-Equal ((Get-SelfXUpdateManager) -eq $null -or (Get-SelfXUpdateManager).GetType().FullName -eq 'Windows.Management.Update.WindowsUpdateManager') $true 'Updates: orchestrator API is created or missing (older Windows), never an error'
+	Assert-Equal ($updatesCode.Contains('if (-not $orchestrator.Ok) { $failed = $true }') -and $updatesCode.Contains('$manager.StartScan($false)')) $true 'Updates: orchestrator result decides the exit code; Settings refreshed afterwards'
+	Assert-Equal ($updatesCode.Contains('if (-not $manager) {') -and $updatesCode.Contains('$failed = $true')) $true 'Updates: missing orchestrator API is an error, not a silent skip'
+	Assert-Equal ((Get-SelfXUpdateManager) -eq $null -or (Get-SelfXUpdateManager).GetType().FullName -eq 'Windows.Management.Update.WindowsUpdateManager') $true 'Updates: orchestrator API is created or missing, never an exception'
 
 	# App retry: reset of the cached error and the retry schedule of failed apps (registry mocked).
 	. "$sources\HealthStatus.ps1"
