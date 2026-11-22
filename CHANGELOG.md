@@ -16,6 +16,7 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 ## Nicht veröffentlicht (SelfX Service)
 
 ### Neu
+- Grundlage für „Ticket aus SelfX“ (`Sources\TicketMail.ps1`, Test `Test-Ticket.ps1`): Ticketmodell mit standardisiertem Betreff und Text, bereinigten Feldern, Freitext im abgesetzten Block und geprüftem mailto-Link. Nur Bausteine ohne Funktion und ohne Oberfläche; es ändert sich nichts für Nutzer.
 
 - Systeminformationen: Die Zeile „Betriebszeit“ wird ab 7 Tagen ohne Neustart als Warnung mit dem Hinweis „Neustart empfohlen (nicht „Herunterfahren“)“ angezeigt (nur lesend; SelfX startet Windows nie selbst neu). Grund für den Hinweis: Mit Schnellstart setzt „Herunterfahren“ die Betriebszeit nicht zurück.
 - Systeminformationen, Bereich Netzwerk: neue Zeilen „Proxy (Benutzereinstellung)“ (manueller Proxy mit Server und Port, Adresse des Konfigurationsskripts; Zugangsdaten in Adressen werden maskiert) und „Netzlaufwerke“ (nur die Laufwerksbuchstaben, auch getrennte, keine Freigabepfade). Nur lesend, keine Netzwerkzugriffe. Hinweis: Die Proxy-Adressen erscheinen auch im Export der Systeminformationen.
