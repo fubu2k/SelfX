@@ -29,6 +29,3 @@ In scope, with priority:
 Out of scope: weaknesses that require administrator rights on the device beforehand, and third-party binaries
 (report those to their vendor).
 
-## Supported versions
-
-Only the latest version on `main` of this fork is supported. Upstream: https://github.com/wbaeck/SelfX
