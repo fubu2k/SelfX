@@ -125,15 +125,11 @@ function Get-SelfXWuaRebootRequired {
 }
 
 # Windows Update orchestrator (Windows 11 24H2+, what Settings > Windows Update shows): titles of the updates
-# that are installed and wait for the restart (AttentionRequiredReason ReadyToReboot). Empty on older Windows.
+# that are installed and wait for the restart (AttentionRequiredReason ReadyToReboot).
 function New-SelfXOrchestratorManager {
-    # Windows PowerShell 5.1 loads the Windows Runtime type by name. PowerShell 7 cannot: it uses SelfXWinRT.dll from the
-    # folder WinRT of the install folder (Install.ps1 checked it against the manifest). Throws when the API is not available.
+    # PowerShell 7 cannot load the Windows Runtime type by name: it uses SelfXWinRT.dll from the folder WinRT of the
+    # install folder (Install.ps1 checked it against the manifest). Throws when the API is not available.
     param([string]$ClientId)
-    if ($PSVersionTable.PSEdition -ne 'Core') {
-        $null = [Windows.Management.Update.WindowsUpdateManager, Windows.Management.Update, ContentType = WindowsRuntime]
-        return (New-Object Windows.Management.Update.WindowsUpdateManager -ArgumentList $ClientId)
-    }
     $library = Join-Path $PSScriptRoot 'WinRT\SelfXWinRT.dll'
     if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { throw 'WinRT\SelfXWinRT.dll is missing.' }
     [void][Reflection.Assembly]::LoadFrom($library)

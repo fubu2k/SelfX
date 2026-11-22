@@ -21,6 +21,9 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- CI: the tests now run in PowerShell 7 as a blocking job. Windows PowerShell 5.1 only checks
+  `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` and the log collector (Intune starts them there).
+  The health check and the support report no longer contain PowerShell 5.1 branches.
 - "Install updates" uses only the Windows Update orchestrator (`SelfXWinRT.dll`,
   PowerShell 7). The Windows Update Agent API and the PowerShell 5.1 branch are removed
   (minimum version Windows 11 25H2). If the orchestrator API is missing, the action ends with exit 1.

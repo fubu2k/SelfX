@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Compile and tests (Windows PowerShell 5.1)
+    name: Tests in Windows PowerShell 5.1 (Install, Uninstall, Detection, log collector syntax)
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -28,29 +28,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Compile service, launcher and session starter
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $service = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Service'
-          $out = Join-Path $env:RUNNER_TEMP 'selfx-build'
-          New-Item -ItemType Directory -Path $out -Force | Out-Null
-          # Same compiler and references as Install.ps1 (C# compiler of the .NET Framework).
-          Add-Type -TypeDefinition (Get-Content -LiteralPath (Join-Path $service 'SelfXService.cs') -Raw) `
-            -ReferencedAssemblies 'System.ServiceProcess', 'System.Xml' `
-            -OutputAssembly (Join-Path $out 'SelfXService.exe') -OutputType ConsoleApplication
-          Add-Type -TypeDefinition (Get-Content -LiteralPath (Join-Path $service 'SelfXLauncher.cs') -Raw) `
-            -OutputAssembly (Join-Path $out 'SelfX.exe') -OutputType WindowsApplication
-          Add-Type -TypeDefinition (Get-Content -LiteralPath (Join-Path $service 'SelfXSessionStarter.cs') -Raw)
-          Get-ChildItem -LiteralPath $out -Filter *.exe | ForEach-Object { "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash, $_.Name }
-
-      - name: Run all Test-*.ps1 of SelfX Service
+      # Only Install.ps1, Uninstall.ps1, Detection.ps1 and Collect-DeviceLogs.ps1 still have to run in Windows PowerShell 5.1
+      # (Intune and Autopilot start them there). Everything else runs in PowerShell 7 (next job).
+      - name: Run the tests of the scripts that must stay compatible with Windows PowerShell 5.1
         shell: powershell
         env:
           SELFX_TEST_TRACE: '1'
         run: |
           $failed = New-Object System.Collections.Generic.List[string]
-          $tests = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Sort-Object Name
+          $tests = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Where-Object { $_.Name -in 'Test-Compat51.ps1', 'Test-InstallBinaries.ps1', 'Test-Uninstall.ps1' } | Sort-Object Name
+          if (@($tests).Count -ne 3) { throw 'The three Windows PowerShell 5.1 tests were not found.' }
           foreach ($test in $tests) {
             Write-Output "::group::$($test.Name)"
             # Each test in its own process, so mocks and globals of one test cannot affect the next.
@@ -99,13 +86,11 @@ jobs:
           if (@($results).Count -gt 0) { throw "$(@($results).Count) findings." }
           Write-Output 'No findings.'
 
-  # Preparation for the move to PowerShell 7 (see docs: migration plan). Information only: this job never fails
-  # the workflow (continue-on-error). It runs every test in PowerShell 7 and lists which ones pass or fail.
+  # All tests run in PowerShell 7 (the runtime of the service, the window and the status icon). Blocking.
   pwsh7-compatibility:
-    name: Information - tests in PowerShell 7 (not blocking)
+    name: Tests in PowerShell 7
     runs-on: windows-latest
     timeout-minutes: 30
-    continue-on-error: true
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -137,9 +122,10 @@ jobs:
             Write-Output '::endgroup::'
             if ($code -eq 0) { $rows.Add("| $($test.Name) | passed |") } else { $failed++; $rows.Add("| $($test.Name) | FAILED (exit code $code) |") }
           }
-          $summary = @("### Tests in PowerShell $($PSVersionTable.PSVersion) (information only)", '', '| Test | Result |', '| --- | --- |') + $rows
+          $summary = @("### Tests in PowerShell $($PSVersionTable.PSVersion) ", '', '| Test | Result |', '| --- | --- |') + $rows
           $summary | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
-          Write-Output "$failed of $($tests.Count) test scripts failed in PowerShell 7 (not blocking)."
+          Write-Output "$failed of $($tests.Count) test scripts failed in PowerShell 7."
+          if ($failed -gt 0) { throw "$failed test script(s) failed in PowerShell 7." }
 
   # .NET 10 build of the service, the starter and the session starter (phase 1 of the move to .NET 10 / PowerShell 7).
   # Builds with tools\Build-SelfXBinaries.ps1 twice and compares the SHA256 (the build must be reproducible), checks the result the way

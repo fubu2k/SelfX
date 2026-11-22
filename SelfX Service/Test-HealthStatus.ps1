@@ -35,12 +35,10 @@ $sources = Join-Path $PSScriptRoot 'Sources'
 $appReader = (Get-Command Get-SelfXAppReports).ScriptBlock
 $rebootReader = (Get-Command Get-SelfXPendingRebootMarkers).ScriptBlock
 
-# Makes the service type available. Windows PowerShell 5.1 compiles the source with the .NET Framework compiler.
-# PowerShell 7 (.NET 10) loads the program built from the real project file (same compiler settings and packages as the
-# release build), because Add-Type cannot reproduce the reference assemblies of the project reliably. Needs the .NET SDK 10.
+# Makes the service type available: loads the program built from the real project file (same compiler settings and
+# packages as the release build). Runs in PowerShell 7 and needs the .NET SDK 10.
 function Add-SelfXServiceType {
-	param([string]$Path, [string[]]$FrameworkReferences)
-	if ($PSVersionTable.PSEdition -ne 'Core') { Add-Type -TypeDefinition ([IO.File]::ReadAllText($Path)) -ReferencedAssemblies $FrameworkReferences; return }
+	param([string]$Path)
 	$project = Join-Path (Split-Path -Parent $Path) 'Projects\SelfXService\SelfXService.csproj'
 	$output = Join-Path ([IO.Path]::GetTempPath()) ('SelfXServiceBuild_' + [guid]::NewGuid().ToString('N'))
 	# global.json in the repository root selects the SDK.
@@ -587,7 +585,7 @@ try {
     & {
         # Compile and call only the read-only whitelist lookup, never ProcessRequest/RunScript.
         $env:SystemRoot = $originalRoot
-        Add-SelfXServiceType -Path (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -FrameworkReferences @('System.ServiceProcess.dll','System.Xml.dll','System.Core.dll')
+        Add-SelfXServiceType -Path (Join-Path $PSScriptRoot 'Service\SelfXService.cs')
         $type = [SelfX.SelfXService]
         $instance = New-Object SelfX.SelfXService('SelfX.Test.NotStarted', $temp)
         try {

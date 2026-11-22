@@ -36,12 +36,10 @@ function Assert-True($Condition, $Message) {
 	if (-not $Condition) { $script:errors.Add($Message) }
 }
 
-# Makes the service type available. Windows PowerShell 5.1 compiles the source with the .NET Framework compiler.
-# PowerShell 7 (.NET 10) loads the program built from the real project file (same compiler settings and packages as the
-# release build), because Add-Type cannot reproduce the reference assemblies of the project reliably. Needs the .NET SDK 10.
+# Makes the service type available: loads the program built from the real project file (same compiler settings and
+# packages as the release build). Runs in PowerShell 7 and needs the .NET SDK 10.
 function Add-SelfXServiceType {
-	param([string]$Path, [string[]]$FrameworkReferences)
-	if ($PSVersionTable.PSEdition -ne 'Core') { Add-Type -TypeDefinition ([IO.File]::ReadAllText($Path)) -ReferencedAssemblies $FrameworkReferences; return }
+	param([string]$Path)
 	$project = Join-Path (Split-Path -Parent $Path) 'Projects\SelfXService\SelfXService.csproj'
 	$output = Join-Path ([IO.Path]::GetTempPath()) ('SelfXServiceBuild_' + [guid]::NewGuid().ToString('N'))
 	# global.json in the repository root selects the SDK.
@@ -52,7 +50,7 @@ function Add-SelfXServiceType {
 }
 
 $source = Join-Path $PSScriptRoot 'Service\SelfXService.cs'
-Add-SelfXServiceType -Path $source -FrameworkReferences 'System.ServiceProcess', 'System.Xml'
+Add-SelfXServiceType -Path $source
 
 # --- PowerShell 7 must not be replaceable by normal users: the service checks the rights before every start ---
 $protectionMethod = [SelfX.SelfXService].GetMethod('IsPowerShellProtected', [Reflection.BindingFlags]'NonPublic,Static')
