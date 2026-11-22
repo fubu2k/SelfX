@@ -21,6 +21,8 @@ Anhebung der Version ausgeliefert.
 
 ### Geändert
 
+- DNS-Cache leeren und Systemlaufwerk prüfen ohne Kompatibilitätsschicht: CIM (`MSFT_DNSClientCache.Clear`,
+  `MSFT_Volume.Repair` mit `OfflineScanAndFix`) statt `Clear-DnsClientCache` und `Repair-Volume`.
 - BitLocker und TPM ohne Module: Gerätestatus und Compliance-Prüfung lesen CIM (`Win32_EncryptableVolume`, `Win32_Tpm`,
   Datei `Sources\SelfXDeviceSecurity.ps1`) statt `Get-BitLockerVolume` und `Get-Tpm`. Dabei wird ein früherer Fehler behoben:
   Datenlaufwerke wurden nie geprüft, weil der Typ „Data“ statt „FixedData“ hieß. Feste Datenlaufwerke ohne BitLocker
