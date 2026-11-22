@@ -1,8 +1,8 @@
 # Notices on authorship and licenses
 
 As of 2026-11-22. This repository is a fork of SelfX (the SelfX Service package only). The license file
-[LICENSE.md](LICENSE.md) is the unchanged file of the original project (MIT License). This notice adds to it and does not
-replace it.
+[LICENSE.md](LICENSE.md) contains the text and the original copyright line of the original project (MIT License) unchanged,
+plus the copyright line for the changes in this fork. This notice adds to it and does not replace it.
 
 ## Origin
 

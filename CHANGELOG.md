@@ -165,6 +165,7 @@ auf 2.6.11 angehoben.
 
 ### Hinzugefügt
 
+- `LICENSE.md`: zusätzliche Copyright-Zeile für die Änderungen in diesem Fork (Text und Originalzeile unverändert).
 - `NOTICE.md` / `NOTICE.en.md`: Urheber und Quellen (Damien Van Robaeys, Wolfgang Baeck, Jannik Reinhard).
 - `Test-ServicePipe.ps1`: startet den Pipe-Listener des Dienstes unter einem
   Testnamen und prüft die Fristen, langsame Sender, zu große Anfragen und das Limit
