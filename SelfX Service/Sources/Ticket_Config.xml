@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ticket_Config.xml: routing of the ticket e-mail (SelfX Service 2.8.6).
+  Only used when Ticket_Enabled is True in Tool_Config.xml. Without a matching rule the e-mail goes to Ticket_Mail
+  (or Support_Mail) of Tool_Config.xml, so that address must always be valid.
+
+  Units: any number of support units. Id = short name (letters, digits . _ -, up to 40 characters),
+         Mail = recipient (one plain address), Cc = optional second address.
+  Rules: any number of rules, checked from top to bottom, the first match wins.
+         Source = GroupTag, OU or Category (values of the device, see below).
+         Match  = the value must be exactly this text (case is ignored), or
+         Regex  = .NET regular expression (case is ignored, up to 300 characters, searched anywhere in the value:
+                  use ^ and $ to match the whole value).
+         Unit   = the unit of the rule. With Regex it can be left out if the expression has a named group
+                  (?'unit'...): the text of the group is then the unit Id.
+  Values of the device (read only, nothing is entered by the user):
+         GroupTag, Category = HKLM\SOFTWARE\SelfX\Support, values GroupTag and Category (REG_SZ, set by Intune).
+         OU = organizational unit of the computer account (hybrid devices, from the Group Policy state).
+  Entries that are not valid are skipped and named in the SelfX log (Warning), the e-mail then uses the default recipient.
+  Examples (remove the comment marks to use them):
+
+  <Units>
+    <Unit Id="IT1" Mail="it1@example.com" Cc="" />
+    <Unit Id="IT2" Mail="it2@example.com" Cc="service@example.com" />
+  </Units>
+  <Rules>
+    <Rule Source="GroupTag" Match="DE-IT1-BER" Unit="IT1" />
+    <Rule Source="GroupTag" Regex="^[A-Z]{2}-(?'unit'IT[0-9]+)-[A-Z]{3}$" />
+    <Rule Source="OU" Regex="OU=IT2," Unit="IT2" />
+    <Rule Source="Category" Match="Category-A" Unit="IT1" />
+  </Rules>
+-->
+<Ticket_Config>
+	<XML_Version>1.0.0</XML_Version>
+	<Units>
+	</Units>
+	<Rules>
+	</Rules>
+</Ticket_Config>

@@ -16,6 +16,7 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 ## Nicht veröffentlicht (SelfX Service)
 
 ### Neu
+- Ticket per E-Mail: Zuordnung zur zuständigen IT-Einheit über die neue Datei `Ticket_Config.xml` mit beliebig vielen Einheiten (Empfänger, optionale Kopie) und Regeln für Group-Tag, OU und Gerätekategorie (exakter Wert oder Regex, erste passende Regel gilt, sonst Standardadresse). Group-Tag und Kategorie werden aus `HKLM\SOFTWARE\SelfX\Support` gelesen, die OU aus dem Computerkonto. Neu: `tools\Test-SelfXTicketRouting.ps1` zur Prüfung vor der Verteilung.
 - Ticket per E-Mail (Standard aus, `Ticket_Enabled`): Schaltfläche *Ticket erstellen* im Hilfe-Dialog. Der Nutzer beschreibt das Problem, SelfX fügt immer alle Geräteinformationen hinzu (Text und Datei) und öffnet die E-Mail in klassischem Outlook (COM) oder im Standard-Mailprogramm (z. B. neues Outlook, mailto plus Datei im Explorer); gesendet wird nur vom Nutzer. Empfänger nur aus der Konfiguration (`Ticket_Mail`, sonst `Support_Mail`). Neue Datei `TicketSend.ps1`, Tests in `Test-Ticket.ps1`.
 - Grundlage für „Ticket aus SelfX“ (`Sources\TicketMail.ps1`, Test `Test-Ticket.ps1`): Ticketmodell mit standardisiertem Betreff und Text, bereinigten Feldern, Freitext im abgesetzten Block und geprüftem mailto-Link. Nur Bausteine ohne Funktion und ohne Oberfläche; es ändert sich nichts für Nutzer.
 

@@ -26,7 +26,7 @@
     Name    : SupportReport.ps1
     Package : SelfX Service
     Context : GUI helper (signed-in user)
-    Version : 2.6.10
+    Version : 2.8.6
 
     History:
     Version  Date        Author               Change
@@ -34,6 +34,7 @@
     2.4.0    2026-11-02  Wolfgang Baeck       Initial version: device logs report by e-mail
     2.6.10   2026-11-22  fubu2k               The own user logs are added here with the rights of the user (were read by
                                               the System action, which a user-writable folder could redirect)
+    2.8.6    2026-11-22  fubu2k               New-SelfXOutlookMail: optional Cc (ticket e-mail)
 #>
 
 function Get-SelfXReportFolder {
@@ -175,7 +176,7 @@ function Test-SelfXClassicOutlook {
 
 function New-SelfXOutlookMail {
     # Classic Outlook only; new Outlook has no COM interface and fails here.
-    param([string]$To, [string]$Subject, [string]$Body, [string]$Attachment)
+    param([string]$To, [string]$Subject, [string]$Body, [string]$Attachment, [string]$Cc = '')
     if (-not (Test-SelfXClassicOutlook)) { throw 'Classic Outlook is not installed.' }
     $outlook = $null
     $mail = $null
@@ -183,6 +184,7 @@ function New-SelfXOutlookMail {
         $outlook = New-Object -ComObject Outlook.Application
         $mail = $outlook.CreateItem(0)
         if ($To) { $mail.To = $To }
+        if ($Cc) { $mail.CC = $Cc }
         $mail.Subject = $Subject
         $mail.Body = $Body
         $null = $mail.Attachments.Add($Attachment)

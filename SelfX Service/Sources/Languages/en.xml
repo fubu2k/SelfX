@@ -183,6 +183,7 @@ Description of the issue:</Report_Mail_Body>
 		<Ticket_Opened_Text>The e-mail has been opened with the device information attached. Check it and send it.</Ticket_Opened_Text>
 		<Ticket_Manual_Text>Your mail program has been opened. Attach the file {0} (selected in Explorer) to the e-mail, check it and send it.</Ticket_Manual_Text>
 		<Ticket_Error_Text>The e-mail could not be prepared: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>The e-mail goes to: {0}</Ticket_Recipient_Text>
 		<Service_Short_Running>SelfX service running</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX service not available</Service_Short_Unavailable>
 		<Version_Text>Version {0}</Version_Text>
