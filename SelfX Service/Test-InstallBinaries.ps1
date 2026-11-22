@@ -154,12 +154,13 @@ try {
 	& icacls.exe $ps7Folder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' "*$($currentUser):(OI)(CI)F" | Out-Null
 	function Test-PowerShell7Result {
 		param([string]$Path, [string]$Minimum = '7.6.0')
-		try { $null = Test-SelfXPowerShell7 -Executable $Path -MinimumVersion $Minimum; return 'accepted' }
+		# accepted = ready; not ready = missing or too old (the installation goes on with a warning); refused = unsafe rights (stops).
+		try { $check = Test-SelfXPowerShell7 -Executable $Path -MinimumVersion $Minimum; if ($check.Ready) { return 'accepted' } else { return 'not ready: ' + $check.Reason } }
 		catch { return 'refused: ' + $_.Exception.Message }
 	}
 	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'PowerShell 7 check accepts a protected folder with a new enough version'
-	Assert-Equal ((Test-PowerShell7Result (Join-Path $ps7Folder 'missing.exe')) -like 'refused*was not found*') $true 'Missing pwsh.exe is refused'
-	Assert-Equal ((Test-PowerShell7Result $fakeExe '99.0.0') -like 'refused*version 99.0.0 or newer is required*') $true 'Too old version is refused'
+	Assert-Equal ((Test-PowerShell7Result (Join-Path $ps7Folder 'missing.exe')) -like 'not ready*was not found*') $true 'Missing pwsh.exe: not ready, installation goes on (Autopilot)'
+	Assert-Equal ((Test-PowerShell7Result $fakeExe '99.0.0') -like 'not ready*version 99.0.0 or newer is required*') $true 'Too old version: not ready, installation goes on (Autopilot)'
 	& icacls.exe $ps7Folder /grant '*S-1-5-32-545:(OI)(CI)M' | Out-Null
 	Assert-Equal ((Test-PowerShell7Result $fakeExe '1.0.0') -like 'refused*can be changed by normal users*') $true 'Folder that Users can change is refused'
 	& icacls.exe $ps7Folder /remove:g '*S-1-5-32-545' | Out-Null

@@ -27,9 +27,12 @@ Anhebung der Version ausgeliefert.
   PowerShell 7, startet er nichts und meldet „PowerShell 7 is not installed“.
 - `SelfX.exe`, `Start-SelfXHiddenPowerShell`, die Health-Prüfung und der Log-Sammler
   nutzen denselben festen Pfad.
-- `Install.ps1` prüft vor allen Änderungen: PowerShell 7.6 oder neuer ist maschinenweit
-  installiert, und Normalnutzer können den Ordner und `pwsh.exe` nicht ändern. Sonst
-  bricht die Installation ab, und die bestehende Installation bleibt unberührt.
+- Autopilot muss immer funktionieren: Fehlt PowerShell 7 (oder ist es älter als 7.6),
+  installiert `Install.ps1` SelfX trotzdem und gibt nur eine Warnung aus. Bis PowerShell 7
+  da ist, startet der Dienst keine Skripte und meldet „PowerShell 7 is not installed“.
+  Ist PowerShell 7 vorhanden, aber für Normalnutzer änderbar (Ordner oder `pwsh.exe`), bricht
+  die Installation vor allen Änderungen ab (Sicherheit). Der Dienst prüft Rechte und Version
+  außerdem vor jedem Start, denn PowerShell 7 kann erst nach SelfX installiert werden.
   `Install.ps1` und `Uninstall.ps1` laufen weiter in Windows PowerShell 5.1 und
   beenden Fenster und Statussymbole von `powershell.exe` und `pwsh.exe`.
 - Die Tests `Test-ServicePipe.ps1` und `Test-HealthStatus.ps1` übersetzen den Dienst auch

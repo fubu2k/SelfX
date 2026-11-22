@@ -910,6 +910,45 @@ namespace SelfX
         }
 
         /// <summary>
+        /// The installer checks the rights of PowerShell 7 only when SelfX is installed. PowerShell 7 can arrive later
+        /// (Autopilot installs apps in any order), so the service checks it again before every start: neither the folder
+        /// nor pwsh.exe may allow Everyone, Authenticated Users, Interactive or Users to change files or permissions.
+        /// A SYSTEM process must never run a program that normal users can replace.
+        /// </summary>
+        static bool IsPowerShellProtected(string executable, out string reason)
+        {
+            reason = "";
+            string[] userSids = { "S-1-1-0", "S-1-5-11", "S-1-5-4", "S-1-5-32-545" };
+            FileSystemRights dangerous = FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete |
+                FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+            try
+            {
+                foreach (string path in new string[] { Path.GetDirectoryName(executable), executable })
+                {
+                    FileSystemSecurity security = path == executable
+                        ? (FileSystemSecurity)new FileInfo(path).GetAccessControl()
+                        : (FileSystemSecurity)new DirectoryInfo(path).GetAccessControl();
+                    foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+                    {
+                        if (rule.AccessControlType != AccessControlType.Allow) continue;
+                        if (Array.IndexOf(userSids, rule.IdentityReference.Value) >= 0 && (rule.FileSystemRights & dangerous) != 0)
+                        {
+                            reason = "'" + path + "' can be changed by normal users (" + rule.IdentityReference.Value + ")";
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Fail closed: when the rights cannot be read, nothing is started.
+                reason = "the rights could not be read (" + ex.GetType().Name + ")";
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Run PowerShell under the service identity and log bounded output and completion.
         /// </summary>
         string RunScript(string scriptPath, string scriptName, int timeoutSeconds, string user, bool health = false, string healthFilter = "", string callerSid = null, bool background = false, bool callerIsAdmin = false)
@@ -921,6 +960,18 @@ namespace SelfX
             {
                 Log("PowerShell 7 not found at '" + powershell + "'; '" + scriptName + "' was not started.");
                 return "ERROR PowerShell 7 is not installed";
+            }
+            string unprotectedReason;
+            if (!IsPowerShellProtected(powershell, out unprotectedReason))
+            {
+                Log("PowerShell 7 is not protected: " + unprotectedReason + "; '" + scriptName + "' was not started.");
+                return "ERROR PowerShell 7 is not protected";
+            }
+            FileVersionInfo version = FileVersionInfo.GetVersionInfo(powershell);
+            if (version.FileMajorPart < 7 || (version.FileMajorPart == 7 && version.FileMinorPart < 6))
+            {
+                Log("PowerShell " + version.FileMajorPart + "." + version.FileMinorPart + " found; 7.6 or newer is required; '" + scriptName + "' was not started.");
+                return "ERROR PowerShell 7.6 or newer is required";
             }
             // Health runs also update the status cache; the path contains no quotes.
             ProcessStartInfo startInfo = new ProcessStartInfo(powershell,

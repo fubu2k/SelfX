@@ -27,9 +27,12 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
   PowerShell 7 is missing it starts nothing and reports "PowerShell 7 is not installed".
 - `SelfX.exe`, `Start-SelfXHiddenPowerShell`, the health check and the log collector use
   the same fixed path.
-- `Install.ps1` checks before it changes anything: PowerShell 7.6 or newer is installed
-  machine-wide, and normal users cannot change the folder or `pwsh.exe`. Otherwise the
-  installation stops and the existing installation stays untouched. `Install.ps1` and
+- Autopilot must always work: when PowerShell 7 is missing (or older than 7.6),
+  `Install.ps1` installs SelfX anyway and only warns. Until PowerShell 7 is there the
+  service starts no scripts and reports "PowerShell 7 is not installed". When PowerShell 7
+  is present but normal users can change it (folder or `pwsh.exe`), the installation stops
+  before anything is changed (security). The service checks rights and version again before
+  every start, because PowerShell 7 can be installed after SelfX. `Install.ps1` and
   `Uninstall.ps1` still run in Windows PowerShell 5.1 and close windows and status icons
   of `powershell.exe` and `pwsh.exe`.
 - `Test-ServicePipe.ps1` and `Test-HealthStatus.ps1` also compile the service in
