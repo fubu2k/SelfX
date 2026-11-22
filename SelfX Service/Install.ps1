@@ -61,6 +61,8 @@
     2.8.0    2026-11-22  fubu2k               Windows 11 25H2 (build 26200) is required and checked first; PowerShell 7.6+
                                               (machine-wide, not changeable by users) is checked: missing or old = warning,
                                               unsafe rights = abort; WinRT library installed from Bin\WinRT
+    2.8.0    2026-11-22  fubu2k               ProgramData\SelfX is prepared before use: links removed, foreign-owned entries deleted,
+                                              owner and rights set again (F12)
 #>
 
 [CmdletBinding()]
@@ -172,20 +174,75 @@ function Test-SelfXPrebuiltBinaries {
 	}
 }
 
+function Initialize-SelfXDataFolder {
+	# Prepares ProgramData\SelfX before anything is written there as SYSTEM (finding F12). A user can create this folder
+	# (or a link in it) before the installation; the service later writes, rotates and deletes files in it as SYSTEM.
+	# Steps: a link at the folder itself or below it is removed (the link, never its target); entries that are not owned by
+	# SYSTEM, administrators or TrustedInstaller are deleted (link-safe); owner and rights of the folder are set again.
+	# Logs\Users is the area of the users (their own folders are owned by them by design): it is neither entered nor changed.
+	param(
+		[Parameter(Mandatory = $true)][string]$Path,
+		[string[]]$TrustedOwnerSids = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'),
+		[string]$UserArea = 'Logs\Users'
+	)
+	$skipFull = [IO.Path]::GetFullPath((Join-Path $Path $UserArea)).TrimEnd('\')
+
+	function Remove-SelfXDataEntry {
+		param([Parameter(Mandatory = $true)][string]$Entry)
+		$item = Get-Item -LiteralPath $Entry -Force -ErrorAction SilentlyContinue
+		If(-not $item) { return }
+		If($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
+		{
+			If($item.PSIsContainer) { [IO.Directory]::Delete($Entry) } Else { [IO.File]::Delete($Entry) }
+			return
+		}
+		If($item.PSIsContainer) { ForEach($child in @([IO.Directory]::EnumerateFileSystemEntries($Entry))) { Remove-SelfXDataEntry -Entry $child } }
+		Remove-Item -LiteralPath $Entry -Force -ErrorAction Stop
+	}
+
+	function Clear-SelfXDataFolder {
+		param([Parameter(Mandatory = $true)][string]$Folder)
+		ForEach($child in @([IO.Directory]::EnumerateFileSystemEntries($Folder)))
+		{
+			$item = Get-Item -LiteralPath $child -Force
+			If($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { Remove-SelfXDataEntry -Entry $child; continue }
+			$owner = (Get-Acl -LiteralPath $child).GetOwner([Security.Principal.SecurityIdentifier]).Value
+			If($TrustedOwnerSids -notcontains $owner) { Remove-SelfXDataEntry -Entry $child; continue }
+			If($item.PSIsContainer -and [IO.Path]::GetFullPath($child).TrimEnd('\') -ne $skipFull) { Clear-SelfXDataFolder -Folder $child }
+		}
+	}
+
+	$root = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+	If($root -and ($root.Attributes -band [IO.FileAttributes]::ReparsePoint)) { Remove-SelfXDataEntry -Entry $Path; $root = $null }
+	If($root -and -not $root.PSIsContainer) { Remove-SelfXDataEntry -Entry $Path; $root = $null }
+	If(-not $root) { New-Item -ItemType Directory -Path $Path -Force | Out-Null }
+	Clear-SelfXDataFolder -Folder $Path
+
+	# Owner first, then rights from scratch: explicit entries that a former owner added are removed by /reset.
+	& icacls.exe $Path /setowner '*S-1-5-32-544' | Out-Null
+	If($LASTEXITCODE -ne 0) { throw "icacls /setowner failed for '$Path' (exit code $LASTEXITCODE)." }
+	& icacls.exe $Path /reset | Out-Null
+	If($LASTEXITCODE -ne 0) { throw "icacls /reset failed for '$Path' (exit code $LASTEXITCODE)." }
+	& icacls.exe $Path /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$Path' (exit code $LASTEXITCODE)." }
+}
+
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 If(-not $IsAdmin) { throw 'Install.ps1 must run with administrator rights.' }
 If($PSVersionTable.PSEdition -eq 'Core') { throw 'Install.ps1 must run in Windows PowerShell 5.1 (powershell.exe), not PowerShell 7.' }
 $null = Test-SelfXWindowsBuild
 If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) { throw 'Run Install.ps1 in a 64-bit PowerShell (use %SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe from 32-bit agents).' }
 
+# Logs may contain script output; only SYSTEM and administrators can read them. The folder is cleaned of links and
+# foreign-owned entries first, then owner and rights are set (finding F12).
+Initialize-SelfXDataFolder -Path $DataFolder
 New-Item -ItemType Directory -Path $LogFolder -Force | Out-Null
-# Logs may contain script output; only SYSTEM and administrators can read them.
-& icacls.exe $DataFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
 # The SelfX window, the status icon and the user actions log as the user into Logs\Users\<SID> (SelfXLog.ps1).
 # Users may only create their own folder (CREATOR OWNER = full control on it); they cannot list the Users
 # folder or read the folders of other users.
 $UserLogFolder = Join-Path $LogFolder 'Users'
 New-Item -ItemType Directory -Path $UserLogFolder -Force | Out-Null
+& icacls.exe $UserLogFolder /setowner '*S-1-5-32-544' | Out-Null
 & icacls.exe $UserLogFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(AD,X,RA)' '*S-1-3-0:(OI)(CI)(IO)F' | Out-Null
 Start-Transcript -Path (Join-Path $LogFolder 'Install.log') -Append | Out-Null
 
