@@ -229,6 +229,45 @@ when the selected actions require it. Keep the working directory at
 `SelfX Admin`, because the scripts use relative paths for XML, XAML and
 assemblies.
 
+### Prebuilt programs (SelfX Service 2.6.11)
+
+Without further steps, `Install.ps1` compiles `SelfXService.exe` and `SelfX.exe`
+on every device. The files then have a different hash on each device, so
+AppLocker or WDAC cannot allow them with a hash rule. Build them once instead,
+on a build machine with Windows PowerShell 5.1:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
+```
+
+The script writes `SelfX Service\Bin` (not committed): `SelfXService.exe`,
+`SelfX.exe`, `SelfXSessionStarter.dll` (used only by the installer) and the
+manifest `SelfX.Binaries.json` with the SHA256 of the three sources and the
+three files. The files are not signed. When the AppLocker cmdlets are
+available on the build machine, the script also writes
+`SelfX.AppLocker.xml` next to the `Bin` folder (in `build\`, not in the
+package): hash rules for the three files, ready to merge into your AppLocker
+policy (`Set-AppLockerPolicy -XmlPolicy ... -Merge` or import in the policy
+editor / Intune). AppLocker uses its own hash of the file (Authenticode
+SHA256), not the SHA256 of the manifest; always take the rules from this file.
+Build the Intune package afterwards; the `Bin` folder is part of it.
+
+When the package contains `Bin`, `Install.ps1` checks before installing:
+
+- the manifest and all three files exist;
+- the sources of the package (`Service\*.cs`) have the hashes of the manifest,
+  so the programs were built from exactly these sources;
+- each file has the hash of the manifest.
+
+Any failed check stops the installation with exit code `1`; nothing is compiled
+instead. The reason is in `%ProgramData%\SelfX\Logs\Install.log`. Without `Bin`
+the device compiles as before; the temporary files of the compiler are then
+written to a folder below the install folder instead of `C:\Windows\Temp`.
+`tools\New-SelfXIntuneWin.ps1` refuses to package a `Bin` folder that was built
+from other sources. Rebuild `Bin` after every change of `Service\*.cs`, and
+replace the hash rules in AppLocker at the same time: a new build has new
+hashes, and the old rules no longer match.
+
 ## Building the Intune packages
 
 `tools\New-SelfXIntuneWin.ps1` creates one `.intunewin` file per product in
