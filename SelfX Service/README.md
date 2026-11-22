@@ -124,6 +124,12 @@ user, for example the device logs report.
   cannot be changed by users.
 - The pipe denies network access, so only local, authenticated users can
   connect.
+- Before a request is sent, the client checks that the process behind the pipe
+  is the running `SelfXService` (process ID of the pipe server compared with the
+  process ID from the service control manager, 2.6.10). If the service is
+  stopped, a user process that created the pipe name is refused. If the check
+  itself cannot run, the request is still sent. In the troubleshooting console
+  mode of the service the check refuses the pipe.
 - All requests and script output are logged to
   `%ProgramData%\SelfX\Logs\SelfXService.log`, together with the requesting
   user; every script also writes its own log (2.6.0). Only SYSTEM and
