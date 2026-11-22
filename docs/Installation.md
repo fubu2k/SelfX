@@ -93,7 +93,7 @@ Nutzer wird nichts gebaut oder kompiliert.
 | Meldung | Bedeutung und Lösung |
 |---|---|
 | `The command dotnet was not found` | Das .NET SDK 10 ist nicht installiert, oder das PowerShell-Fenster ist älter als die Installation. SDK installieren und ein neues Fenster öffnen. |
-| `The .NET SDK 10 is required, found '9.…'` | Eine andere SDK-Version ist aktiv. SDK 10 installieren; mit mehreren SDKs wählt eine `global.json` die Version. |
+| `The .NET SDK 10 is required, found '…'` | Es ist kein SDK 10 installiert (oder nur ein anderes). SDK 10 installieren. Sind mehrere SDKs installiert, wählt die `global.json` im Repository automatisch das SDK 10. |
 | `The folder Bin is missing …` | Schritt 5 wurde nicht ausgeführt, oder das Paket wurde vorher gebaut. Schritt 5 und 7 wiederholen. |
 | `Bin was not built from the current …` | Ein Quelltext wurde nach dem Bauen geändert. Schritt 5 und 7 wiederholen. |
 | Die Installation auf dem Gerät endet mit Exitcode 1 | Den Grund nennt die letzte Zeile von `%ProgramData%\SelfX\Logs\Install.log`. Die bisherige Installation bleibt dann unverändert. |

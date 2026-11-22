@@ -92,7 +92,7 @@ the devices of your users.
 | Message | Meaning and solution |
 |---|---|
 | `The command dotnet was not found` | The .NET SDK 10 is not installed, or the PowerShell window is older than the installation. Install the SDK and open a new window. |
-| `The .NET SDK 10 is required, found '9.…'` | Another SDK version is active. Install SDK 10; with several SDKs a `global.json` selects the version. |
+| `The .NET SDK 10 is required, found '…'` | No SDK 10 is installed (or only another one). Install SDK 10. When several SDKs are installed, the `global.json` in the repository selects SDK 10 automatically. |
 | `The folder Bin is missing …` | Step 5 was not run, or the package was built before. Repeat steps 5 and 7. |
 | `Bin was not built from the current …` | A source file was changed after the build. Repeat steps 5 and 7. |
 | The installation on the device ends with exit code 1 | The last line of `%ProgramData%\SelfX\Logs\Install.log` gives the reason. The previous installation then stays unchanged. |

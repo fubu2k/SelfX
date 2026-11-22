@@ -65,8 +65,12 @@ $Programs = [ordered]@{
 # The .NET SDK 10 is required: another major version would build other files than the ones that were tested.
 $dotnet = Get-Command -Name dotnet -ErrorAction SilentlyContinue
 if (-not $dotnet) { throw 'The command dotnet was not found. Install the .NET SDK 10 (https://dotnet.microsoft.com/download) and open a new PowerShell window.' }
-$sdkVersion = (& $dotnet.Source --version | Select-Object -First 1).Trim()
-if ($LASTEXITCODE -ne 0 -or $sdkVersion -notmatch '^10\.') { throw "The .NET SDK 10 is required, found '$sdkVersion'. Install the SDK 10 or select it with a global.json." }
+# global.json in the repository root selects the SDK 10 even when a newer SDK is installed too, so the command
+# runs in the repository root.
+Push-Location -LiteralPath $RepositoryRoot
+try { $sdkVersion = ((& $dotnet.Source --version 2>&1) | Select-Object -First 1).ToString().Trim(); $sdkExit = $LASTEXITCODE }
+finally { Pop-Location }
+if ($sdkExit -ne 0 -or $sdkVersion -notmatch '^10\.') { throw "The .NET SDK 10 is required, found '$sdkVersion'. Install the .NET SDK 10 (https://dotnet.microsoft.com/download/dotnet/10.0)." }
 
 # No telemetry and no welcome text on the build machine.
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
@@ -80,6 +84,7 @@ $publishRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfX-Build-' + [guid]::Ne
 New-Item -ItemType Directory -Path $publishRoot | Out-Null
 $manifestSources = [ordered]@{}
 $manifestBinaries = [ordered]@{}
+Push-Location -LiteralPath $RepositoryRoot
 try {
     foreach ($relative in $Programs.Keys) {
         $definition = $Programs[$relative]
@@ -97,6 +102,7 @@ try {
     }
 }
 finally {
+    Pop-Location
     Remove-Item -LiteralPath $publishRoot -Recurse -Force -ErrorAction SilentlyContinue
     # dotnet leaves obj and bin next to the project files; they are not needed and must not end up in a package.
     Get-ChildItem -LiteralPath $ProjectsFolder -Directory -ErrorAction SilentlyContinue | ForEach-Object {
