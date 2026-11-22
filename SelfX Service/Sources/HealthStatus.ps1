@@ -83,9 +83,12 @@ function Get-SelfXDiskHealth {
     } catch { New-SelfXHealthResult Disk Unknown $_.Exception.Message }
 }
 
+# Defender status through CIM (SelfXDefender.ps1, no Defender module).
+. (Join-Path $PSScriptRoot 'SelfXDefender.ps1')
+
 function Get-SelfXDefenderHealth {
     try {
-        $mp = Get-MpComputerStatus -ErrorAction Stop
+        $mp = Get-SelfXDefenderStatus
         if ($null -eq $mp -or $null -eq $mp.AMServiceEnabled -or $null -eq $mp.AntivirusEnabled -or
             $null -eq $mp.RealTimeProtectionEnabled -or $null -eq $mp.AntivirusSignatureAge -or
             $null -eq $mp.DefenderSignaturesOutOfDate) {

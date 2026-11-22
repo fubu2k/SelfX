@@ -67,17 +67,25 @@ function global:Get-NetRoute { throw 'Get-NetRoute is not allowed (use SelfXNetw
 function global:Repair-Volume { param($DriveLetter, [switch]$OfflineScanAndFix, [switch]$Scan, [switch]$SpotFix, $ErrorAction) $global:SelfXTestCalls.Add("Repair-Volume $DriveLetter offline=$OfflineScanAndFix"); 'ScanScheduled' }
 function global:Clear-RecycleBin { param([switch]$Force, $Confirm, $ErrorAction) $global:SelfXTestCalls.Add('Clear-RecycleBin'); throw 'The system cannot find the path specified.' }
 function global:Clear-DnsClientCache { param($ErrorAction) $global:SelfXTestCalls.Add('Clear-DnsClientCache'); if ($global:DnsFails) { throw 'Access denied' } }
-function global:Get-MpComputerStatus { param($ErrorAction) [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00' } }
-function global:Update-MpSignature { param($ErrorAction) $global:SelfXTestCalls.Add('Update-MpSignature'); if ($global:UpdateFails) { throw 'No connection' }; $global:SignatureVersion = '1.441.99.0' }
+# The Defender module is not used any more (compatibility layer in PowerShell 7): calling it fails the test. SelfXDefender.ps1 reads CIM.
+function global:Get-MpComputerStatus { throw 'Get-MpComputerStatus is not allowed (use SelfXDefender.ps1)' }
+function global:Update-MpSignature { throw 'Update-MpSignature is not allowed (use SelfXDefender.ps1)' }
 # Only the two network classes are simulated (raw CIM objects of root\StandardCimv2); every other class or method fails the test.
 function global:Get-CimInstance {
 	param($Namespace, $ClassName, $Filter, $ErrorAction)
 	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetAdapter') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeAdapters }
+	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpComputerStatus') { return [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00' } }
 	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetRoute') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeRoutes }
 	throw "Get-CimInstance is not allowed in tests ($ClassName)"
 }
 function global:Invoke-CimMethod {
-	param($InputObject, $MethodName, $ErrorAction)
+	param($InputObject, $Namespace, $ClassName, $MethodName, $ErrorAction)
+	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpSignature' -and $MethodName -eq 'Update') {
+		$global:SelfXTestCalls.Add('Defender-Update')
+		if ($global:UpdateFails) { throw 'No connection' }
+		$global:SignatureVersion = '1.441.99.0'
+		return [pscustomobject]@{ ReturnValue = $(if ($null -ne $global:UpdateReturn) { $global:UpdateReturn } else { 0 }) }
+	}
 	if ($MethodName -ne 'Restart' -or -not $InputObject.InterfaceIndex) { throw 'Invoke-CimMethod is not allowed in tests' }
 	$global:SelfXTestCalls.Add("Restart-NetAdapter $($InputObject.Name)")
 }
@@ -257,6 +265,14 @@ try {
 	Assert-Equal ($run.ExitCode -eq 0 -and "$($run.Output[0])" -like 'Defender signatures: 1.441.85.0 -> 1.441.99.0 (last update *)') $true 'Defender: signatures updated'
 	$global:UpdateFails = $true
 	Assert-Equal (Invoke-TestScript 'SelfX_Defender_UpdateSignature.ps1').ExitCode 1 'Defender: failure is exit 1'
+	$global:UpdateFails = $false
+	$global:UpdateReturn = 3
+	$run = Invoke-TestScript 'SelfX_Defender_UpdateSignature.ps1'
+	Assert-Equal ($run.ExitCode -eq 1 -and "$($run.Output[0])" -like '*Defender signature update returned 3*') $true 'Defender: a return value other than 0 is an error (exit 1)'
+	$global:UpdateReturn = $null
+	$global:SignatureVersion = '1.441.85.0'
+	$run = Invoke-TestScript 'SelfX_Defender_UpdateSignature.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Defender-Update' 'Defender: the update runs through CIM (MSFT_MpSignature.Update) only'
 
 	$run = Invoke-TestScript 'SelfX_Intune_RestartService.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Restart-Service IntuneManagementExtension' 'IME restart'

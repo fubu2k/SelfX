@@ -5,7 +5,7 @@
 .DESCRIPTION
     Runs non-interactively as LOCAL SYSTEM through the local SelfX service and named pipe
     "SelfX.Service" when the user clicks the remediation button of the Defender or Compliance
-    status row. Runs Update-MpSignature with the update sources configured by policy
+    status row. Runs the signature update (CIM MSFT_MpSignature.Update, as Update-MpSignature) with the update sources configured by policy
     (WSUS / Microsoft Update / MMPC / file share). Outdated signatures after a longer absence
     are a frequent cause of a non-compliant device.
     Needs a connection to a configured update source; offline the update fails with exit 1.
@@ -33,11 +33,12 @@ else { function Write-SelfXLog { param($Message, $Level) } }
 
 $ErrorActionPreference = 'Stop'
 try {
-    $before = (Get-MpComputerStatus).AntivirusSignatureVersion
+    . (Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXDefender.ps1')
+    $before = (Get-SelfXDefenderStatus).AntivirusSignatureVersion
     Write-SelfXLog "Signature version before the update: $before"
     # Uses the sources and order defined by Defender policy; no source is forced here.
-    Update-MpSignature
-    $after = Get-MpComputerStatus
+    Update-SelfXDefenderSignature
+    $after = Get-SelfXDefenderStatus
     $text = "Defender signatures: {0} -> {1} (last update {2})" -f $before, $after.AntivirusSignatureVersion, $after.AntivirusSignatureLastUpdated
     Write-SelfXLog $text
     Write-Output $text

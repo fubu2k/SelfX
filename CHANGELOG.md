@@ -21,6 +21,9 @@ Anhebung der Version ausgeliefert.
 
 ### Geändert
 
+- Defender ohne Defender-Modul: Status (Gerätestatus, Compliance) und Signatur-Update nutzen CIM
+  (`root\Microsoft\Windows\Defender`, neue Datei `Sources\SelfXDefender.ps1`) statt `Get-MpComputerStatus`
+  und `Update-MpSignature`. Update-Quellen und Reihenfolge kommen weiter aus der Defender-Richtlinie.
 - Netzwerk ohne NetAdapter-Modul: Adapter, Standardrouten und der Adapter-Neustart („Netzwerk neu starten“)
   nutzen CIM (`root\StandardCimv2`, neue Datei `Sources\SelfXNetwork.ps1`) statt `Get-NetAdapter`,
   `Get-NetRoute` und `Restart-NetAdapter`. Dadurch startet PowerShell 7 dafür kein Windows PowerShell 5.1 mehr.
