@@ -80,6 +80,7 @@ Wir empfehlen die detaillierte Ansicht, wenn die einfache Ansicht Ihr Problem ni
 		<Service_Running_Text>Der SelfX-Dienst wird ausgeführt: Aktionen mit Schildsymbol werden mit Administratorrechten ausgeführt.</Service_Running_Text>
 		<Service_Unavailable_Text>Der SelfX-Dienst wird nicht ausgeführt: Aktionen mit Schildsymbol sind nicht verfügbar.</Service_Unavailable_Text>
 		<Service_Busy_Text>Eine andere Aktion wird noch ausgeführt. Bitte warten Sie, bis sie abgeschlossen ist.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Diese Aktion ist nicht möglich, solange ein anderer Benutzer an diesem Gerät angemeldet ist. Wenden Sie sich an den IT-Support oder versuchen Sie es erneut, wenn Sie allein angemeldet sind.</Service_OtherSessions_Text>
 		<Action_Running_Text>Aktion wird ausgeführt: {0}</Action_Running_Text>
 		<Action_Running_Label>Wird ausgeführt…</Action_Running_Label>
 		<Action_Success_Text>Aktion abgeschlossen: {0}</Action_Success_Text>

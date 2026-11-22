@@ -17,6 +17,9 @@
 	  Context        User   = started by the GUI as the signed-in user.
 	                 System = run as LOCAL SYSTEM by the local SelfX service. Only these entries are allowed by the service.
 	  TimeoutSeconds Only for Context System. The service stops the script after this time (default 900, maximum 7200).
+	  OtherSessions  Only for Context System. Block = a normal user cannot start the action while another user has an
+	                 active session on the device (restart, network, disk check, ...). Elevated administrators are not
+	                 restricted. Default: no restriction. Set it on every entry of the same script (Test-Catalog.ps1 checks this).
 	  Post_Action    Optional. MailReport = after a successful System action the GUI attaches the newest report of the user
 	                 (ProgramData\SelfX\Reports\<user SID>) to a new e-mail to Support_Mail (Outlook, otherwise mail app + Explorer).
 	                 The first System action with MailReport is also offered as "Send logs to support" in System information.
@@ -190,6 +193,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation Ref="Msg_Intune_Sync_Explanation"/>
 			<Script>SelfX_Intune_RestartService.ps1</Script>
 			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>300</TimeoutSeconds>
 			<Category>Intune</Category>
 			<Alerte_MSG Ref="Msg_Intune_Restart"/>
@@ -201,6 +205,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You have network issues and want to restart the network adapters. This action runs with administrator rights through the local SelfX service.</Explanation>
 			<Script>SelfX_Device_AirePlaneMode.ps1</Script>
 			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>300</TimeoutSeconds>
 			<Category>Device</Category>
 			<Alerte_MSG>All network adapters will be restarted. Network access will be interrupted for a short time.
@@ -214,6 +219,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_Chkdsk"/>
@@ -605,6 +611,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Intune_Sync_Explanation"/>
 			<Script>SelfX_Intune_RestartService.ps1</Script>
 			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>300</TimeoutSeconds>
 			<Category>Intune</Category>
 			<Alerte_MSG Ref="Msg_Intune_Restart"/>
@@ -616,6 +623,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_Chkdsk"/>
@@ -627,6 +635,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_Chkdsk"/>
@@ -638,6 +647,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_Chkdsk"/>

@@ -197,6 +197,7 @@ function Invoke-SelfXSystemAction {
 	}
 	switch -Regex ($response) {
 		'^BUSY'    { return [pscustomobject]@{ Status = 'Busy'; ExitCode = $null; Message = $response } }
+		'^ERROR OtherSessions$' { return [pscustomobject]@{ Status = 'OtherSessions'; ExitCode = $null; Message = $response } }
 		'^TIMEOUT' { return [pscustomobject]@{ Status = 'Timeout'; ExitCode = $null; Message = $response } }
 		default    { return [pscustomobject]@{ Status = 'Error'; ExitCode = $null; Message = "$response" } }
 	}

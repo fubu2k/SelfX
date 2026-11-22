@@ -259,6 +259,7 @@ $Run_Explanation_Text = Get-SelfXString 'Warning_Click_Run_Explanation_Text'
 $Service_Running_Text = Get-SelfXString 'Service_Running_Text'
 $Service_Unavailable_Text = Get-SelfXString 'Service_Unavailable_Text'
 $Service_Busy_Text = Get-SelfXString 'Service_Busy_Text'
+$Service_OtherSessions_Text = Get-SelfXString 'Service_OtherSessions_Text'
 $Global:SysInfo_Texts = Get-SelfXSystemInfoTexts
 $SysInfo_Test_Host = Get-SelfXText "SystemInfo_Internet_Test_Host" "www.msftconnecttest.com"
 $SysInfo_Test_Port = [int](Get-SelfXText "SystemInfo_Internet_Test_Port" "80")
@@ -1382,6 +1383,7 @@ $SvcAction_Timer.Add_Tick({
 			}
 			'Failed'      { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_ExitCode_Text' $Global:SvcAction_Name $Result.ExitCode)) }
 			'Busy'        { $msgbar.SetWarningAlert($Service_Busy_Text) }
+			'OtherSessions' { $msgbar.SetWarningAlert($Service_OtherSessions_Text) }
 			'Timeout'     { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Timeout_Text' $Global:SvcAction_Name)) }
 			'Unavailable' { $msgbar.SetDangerAlert($Service_Unavailable_Text); Update-SelfXServiceStatus }
 			Default       { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_Text' "$Global:SvcAction_Name ($($Result.Message))")) }

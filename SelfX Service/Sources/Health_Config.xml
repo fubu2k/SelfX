@@ -60,6 +60,8 @@
          SelfX: it asks the user with a restart warning (save your work) and never runs it in
          "Fix all problems".
          Optional When="NotOK" offers the button only while the status is not OK (default: Always).
+         Optional OtherSessions="Block": a normal user cannot start the repair while another user has an active
+         session (elevated administrators are not restricted).
     <Remediation Id="IME" Script="SelfX_Intune_RestartService.ps1" />
     <Remediation Id="Service" Name="Spooler" Script="Repair-Spooler.ps1" />
     -->
@@ -73,9 +75,9 @@
          "Check for updates" in Settings; the Windows Update Agent installs only what is left. SelfX shows
          "Running..." until the installation has finished and then checks the whole status again.
          Optional TimeoutSeconds (max. 7200); the orchestrator is watched at most 90 minutes. -->
-    <Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" />
+    <Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" OtherSessions="Block" />
     <!-- Restart Windows to complete a pending restart, only after the user confirmed the restart warning. -->
-    <Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" />
+    <Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" OtherSessions="Block" />
     <!-- Retry failed Intune app installations now (instead of after the IME retry schedule of 24 hours):
          resets the cached error of the failed apps and restarts the Intune Management Extension. -->
     <Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" />

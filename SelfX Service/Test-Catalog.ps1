@@ -111,6 +111,27 @@ foreach ($key in $contexts.Keys) {
 	Assert-True (@($contexts[$key] | Sort-Object -Unique).Count -eq 1) "$key is not listed with both contexts (the service accepts a script when any entry says System)"
 }
 
+# OtherSessions is optional, may only be Block, needs Context System and must be the same on every entry of a script
+# (the service blocks when any System entry of the script says Block).
+$sessionsByScript = @{}
+foreach ($action in @($catalog.SelectNodes('//Action'))) {
+	$sessions = "$($action.OtherSessions)".Trim()
+	if ($sessions) {
+		Assert-True ($sessions -ceq 'Block' -and "$($action.Context)".Trim() -ceq 'System') "Action $($action.Id) uses OtherSessions=Block only with Context System (found '$sessions')"
+	}
+	if ("$($action.Context)".Trim() -ceq 'System') {
+		$scriptKey = "$($action.Script)".Trim().ToLowerInvariant()
+		if (-not $sessionsByScript.ContainsKey($scriptKey)) { $sessionsByScript[$scriptKey] = New-Object System.Collections.Generic.List[string] }
+		$sessionsByScript[$scriptKey].Add($sessions)
+	}
+}
+foreach ($scriptKey in $sessionsByScript.Keys) {
+	Assert-True (@($sessionsByScript[$scriptKey] | Sort-Object -Unique).Count -eq 1) "All System entries of $scriptKey have the same OtherSessions setting"
+}
+foreach ($remediation in @($health.SelectNodes('//Remediation[@OtherSessions]'))) {
+	Assert-True ($remediation.GetAttribute('OtherSessions') -ceq 'Block') "Remediation $($remediation.GetAttribute('Script')) OtherSessions is Block (found '$($remediation.GetAttribute('OtherSessions'))')"
+}
+
 # --- Remediations of Health_Config.xml -------------------------------------------------------------
 $remediationScripts = New-Object System.Collections.Generic.List[string]
 foreach ($remediation in @($health.SelectNodes('//Remediation'))) {
