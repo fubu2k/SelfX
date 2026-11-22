@@ -1,7 +1,7 @@
 # SelfX Service
 
 SelfX Service is installed machine-wide and works without any network connection. Current version:
-**2.6.11** (see the [Changelog](../CHANGELOG.md)).
+**2.6.12** (see the [Changelog](../CHANGELOG.md)).
 
 - One modern, resizable user interface for users without technical knowledge
   (2.5.0): navigation bar with **Troubleshooting**, **Device status** and

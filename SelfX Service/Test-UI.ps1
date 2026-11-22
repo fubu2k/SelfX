@@ -143,6 +143,10 @@ try {
     Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'gsw-CH') 'de' 'Swiss German uses de.xml'
     Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'zh-TW') 'zh-Hant' 'zh-TW uses zh-Hant.xml'
     Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'fr') 'fr' 'Exact language file'
+    Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'cs') 'de' 'Language without a file uses German (base language)'
+    Assert-Equal (Initialize-SelfXLanguage -LanguageFolder $languages -Language 'cs').Culture 'de' 'No matching file: German is loaded'
+    # The following checks use English again.
+    [void](Initialize-SelfXLanguage -LanguageFolder $languages -Language 'en')
     $list = @(Get-SelfXLanguageList -LanguageFolder $languages)
     Assert-Equal $list.Count @(Get-ChildItem -LiteralPath $languages -Filter '*.xml').Count 'Every language file is listed'
     Assert-Equal (($list | Where-Object Culture -eq 'de').Name) 'Deutsch' 'Languages are listed by their own name'

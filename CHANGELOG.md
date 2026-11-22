@@ -11,6 +11,24 @@ histories of the single files show where a change was made. Changes marked
 2.6.10 were made before the package version was raised; they are delivered with
 **2.6.11**, the first package version of this fork.
 
+## 2.6.12 - 2026-11-22 (SelfX Service)
+
+German is the base language of the user interface; English is the fallback.
+Raise of `Tool_Version` and `$ExpectedVersion`: redeploy the package.
+
+### Changed
+
+- `Tool_Language` in `Tool_Config.xml` is now `de` by default (before: `Auto`,
+  the Windows display language). Users can still choose another language in
+  SelfX > Settings; `Auto` remains possible.
+- If no language file matches (for example `Auto` on a device in Czech), SelfX
+  uses German instead of English. A text that is missing in the selected
+  language is shown in English.
+- `Test-UI.ps1` tests the base language.
+
+Not changed: the texts of the actions in `Issues_List.xml` stay English base
+texts, which are used only if a text is missing in German and in English.
+
 ## Repository, 2026-11-22
 
 - The fork is developed only for SelfX Service. The folders `SelfX Standard`
