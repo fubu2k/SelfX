@@ -198,6 +198,7 @@
 		<Copilot_Open_Button>Копировать и открыть Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Текст находится в буфере обмена, Copilot Chat открыт. Вставьте текст туда (Ctrl+V) и отправьте.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Не удалось подготовить текст: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Не указывайте в описании имена, пароли или данные клиентов. Copilot может ошибаться: не выполняйте команды, которых вы не понимаете.</Copilot_Warning_Text>
 		<Version_Text>Версия {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: всё в порядке</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: проблем: {0}, предупреждений: {1}</Tray_Tooltip_Issues>

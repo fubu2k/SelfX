@@ -198,6 +198,7 @@
 		<Copilot_Open_Button>複製並開啟 Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>文字已在剪貼簿中，Copilot Chat 已開啟。請在該處貼上（Ctrl+V）並傳送。</Copilot_Opened_Text>
 		<Copilot_Error_Text>無法準備文字：{0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>請勿在描述中寫入姓名、密碼或客戶資料。Copilot 可能出錯：請勿執行您不理解的命令。</Copilot_Warning_Text>
 		<Version_Text>版本 {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 一切正常</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} 個問題，{1} 個警告</Tray_Tooltip_Issues>

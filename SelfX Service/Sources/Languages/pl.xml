@@ -198,6 +198,7 @@ Opis problemu:</Report_Mail_Body>
 		<Copilot_Open_Button>Kopiuj i otwórz Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Tekst jest w schowku, a Copilot Chat został otwarty. Wklej go tam (Ctrl+V) i wyślij.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Nie można przygotować tekstu: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Nie wpisuj w opisie imion i nazwisk, haseł ani danych klientów. Copilot może się mylić: nie wykonuj poleceń, których nie rozumiesz.</Copilot_Warning_Text>
 		<Version_Text>Wersja {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: wszystko w porządku</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: problemy: {0}, ostrzeżenia: {1}</Tray_Tooltip_Issues>

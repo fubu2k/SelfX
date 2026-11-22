@@ -198,6 +198,7 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Copilot_Open_Button>Nakili na ufungue Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Maandishi yako kwenye ubao wa kunakili na Copilot Chat imefunguliwa. Yabandike hapo (Ctrl+V) kisha uyatume.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Maandishi hayakuweza kuandaliwa: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Usiandike majina, nywila au data za wateja kwenye maelezo. Copilot inaweza kukosea: usitekeleze amri ambazo huzielewi.</Copilot_Warning_Text>
 		<Version_Text>Toleo {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: kila kitu kiko sawa</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: matatizo {0}, maonyo {1}</Tray_Tooltip_Issues>

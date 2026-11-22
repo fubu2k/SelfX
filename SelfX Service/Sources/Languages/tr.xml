@@ -198,6 +198,7 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Copilot_Open_Button>Kopyala ve Copilot’u aç</Copilot_Open_Button>
 		<Copilot_Opened_Text>Metin panoda ve Copilot Chat açıldı. Metni oraya yapıştırın (Ctrl+V) ve gönderin.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Metin hazırlanamadı: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Açıklamaya ad, parola veya müşteri verisi yazmayın. Copilot yanılabilir: anlamadığınız komutları çalıştırmayın.</Copilot_Warning_Text>
 		<Version_Text>Sürüm {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: her şey yolunda</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} sorun, {1} uyarı</Tray_Tooltip_Issues>

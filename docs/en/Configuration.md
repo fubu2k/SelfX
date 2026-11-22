@@ -459,23 +459,25 @@ SelfX uses no interface and no token: the user pastes the text into Copilot Chat
 
 **What is in the text (fixed list):** Windows edition, version and build, SelfX version
 and language, days since the last restart, drives (letter, percent used, GB free) and
-the device status (name of the check, state, shortened details). The building blocks
-can do more (apps with errors, network, updates), but this data is not collected yet
-in this version.
+the device status (name of the check, state, shortened details; this includes pending
+updates, a pending restart and company apps with errors) and the network (only the
+kind of connection: LAN, Wi-Fi, mobile, VPN, and the kind of proxy: none, manual,
+script). There is no internet test, SelfX makes no network connection.
 
 **What is not in the text:** device name, user name, domain, e-mail addresses, IP and
 MAC addresses, serial numbers, the *System information* page, logs. If such values
 appear in the description or in details, they are replaced by placeholders (`<email>`,
 `<ip>`, `<device>`, `<user>`, `<server 1>` ...). Recognition by patterns is not
-complete, which is why the user sees the text before it is copied. The text is limited
-to 6000 characters.
+complete, which is why the user sees the text before it is copied. The dialog reminds the
+user not to write names, passwords or customer data in the description and not to run
+commands they do not understand. The text is limited to 6000 characters.
 
 | Setting | Meaning |
 |---|---|
 | `Copilot_Enabled` | `False` (default) or `True`. |
 | `Copilot_Url` | Address that is opened. Default `https://m365.cloud.microsoft/chat`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
 | `Copilot_Audience` | `User` (default): plain answers for users. `Admin`: technical answers for IT staff. |
-| `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: only the error codes. |
+| `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: the company apps row of the device status stays, but without details, so without app names and without error codes. |
 
 **Security:** The address and the settings come only from `Tool_Config.xml` (writable
 by administrators only). The user cannot change the address. Only this address is

@@ -198,6 +198,7 @@
 		<Copilot_Open_Button>نسخ وفتح Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>النص موجود في الحافظة وتم فتح Copilot Chat. الصقه هناك (Ctrl+V) ثم أرسله.</Copilot_Opened_Text>
 		<Copilot_Error_Text>تعذر إعداد النص: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>لا تكتب أسماء أو كلمات مرور أو بيانات عملاء في الوصف. قد يخطئ Copilot: لا تنفذ أوامر لا تفهمها.</Copilot_Warning_Text>
 		<Version_Text>الإصدار {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: كل شيء على ما يرام</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} مشكلة، {1} تحذير</Tray_Tooltip_Issues>

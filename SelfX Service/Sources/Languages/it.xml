@@ -198,6 +198,7 @@ Descrizione del problema:</Report_Mail_Body>
 		<Copilot_Open_Button>Copia e apri Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Il testo è negli appunti e Copilot Chat è stato aperto. Incollalo lì (Ctrl+V) e invialo.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Impossibile preparare il testo: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Non scrivere nomi, password o dati dei clienti nella descrizione. Copilot può sbagliare: non eseguire comandi che non capisci.</Copilot_Warning_Text>
 		<Version_Text>Versione {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: tutto in ordine</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} problema/i, {1} avviso/i</Tray_Tooltip_Issues>

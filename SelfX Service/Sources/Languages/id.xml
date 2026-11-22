@@ -198,6 +198,7 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Copilot_Open_Button>Salin dan buka Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Teks ada di clipboard dan Copilot Chat telah dibuka. Tempelkan di sana (Ctrl+V) lalu kirim.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Teks tidak dapat disiapkan: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Jangan menulis nama, kata sandi, atau data pelanggan di deskripsi. Copilot bisa salah: jangan menjalankan perintah yang tidak Anda pahami.</Copilot_Warning_Text>
 		<Version_Text>Versi {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: semuanya baik</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} masalah, {1} peringatan</Tray_Tooltip_Issues>

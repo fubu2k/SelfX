@@ -196,6 +196,7 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Copilot_Open_Button>Kopieren und Copilot öffnen</Copilot_Open_Button>
 		<Copilot_Opened_Text>Der Text liegt in der Zwischenablage und Copilot Chat wurde geöffnet. Fügen Sie ihn dort ein (Strg+V) und senden Sie ihn ab.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Der Text konnte nicht vorbereitet werden: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Schreiben Sie keine Namen, Passwörter oder Kundendaten in die Beschreibung. Copilot kann sich irren: Führen Sie keine Befehle aus, die Sie nicht verstehen.</Copilot_Warning_Text>
 		<Service_Short_Running>SelfX-Dienst aktiv</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX-Dienst läuft nicht</Service_Short_Unavailable>
 		<Version_Text>Version {0}</Version_Text>

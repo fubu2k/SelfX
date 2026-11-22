@@ -198,6 +198,7 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Copilot_Open_Button>কপি করুন ও Copilot খুলুন</Copilot_Open_Button>
 		<Copilot_Opened_Text>লেখাটি ক্লিপবোর্ডে আছে এবং Copilot Chat খোলা হয়েছে। সেখানে পেস্ট করুন (Ctrl+V) ও পাঠান।</Copilot_Opened_Text>
 		<Copilot_Error_Text>লেখা প্রস্তুত করা যায়নি: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>বিবরণে নাম, পাসওয়ার্ড বা গ্রাহকের তথ্য লিখবেন না। Copilot ভুল করতে পারে: যে কমান্ড বোঝেন না তা চালাবেন না।</Copilot_Warning_Text>
 		<Version_Text>সংস্করণ {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: সব ঠিক আছে</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0}টি সমস্যা, {1}টি সতর্কতা</Tray_Tooltip_Issues>

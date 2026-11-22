@@ -198,6 +198,7 @@ Descrição do problema:</Report_Mail_Body>
 		<Copilot_Open_Button>Copiar e abrir o Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>O texto está na área de transferência e o Copilot Chat foi aberto. Cole-o lá (Ctrl+V) e envie.</Copilot_Opened_Text>
 		<Copilot_Error_Text>Não foi possível preparar o texto: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>Não escreva nomes, senhas nem dados de clientes na descrição. O Copilot pode errar: não execute comandos que você não entende.</Copilot_Warning_Text>
 		<Version_Text>Versão {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: está tudo bem</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} problema(s), {1} aviso(s)</Tray_Tooltip_Issues>

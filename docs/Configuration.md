@@ -478,23 +478,27 @@ Text selbst in Copilot Chat ein.
 
 **Was im Text steht (feste Liste):** Windows-Ausgabe, -Version und -Build, SelfX-Version
 und Sprache, Tage seit dem letzten Neustart, Laufwerke (Buchstabe, belegt in Prozent,
-frei in GB) und der Gerätestatus (Name der Prüfung, Zustand, gekürzte Einzelheiten).
-Der Baukasten kann noch mehr (Apps mit Fehlern, Netzwerk, Updates), diese Daten werden
-in dieser Version aber noch nicht gesammelt.
+frei in GB), der Gerätestatus (Name der Prüfung, Zustand, gekürzte Einzelheiten; dazu
+gehören auch ausstehende Updates, ein anstehender Neustart und Firmen-Apps mit
+Fehlern) und das Netzwerk (nur die Art der Verbindung: LAN, WLAN, Mobilfunk, VPN, und
+die Art des Proxys: keiner, manuell, Skript). Es gibt keinen Internettest, SelfX stellt
+keine Netzwerkverbindung her.
 
 **Was nicht im Text steht:** Gerätename, Nutzername, Domäne, E-Mail-Adressen,
 IP- und MAC-Adressen, Seriennummern, die Seite *Systeminformationen*, Protokolle.
 Taucht so etwas in der Beschreibung oder in Einzelheiten auf, wird es durch
 Platzhalter ersetzt (`<email>`, `<ip>`, `<device>`, `<user>`, `<server 1>` ...). Das
 Erkennen nach Mustern ist nicht vollständig. Deshalb sieht der Nutzer den Text vor dem
-Kopieren. Der Text ist auf 6000 Zeichen begrenzt.
+Kopieren. Der Dialog erinnert daran, keine Namen, Passwörter oder Kundendaten in die
+Beschreibung zu schreiben und keine Befehle auszuführen, die man nicht versteht. Der
+Text ist auf 6000 Zeichen begrenzt.
 
 | Einstellung | Bedeutung |
 |---|---|
 | `Copilot_Enabled` | `False` (Standard) oder `True`. |
 | `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://m365.cloud.microsoft/chat`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
 | `Copilot_Audience` | `User` (Standard): einfache Antworten für Nutzer. `Admin`: technische Antworten für IT-Personal. |
-| `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: nur die Fehlercodes. |
+| `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: Die Zeile der Firmen-Apps im Gerätestatus bleibt, aber ohne Einzelheiten, also ohne App-Namen und ohne Fehlercodes. |
 
 **Sicherheit:** Adresse und Einstellungen kommen nur aus `Tool_Config.xml` (nur für
 Administratoren schreibbar). Der Nutzer kann die Adresse nicht ändern. Geöffnet wird

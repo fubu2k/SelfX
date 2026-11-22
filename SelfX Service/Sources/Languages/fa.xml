@@ -198,6 +198,7 @@
 		<Copilot_Open_Button>کپی و باز کردن Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>متن در کلیپ‌بورد است و Copilot Chat باز شد. آن را آنجا جای‌گذاری کنید (Ctrl+V) و ارسال کنید.</Copilot_Opened_Text>
 		<Copilot_Error_Text>آماده‌سازی متن ممکن نشد: {0}</Copilot_Error_Text>
+		<Copilot_Warning_Text>در توضیح، نام، گذرواژه یا اطلاعات مشتریان ننویسید. Copilot ممکن است اشتباه کند: دستوراتی را که نمی‌فهمید اجرا نکنید.</Copilot_Warning_Text>
 		<Version_Text>نسخه {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: همه چیز درست است</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} مشکل، {1} هشدار</Tray_Tooltip_Issues>

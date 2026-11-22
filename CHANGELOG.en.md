@@ -31,6 +31,7 @@ histories of the single files show where a change was made. Changes marked
 - New action "The time of your device is wrong" (system context through the SelfX service, category Device, `SelfX_Device_SyncTime.ps1`): starts the Windows Time service when needed and runs `w32tm.exe /resync /force` with fixed arguments. Time source, configuration and time zone are not changed. Blocked while another user is signed in (`OtherSessions=Block`). German text in `de.xml`, other languages show the English text.
 
 ### Changed
+- Copilot Chat: `Copilot_Include_AppNames` = `False` now also removes the details of the *Company apps* row in the device status. Before, the app names were still part of the text there. New in the text: kind of connection (LAN, Wi-Fi, mobile, VPN) and kind of proxy (none, manual, script), from local values, without an internet test and without addresses. The dialog shows a note (do not write names, passwords or customer data, do not run commands you do not understand).
 - Documentation: `docs/Configuration.md` rewritten in plainer language, outdated version notes and history removed, headings without version numbers (links updated).
 - Translations added: all 22 language files (except German and English) were missing 28 texts, which were shown in English: notice while another person is signed in (`Service_OtherSessions_Text`), ticket dialog (`Ticket_*`), uptime hint, proxy and network drives, and the network measurements (`Latency_*`).
 
