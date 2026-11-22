@@ -21,6 +21,9 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- Minimum version: Windows 11 25H2 (build 26200). `Install.ps1` checks the build number
+  (registry) before changing anything and stops hard on older builds; the existing
+  installation stays unchanged.
 - The service starts every script with `%ProgramFiles%\PowerShell\7\pwsh.exe` (fixed
   path, no PATH search). For the script it sets only the machine-wide module folders
   (`PSModulePath`) and turns off PowerShell telemetry and the update check. When
