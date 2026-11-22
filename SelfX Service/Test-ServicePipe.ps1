@@ -54,6 +54,31 @@ function Add-SelfXServiceType {
 $source = Join-Path $PSScriptRoot 'Service\SelfXService.cs'
 Add-SelfXServiceType -Path $source -FrameworkReferences 'System.ServiceProcess', 'System.Xml'
 
+# --- PowerShell 7 must not be replaceable by normal users: the service checks the rights before every start ---
+$protectionMethod = [SelfX.SelfXService].GetMethod('IsPowerShellProtected', [Reflection.BindingFlags]'NonPublic,Static')
+Assert-True ($null -ne $protectionMethod) 'The service has the rights check for PowerShell 7'
+$fakeFolder = Join-Path ([IO.Path]::GetTempPath()) ('SelfXPwshTest_' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $fakeFolder -Force | Out-Null
+$fakeExe = Join-Path $fakeFolder 'pwsh.exe'
+Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'System32\cmd.exe') -Destination $fakeExe
+$currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+function Test-ProtectionResult([string]$Path) {
+	$arguments = [object[]]@($Path, $null)
+	return [bool]$protectionMethod.Invoke($null, $arguments)
+}
+& icacls.exe $fakeFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' "*$($currentSid):(OI)(CI)F" | Out-Null
+Assert-True (Test-ProtectionResult $fakeExe) 'Folder for administrators only: protected'
+& icacls.exe $fakeFolder /grant '*S-1-5-32-545:(OI)(CI)M' | Out-Null
+Assert-True (-not (Test-ProtectionResult $fakeExe)) 'Users can modify the folder: not protected (nothing is started)'
+& icacls.exe $fakeFolder /remove:g '*S-1-5-32-545' | Out-Null
+& icacls.exe $fakeFolder /grant '*S-1-1-0:(OI)(CI)W' | Out-Null
+Assert-True (-not (Test-ProtectionResult $fakeExe)) 'Everyone can write: not protected'
+& icacls.exe $fakeFolder /remove:g '*S-1-1-0' | Out-Null
+& icacls.exe $fakeFolder /grant '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
+Assert-True (Test-ProtectionResult $fakeExe) 'Users can read and run: protected'
+Assert-True (-not (Test-ProtectionResult (Join-Path $fakeFolder 'missing.exe'))) 'Rights cannot be read: not protected (fail closed)'
+Remove-Item -LiteralPath $fakeFolder -Recurse -Force -ErrorAction SilentlyContinue
+
 $pipeName = 'SelfX.Test.' + [guid]::NewGuid().ToString('N')
 $dataRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXPipeTest_' + [guid]::NewGuid().ToString('N'))
 $logDirectory = Join-Path $dataRoot 'Logs'

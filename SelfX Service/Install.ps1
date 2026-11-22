@@ -77,19 +77,21 @@ $PowerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powe
 
 function Test-SelfXPowerShell7 {
 	# Checks the PowerShell 7 that the service, the window and the status icon start (fixed machine-wide path, no PATH
-	# search). Throws with a reason when a check fails; the caller stops the installation then (nothing is changed yet).
-	#  - pwsh.exe exists at %ProgramFiles%\PowerShell\7 (the MSI or Intune installation; the Store version lives in a
-	#    user-specific folder and is not usable for the service);
-	#  - its version is at least the minimum (7.6 is based on .NET 10, the LTS release);
-	#  - neither the folder nor pwsh.exe can be changed by normal users (the service runs it as SYSTEM).
+	# search). Returns an object with Ready, Version and Reason.
+	#  - pwsh.exe missing or older than the minimum (7.6 is based on .NET 10, the LTS release): Ready = $false with a
+	#    reason, and the installation goes on. Autopilot installs apps in any order and must never fail because of this;
+	#    until PowerShell 7 is there the service starts no script and says so.
+	#  - neither the folder nor pwsh.exe may be changeable by normal users (the service runs it as SYSTEM): THROWS, the
+	#    installation stops before anything is changed. The service checks this again before every start.
+	#    (The Store version lives in a user-specific folder and is not usable for the service.)
 	param(
 		[string]$Executable = (Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'),
 		[version]$MinimumVersion = '7.6.0'
 	)
-	If(-not (Test-Path -LiteralPath $Executable -PathType Leaf)) { throw "PowerShell 7 was not found at '$Executable'. Install PowerShell $MinimumVersion or newer (MSI, machine-wide) first (docs\Installation.md)." }
+	If(-not (Test-Path -LiteralPath $Executable -PathType Leaf)) { return [pscustomobject]@{ Ready = $false; Version = $null; Reason = "PowerShell 7 was not found at '$Executable'. Install PowerShell $MinimumVersion or newer (MSI, machine-wide); SelfX works as soon as it is there (docs\Installation.md)." } }
 	$Info = [Diagnostics.FileVersionInfo]::GetVersionInfo($Executable)
 	$Found = [version]('{0}.{1}.{2}' -f $Info.FileMajorPart, $Info.FileMinorPart, $Info.FileBuildPart)
-	If($Found -lt $MinimumVersion) { throw "PowerShell $Found was found at '$Executable'; version $MinimumVersion or newer is required." }
+	If($Found -lt $MinimumVersion) { return [pscustomobject]@{ Ready = $false; Version = $Found; Reason = "PowerShell $Found was found at '$Executable'; version $MinimumVersion or newer is required." } }
 	# Everyone, Authenticated Users, Interactive and Users must not have rights to change files or permissions.
 	$UserSids = @('S-1-1-0', 'S-1-5-11', 'S-1-5-4', 'S-1-5-32-545')
 	$Dangerous = [Security.AccessControl.FileSystemRights]'WriteData, AppendData, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
@@ -102,7 +104,7 @@ function Test-SelfXPowerShell7 {
 			If(($UserSids -contains $Sid) -and ($Rule.FileSystemRights -band $Dangerous)) { throw "'$Item' can be changed by normal users ($($Rule.IdentityReference)). PowerShell 7 must be installed machine-wide in a folder that only administrators can change." }
 		}
 	}
-	return $Found
+	return [pscustomobject]@{ Ready = $true; Version = $Found; Reason = '' }
 }
 
 function Test-SelfXPrebuiltBinaries {
@@ -176,8 +178,9 @@ Try
 	# installation stays untouched and still works.
 	Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
 	Write-Output 'Programs in Bin checked against the manifest.'
-	$PowerShell7Version = Test-SelfXPowerShell7
-	Write-Output "PowerShell $PowerShell7Version found (machine-wide)."
+	$PowerShell7 = Test-SelfXPowerShell7
+	If($PowerShell7.Ready) { Write-Output "PowerShell $($PowerShell7.Version) found (machine-wide)." }
+	Else { Write-Warning "$($PowerShell7.Reason) The installation continues." }
 
 	# Remove a previous service so its files can be replaced
 	$ExistingService = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
