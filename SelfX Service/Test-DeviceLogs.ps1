@@ -197,9 +197,17 @@ try {
         # accepted when the own SID owns them (as for a normal user), so the test files get that owner.
         if ($Name -like 'Users\*') {
             $mySid = [Security.Principal.WindowsIdentity]::GetCurrent().User
-            $acl = [IO.File]::GetAccessControl($path)
-            $acl.SetOwner($mySid)
-            [IO.File]::SetAccessControl($path, $acl)
+            # .NET Framework (Windows PowerShell 5.1) has File.GetAccessControl; .NET 10 (PowerShell 7) only the FileSystemAclExtensions.
+            $item = New-Object IO.FileInfo($path)
+            if ($PSVersionTable.PSEdition -eq 'Core') {
+                $acl = [IO.FileSystemAclExtensions]::GetAccessControl($item)
+                $acl.SetOwner($mySid)
+                [IO.FileSystemAclExtensions]::SetAccessControl($item, $acl)
+            } else {
+                $acl = [IO.File]::GetAccessControl($path)
+                $acl.SetOwner($mySid)
+                [IO.File]::SetAccessControl($path, $acl)
+            }
         }
     }
     $me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
