@@ -167,7 +167,7 @@ try {
 		$errors = $null
 		[void][Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$errors)
 		Assert-Equal @($errors).Count 0 "$($file.Name) parses"
-		Assert-Equal ($text -match 'Version\s*:\s*2\.6\.\d+') $true "$($file.Name) header version 2.6.x"
+		Assert-Equal ($text -match 'Version\s*:\s*2\.\d+\.\d+') $true "$($file.Name) header version 2.x.y"
 		Assert-Equal ($code.Contains('Initialize-SelfXLog')) $true "$($file.Name) initializes the logging"
 		Assert-Equal ($code -match '(?i)-like\s+"\*(word|teams)\*"') $false "$($file.Name) uses no *word* / *teams* wildcards"
 		Assert-Equal ($code.Contains('echo Y|')) $false "$($file.Name) does not answer prompts in English only"
