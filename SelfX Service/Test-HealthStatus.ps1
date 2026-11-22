@@ -72,6 +72,7 @@ function Get-SelfXPendingRebootMarkers { if ($script:rebootFails) { throw 'Mock 
 function Get-SelfXUpdateSearchResult { if ($script:updateFails) { throw 'Mock WUA unavailable' }; $script:updateSearch }
 function Get-SelfXWuaRebootRequired { if ($script:wuaRebootFails) { throw 'Mock WUA denied' }; [bool]$script:wuaReboot }
 function Get-SelfXOrchestratorRebootTitles { @($script:orchestratorReboot) }
+function Get-SelfXRestartTimes { if ($script:restartTimesFail) { throw 'Mock times denied' }; [pscustomobject]@{ LastBoot = $script:restartBoot; LastInstall = $script:restartInstall } }
 function Invoke-SelfXHealthScript { param($Path, $TimeoutSeconds) if ($script:timeout) { throw 'Mock timeout' }; [pscustomobject]@{ ExitCode = $script:exitCode; Output = $script:checkOutput } }
 function Start-Process { throw 'Forbidden in tests' }
 function Invoke-CimMethod { throw 'Forbidden in tests' }
@@ -82,7 +83,7 @@ function New-ScheduledTaskTrigger { throw 'Forbidden in tests' }
 function New-ScheduledTaskPrincipal { throw 'Forbidden in tests' }
 function New-ScheduledTaskSettingsSet { throw 'Forbidden in tests' }
 foreach ($name in @('Get-Service','Get-CimInstance','Get-SelfXDefenderStatus','Get-SelfXBitLockerVolumes',
-    'Get-SelfXAppReports','Get-SelfXPendingRebootMarkers','Get-SelfXUpdateSearchResult','Get-SelfXWuaRebootRequired','Get-SelfXOrchestratorRebootTitles',
+    'Get-SelfXAppReports','Get-SelfXPendingRebootMarkers','Get-SelfXUpdateSearchResult','Get-SelfXWuaRebootRequired','Get-SelfXOrchestratorRebootTitles','Get-SelfXRestartTimes',
     'Invoke-SelfXHealthScript','Start-Process','Invoke-CimMethod',
     'Register-ScheduledTask','New-ScheduledTask','New-ScheduledTaskAction','New-ScheduledTaskTrigger',
     'New-ScheduledTaskPrincipal','New-ScheduledTaskSettingsSet')) {
@@ -150,6 +151,19 @@ try {
     $reboot = Get-SelfXPendingRebootHealth
     Assert-Equal "$($reboot.Id)/$($reboot.Status)" 'PendingReboot/Error' 'Pending reboot is Error'
     Assert-Equal $reboot.Detail.Contains('Windows Update') $true 'Pending reboot source in detail'
+    # Times: the detail names the last restart and the installation only when it is newer than the restart.
+    $script:restartBoot = [datetime]::SpecifyKind([datetime]'2026-11-20T08:00:00', [DateTimeKind]::Utc)
+    $script:restartInstall = [datetime]'2026-11-21T07:38:45'
+    Assert-Equal (Get-SelfXPendingRebootHealth).Detail 'Restart required: Windows Update. Last restart {utc:2026-11-20T08:00:00Z}; last update installed {utc:2026-11-21T07:38:45Z}.' 'Pending restart detail names restart and installation'
+    $script:restartInstall = [datetime]'2026-11-19T07:38:45'
+    Assert-Equal (Get-SelfXPendingRebootHealth).Detail 'Restart required: Windows Update. Last restart {utc:2026-11-20T08:00:00Z}.' 'An installation older than the restart is not named'
+    $script:restartInstall = $null
+    Assert-Equal (Get-SelfXPendingRebootHealth).Detail 'Restart required: Windows Update. Last restart {utc:2026-11-20T08:00:00Z}.' 'Missing installation time is left out'
+    $script:restartBoot = $null
+    Assert-Equal (Get-SelfXPendingRebootHealth).Detail 'Restart required: Windows Update.' 'Missing times leave only the markers'
+    $script:restartTimesFail = $true
+    Assert-Equal (Get-SelfXPendingRebootHealth).Detail 'Restart required: Windows Update.' 'Failing time sources do not fail the check'
+    $script:restartTimesFail = $false
     $script:rebootFails = $true
     Assert-Equal (Get-SelfXPendingRebootHealth).Status Unknown 'Unreadable reboot markers are Unknown'
     $script:rebootFails = $false
