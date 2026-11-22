@@ -446,6 +446,13 @@ try {
         $script:recheckFails = $false
     }
     Assert-Equal $info[0].Status Error 'Status preserved for row styling'
+    $short = Get-SelfXUptimeInfo -Uptime ([timespan]::FromDays(6.9))
+    $long = Get-SelfXUptimeInfo -Uptime ([timespan]::FromDays(7))
+    $shortHasHint = $short.Value.Contains($script:SelfXInfoText.Uptime_Restart_Hint)
+    $longHasHint = $long.Value.Contains($script:SelfXInfoText.Uptime_Restart_Hint)
+    Assert-Equal "$($short.Status)|$shortHasHint" '|False' 'Uptime below 7 days: no status, no hint'
+    Assert-Equal "$($long.Status)|$longHasHint" 'Pending|True' 'Uptime of 7 days: warning with restart hint'
+    Assert-Equal (Get-SelfXUptimeInfo -Uptime ([timespan]::FromDays(3)) -WarnDays 2).Status 'Pending' 'Uptime warning limit can be set'
     $manualScript = [pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'proxy.internal.example:8080'; AutoConfigURL = 'http://wpad.internal.example/proxy.pac' }
     $proxyText = ConvertTo-SelfXProxyText $manualScript
     $hasManual = $proxyText.Contains($script:SelfXInfoText.Proxy_Manual)

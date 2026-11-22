@@ -208,6 +208,7 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Last_Boot>Letzter Start</Last_Boot>
 		<Uptime>Betriebszeit</Uptime>
 		<Uptime_Value>{0} Tag(e) {1:D2}:{2:D2} Std.</Uptime_Value>
+		<Uptime_Restart_Hint>Neustart empfohlen (nicht „Herunterfahren“)</Uptime_Restart_Hint>
 		<Last_Update>Zuletzt installiertes Update</Last_Update>
 		<Time_Zone>Zeitzone</Time_Zone>
 		<Current_User>Aktueller Benutzer</Current_User>
@@ -396,6 +397,13 @@ Möchten Sie fortfahren?</Alerte_MSG>
 				<Name>Ihr Gerät ist langsam</Name>
 				<Explanation>Ihr Gerät ist langsam, und Sie möchten Platz schaffen.</Explanation>
 				<Alerte_MSG>Der Papierkorb wird geleert und temporäre Dateien werden gelöscht. Gelöschte Dateien aus dem Papierkorb lassen sich nicht wiederherstellen. Dateien, die gerade ein Programm nutzt, bleiben erhalten. Es werden keine Programme beendet.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Die Uhrzeit Ihres Geräts stimmt nicht</Name>
+				<Explanation>Es treten Anmelde- oder Zertifikatsfehler auf, oder die Uhr Ihres Geräts zeigt die falsche Zeit an. Das geschieht über den SelfX-Dienst mit Administratorrechten.</Explanation>
+				<Alerte_MSG>Die Uhr Ihres Geräts wird mit der Zeitquelle Ihrer Organisation abgeglichen. Die Zeitzone wird nicht geändert. Versuchen Sie es danach noch einmal.
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>

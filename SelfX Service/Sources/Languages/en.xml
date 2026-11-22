@@ -208,6 +208,7 @@ Description of the issue:</Report_Mail_Body>
 		<Last_Boot>Last boot</Last_Boot>
 		<Uptime>Uptime</Uptime>
 		<Uptime_Value>{0} day(s) {1:D2}:{2:D2} h</Uptime_Value>
+		<Uptime_Restart_Hint>restart recommended (not "Shut down")</Uptime_Restart_Hint>
 		<Last_Update>Last update installed</Last_Update>
 		<Time_Zone>Time zone</Time_Zone>
 		<Current_User>Current user</Current_User>
