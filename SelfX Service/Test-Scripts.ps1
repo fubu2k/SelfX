@@ -227,6 +227,15 @@ try {
 	Assert-Equal @($global:FakeProcesses | Where-Object { $_.ProcessName -in '1Password', 'wordpad' }).Count 2 'Word: 1Password and WordPad keep running'
 	$global:FakeProcesses.Clear()
 
+	New-FakeProcess 'OUTLOOK' 'C:\Office\OUTLOOK.EXE'
+	New-FakeProcess 'olk' 'C:\Program Files\WindowsApps\Microsoft.OutlookForWindows_1_x64__8wekyb3d8bbwe\olk.exe'
+	$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Stop-Process OUTLOOK;Start-Process C:\Office\OUTLOOK.EXE' 'Outlook: only classic Outlook is closed and started again'
+	Assert-Equal @($global:FakeProcesses | Where-Object ProcessName -eq 'olk').Count 1 'Outlook: new Outlook keeps running'
+	$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Outlook: nothing to do when not running'
+	$global:FakeProcesses.Clear()
+
 	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'
 	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'
 	New-FakeProcess 'TeamViewer' 'C:\Apps\TeamViewer.exe'

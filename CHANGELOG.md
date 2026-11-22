@@ -15,6 +15,10 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 
 ## Nicht veröffentlicht (SelfX Service)
 
+### Neu
+
+- Neue Aktion „Outlook reagiert nicht mehr“ (Nutzerkontext, Kategorie Outlook, `SelfX_Outlook_Reboot.ps1`): beendet das klassische Outlook der eigenen Sitzung und startet es wieder. Profil, Datendateien und Add-ins bleiben unverändert; das neue Outlook (`olk.exe`) ist nicht betroffen. Deutscher Text in `de.xml`, andere Sprachen zeigen den englischen Text.
+
 ### Geändert
 
 - Statuszeile „Neustart ausstehend“: Der Text nennt jetzt den letzten Neustart und, wenn die letzte Update-Installation danach lag, deren Zeitpunkt (nur lesend, Zeiten in der Zeitzone des Nutzers). Fehlen die Quellen, entfällt nur der Zusatz.

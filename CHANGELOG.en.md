@@ -15,6 +15,10 @@ histories of the single files show where a change was made. Changes marked
 
 ## Unreleased (SelfX Service)
 
+### Added
+
+- New action "Solve an issue with Outlook" (user context, category Outlook, `SelfX_Outlook_Reboot.ps1`): closes classic Outlook of the own session and starts it again. Profile, data files and add-ins stay unchanged; the new Outlook (`olk.exe`) is not affected. German text in `de.xml`, other languages show the English text.
+
 ### Changed
 
 - Status row "Restart pending": the text now names the last restart and, when the last update installation was after it, its time (read-only, times in the time zone of the user). If the sources are missing, only the addition is left out.
