@@ -80,6 +80,7 @@ Jeśli widok uproszczony nie rozwiązuje problemu, wybierz widok szczegółowy.<
 		<Service_Running_Text>Usługa SelfX działa: działania oznaczone tarczą są uruchamiane jako administrator.</Service_Running_Text>
 		<Service_Unavailable_Text>Usługa SelfX nie działa: działania oznaczone tarczą są niedostępne.</Service_Unavailable_Text>
 		<Service_Busy_Text>Trwa inne działanie. Poczekaj na jego zakończenie.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Ta czynność nie jest możliwa, gdy na tym urządzeniu zalogowany jest inny użytkownik. Skontaktuj się z pomocą techniczną IT lub spróbuj ponownie, gdy będziesz jedynym użytkownikiem.</Service_OtherSessions_Text>
 		<Action_Running_Text>Uruchamianie działania: {0}</Action_Running_Text>
 		<Action_Running_Label>Trwa…</Action_Running_Label>
 		<Action_Success_Text>Działanie zakończone: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Opis problemu:</Report_Mail_Body>
 		<Support_None_Text>Nie skonfigurowano danych kontaktowych. Skontaktuj się z działem IT.</Support_None_Text>
 		<Service_Short_Running>Usługa SelfX działa</Service_Short_Running>
 		<Service_Short_Unavailable>Usługa SelfX niedostępna</Service_Short_Unavailable>
+		<Ticket_Row_Label>Zgłoś problem</Ticket_Row_Label>
+		<Ticket_Row_Text>Otwiera e-mail do pomocy technicznej IT z Twoim opisem i informacjami o tym komputerze.</Ticket_Row_Text>
+		<Ticket_Button>Utwórz zgłoszenie</Ticket_Button>
+		<Ticket_Window_Title>Utwórz zgłoszenie</Ticket_Window_Title>
+		<Ticket_Intro_Text>Opisz, co nie działa. SelfX przygotuje e-mail do pomocy technicznej IT.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Twój opis</Ticket_Description_Label>
+		<Ticket_Info_Text>E-mail zawsze zawiera informacje o tym komputerze (informacje o systemie i stan urządzenia), w treści oraz jako załącznik. Przed wysłaniem możesz wszystko sprawdzić. Nic nie jest wysyłane automatycznie.</Ticket_Info_Text>
+		<Ticket_Open_Button>Otwórz e-mail</Ticket_Open_Button>
+		<Ticket_Kind_Text>Incydent</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Informacje o urządzeniu nie zostały jeszcze zebrane.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>E-mail został otwarty z załączonymi informacjami o urządzeniu. Sprawdź go i wyślij.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Otwarto Twój program pocztowy. Dołącz do e-maila plik {0} (zaznaczony w Eksploratorze plików), sprawdź e-mail i wyślij go.</Ticket_Manual_Text>
+		<Ticket_Error_Text>Nie udało się przygotować e-maila: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>E-mail zostanie wysłany do: {0}</Ticket_Recipient_Text>
 		<Version_Text>Wersja {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: wszystko w porządku</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: problemy: {0}, ostrzeżenia: {1}</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Opis problemu:</Report_Mail_Body>
 		<Last_Boot>Ostatnie uruchomienie</Last_Boot>
 		<Uptime>Czas pracy</Uptime>
 		<Uptime_Value>{0} dni {1:D2}:{2:D2} godz.</Uptime_Value>
+		<Uptime_Restart_Hint>zalecane ponowne uruchomienie (nie „Zamknij”)</Uptime_Restart_Hint>
 		<Last_Update>Ostatnia zainstalowana aktualizacja</Last_Update>
 		<Time_Zone>Strefa czasowa</Time_Zone>
 		<Current_User>Bieżący użytkownik</Current_User>
@@ -229,6 +245,18 @@ Opis problemu:</Report_Mail_Body>
 		<Gateway>Brama domyślna</Gateway>
 		<DNS>Serwery DNS</DNS>
 		<MAC>Adresy MAC</MAC>
+		<Proxy>Serwer proxy (ustawienie użytkownika)</Proxy>
+		<Proxy_None>Brak serwera proxy</Proxy_None>
+		<Proxy_Manual>Ręczny serwer proxy</Proxy_Manual>
+		<Proxy_Script>Skrypt automatycznej konfiguracji</Proxy_Script>
+		<Network_Drives>Dyski sieciowe</Network_Drives>
+		<Network_Drives_None>Brak</Network_Drives_None>
+		<Latency_Gateway>Opóźnienie: brama domyślna</Latency_Gateway>
+		<Latency_Dns>Zapytanie DNS: {0}</Latency_Dns>
+		<Latency_Connection>Połączenie: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (min. {1}, maks. {2}, utracono {3} z {4})</Latency_Value>
+		<Latency_Failed>niedostępny (niepowodzeń: {0} z {1})</Latency_Failed>
+		<Latency_Skipped>nie zmierzono (osiągnięto limit czasu)</Latency_Skipped>
 		<Collected_At>Zebrano</Collected_At>
 		<Error>Błąd</Error>
 		<Yes>Tak</Yes>

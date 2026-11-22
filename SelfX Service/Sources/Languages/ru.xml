@@ -80,6 +80,7 @@
 		<Service_Running_Text>Служба SelfX работает: действия со значком щита запускаются с правами администратора.</Service_Running_Text>
 		<Service_Unavailable_Text>Служба SelfX не работает: действия со значком щита недоступны.</Service_Unavailable_Text>
 		<Service_Busy_Text>Выполняется другое действие. Дождитесь его завершения.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Это действие невозможно, пока на устройстве выполнен вход другого пользователя. Обратитесь в ИТ-поддержку или повторите попытку, когда вы будете единственным пользователем.</Service_OtherSessions_Text>
 		<Action_Running_Text>Выполняется действие: {0}</Action_Running_Text>
 		<Action_Running_Label>Выполняется…</Action_Running_Label>
 		<Action_Success_Text>Действие выполнено: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@
 		<Support_None_Text>Контактные данные не настроены. Обратитесь в ИТ-отдел.</Support_None_Text>
 		<Service_Short_Running>Служба SelfX работает</Service_Short_Running>
 		<Service_Short_Unavailable>Служба SelfX недоступна</Service_Short_Unavailable>
+		<Ticket_Row_Label>Сообщить о проблеме</Ticket_Row_Label>
+		<Ticket_Row_Text>Открывает письмо в ИТ-поддержку с вашим описанием и сведениями об этом компьютере.</Ticket_Row_Text>
+		<Ticket_Button>Создать заявку</Ticket_Button>
+		<Ticket_Window_Title>Создание заявки</Ticket_Window_Title>
+		<Ticket_Intro_Text>Опишите, что не работает. SelfX подготовит письмо в ИТ-поддержку.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Ваше описание</Ticket_Description_Label>
+		<Ticket_Info_Text>Письмо всегда содержит сведения об этом компьютере (сведения о системе и состояние устройства) в тексте и во вложенном файле. Перед отправкой всё можно проверить. Автоматически ничего не отправляется.</Ticket_Info_Text>
+		<Ticket_Open_Button>Открыть письмо</Ticket_Open_Button>
+		<Ticket_Kind_Text>Инцидент</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Сведения об устройстве ещё не собраны.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>Письмо открыто, сведения об устройстве вложены. Проверьте его и отправьте.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Открыта ваша почтовая программа. Приложите к письму файл {0} (выбран в проводнике), проверьте письмо и отправьте его.</Ticket_Manual_Text>
+		<Ticket_Error_Text>Не удалось подготовить письмо: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>Письмо будет отправлено по адресу: {0}</Ticket_Recipient_Text>
 		<Version_Text>Версия {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: всё в порядке</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: проблем: {0}, предупреждений: {1}</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@
 		<Last_Boot>Последний запуск</Last_Boot>
 		<Uptime>Время работы</Uptime>
 		<Uptime_Value>{0} дн. {1:D2}:{2:D2} ч</Uptime_Value>
+		<Uptime_Restart_Hint>рекомендуется перезагрузка (не «Завершение работы»)</Uptime_Restart_Hint>
 		<Last_Update>Последнее установленное обновление</Last_Update>
 		<Time_Zone>Часовой пояс</Time_Zone>
 		<Current_User>Текущий пользователь</Current_User>
@@ -229,6 +245,18 @@
 		<Gateway>Шлюз по умолчанию</Gateway>
 		<DNS>Серверы DNS</DNS>
 		<MAC>Адреса MAC</MAC>
+		<Proxy>Прокси (параметр пользователя)</Proxy>
+		<Proxy_None>Без прокси</Proxy_None>
+		<Proxy_Manual>Прокси вручную</Proxy_Manual>
+		<Proxy_Script>Скрипт автоматической настройки</Proxy_Script>
+		<Network_Drives>Сетевые диски</Network_Drives>
+		<Network_Drives_None>Нет</Network_Drives_None>
+		<Latency_Gateway>Задержка: шлюз по умолчанию</Latency_Gateway>
+		<Latency_Dns>DNS-запрос: {0}</Latency_Dns>
+		<Latency_Connection>Подключение: {0}</Latency_Connection>
+		<Latency_Value>{0} мс (мин. {1}, макс. {2}, потеряно {3} из {4})</Latency_Value>
+		<Latency_Failed>недоступен (сбоев: {0} из {1})</Latency_Failed>
+		<Latency_Skipped>не измерено (достигнут лимит времени)</Latency_Skipped>
 		<Collected_At>Собрано</Collected_At>
 		<Error>Ошибка</Error>
 		<Yes>Да</Yes>

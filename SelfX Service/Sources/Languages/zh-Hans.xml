@@ -80,6 +80,7 @@
 		<Service_Running_Text>SelfX 服务正在运行：带盾牌图标的操作将以管理员权限运行。</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX 服务未运行：带盾牌图标的操作不可用。</Service_Unavailable_Text>
 		<Service_Busy_Text>另一项操作仍在运行。请等待其完成。</Service_Busy_Text>
+		<Service_OtherSessions_Text>其他用户登录此设备时，无法执行此操作。请联系 IT 支持，或在您是唯一用户时重试。</Service_OtherSessions_Text>
 		<Action_Running_Text>正在运行操作：{0}</Action_Running_Text>
 		<Action_Running_Label>正在运行…</Action_Running_Label>
 		<Action_Success_Text>操作已完成：{0}</Action_Success_Text>
@@ -171,6 +172,20 @@
 		<Support_None_Text>未配置联系信息。请联系您的 IT 部门。</Support_None_Text>
 		<Service_Short_Running>SelfX 服务正在运行</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX 服务不可用</Service_Short_Unavailable>
+		<Ticket_Row_Label>报告问题</Ticket_Row_Label>
+		<Ticket_Row_Text>打开发送给 IT 支持的电子邮件，其中包含您的描述和这台电脑的设备信息。</Ticket_Row_Text>
+		<Ticket_Button>创建工单</Ticket_Button>
+		<Ticket_Window_Title>创建工单</Ticket_Window_Title>
+		<Ticket_Intro_Text>请描述哪里出了问题。SelfX 会为 IT 支持准备一封电子邮件。</Ticket_Intro_Text>
+		<Ticket_Description_Label>您的描述</Ticket_Description_Label>
+		<Ticket_Info_Text>电子邮件始终包含这台电脑的设备信息（系统信息和设备状态），内容在正文中并作为附件。发送前您可以检查所有内容。不会自动发送任何内容。</Ticket_Info_Text>
+		<Ticket_Open_Button>打开电子邮件</Ticket_Open_Button>
+		<Ticket_Kind_Text>事件</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>尚未收集设备信息。</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>已打开电子邮件，并附上设备信息。请检查后发送。</Ticket_Opened_Text>
+		<Ticket_Manual_Text>已打开您的邮件程序。请将文件 {0}（已在文件资源管理器中选中）附加到电子邮件，检查后发送。</Ticket_Manual_Text>
+		<Ticket_Error_Text>无法准备电子邮件：{0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>电子邮件将发送至：{0}</Ticket_Recipient_Text>
 		<Version_Text>版本 {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 一切正常</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} 个问题，{1} 个警告</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@
 		<Last_Boot>上次启动时间</Last_Boot>
 		<Uptime>运行时间</Uptime>
 		<Uptime_Value>{0} 天 {1:D2}:{2:D2} 小时</Uptime_Value>
+		<Uptime_Restart_Hint>建议重启（而不是“关机”）</Uptime_Restart_Hint>
 		<Last_Update>最近安装的更新</Last_Update>
 		<Time_Zone>时区</Time_Zone>
 		<Current_User>当前用户</Current_User>
@@ -229,6 +245,18 @@
 		<Gateway>默认网关</Gateway>
 		<DNS>DNS 服务器</DNS>
 		<MAC>MAC 地址</MAC>
+		<Proxy>代理（用户设置）</Proxy>
+		<Proxy_None>无代理</Proxy_None>
+		<Proxy_Manual>手动代理</Proxy_Manual>
+		<Proxy_Script>自动配置脚本</Proxy_Script>
+		<Network_Drives>网络驱动器</Network_Drives>
+		<Network_Drives_None>无</Network_Drives_None>
+		<Latency_Gateway>延迟：默认网关</Latency_Gateway>
+		<Latency_Dns>DNS 查询：{0}</Latency_Dns>
+		<Latency_Connection>连接：{0}</Latency_Connection>
+		<Latency_Value>{0} 毫秒（最小 {1}，最大 {2}，{4} 次中丢失 {3} 次）</Latency_Value>
+		<Latency_Failed>无法访问（{1} 次中失败 {0} 次）</Latency_Failed>
+		<Latency_Skipped>未测量（已达时间限制）</Latency_Skipped>
 		<Collected_At>收集时间</Collected_At>
 		<Error>错误</Error>
 		<Yes>是</Yes>

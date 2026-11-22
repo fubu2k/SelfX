@@ -80,6 +80,7 @@ Basit görünüm sorununuzu çözmezse veya içermiyorsa ayrıntılı görünüm
 		<Service_Running_Text>SelfX hizmeti çalışıyor: kalkanla işaretli eylemler yönetici haklarıyla çalışır.</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX hizmeti çalışmıyor: kalkanla işaretli eylemler kullanılamaz.</Service_Unavailable_Text>
 		<Service_Busy_Text>Başka bir eylem çalışıyor. Tamamlanmasını bekleyin.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Bu cihazda başka bir kullanıcı oturum açmışken bu eylem yapılamaz. BT desteğine başvurun veya tek kullanıcı olduğunuzda yeniden deneyin.</Service_OtherSessions_Text>
 		<Action_Running_Text>Eylem çalışıyor: {0}</Action_Running_Text>
 		<Action_Running_Label>Çalışıyor…</Action_Running_Label>
 		<Action_Success_Text>Eylem tamamlandı: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Support_None_Text>İletişim bilgisi yapılandırılmamış. Lütfen BT bölümünüze başvurun.</Support_None_Text>
 		<Service_Short_Running>SelfX hizmeti çalışıyor</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX hizmeti kullanılamıyor</Service_Short_Unavailable>
+		<Ticket_Row_Label>Sorun bildir</Ticket_Row_Label>
+		<Ticket_Row_Text>Açıklamanız ve bu bilgisayarın bilgileriyle BT desteğine bir e-posta açar.</Ticket_Row_Text>
+		<Ticket_Button>Talep oluştur</Ticket_Button>
+		<Ticket_Window_Title>Talep oluştur</Ticket_Window_Title>
+		<Ticket_Intro_Text>Neyin çalışmadığını açıklayın. SelfX, BT desteği için bir e-posta hazırlar.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Açıklamanız</Ticket_Description_Label>
+		<Ticket_Info_Text>E-posta her zaman bu bilgisayarın bilgilerini (sistem bilgileri ve cihaz durumu) metinde ve ek dosya olarak içerir. Göndermeden önce her şeyi kontrol edebilirsiniz. Hiçbir şey otomatik olarak gönderilmez.</Ticket_Info_Text>
+		<Ticket_Open_Button>E-postayı aç</Ticket_Open_Button>
+		<Ticket_Kind_Text>Olay</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Cihaz bilgileri henüz toplanmadı.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>E-posta, cihaz bilgileri ekli olarak açıldı. Kontrol edip gönderin.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>E-posta programınız açıldı. {0} dosyasını (Dosya Gezgini’nde seçili) e-postaya ekleyin, kontrol edin ve gönderin.</Ticket_Manual_Text>
+		<Ticket_Error_Text>E-posta hazırlanamadı: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>E-posta şu adrese gider: {0}</Ticket_Recipient_Text>
 		<Version_Text>Sürüm {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: her şey yolunda</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} sorun, {1} uyarı</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Last_Boot>Son başlatma</Last_Boot>
 		<Uptime>Çalışma süresi</Uptime>
 		<Uptime_Value>{0} gün {1:D2}:{2:D2} sa</Uptime_Value>
+		<Uptime_Restart_Hint>yeniden başlatma önerilir (“Kapat” değil)</Uptime_Restart_Hint>
 		<Last_Update>Son yüklenen güncelleştirme</Last_Update>
 		<Time_Zone>Saat dilimi</Time_Zone>
 		<Current_User>Geçerli kullanıcı</Current_User>
@@ -229,6 +245,18 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Gateway>Varsayılan ağ geçidi</Gateway>
 		<DNS>DNS sunucuları</DNS>
 		<MAC>MAC adresleri</MAC>
+		<Proxy>Ara sunucu (kullanıcı ayarı)</Proxy>
+		<Proxy_None>Ara sunucu yok</Proxy_None>
+		<Proxy_Manual>El ile ara sunucu</Proxy_Manual>
+		<Proxy_Script>Otomatik yapılandırma betiği</Proxy_Script>
+		<Network_Drives>Ağ sürücüleri</Network_Drives>
+		<Network_Drives_None>Yok</Network_Drives_None>
+		<Latency_Gateway>Gecikme: varsayılan ağ geçidi</Latency_Gateway>
+		<Latency_Dns>DNS sorgusu: {0}</Latency_Dns>
+		<Latency_Connection>Bağlantı: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (en az {1}, en çok {2}, {4} içinde {3} kayıp)</Latency_Value>
+		<Latency_Failed>erişilemiyor ({1} içinde {0} başarısız)</Latency_Failed>
+		<Latency_Skipped>ölçülmedi (zaman sınırına ulaşıldı)</Latency_Skipped>
 		<Collected_At>Toplanma zamanı</Collected_At>
 		<Error>Hata</Error>
 		<Yes>Evet</Yes>

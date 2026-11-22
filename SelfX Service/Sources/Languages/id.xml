@@ -80,6 +80,7 @@ Gunakan tampilan terperinci jika tampilan sederhana tidak menyelesaikan atau men
 		<Service_Running_Text>Layanan SelfX sedang berjalan: tindakan bertanda perisai dijalankan dengan hak administrator.</Service_Running_Text>
 		<Service_Unavailable_Text>Layanan SelfX tidak berjalan: tindakan bertanda perisai tidak tersedia.</Service_Unavailable_Text>
 		<Service_Busy_Text>Tindakan lain masih berjalan. Tunggu hingga selesai.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Tindakan ini tidak dapat dilakukan saat pengguna lain masuk di perangkat ini. Hubungi dukungan TI atau coba lagi saat Anda menjadi satu-satunya pengguna.</Service_OtherSessions_Text>
 		<Action_Running_Text>Tindakan berjalan: {0}</Action_Running_Text>
 		<Action_Running_Label>Sedang berjalan…</Action_Running_Label>
 		<Action_Success_Text>Tindakan selesai: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Support_None_Text>Tidak ada detail kontak yang dikonfigurasi. Silakan hubungi departemen TI Anda.</Support_None_Text>
 		<Service_Short_Running>Layanan SelfX berjalan</Service_Short_Running>
 		<Service_Short_Unavailable>Layanan SelfX tidak tersedia</Service_Short_Unavailable>
+		<Ticket_Row_Label>Laporkan masalah</Ticket_Row_Label>
+		<Ticket_Row_Text>Membuka e-mail ke dukungan TI berisi deskripsi Anda dan informasi PC ini.</Ticket_Row_Text>
+		<Ticket_Button>Buat tiket</Ticket_Button>
+		<Ticket_Window_Title>Buat tiket</Ticket_Window_Title>
+		<Ticket_Intro_Text>Jelaskan apa yang tidak berfungsi. SelfX menyiapkan e-mail untuk dukungan TI.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Deskripsi Anda</Ticket_Description_Label>
+		<Ticket_Info_Text>E-mail selalu berisi informasi PC ini (informasi sistem dan status perangkat), di dalam teks dan sebagai file terlampir. Anda dapat memeriksa semuanya sebelum mengirim. Tidak ada yang dikirim secara otomatis.</Ticket_Info_Text>
+		<Ticket_Open_Button>Buka e-mail</Ticket_Open_Button>
+		<Ticket_Kind_Text>Insiden</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Informasi perangkat belum dikumpulkan.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>E-mail telah dibuka dengan informasi perangkat terlampir. Periksa lalu kirim.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Program e-mail Anda telah dibuka. Lampirkan file {0} (dipilih di File Explorer) ke e-mail, periksa, lalu kirim.</Ticket_Manual_Text>
+		<Ticket_Error_Text>E-mail tidak dapat disiapkan: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>E-mail dikirim ke: {0}</Ticket_Recipient_Text>
 		<Version_Text>Versi {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: semuanya baik</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} masalah, {1} peringatan</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Last_Boot>Boot terakhir</Last_Boot>
 		<Uptime>Waktu aktif</Uptime>
 		<Uptime_Value>{0} hari {1:D2}:{2:D2} jam</Uptime_Value>
+		<Uptime_Restart_Hint>disarankan memulai ulang (bukan “Matikan”)</Uptime_Restart_Hint>
 		<Last_Update>Pembaruan terakhir yang diinstal</Last_Update>
 		<Time_Zone>Zona waktu</Time_Zone>
 		<Current_User>Pengguna saat ini</Current_User>
@@ -229,6 +245,18 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Gateway>Gateway default</Gateway>
 		<DNS>Server DNS</DNS>
 		<MAC>Alamat MAC</MAC>
+		<Proxy>Proksi (pengaturan pengguna)</Proxy>
+		<Proxy_None>Tanpa proksi</Proxy_None>
+		<Proxy_Manual>Proksi manual</Proxy_Manual>
+		<Proxy_Script>Skrip konfigurasi otomatis</Proxy_Script>
+		<Network_Drives>Drive jaringan</Network_Drives>
+		<Network_Drives_None>Tidak ada</Network_Drives_None>
+		<Latency_Gateway>Latensi: gateway default</Latency_Gateway>
+		<Latency_Dns>Kueri DNS: {0}</Latency_Dns>
+		<Latency_Connection>Koneksi: {0}</Latency_Connection>
+		<Latency_Value>{0} md (min. {1}, maks. {2}, {3} dari {4} hilang)</Latency_Value>
+		<Latency_Failed>tidak dapat dijangkau ({0} dari {1} gagal)</Latency_Failed>
+		<Latency_Skipped>tidak diukur (batas waktu tercapai)</Latency_Skipped>
 		<Collected_At>Dikumpulkan pada</Collected_At>
 		<Error>Kesalahan</Error>
 		<Yes>Ya</Yes>

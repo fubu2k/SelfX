@@ -80,6 +80,7 @@ Nous recommandons la vue détaillée si la vue simplifiée ne résout pas votre 
 		<Service_Running_Text>Le service SelfX est en cours d’exécution : les actions avec un bouclier sont exécutées avec des droits d’administrateur.</Service_Running_Text>
 		<Service_Unavailable_Text>Le service SelfX n’est pas en cours d’exécution : les actions avec un bouclier ne sont pas disponibles.</Service_Unavailable_Text>
 		<Service_Busy_Text>Une autre action est en cours. Veuillez attendre qu’elle se termine.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Cette action est impossible tant qu’un autre utilisateur est connecté à cet appareil. Contactez le support informatique ou réessayez lorsque vous serez le seul utilisateur.</Service_OtherSessions_Text>
 		<Action_Running_Text>Action en cours : {0}</Action_Running_Text>
 		<Action_Running_Label>En cours…</Action_Running_Label>
 		<Action_Success_Text>Action terminée : {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Description du problème :</Report_Mail_Body>
 		<Support_None_Text>Aucune coordonnée n’est configurée. Veuillez contacter votre service informatique.</Support_None_Text>
 		<Service_Short_Running>Service SelfX actif</Service_Short_Running>
 		<Service_Short_Unavailable>Service SelfX indisponible</Service_Short_Unavailable>
+		<Ticket_Row_Label>Signaler un problème</Ticket_Row_Label>
+		<Ticket_Row_Text>Ouvre un e-mail au support informatique avec votre description et les informations de cet ordinateur.</Ticket_Row_Text>
+		<Ticket_Button>Créer un ticket</Ticket_Button>
+		<Ticket_Window_Title>Créer un ticket</Ticket_Window_Title>
+		<Ticket_Intro_Text>Décrivez ce qui ne fonctionne pas. SelfX prépare un e-mail pour le support informatique.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Votre description</Ticket_Description_Label>
+		<Ticket_Info_Text>L’e-mail contient toujours les informations de cet ordinateur (informations système et état de l’appareil), dans le texte et en pièce jointe. Vous pouvez tout vérifier avant l’envoi. Rien n’est envoyé automatiquement.</Ticket_Info_Text>
+		<Ticket_Open_Button>Ouvrir l’e-mail</Ticket_Open_Button>
+		<Ticket_Kind_Text>Incident</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Les informations de l’appareil n’ont pas encore été collectées.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>L’e-mail a été ouvert avec les informations de l’appareil en pièce jointe. Vérifiez-le et envoyez-le.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Votre programme de messagerie a été ouvert. Joignez le fichier {0} (sélectionné dans l’Explorateur) à l’e-mail, vérifiez-le et envoyez-le.</Ticket_Manual_Text>
+		<Ticket_Error_Text>L’e-mail n’a pas pu être préparé : {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>L’e-mail est envoyé à : {0}</Ticket_Recipient_Text>
 		<Version_Text>Version {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX : tout est en ordre</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX : {0} problème(s), {1} avertissement(s)</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Description du problème :</Report_Mail_Body>
 		<Last_Boot>Dernier démarrage</Last_Boot>
 		<Uptime>Durée de fonctionnement</Uptime>
 		<Uptime_Value>{0} jour(s) {1:D2}:{2:D2} h</Uptime_Value>
+		<Uptime_Restart_Hint>redémarrage recommandé (pas « Arrêter »)</Uptime_Restart_Hint>
 		<Last_Update>Dernière mise à jour installée</Last_Update>
 		<Time_Zone>Fuseau horaire</Time_Zone>
 		<Current_User>Utilisateur actuel</Current_User>
@@ -229,6 +245,18 @@ Description du problème :</Report_Mail_Body>
 		<Gateway>Passerelle par défaut</Gateway>
 		<DNS>Serveur(s) DNS</DNS>
 		<MAC>Adresse(s) MAC</MAC>
+		<Proxy>Proxy (paramètre de l’utilisateur)</Proxy>
+		<Proxy_None>Aucun proxy</Proxy_None>
+		<Proxy_Manual>Proxy manuel</Proxy_Manual>
+		<Proxy_Script>Script de configuration automatique</Proxy_Script>
+		<Network_Drives>Lecteurs réseau</Network_Drives>
+		<Network_Drives_None>Aucun</Network_Drives_None>
+		<Latency_Gateway>Latence : passerelle par défaut</Latency_Gateway>
+		<Latency_Dns>Résolution DNS : {0}</Latency_Dns>
+		<Latency_Connection>Connexion : {0}</Latency_Connection>
+		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} sur {4} perdus)</Latency_Value>
+		<Latency_Failed>inaccessible ({0} sur {1} en échec)</Latency_Failed>
+		<Latency_Skipped>non mesuré (délai atteint)</Latency_Skipped>
 		<Collected_At>Collecté le</Collected_At>
 		<Error>Erreur</Error>
 		<Yes>Oui</Yes>

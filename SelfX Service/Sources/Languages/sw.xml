@@ -80,6 +80,7 @@ Tunapendekeza mwonekano wa kina ikiwa mwonekano rahisi hautatui au hauna tatizo 
 		<Service_Running_Text>Huduma ya SelfX inafanya kazi: vitendo vilivyo na alama ya ngao huendeshwa kwa haki za msimamizi.</Service_Running_Text>
 		<Service_Unavailable_Text>Huduma ya SelfX haifanyi kazi: vitendo vilivyo na alama ya ngao havipatikani.</Service_Unavailable_Text>
 		<Service_Busy_Text>Kitendo kingine bado kinaendelea. Subiri hadi kikamilike.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Kitendo hiki hakiwezekani wakati mtumiaji mwingine ameingia kwenye kifaa hiki. Wasiliana na usaidizi wa TEHAMA au jaribu tena ukiwa mtumiaji pekee.</Service_OtherSessions_Text>
 		<Action_Running_Text>Kitendo kinaendelea: {0}</Action_Running_Text>
 		<Action_Running_Label>Inaendelea…</Action_Running_Label>
 		<Action_Success_Text>Kitendo kimekamilika: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Support_None_Text>Hakuna maelezo ya mawasiliano yaliyowekwa. Tafadhali wasiliana na idara yako ya TEHAMA.</Support_None_Text>
 		<Service_Short_Running>Huduma ya SelfX inaendeshwa</Service_Short_Running>
 		<Service_Short_Unavailable>Huduma ya SelfX haipatikani</Service_Short_Unavailable>
+		<Ticket_Row_Label>Ripoti tatizo</Ticket_Row_Label>
+		<Ticket_Row_Text>Hufungua barua pepe kwa usaidizi wa TEHAMA yenye maelezo yako na taarifa za kompyuta hii.</Ticket_Row_Text>
+		<Ticket_Button>Unda tiketi</Ticket_Button>
+		<Ticket_Window_Title>Unda tiketi</Ticket_Window_Title>
+		<Ticket_Intro_Text>Eleza kinachoshindwa kufanya kazi. SelfX huandaa barua pepe kwa usaidizi wa TEHAMA.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Maelezo yako</Ticket_Description_Label>
+		<Ticket_Info_Text>Barua pepe daima ina taarifa za kompyuta hii (taarifa za mfumo na hali ya kifaa), ndani ya maandishi na kama faili iliyoambatishwa. Unaweza kukagua kila kitu kabla ya kutuma. Hakuna chochote kinachotumwa kiotomatiki.</Ticket_Info_Text>
+		<Ticket_Open_Button>Fungua barua pepe</Ticket_Open_Button>
+		<Ticket_Kind_Text>Tukio</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Taarifa za kifaa bado hazijakusanywa.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>Barua pepe imefunguliwa ikiwa na taarifa za kifaa zilizoambatishwa. Ikague kisha uitume.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Programu yako ya barua pepe imefunguliwa. Ambatisha faili {0} (iliyochaguliwa kwenye File Explorer) kwenye barua pepe, ikague kisha uitume.</Ticket_Manual_Text>
+		<Ticket_Error_Text>Barua pepe haikuweza kuandaliwa: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>Barua pepe inatumwa kwa: {0}</Ticket_Recipient_Text>
 		<Version_Text>Toleo {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: kila kitu kiko sawa</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: matatizo {0}, maonyo {1}</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Last_Boot>Mwanzo wa mwisho</Last_Boot>
 		<Uptime>Muda wa kufanya kazi</Uptime>
 		<Uptime_Value>Siku {0}, saa {1:D2}:{2:D2}</Uptime_Value>
+		<Uptime_Restart_Hint>inapendekezwa kuwasha upya (si “Zima”)</Uptime_Restart_Hint>
 		<Last_Update>Sasisho la mwisho lililosakinishwa</Last_Update>
 		<Time_Zone>Saa za eneo</Time_Zone>
 		<Current_User>Mtumiaji wa sasa</Current_User>
@@ -229,6 +245,18 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Gateway>Lango-msingi</Gateway>
 		<DNS>Seva za DNS</DNS>
 		<MAC>Anwani za MAC</MAC>
+		<Proxy>Seva mbadala (mpangilio wa mtumiaji)</Proxy>
+		<Proxy_None>Hakuna seva mbadala</Proxy_None>
+		<Proxy_Manual>Seva mbadala ya mkono</Proxy_Manual>
+		<Proxy_Script>Hati ya usanidi otomatiki</Proxy_Script>
+		<Network_Drives>Hifadhi za mtandao</Network_Drives>
+		<Network_Drives_None>Hakuna</Network_Drives_None>
+		<Latency_Gateway>Ucheleweshaji: lango-msingi</Latency_Gateway>
+		<Latency_Dns>Utafutaji wa DNS: {0}</Latency_Dns>
+		<Latency_Connection>Muunganisho: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (chini {1}, juu {2}, {3} kati ya {4} zimepotea)</Latency_Value>
+		<Latency_Failed>haifikiki ({0} kati ya {1} zimeshindwa)</Latency_Failed>
+		<Latency_Skipped>haikupimwa (kikomo cha muda kimefikiwa)</Latency_Skipped>
 		<Collected_At>Imekusanywa saa</Collected_At>
 		<Error>Hitilafu</Error>
 		<Yes>Ndiyo</Yes>

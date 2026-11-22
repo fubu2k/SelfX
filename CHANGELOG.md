@@ -30,6 +30,7 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 
 ### Geändert
 - Dokumentation: `docs/Configuration.md` in einfacherer Sprache neu geschrieben, überholte Versionshinweise und Verlaufstexte entfernt, Überschriften ohne Versionsnummern (Links angepasst).
+- Übersetzungen ergänzt: In allen 22 Sprachdateien (außer Deutsch und Englisch) fehlten 28 Texte und wurden bisher auf Englisch angezeigt: Hinweis bei angemeldeter anderer Person (`Service_OtherSessions_Text`), Ticket-Dialog (`Ticket_*`), Hinweis zur Betriebszeit, Proxy und Netzlaufwerke sowie die Netzwerk-Messungen (`Latency_*`).
 
 - Statuszeile „Neustart ausstehend“: Der Text nennt jetzt den letzten Neustart und, wenn die letzte Update-Installation danach lag, deren Zeitpunkt (nur lesend, Zeiten in der Zeitzone des Nutzers). Fehlen die Quellen, entfällt nur der Zusatz.
 

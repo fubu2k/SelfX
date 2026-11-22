@@ -80,6 +80,7 @@ Chúng tôi khuyên bạn nên dùng giao diện chi tiết nếu giao diện đ
 		<Service_Running_Text>Dịch vụ SelfX đang chạy: các thao tác có biểu tượng chiếc khiên sẽ chạy với quyền quản trị viên.</Service_Running_Text>
 		<Service_Unavailable_Text>Dịch vụ SelfX không chạy: các thao tác có biểu tượng chiếc khiên hiện không khả dụng.</Service_Unavailable_Text>
 		<Service_Busy_Text>Một thao tác khác vẫn đang chạy. Vui lòng đợi thao tác đó hoàn tất.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Không thể thực hiện thao tác này khi người dùng khác đang đăng nhập trên thiết bị. Hãy liên hệ bộ phận hỗ trợ CNTT hoặc thử lại khi chỉ có mình bạn sử dụng.</Service_OtherSessions_Text>
 		<Action_Running_Text>Đang chạy thao tác: {0}</Action_Running_Text>
 		<Action_Running_Label>Đang chạy…</Action_Running_Label>
 		<Action_Success_Text>Đã hoàn tất thao tác: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Support_None_Text>Chưa cấu hình thông tin liên hệ. Vui lòng liên hệ bộ phận CNTT.</Support_None_Text>
 		<Service_Short_Running>Dịch vụ SelfX đang chạy</Service_Short_Running>
 		<Service_Short_Unavailable>Dịch vụ SelfX không khả dụng</Service_Short_Unavailable>
+		<Ticket_Row_Label>Báo cáo sự cố</Ticket_Row_Label>
+		<Ticket_Row_Text>Mở thư gửi bộ phận hỗ trợ CNTT kèm mô tả của bạn và thông tin của máy tính này.</Ticket_Row_Text>
+		<Ticket_Button>Tạo phiếu yêu cầu</Ticket_Button>
+		<Ticket_Window_Title>Tạo phiếu yêu cầu</Ticket_Window_Title>
+		<Ticket_Intro_Text>Hãy mô tả điều gì không hoạt động. SelfX sẽ soạn sẵn thư gửi bộ phận hỗ trợ CNTT.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Mô tả của bạn</Ticket_Description_Label>
+		<Ticket_Info_Text>Thư luôn chứa thông tin của máy tính này (thông tin hệ thống và trạng thái thiết bị), trong nội dung và dưới dạng tệp đính kèm. Bạn có thể kiểm tra mọi thứ trước khi gửi. Không có gì được gửi tự động.</Ticket_Info_Text>
+		<Ticket_Open_Button>Mở thư</Ticket_Open_Button>
+		<Ticket_Kind_Text>Sự cố</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Thông tin thiết bị chưa được thu thập.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>Thư đã được mở kèm thông tin thiết bị. Hãy kiểm tra và gửi thư.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Chương trình thư của bạn đã được mở. Hãy đính kèm tệp {0} (được chọn trong File Explorer) vào thư, kiểm tra rồi gửi.</Ticket_Manual_Text>
+		<Ticket_Error_Text>Không thể chuẩn bị thư: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>Thư được gửi đến: {0}</Ticket_Recipient_Text>
 		<Version_Text>Phiên bản {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: mọi thứ đều ổn</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} sự cố, {1} cảnh báo</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Last_Boot>Lần khởi động gần nhất</Last_Boot>
 		<Uptime>Thời gian hoạt động</Uptime>
 		<Uptime_Value>{0} ngày {1:D2}:{2:D2} giờ</Uptime_Value>
+		<Uptime_Restart_Hint>nên khởi động lại (không phải “Tắt máy”)</Uptime_Restart_Hint>
 		<Last_Update>Bản cập nhật được cài đặt gần nhất</Last_Update>
 		<Time_Zone>Múi giờ</Time_Zone>
 		<Current_User>Người dùng hiện tại</Current_User>
@@ -229,6 +245,18 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Gateway>Cổng mặc định</Gateway>
 		<DNS>Máy chủ DNS</DNS>
 		<MAC>Địa chỉ MAC</MAC>
+		<Proxy>Proxy (cài đặt của người dùng)</Proxy>
+		<Proxy_None>Không có proxy</Proxy_None>
+		<Proxy_Manual>Proxy thủ công</Proxy_Manual>
+		<Proxy_Script>Tập lệnh cấu hình tự động</Proxy_Script>
+		<Network_Drives>Ổ đĩa mạng</Network_Drives>
+		<Network_Drives_None>Không có</Network_Drives_None>
+		<Latency_Gateway>Độ trễ: cổng mặc định</Latency_Gateway>
+		<Latency_Dns>Truy vấn DNS: {0}</Latency_Dns>
+		<Latency_Connection>Kết nối: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (tối thiểu {1}, tối đa {2}, mất {3}/{4})</Latency_Value>
+		<Latency_Failed>không thể truy cập (thất bại {0}/{1})</Latency_Failed>
+		<Latency_Skipped>chưa đo (đã hết giới hạn thời gian)</Latency_Skipped>
 		<Collected_At>Thời điểm thu thập</Collected_At>
 		<Error>Lỗi</Error>
 		<Yes>Có</Yes>

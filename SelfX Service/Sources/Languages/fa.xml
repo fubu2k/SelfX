@@ -80,6 +80,7 @@
 		<Service_Running_Text>سرویس SelfX در حال اجرا است: اقدامات مشخص شده با یک سپر با حقوق سرپرست اجرا می شوند.</Service_Running_Text>
 		<Service_Unavailable_Text>سرویس SelfX در حال اجرا نیست: اقدامات علامت گذاری شده با سپر در دسترس نیستند.</Service_Unavailable_Text>
 		<Service_Busy_Text>اقدام دیگری همچنان در حال اجراست. لطفا صبر کنید تا تمام شود.</Service_Busy_Text>
+		<Service_OtherSessions_Text>تا زمانی که کاربر دیگری در این دستگاه وارد شده است، این اقدام ممکن نیست. با پشتیبانی فناوری اطلاعات تماس بگیرید یا وقتی تنها کاربر هستید دوباره تلاش کنید.</Service_OtherSessions_Text>
 		<Action_Running_Text>اقدام در حال اجرا است: {0}</Action_Running_Text>
 		<Action_Running_Label>در حال اجرا…</Action_Running_Label>
 		<Action_Success_Text>اقدام انجام شد: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@
 		<Support_None_Text>اطلاعات تماسی پیکربندی نشده است. لطفاً با بخش فناوری اطلاعات تماس بگیرید.</Support_None_Text>
 		<Service_Short_Running>سرویس SelfX در حال اجرا</Service_Short_Running>
 		<Service_Short_Unavailable>سرویس SelfX در دسترس نیست</Service_Short_Unavailable>
+		<Ticket_Row_Label>گزارش مشکل</Ticket_Row_Label>
+		<Ticket_Row_Text>یک ایمیل برای پشتیبانی فناوری اطلاعات باز می‌کند که شامل توضیح شما و اطلاعات این رایانه است.</Ticket_Row_Text>
+		<Ticket_Button>ایجاد تیکت</Ticket_Button>
+		<Ticket_Window_Title>ایجاد تیکت</Ticket_Window_Title>
+		<Ticket_Intro_Text>توضیح دهید چه چیزی کار نمی‌کند. SelfX یک ایمیل برای پشتیبانی فناوری اطلاعات آماده می‌کند.</Ticket_Intro_Text>
+		<Ticket_Description_Label>توضیح شما</Ticket_Description_Label>
+		<Ticket_Info_Text>ایمیل همیشه شامل اطلاعات این رایانه (اطلاعات سیستم و وضعیت دستگاه) در متن و به‌صورت فایل پیوست است. می‌توانید پیش از ارسال همه‌چیز را بررسی کنید. هیچ چیزی به‌طور خودکار ارسال نمی‌شود.</Ticket_Info_Text>
+		<Ticket_Open_Button>باز کردن ایمیل</Ticket_Open_Button>
+		<Ticket_Kind_Text>رویداد</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>اطلاعات دستگاه هنوز جمع‌آوری نشده است.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>ایمیل همراه با اطلاعات دستگاه باز شد. آن را بررسی و ارسال کنید.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>برنامه ایمیل شما باز شد. فایل {0} (انتخاب‌شده در File Explorer) را به ایمیل پیوست کنید، بررسی کنید و ارسال کنید.</Ticket_Manual_Text>
+		<Ticket_Error_Text>آماده‌سازی ایمیل ممکن نشد: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>ایمیل به این نشانی ارسال می‌شود: {0}</Ticket_Recipient_Text>
 		<Version_Text>نسخه {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: همه چیز درست است</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} مشکل، {1} هشدار</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@
 		<Last_Boot>آخرین بوت</Last_Boot>
 		<Uptime>آپتایم</Uptime>
 		<Uptime_Value>{0} روز(های) {1:D2}:{2:D2} ساعت</Uptime_Value>
+		<Uptime_Restart_Hint>راه‌اندازی مجدد توصیه می‌شود (نه «خاموش کردن»)</Uptime_Restart_Hint>
 		<Last_Update>آخرین به روز رسانی نصب شده است</Last_Update>
 		<Time_Zone>منطقه زمانی</Time_Zone>
 		<Current_User>کاربر فعلی</Current_User>
@@ -229,6 +245,18 @@
 		<Gateway>دروازه پیش فرض</Gateway>
 		<DNS>سرور(های) DNS</DNS>
 		<MAC>آدرس(های) MAC</MAC>
+		<Proxy>پروکسی (تنظیم کاربر)</Proxy>
+		<Proxy_None>بدون پروکسی</Proxy_None>
+		<Proxy_Manual>پروکسی دستی</Proxy_Manual>
+		<Proxy_Script>اسکریپت پیکربندی خودکار</Proxy_Script>
+		<Network_Drives>درایوهای شبکه</Network_Drives>
+		<Network_Drives_None>هیچ</Network_Drives_None>
+		<Latency_Gateway>تأخیر: دروازه پیش‌فرض</Latency_Gateway>
+		<Latency_Dns>پرس‌وجوی DNS: {0}</Latency_Dns>
+		<Latency_Connection>اتصال: {0}</Latency_Connection>
+		<Latency_Value>{0} میلی‌ثانیه (کمینه {1}، بیشینه {2}، {3} از {4} از دست رفت)</Latency_Value>
+		<Latency_Failed>در دسترس نیست ({0} از {1} ناموفق)</Latency_Failed>
+		<Latency_Skipped>اندازه‌گیری نشد (به محدودیت زمانی رسید)</Latency_Skipped>
 		<Collected_At>جمع آوری شده در</Collected_At>
 		<Error>خطا</Error>
 		<Yes>بله</Yes>

@@ -80,6 +80,7 @@
 		<Service_Running_Text>SelfX सेवा चल रही है: शील्ड के साथ चिह्नित क्रियाएँ व्यवस्थापक अधिकारों के साथ चलती हैं।</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX सेवा नहीं चल रही है: शील्ड से चिह्नित क्रियाएँ उपलब्ध नहीं हैं।</Service_Unavailable_Text>
 		<Service_Busy_Text>एक अन्य कार्रवाई अभी भी चल रही है. कृपया इसके समाप्त होने तक प्रतीक्षा करें.</Service_Busy_Text>
+		<Service_OtherSessions_Text>जब तक कोई अन्य उपयोगकर्ता इस डिवाइस में साइन इन है, यह कार्रवाई संभव नहीं है। IT सहायता से संपर्क करें या जब आप अकेले उपयोगकर्ता हों तब फिर से प्रयास करें।</Service_OtherSessions_Text>
 		<Action_Running_Text>कार्रवाई चल रही है: {0}</Action_Running_Text>
 		<Action_Running_Label>चल रहा है…</Action_Running_Label>
 		<Action_Success_Text>कार्रवाई पूरी हुई: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Support_None_Text>कोई संपर्क विवरण कॉन्फ़िगर नहीं है। कृपया अपने IT विभाग से संपर्क करें।</Support_None_Text>
 		<Service_Short_Running>SelfX सेवा चल रही है</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX सेवा उपलब्ध नहीं</Service_Short_Unavailable>
+		<Ticket_Row_Label>समस्या की सूचना दें</Ticket_Row_Label>
+		<Ticket_Row_Text>आपके विवरण और इस पीसी की डिवाइस जानकारी के साथ IT सहायता को ईमेल खोलता है।</Ticket_Row_Text>
+		<Ticket_Button>टिकट बनाएँ</Ticket_Button>
+		<Ticket_Window_Title>टिकट बनाएँ</Ticket_Window_Title>
+		<Ticket_Intro_Text>बताएँ कि क्या काम नहीं कर रहा है। SelfX IT सहायता के लिए एक ईमेल तैयार करता है।</Ticket_Intro_Text>
+		<Ticket_Description_Label>आपका विवरण</Ticket_Description_Label>
+		<Ticket_Info_Text>ईमेल में इस पीसी की डिवाइस जानकारी (सिस्टम जानकारी और डिवाइस की स्थिति) हमेशा टेक्स्ट में और संलग्न फ़ाइल के रूप में होती है। भेजने से पहले आप सब कुछ जाँच सकते हैं। कुछ भी अपने-आप नहीं भेजा जाता।</Ticket_Info_Text>
+		<Ticket_Open_Button>ईमेल खोलें</Ticket_Open_Button>
+		<Ticket_Kind_Text>घटना</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>डिवाइस जानकारी अभी एकत्र नहीं की गई है।</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>डिवाइस जानकारी संलग्न करके ईमेल खोल दिया गया है। इसे जाँचें और भेजें।</Ticket_Opened_Text>
+		<Ticket_Manual_Text>आपका मेल प्रोग्राम खोल दिया गया है। फ़ाइल {0} (फ़ाइल एक्सप्लोरर में चयनित) को ईमेल में संलग्न करें, जाँचें और भेजें।</Ticket_Manual_Text>
+		<Ticket_Error_Text>ईमेल तैयार नहीं किया जा सका: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>ईमेल यहाँ भेजा जाएगा: {0}</Ticket_Recipient_Text>
 		<Version_Text>संस्करण {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: सब कुछ ठीक है</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} समस्याएँ, {1} चेतावनियाँ</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Last_Boot>आखिरी बूट</Last_Boot>
 		<Uptime>अपटाइम</Uptime>
 		<Uptime_Value>{0} दिन {1:D2}:{2:D2} घंटे</Uptime_Value>
+		<Uptime_Restart_Hint>रीस्टार्ट करने की सलाह है (“शट डाउन” नहीं)</Uptime_Restart_Hint>
 		<Last_Update>अंतिम अद्यतन स्थापित</Last_Update>
 		<Time_Zone>समय क्षेत्र</Time_Zone>
 		<Current_User>तात्कालिक प्रयोगकर्ता</Current_User>
@@ -229,6 +245,18 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Gateway>डिफ़ॉल्ट गेटवे</Gateway>
 		<DNS>DNS सर्वर</DNS>
 		<MAC>MAC पता</MAC>
+		<Proxy>प्रॉक्सी (उपयोगकर्ता सेटिंग)</Proxy>
+		<Proxy_None>कोई प्रॉक्सी नहीं</Proxy_None>
+		<Proxy_Manual>मैन्युअल प्रॉक्सी</Proxy_Manual>
+		<Proxy_Script>स्वचालित कॉन्फ़िगरेशन स्क्रिप्ट</Proxy_Script>
+		<Network_Drives>नेटवर्क ड्राइव</Network_Drives>
+		<Network_Drives_None>कोई नहीं</Network_Drives_None>
+		<Latency_Gateway>विलंबता: डिफ़ॉल्ट गेटवे</Latency_Gateway>
+		<Latency_Dns>DNS लुकअप: {0}</Latency_Dns>
+		<Latency_Connection>कनेक्शन: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (न्यूनतम {1}, अधिकतम {2}, {4} में से {3} खोए)</Latency_Value>
+		<Latency_Failed>पहुँच योग्य नहीं ({1} में से {0} विफल)</Latency_Failed>
+		<Latency_Skipped>मापा नहीं गया (समय सीमा पूरी हुई)</Latency_Skipped>
 		<Collected_At>पर एकत्रित किया गया</Collected_At>
 		<Error>गलती</Error>
 		<Yes>हाँ</Yes>

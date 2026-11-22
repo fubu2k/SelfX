@@ -80,6 +80,7 @@ La visualizzazione dettagliata elenca diversi problemi specifici per prodotto ch
 		<Service_Running_Text>Il servizio SelfX è in esecuzione: le azioni con lo scudo vengono eseguite con diritti di amministratore.</Service_Running_Text>
 		<Service_Unavailable_Text>Il servizio SelfX non è in esecuzione: le azioni con lo scudo non sono disponibili.</Service_Unavailable_Text>
 		<Service_Busy_Text>È in esecuzione un’altra azione. Attendi che sia terminata.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Questa azione non è possibile mentre un altro utente è connesso a questo dispositivo. Rivolgiti al supporto IT oppure riprova quando sei l’unico utente.</Service_OtherSessions_Text>
 		<Action_Running_Text>Azione in esecuzione: {0}</Action_Running_Text>
 		<Action_Running_Label>In esecuzione…</Action_Running_Label>
 		<Action_Success_Text>Azione completata: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Descrizione del problema:</Report_Mail_Body>
 		<Support_None_Text>Non sono configurati dati di contatto. Contattare il reparto IT.</Support_None_Text>
 		<Service_Short_Running>Servizio SelfX attivo</Service_Short_Running>
 		<Service_Short_Unavailable>Servizio SelfX non disponibile</Service_Short_Unavailable>
+		<Ticket_Row_Label>Segnala un problema</Ticket_Row_Label>
+		<Ticket_Row_Text>Apre un’e-mail al supporto IT con la tua descrizione e le informazioni di questo PC.</Ticket_Row_Text>
+		<Ticket_Button>Crea ticket</Ticket_Button>
+		<Ticket_Window_Title>Crea un ticket</Ticket_Window_Title>
+		<Ticket_Intro_Text>Descrivi cosa non funziona. SelfX prepara un’e-mail per il supporto IT.</Ticket_Intro_Text>
+		<Ticket_Description_Label>La tua descrizione</Ticket_Description_Label>
+		<Ticket_Info_Text>L’e-mail contiene sempre le informazioni di questo PC (informazioni di sistema e stato del dispositivo), nel testo e come file allegato. Puoi controllare tutto prima di inviarla. Non viene inviato nulla automaticamente.</Ticket_Info_Text>
+		<Ticket_Open_Button>Apri e-mail</Ticket_Open_Button>
+		<Ticket_Kind_Text>Incidente</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Le informazioni del dispositivo non sono ancora state raccolte.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>L’e-mail è stata aperta con le informazioni del dispositivo allegate. Controllala e inviala.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Il programma di posta è stato aperto. Allega all’e-mail il file {0} (selezionato in Esplora file), controllala e inviala.</Ticket_Manual_Text>
+		<Ticket_Error_Text>Impossibile preparare l’e-mail: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>L’e-mail viene inviata a: {0}</Ticket_Recipient_Text>
 		<Version_Text>Versione {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: tutto in ordine</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} problema/i, {1} avviso/i</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Descrizione del problema:</Report_Mail_Body>
 		<Last_Boot>Ultimo avvio</Last_Boot>
 		<Uptime>Tempo di attività</Uptime>
 		<Uptime_Value>{0} giorno/i {1:D2}:{2:D2} h</Uptime_Value>
+		<Uptime_Restart_Hint>riavvio consigliato (non «Arresta il sistema»)</Uptime_Restart_Hint>
 		<Last_Update>Ultimo aggiornamento installato</Last_Update>
 		<Time_Zone>Fuso orario</Time_Zone>
 		<Current_User>Utente corrente</Current_User>
@@ -229,6 +245,18 @@ Descrizione del problema:</Report_Mail_Body>
 		<Gateway>Gateway predefinito</Gateway>
 		<DNS>Server DNS</DNS>
 		<MAC>Indirizzo/i MAC</MAC>
+		<Proxy>Proxy (impostazione utente)</Proxy>
+		<Proxy_None>Nessun proxy</Proxy_None>
+		<Proxy_Manual>Proxy manuale</Proxy_Manual>
+		<Proxy_Script>Script di configurazione automatica</Proxy_Script>
+		<Network_Drives>Unità di rete</Network_Drives>
+		<Network_Drives_None>Nessuna</Network_Drives_None>
+		<Latency_Gateway>Latenza: gateway predefinito</Latency_Gateway>
+		<Latency_Dns>Query DNS: {0}</Latency_Dns>
+		<Latency_Connection>Connessione: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} di {4} persi)</Latency_Value>
+		<Latency_Failed>non raggiungibile ({0} di {1} non riusciti)</Latency_Failed>
+		<Latency_Skipped>non misurato (limite di tempo raggiunto)</Latency_Skipped>
 		<Collected_At>Raccolto il</Collected_At>
 		<Error>Errore</Error>
 		<Yes>Sì</Yes>

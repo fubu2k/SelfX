@@ -30,6 +30,7 @@ histories of the single files show where a change was made. Changes marked
 
 ### Changed
 - Documentation: `docs/Configuration.md` rewritten in plainer language, outdated version notes and history removed, headings without version numbers (links updated).
+- Translations added: all 22 language files (except German and English) were missing 28 texts, which were shown in English: notice while another person is signed in (`Service_OtherSessions_Text`), ticket dialog (`Ticket_*`), uptime hint, proxy and network drives, and the network measurements (`Latency_*`).
 
 - Status row "Restart pending": the text now names the last restart and, when the last update installation was after it, its time (read-only, times in the time zone of the user). If the sources are missing, only the addition is left out.
 
