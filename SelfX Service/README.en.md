@@ -10,16 +10,16 @@ SelfX Service is installed machine-wide and works without any network connection
   **System information**, icon buttons with explaining tooltips, dark and
   light theme, help dialog with the support contacts (hours, phone, mail,
   Teams chat, website / ticket system). See
-  [User interface](../docs/en/Configuration.md#user-interface-selfx-service-250).
+  [User interface](../docs/en/Configuration.md#user-interface).
 - Background checks (2.5.0): the service checks the device status regularly
   (default every 15 minutes, paused on battery, postponed under high processor
   load) and keeps the result, so SelfX shows status and system information
   immediately. See
-  [Background checks](../docs/en/Configuration.md#background-checks-and-status-cache-selfx-service-250).
+  [Background checks](../docs/en/Configuration.md#background-checks).
 - Tray icon (2.5.0): a status icon next to the clock for every user (green,
   yellow, red) with a notification when a problem is found, for example low
   disk space. Each user can hide it. See
-  [Tray icon](../docs/en/Configuration.md#tray-icon-selfx-service-250).
+  [Tray icon](../docs/en/Configuration.md#tray-icon).
 - **Fix all problems** and user time zone (2.5.3): one button on the Device
   status page runs all prepared repairs one after another; all times are shown
   in the current time zone of the user. SelfX and the status icon start
@@ -49,26 +49,26 @@ SelfX Service is installed machine-wide and works without any network connection
   then re-check that status. Every card has a **check again** button that only
   re-checks that status. By default
   Defender (always) and Compliance (when not OK) offer a signature update
-  (`Update-MpSignature`); the Defender row shows signature version and last update. See [Health remediation](../docs/en/Configuration.md#health-remediation).
+  (`Update-MpSignature`); the Defender row shows signature version and last update. See [Health remediation](../docs/en/Configuration.md#repairs).
 - Local health results on the Device status page: IME, Defender, disk space,
   BitLocker, pending reboot, updates to install (offline Windows Update cache),
   a best-effort cached app summary with exclusions, configurable
   services and script probes. Cloud compliance is not inferred offline.
-  See [Health status](../docs/en/Configuration.md#health-status-selfx-service-230).
+  See [Health status](../docs/en/Configuration.md#device-status).
 - **Send logs to support** (2.4.0): the action *Send the device logs to the
   support* and a button in System information run `Collect-DeviceLogs.ps1`
   with administrator rights through the service. Then they open a new e-mail
   (Outlook) to `Support_Mail` with the report attached; the user describes the
   issue and sends it. See
-  [Device logs for the support](../docs/en/Configuration.md#device-logs-for-the-support-selfx-service-240).
+  [Device logs for the support](../docs/en/Configuration.md#device-logs-for-the-support).
 - Logging and repairs (2.6.0): every script logs to `%ProgramData%\SelfX\Logs`
   (users to `Logs\Users\<SID>`), old logs are deleted after `Log_Retention_Days`
   (default 90). **Restart now** on *Restart pending* (with a restart warning),
   **Try again** for failed company apps, and the update repair installs the pending Windows updates
   (2.6.3). All action scripts were checked and
   fixed (for example Word, Teams, OneDrive and the disk check). See
-  [Logging](../docs/en/Configuration.md#logging-and-log-housekeeping-selfx-service-260)
-  and [Health remediation](../docs/en/Configuration.md#health-remediation).
+  [Logging](../docs/en/Configuration.md#logs-and-retention)
+  and [Health remediation](../docs/en/Configuration.md#repairs).
 
 ## Package layout
 

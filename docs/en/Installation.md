@@ -158,7 +158,7 @@ the window, the status icon and the user actions log to
 `%ProgramData%\SelfX\Logs\Users\<SID>`, which the installer creates so that
 each user can only create and read the own folder. Log files older than
 `Log_Retention_Days` (default 90) are deleted automatically; see
-[Logging](Configuration.md#logging-and-log-housekeeping-selfx-service-260).
+[Logging](Configuration.md#logs-and-retention).
 
 The installer exits with code 0 on success and 1 on an error. The reason is
 the last line of `Install.log` (`Installation failed: ...`). Up to version
@@ -250,14 +250,14 @@ status with `STATUS`, which older services do not know. Before packaging, set
 the support contacts of the help dialog (`Support_Hours`,
 `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website`)
 and check the `Background` element of `Health_Config.xml`; see
-[User interface](Configuration.md#user-interface-selfx-service-250) and
-[Background checks](Configuration.md#background-checks-and-status-cache-selfx-service-250).
+[User interface](Configuration.md#user-interface) and
+[Background checks](Configuration.md#background-checks).
 SelfX Service no longer needs the MahApps.Metro assemblies. Version 2.6.0
 (logging, restart and app retry repairs, updates installed by SelfX) also requires redeploying the entire package: the installer
 creates `Logs\Users` and the service compiles the log housekeeping. Configure
 `Sources\Health_Config.xml` and optionally add reviewed read-only scripts under
 `Sources\HealthChecks` before packaging; see
-[Health status](Configuration.md#health-status-selfx-service-230).
+[Health status](Configuration.md#device-status).
 Versions 2.6.10 and 2.6.11 (security hardening, see the
 [Changelog](../../CHANGELOG.en.md)) change the service and the installer. Redeploy the
 **entire package** and raise `Tool_Version` and `$ExpectedVersion`.
@@ -330,7 +330,7 @@ The result is in `%ProgramData%\SelfX\Logs\Install.log`.
 
 ### Ticket routing: set the values with Intune (since 2.8.6)
 
-Only needed when the ticket function (`Ticket_Enabled`) is used with rules for group tag or category in `Ticket_Config.xml` (see [Configuration](Configuration.md#ticket-by-e-mail-selfx-service-285-assignment-286)). SelfX only reads the values; they are in `HKLM\SOFTWARE\SelfX\Support`: `GroupTag` and `Category` (each REG_SZ, up to 64 characters: letters, digits, spaces, `.`, `_`, `-`) and the addresses `TicketMail` and `TicketCc` of the responsible unit (exactly one plain address each; shared mailboxes only, no personal mailboxes). The SelfX package does not create the key. Hybrid devices can also be assigned by OU; nothing has to be set for that.
+Only needed when the ticket function (`Ticket_Enabled`) is used with rules for group tag or category in `Ticket_Config.xml` (see [Configuration](Configuration.md#ticket-by-e-mail)). SelfX only reads the values; they are in `HKLM\SOFTWARE\SelfX\Support`: `GroupTag` and `Category` (each REG_SZ, up to 64 characters: letters, digits, spaces, `.`, `_`, `-`) and the addresses `TicketMail` and `TicketCc` of the responsible unit (exactly one plain address each; shared mailboxes only, no personal mailboxes). The SelfX package does not create the key. Hybrid devices can also be assigned by OU; nothing has to be set for that.
 
 Example with an Intune platform script (*Devices > Scripts and remediations > Platform scripts*):
 1. Copy the script below for each unit and change the values at the top (`TicketMail` is the recipient of the unit).

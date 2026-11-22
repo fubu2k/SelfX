@@ -164,7 +164,7 @@ protokollieren nach `%ProgramData%\SelfX\Logs\Users\<SID>`. Diesen Ordner legt d
 Installer so an, dass jeder Nutzer nur den eigenen Ordner anlegen und lesen kann.
 Protokolldateien, die älter sind als `Log_Retention_Days` (Standard 90), werden
 automatisch gelöscht; siehe
-[Protokollierung](Configuration.md#protokollierung-und-aufbewahrung-selfx-service-260).
+[Protokollierung](Configuration.md#protokolle-und-aufbewahrung).
 
 Der Installer endet bei Erfolg mit Exitcode 0 und bei einem Fehler mit 1. Den Grund
 finden Sie in der letzten Zeile von `Install.log` (`Installation failed: ...`).
@@ -301,7 +301,7 @@ Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Install.log`.
 
 ### Ticket-Zuordnung: Werte per Intune setzen (ab 2.8.6)
 
-Nur nötig, wenn die Ticket-Funktion (`Ticket_Enabled`) mit Regeln für Group-Tag oder Kategorie in `Ticket_Config.xml` genutzt wird (siehe [Konfiguration](Configuration.md#ticket-per-e-mail-selfx-service-285-zuordnung-286)). SelfX liest die Werte nur; sie stehen in `HKLM\SOFTWARE\SelfX\Support`: `GroupTag` und `Category` (je REG_SZ, bis 64 Zeichen: Buchstaben, Ziffern, Leerzeichen, `.`, `_`, `-`) sowie die Adressen `TicketMail` und `TicketCc` der zuständigen Einheit (je genau eine einfache Adresse; nur Funktionspostfächer, keine persönlichen Postfächer). Das Paket SelfX legt den Schlüssel nicht an. Hybrid-Geräte können zusätzlich nach der OU zugeordnet werden; dafür ist nichts zu setzen.
+Nur nötig, wenn die Ticket-Funktion (`Ticket_Enabled`) mit Regeln für Group-Tag oder Kategorie in `Ticket_Config.xml` genutzt wird (siehe [Konfiguration](Configuration.md#ticket-per-e-mail)). SelfX liest die Werte nur; sie stehen in `HKLM\SOFTWARE\SelfX\Support`: `GroupTag` und `Category` (je REG_SZ, bis 64 Zeichen: Buchstaben, Ziffern, Leerzeichen, `.`, `_`, `-`) sowie die Adressen `TicketMail` und `TicketCc` der zuständigen Einheit (je genau eine einfache Adresse; nur Funktionspostfächer, keine persönlichen Postfächer). Das Paket SelfX legt den Schlüssel nicht an. Hybrid-Geräte können zusätzlich nach der OU zugeordnet werden; dafür ist nichts zu setzen.
 
 Beispiel mit einem Intune-Plattformskript (*Geräte > Skripte und Fehlerbehebungen > Plattformskripts*):
 1. Das Skript unten je Einheit kopieren und die Werte oben anpassen (`TicketMail` ist der Empfänger der Einheit).
@@ -367,11 +367,11 @@ Prüfen Sie vor dem Paketieren:
 - die Support-Kontakte des Hilfe-Dialogs in `Tool_Config.xml` (`Support_Hours`,
   `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website`),
 - das Element `Background` in `Health_Config.xml`; siehe
-  [Benutzeroberfläche](Configuration.md#benutzeroberfläche-selfx-service-250) und
-  [Hintergrundprüfungen](Configuration.md#hintergrundprüfungen-und-status-cache-selfx-service-250),
+  [Benutzeroberfläche](Configuration.md#benutzeroberfläche) und
+  [Hintergrundprüfungen](Configuration.md#hintergrundprüfungen),
 - `Sources\Health_Config.xml` und, falls Sie eigene nur lesende Prüfskripte
   verwenden, `Sources\HealthChecks`; siehe
-  [Gesundheitsstatus](Configuration.md#gesundheitsstatus-selfx-service-230).
+  [Gesundheitsstatus](Configuration.md#gerätestatus).
 
 SelfX Service braucht die MahApps.Metro-Assemblies nicht mehr. Geben Sie Nutzern
 keinen Schreibzugriff auf den Installationsordner oder auf die Prüfskripte.

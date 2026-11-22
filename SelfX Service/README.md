@@ -11,16 +11,16 @@ Netzwerkverbindung. Aktuelle Version: **2.8.0** (siehe das
   **Systeminformationen**, Symbolschaltflächen mit erklärenden Kurzinfos, dunkles
   und helles Design, Hilfe-Dialog mit den Support-Kontakten (Zeiten, Telefon,
   E-Mail, Teams-Chat, Website / Ticketsystem). Siehe
-  [Benutzeroberfläche](../docs/Configuration.md#benutzeroberfläche-selfx-service-250).
+  [Benutzeroberfläche](../docs/Configuration.md#benutzeroberfläche).
 - Hintergrundprüfungen (2.5.0): Der Dienst prüft den Gerätestatus regelmäßig
   (standardmäßig alle 15 Minuten, pausiert im Akkubetrieb, verschoben bei hoher
   Prozessorlast) und behält das Ergebnis, sodass SelfX Status und
   Systeminformationen sofort anzeigt. Siehe
-  [Hintergrundprüfungen](../docs/Configuration.md#hintergrundprüfungen-und-status-cache-selfx-service-250).
+  [Hintergrundprüfungen](../docs/Configuration.md#hintergrundprüfungen).
 - Statussymbol (2.5.0): ein Statussymbol neben der Uhr für jeden Nutzer (grün,
   gelb, rot) mit einer Benachrichtigung, wenn ein Problem gefunden wird, zum
   Beispiel wenig Speicherplatz. Jeder Nutzer kann es ausblenden. Siehe
-  [Statussymbol](../docs/Configuration.md#statussymbol-selfx-service-250).
+  [Statussymbol](../docs/Configuration.md#statussymbol).
 - **Alle Probleme beheben** und Zeitzone des Nutzers (2.5.3): Eine Schaltfläche auf
   der Seite Gerätestatus führt alle vorbereiteten Reparaturen nacheinander aus;
   alle Zeiten erscheinen in der aktuellen Zeitzone des Nutzers. SelfX und das
@@ -51,19 +51,19 @@ Netzwerkverbindung. Aktuelle Version: **2.8.0** (siehe das
   bieten Defender (immer) und Compliance (wenn nicht in Ordnung) ein Update der
   Signaturen (`Update-MpSignature`); die Zeile Defender zeigt Signaturversion und
   letzte Aktualisierung. Siehe
-  [Reparaturen der Gesundheitsprüfung](../docs/Configuration.md#reparaturen-der-gesundheitsprüfung).
+  [Reparaturen der Gesundheitsprüfung](../docs/Configuration.md#reparaturen).
 - Lokale Gesundheitsergebnisse auf der Seite Gerätestatus: IME, Defender,
   Speicherplatz, BitLocker, ausstehender Neustart, zu installierende Updates
   (Offline-Cache von Windows Update), eine nach bestem Wissen zwischengespeicherte
   App-Zusammenfassung mit Ausnahmen, konfigurierbare Dienste und Skript-Prüfungen.
   Die Cloud-Compliance wird offline nicht abgeleitet. Siehe
-  [Gesundheitsstatus](../docs/Configuration.md#gesundheitsstatus-selfx-service-230).
+  [Gesundheitsstatus](../docs/Configuration.md#gerätestatus).
 - **Protokolle an den Support senden** (2.4.0): Die Aktion *Geräteprotokolle an den
   Support senden* und eine Schaltfläche in den Systeminformationen führen
   `Collect-DeviceLogs.ps1` mit Administratorrechten über den Dienst aus. Danach
   öffnen sie eine neue E-Mail (Outlook) an `Support_Mail` mit dem Bericht im
   Anhang; der Nutzer beschreibt das Problem und sendet sie ab. Siehe
-  [Geräteprotokolle für den Support](../docs/Configuration.md#geräteprotokolle-für-den-support-selfx-service-240).
+  [Geräteprotokolle für den Support](../docs/Configuration.md#geräteprotokolle-für-den-support).
 - Protokollierung und Reparaturen (2.6.0): Jedes Skript protokolliert nach
   `%ProgramData%\SelfX\Logs` (Nutzer nach `Logs\Users\<SID>`), alte Protokolle
   werden nach `Log_Retention_Days` gelöscht (Standard 90). **Jetzt neu starten**
@@ -72,8 +72,8 @@ Netzwerkverbindung. Aktuelle Version: **2.8.0** (siehe das
   ausstehenden Windows-Updates (2.6.3). Alle Aktionsskripte wurden geprüft und
   korrigiert (zum Beispiel Word, Teams, OneDrive und die Datenträgerprüfung).
   Siehe
-  [Protokollierung](../docs/Configuration.md#protokollierung-und-aufbewahrung-selfx-service-260)
-  und [Reparaturen der Gesundheitsprüfung](../docs/Configuration.md#reparaturen-der-gesundheitsprüfung).
+  [Protokollierung](../docs/Configuration.md#protokolle-und-aufbewahrung)
+  und [Reparaturen der Gesundheitsprüfung](../docs/Configuration.md#reparaturen).
 
 ## Aufbau des Pakets
 
