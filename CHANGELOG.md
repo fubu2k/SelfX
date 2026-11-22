@@ -21,6 +21,10 @@ Anhebung der Version ausgeliefert.
 
 ### Geändert
 
+- BitLocker und TPM ohne Module: Gerätestatus und Compliance-Prüfung lesen CIM (`Win32_EncryptableVolume`, `Win32_Tpm`,
+  Datei `Sources\SelfXDeviceSecurity.ps1`) statt `Get-BitLockerVolume` und `Get-Tpm`. Dabei wird ein früherer Fehler behoben:
+  Datenlaufwerke wurden nie geprüft, weil der Typ „Data“ statt „FixedData“ hieß. Feste Datenlaufwerke ohne BitLocker
+  zeigen jetzt „Fehler“ im BitLocker-Status.
 - Secure-Boot-Prüfung (Compliance) liest die Registry (`UEFISecureBootEnabled`, neue Datei `Sources\SelfXDeviceSecurity.ps1`)
   statt `Confirm-SecureBootUEFI`: ohne Windows-PowerShell-Kompatibilitätsschicht und ohne Administratorrechte.
 - Defender ohne Defender-Modul: Status (Gerätestatus, Compliance) und Signatur-Update nutzen CIM

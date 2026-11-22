@@ -71,7 +71,9 @@ if ($Require.Enrollment) {
 
 if ($Require.BitLocker) {
     Test-Criterion 'BitLocker' {
-        $volume = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction Stop
+        . (Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXDeviceSecurity.ps1')
+        $volume = @(Get-SelfXBitLockerVolumes | Where-Object { $_.MountPoint -eq $env:SystemDrive }) | Select-Object -First 1
+        if (-not $volume) { throw "$env:SystemDrive not found" }
         if ("$($volume.ProtectionStatus)" -ne 'On') { "$env:SystemDrive protection $($volume.ProtectionStatus)" }
     }
 }
@@ -88,7 +90,8 @@ if ($Require.SecureBoot) {
 
 if ($Require.Tpm) {
     Test-Criterion 'TPM' {
-        $tpm = Get-Tpm -ErrorAction Stop
+        . (Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXDeviceSecurity.ps1')
+        $tpm = Get-SelfXTpmStatus
         if (-not $tpm.TpmPresent) { 'not present' } elseif (-not $tpm.TpmReady) { 'not ready' }
     }
 }

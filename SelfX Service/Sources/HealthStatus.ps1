@@ -105,9 +105,12 @@ function Get-SelfXDefenderHealth {
     } catch { New-SelfXHealthResult Defender Unknown $_.Exception.Message }
 }
 
+# BitLocker status through CIM (SelfXDeviceSecurity.ps1, no BitLocker module).
+. (Join-Path $PSScriptRoot 'SelfXDeviceSecurity.ps1')
+
 function Get-SelfXBitLockerHealth {
     try {
-        $volumes = @(Get-BitLockerVolume -ErrorAction Stop)
+        $volumes = @(Get-SelfXBitLockerVolumes)
         $volumes = @($volumes | Where-Object { "$($_.VolumeType)" -in @('OperatingSystem','FixedData') })
         if (-not $volumes.Count) { throw 'No fixed BitLocker volumes were returned.' }
         foreach ($volume in $volumes) {

@@ -21,6 +21,10 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- BitLocker and TPM without modules: device status and compliance check read CIM (`Win32_EncryptableVolume`, `Win32_Tpm`,
+  file `Sources\SelfXDeviceSecurity.ps1`) instead of `Get-BitLockerVolume` and `Get-Tpm`. This fixes an earlier bug: data
+  drives were never checked because the type was named "Data", not "FixedData". Fixed data drives without BitLocker
+  now show "Error" in the BitLocker status.
 - Secure Boot check (compliance) reads the registry (`UEFISecureBootEnabled`, new file `Sources\SelfXDeviceSecurity.ps1`)
   instead of `Confirm-SecureBootUEFI`: no Windows PowerShell compatibility layer and no administrator rights needed.
 - Defender without the Defender module: status (device status, compliance) and signature update use CIM
