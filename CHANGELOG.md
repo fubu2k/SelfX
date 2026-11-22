@@ -21,6 +21,9 @@ Anhebung der Version ausgeliefert.
 
 ### Geändert
 
+- CI: Die Tests laufen jetzt verbindlich in PowerShell 7. Windows PowerShell 5.1 prüft nur noch
+  `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` und den Log-Sammler (Intune startet sie dort).
+  Health-Prüfung und Support-Bericht enthalten keine PowerShell-5.1-Zweige mehr.
 - „Updates installieren“ nutzt nur noch den Windows-Update-Orchestrator (`SelfXWinRT.dll`,
   PowerShell 7). Die Windows-Update-Agent-API und der PowerShell-5.1-Zweig sind entfernt
   (Mindestversion Windows 11 25H2). Fehlt die Orchestrator-API, endet die Aktion mit Exit 1.

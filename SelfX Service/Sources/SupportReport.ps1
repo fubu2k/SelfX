@@ -91,12 +91,11 @@ function Get-SelfXUserLogFiles {
         if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
         if ($file.Name -notlike '*.log' -or $file.LastWriteTime -lt $limit) { continue }
         $owner = $null
-        # Fails closed: when the owner cannot be read, the file is skipped. .NET Framework (Windows PowerShell 5.1) has
-        # File.GetAccessControl, .NET 10 (PowerShell 7) only the FileSystemAclExtensions.
+        # Fails closed: when the owner cannot be read, the file is skipped. .NET 10 (PowerShell 7) has the
+        # FileSystemAclExtensions only.
         try {
             $sections = [Security.AccessControl.AccessControlSections]::Owner
-            if ($PSVersionTable.PSEdition -eq 'Core') { $acl = [IO.FileSystemAclExtensions]::GetAccessControl($file, $sections) }
-            else { $acl = [IO.File]::GetAccessControl($file.FullName, $sections) }
+            $acl = [IO.FileSystemAclExtensions]::GetAccessControl($file, $sections)
             $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
         } catch { }
         if ($owner -ne $Sid) { continue }
