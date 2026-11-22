@@ -467,8 +467,9 @@ try {
 	Assert-Equal (@($parsed)[0].Id) 'Disk' 'HealthStatus -Collect: stdout is still pure JSON with logging'
 	Assert-Equal ((Get-SandboxLog 'HealthStatus') -match 'Health check Disk finished') $true 'HealthStatus: run logged'
 
-	# Logs of the scripts: user actions fall back to LOCALAPPDATA without the installed Logs\Users folder.
-	Assert-Equal (@(Get-ChildItem -LiteralPath (Join-Path $env:LOCALAPPDATA 'SelfX\Logs') -Filter '*.log').Count -ge 10) $true 'Logs of the user actions written'
+	# Logs of the scripts: user actions fall back to LOCALAPPDATA without the installed Logs\Users folder; an
+	# elevated test run (for example a CI runner) logs to ProgramData\SelfX\Logs. Both are inside the sandbox.
+	Assert-Equal (@(Get-ChildItem -LiteralPath $sandbox -Recurse -File -Filter '*.log' -ErrorAction SilentlyContinue).Count -ge 10) $true 'Logs of the user actions written'
 } finally {
 	foreach ($key in $saved.Keys) { Set-Item -Path "Env:$key" -Value $saved[$key] }
 	Microsoft.PowerShell.Management\Remove-Item -LiteralPath $sandbox -Recurse -Force -ErrorAction SilentlyContinue

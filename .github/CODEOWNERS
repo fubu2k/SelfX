@@ -1,0 +1,14 @@
+# Paths with spaces are escaped with a backslash. Changes to these paths need a review by the owner (enable "Require review from Code Owners" only if a
+# second reviewer exists; a single maintainer cannot approve their own pull request).
+*                                            @fubu2k
+# Runs as SYSTEM or decides what runs as SYSTEM
+/SelfX\ Service/Service/                      @fubu2k
+/SelfX\ Service/Install.ps1                   @fubu2k
+/SelfX\ Service/Uninstall.ps1                 @fubu2k
+/SelfX\ Service/Sources/Scripts_to_run/       @fubu2k
+/SelfX\ Service/Sources/Issues_List.xml       @fubu2k
+/SelfX\ Service/Sources/Health_Config.xml     @fubu2k
+/SelfX\ Service/Sources/HealthStatus.ps1      @fubu2k
+/SelfX\ Service/Sources/SelfXServiceClient.ps1 @fubu2k
+/tools/                                      @fubu2k
+/.github/                                    @fubu2k

@@ -102,7 +102,7 @@ foreach ($action in @($catalog.SelectNodes('//Action'))) {
 	$seenIds[$id] = $true
 	Assert-True ($context -ceq 'User' -or $context -ceq 'System') "Action $id has Context User or System (found '$context')"
 	Assert-True (Test-PlainScriptName $scriptName) "Action $id uses a plain script file name (found '$scriptName')"
-	Assert-True (Test-Path -LiteralPath (Join-Path $scripts $scriptName) -PathType Leaf) "Action $id: script exists in Scripts_to_run ($scriptName)"
+	Assert-True (Test-Path -LiteralPath (Join-Path $scripts $scriptName) -PathType Leaf) "Action ${id}: script exists in Scripts_to_run ($scriptName)"
 	$key = $scriptName.ToLowerInvariant()
 	if (-not $contexts.ContainsKey($key)) { $contexts[$key] = New-Object System.Collections.Generic.List[string] }
 	$contexts[$key].Add($context)

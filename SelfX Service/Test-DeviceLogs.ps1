@@ -193,6 +193,14 @@ try {
         [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path))
         [IO.File]::WriteAllText($path, $Content)
         (Get-Item -LiteralPath $path).LastWriteTime = (Get-Date).AddDays(-$AgeDays)
+        # An elevated administrator creates files owned by the Administrators group. Own user logs are only
+        # accepted when the own SID owns them (as for a normal user), so the test files get that owner.
+        if ($Name -like 'Users\*') {
+            $mySid = [Security.Principal.WindowsIdentity]::GetCurrent().User
+            $acl = [IO.File]::GetAccessControl($path)
+            $acl.SetOwner($mySid)
+            [IO.File]::SetAccessControl($path, $acl)
+        }
     }
     $me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     New-LogFile 'SelfXService.log' 40 'service log'
