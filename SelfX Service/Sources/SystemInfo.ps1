@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.8.2
+    Version : 2.8.3
 
     History:
     Version  Date        Author               Change
@@ -46,6 +46,7 @@
                                               time is local time despite its "Z" (ConvertFrom-SelfXOmaDmTime)
     2.6.0    2026-11-06  Wolfgang Baeck       Label "Company apps (Intune)" instead of "Applications (local IME cache)"
     2.8.2    2026-11-22  fubu2k               Uptime row shows a restart hint (warning status) from 7 days without a restart (Get-SelfXUptimeInfo)
+    2.8.3    2026-11-22  fubu2k               Network: proxy setting of the user (server and port, configuration script address; credentials masked) and mapped network drive letters
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -63,6 +64,8 @@ $Script:SelfXInfoDefaultText = @{
 	LAN_Connected = 'LAN connected'; WiFi_Connected = 'Wi-Fi connected'; WWAN_Connected = 'Mobile broadband connected'
 	WiFi_SSID = 'Wi-Fi network (SSID)'; VPN_Connected = 'VPN connected'; Internet_Reachable = 'Internet reachable'
 	IPv4 = 'IPv4 address(es)'; IPv6 = 'IPv6 address(es)'; Gateway = 'Default gateway'; DNS = 'DNS server(s)'; MAC = 'MAC address(es)'
+	Proxy = 'Proxy (user setting)'; Proxy_None = 'No proxy'; Proxy_Manual = 'Manual proxy'; Proxy_Script = 'Automatic configuration script'
+	Network_Drives = 'Network drives'; Network_Drives_None = 'None'
 	Collected_At = 'Collected at'; Error = 'Error'; Yes = 'Yes'; No = 'No'; Not_Available = 'n/a'
 	Not_Enrolled = 'Not enrolled / unknown'; No_WiFi = 'No Wi-Fi connection'
 	Category_Health = 'Health status'; Health_IME = 'IME service'; Health_Defender = 'Microsoft Defender'
@@ -91,6 +94,42 @@ function Get-SelfXInfoText {
 		catch { return [string]::Format($Script:SelfXInfoDefaultText[$Key], $Arguments) }
 	}
 	return $value
+}
+
+# Proxy setting of the signed-in user as text: the kind of setting with its value (server and port, address of
+# the configuration script). Credentials in an address (user:password@host) are masked and long values are cut,
+# so a password never reaches the screen or an export. Settings: object with ProxyEnable, ProxyServer and
+# AutoConfigURL (values of HKCU\...\Internet Settings); $null = not readable.
+function Hide-SelfXAddressCredentials {
+	param([string]$Text)
+	$clean = "$Text".Trim()
+	$clean = [regex]::Replace($clean, '(?<=://)[^/@\s;]+@', '***@')
+	$clean = [regex]::Replace($clean, '(?<=^|[;=\s])[^/@\s;=]+:[^/@\s;=]*@', '***@')
+	if ($clean.Length -gt 200) { $clean = $clean.Substring(0, 200) + '...' }
+	return $clean
+}
+
+function ConvertTo-SelfXProxyText {
+	param($Settings)
+	if ($null -eq $Settings) { return '' }
+	$kinds = New-Object System.Collections.Generic.List[string]
+	if ([int]$Settings.ProxyEnable -eq 1 -and -not [string]::IsNullOrWhiteSpace("$($Settings.ProxyServer)")) {
+		$kinds.Add(('{0}: {1}' -f (Get-SelfXInfoText 'Proxy_Manual'), (Hide-SelfXAddressCredentials "$($Settings.ProxyServer)")))
+	}
+	if (-not [string]::IsNullOrWhiteSpace("$($Settings.AutoConfigURL)")) {
+		$kinds.Add(('{0}: {1}' -f (Get-SelfXInfoText 'Proxy_Script'), (Hide-SelfXAddressCredentials "$($Settings.AutoConfigURL)")))
+	}
+	if (-not $kinds.Count) { return (Get-SelfXInfoText 'Proxy_None') }
+	return ($kinds -join '; ')
+}
+
+# Drive letters of the mapped network drives of the signed-in user (also disconnected ones). Only the letters,
+# never the share paths. No network access: the drive type is a local information.
+function Get-SelfXNetworkDriveText {
+	param([string[]]$Letters)
+	$valid = @($Letters | Where-Object { $_ })
+	if (-not $valid.Count) { return (Get-SelfXInfoText 'Network_Drives_None') }
+	return (($valid | Sort-Object) -join ', ')
 }
 
 # Uptime text and status. From WarnDays days without a restart the row is a warning (Pending) with a hint.
@@ -507,6 +546,10 @@ function Get-SelfXSystemInfo {
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Gateway') $gateways))
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'DNS') $dns))
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'MAC') (@($nics | ForEach-Object { $_.MACAddress } | Where-Object { $_ } | Sort-Object -Unique))))
+	$proxySettings = Invoke-SelfXSafe { Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -ErrorAction Stop }
+	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Proxy') (ConvertTo-SelfXProxyText $proxySettings)))
+	$driveLetters = Invoke-SelfXSafe { @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq [IO.DriveType]::Network } | ForEach-Object { $_.Name.TrimEnd('\') }) }
+	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Network_Drives') (Get-SelfXNetworkDriveText $driveLetters)))
 
 	$items.Add((New-SelfXInfoItem $catReport (& $L 'Collected_At') (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')))
 	if ($IncludeHealth) {

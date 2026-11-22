@@ -453,6 +453,28 @@ try {
     Assert-Equal "$($short.Status)|$shortHasHint" '|False' 'Uptime below 7 days: no status, no hint'
     Assert-Equal "$($long.Status)|$longHasHint" 'Pending|True' 'Uptime of 7 days: warning with restart hint'
     Assert-Equal (Get-SelfXUptimeInfo -Uptime ([timespan]::FromDays(3)) -WarnDays 2).Status 'Pending' 'Uptime warning limit can be set'
+    $manualScript = [pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'proxy.internal.example:8080'; AutoConfigURL = 'http://wpad.internal.example/proxy.pac' }
+    $proxyText = ConvertTo-SelfXProxyText $manualScript
+    $hasManual = $proxyText.Contains($script:SelfXInfoText.Proxy_Manual)
+    $hasScript = $proxyText.Contains($script:SelfXInfoText.Proxy_Script)
+    $hasServer = $proxyText.Contains('proxy.internal.example:8080')
+    $hasPac = $proxyText.Contains('http://wpad.internal.example/proxy.pac')
+    Assert-Equal "$hasManual/$hasScript" 'True/True' 'Proxy: manual proxy and configuration script are named'
+    Assert-Equal "$hasServer/$hasPac" 'True/True' 'Proxy: server with port and script address are shown'
+    $secret = ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'user1:Secret123@proxy.internal.example:8080'; AutoConfigURL = 'http://svc:Pw456@wpad.internal.example/p.pac' })
+    $leaksSecret = $secret.Contains('Secret123') -or $secret.Contains('Pw456') -or $secret.Contains('user1') -or $secret.Contains('svc:')
+    $keepsHost = $secret.Contains('proxy.internal.example:8080') -and $secret.Contains('wpad.internal.example/p.pac')
+    Assert-Equal "$leaksSecret/$keepsHost" 'False/True' 'Proxy: credentials in addresses are masked, host stays visible'
+    $perProtocol = ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = 'http=p1:80;https=p1:443'; AutoConfigURL = '' })
+    Assert-Equal $perProtocol.Contains('http=p1:80;https=p1:443') $true 'Proxy: per-protocol list is not mistaken for credentials'
+    $longText = ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = ('a' * 500); AutoConfigURL = '' })
+    Assert-Equal ($longText.Length -lt 260) $true 'Proxy: very long value is cut'
+    Assert-Equal (ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 0; ProxyServer = 'x:1'; AutoConfigURL = '' })) $script:SelfXInfoText.Proxy_None 'Proxy: switched off server means no proxy'
+    Assert-Equal (ConvertTo-SelfXProxyText ([pscustomobject]@{ ProxyEnable = 1; ProxyServer = ''; AutoConfigURL = '' })) $script:SelfXInfoText.Proxy_None 'Proxy: enabled without server means no proxy'
+    Assert-Equal (ConvertTo-SelfXProxyText $null) '' 'Proxy: unreadable setting stays empty (shown as n/a)'
+    Assert-Equal (Get-SelfXNetworkDriveText @('Z:', 'H:')) 'H:, Z:' 'Network drives: sorted letters only'
+    Assert-Equal (Get-SelfXNetworkDriveText @()) $script:SelfXInfoText.Network_Drives_None 'Network drives: none'
+    Assert-Equal (Get-SelfXNetworkDriveText $null) $script:SelfXInfoText.Network_Drives_None 'Network drives: unreadable list shows none'
     Assert-Equal $info[0].Category $script:SelfXInfoText.Category_Health 'Localized health category'
     Assert-Equal $info[0].Value.StartsWith($script:SelfXInfoText.Health_Error) $true 'Localized error text'
     Assert-Equal (ConvertTo-SelfXSystemInfoText $info).Contains('90%') $true 'Text export includes health'

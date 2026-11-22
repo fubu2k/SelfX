@@ -231,6 +231,12 @@ Description of the issue:</Report_Mail_Body>
 		<Gateway>Default gateway</Gateway>
 		<DNS>DNS server(s)</DNS>
 		<MAC>MAC address(es)</MAC>
+		<Proxy>Proxy (user setting)</Proxy>
+		<Proxy_None>No proxy</Proxy_None>
+		<Proxy_Manual>Manual proxy</Proxy_Manual>
+		<Proxy_Script>Automatic configuration script</Proxy_Script>
+		<Network_Drives>Network drives</Network_Drives>
+		<Network_Drives_None>None</Network_Drives_None>
 		<Collected_At>Collected at</Collected_At>
 		<Error>Error</Error>
 		<Yes>Yes</Yes>
