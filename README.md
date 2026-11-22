@@ -240,3 +240,9 @@ The Intune packages are built with Microsoft's
 [Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool).
 The executable is not included in this repository; the build script verifies
 its Microsoft Authenticode signature before use.
+
+## Security and CI
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Every pull request to `main`
+compiles SelfX Service, runs all `Test-*.ps1` of the package and a security-focused PSScriptAnalyzer check
+([workflow](.github/workflows/service-ci.yml)).

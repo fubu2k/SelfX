@@ -1,0 +1,86 @@
+# CI for SelfX Service: compiles the service, runs all isolated tests and a security-focused script analysis.
+# Runs on GitHub-hosted Windows runners only; nothing is installed on a real device and no secret is used.
+name: SelfX Service CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only token: the workflow never writes to the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: service-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Compile and tests (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      # Actions are pinned to a full commit SHA (tag in the comment); Dependabot proposes updates.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Compile service, launcher and session starter
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $service = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Service'
+          $out = Join-Path $env:RUNNER_TEMP 'selfx-build'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          # Same compiler and references as Install.ps1 (C# compiler of the .NET Framework).
+          Add-Type -TypeDefinition (Get-Content -LiteralPath (Join-Path $service 'SelfXService.cs') -Raw) `
+            -ReferencedAssemblies 'System.ServiceProcess', 'System.Xml' `
+            -OutputAssembly (Join-Path $out 'SelfXService.exe') -OutputType ConsoleApplication
+          Add-Type -TypeDefinition (Get-Content -LiteralPath (Join-Path $service 'SelfXLauncher.cs') -Raw) `
+            -OutputAssembly (Join-Path $out 'SelfX.exe') -OutputType WindowsApplication
+          Add-Type -TypeDefinition (Get-Content -LiteralPath (Join-Path $service 'SelfXSessionStarter.cs') -Raw)
+          Get-ChildItem -LiteralPath $out -Filter *.exe | ForEach-Object { "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash, $_.Name }
+
+      - name: Run all Test-*.ps1 of SelfX Service
+        shell: powershell
+        run: |
+          $failed = New-Object System.Collections.Generic.List[string]
+          $tests = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Sort-Object Name
+          foreach ($test in $tests) {
+            Write-Output "::group::$($test.Name)"
+            # Each test in its own process, so mocks and globals of one test cannot affect the next.
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $test.FullName
+            $code = $LASTEXITCODE
+            Write-Output '::endgroup::'
+            if ($code -ne 0) { $failed.Add("$($test.Name) (exit code $code)"); Write-Output "::error::$($test.Name) failed with exit code $code" }
+          }
+          if ($failed.Count -gt 0) { throw "Failed tests: $($failed -join ', ')" }
+          Write-Output "$($tests.Count) test scripts passed."
+
+  script-analysis:
+    name: PSScriptAnalyzer (security rules)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Analyze SelfX Service and tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Fixed version from the PowerShell Gallery.
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.23.0 -Repository PSGallery -Scope CurrentUser -Force
+          Import-Module PSScriptAnalyzer -RequiredVersion 1.23.0
+          $settings = Join-Path $env:GITHUB_WORKSPACE '.github\PSScriptAnalyzerSettings.psd1'
+          $results = @('SelfX Service', 'tools') | ForEach-Object {
+            Invoke-ScriptAnalyzer -Path (Join-Path $env:GITHUB_WORKSPACE $_) -Recurse -Settings $settings
+          }
+          $results | Format-Table RuleName, Severity, ScriptName, Line, Message -AutoSize -Wrap | Out-String -Width 220
+          foreach ($r in $results) { Write-Output "::error file=$($r.ScriptPath),line=$($r.Line)::$($r.RuleName): $($r.Message)" }
+          if (@($results).Count -gt 0) { throw "$(@($results).Count) findings." }
+          Write-Output 'No findings.'
