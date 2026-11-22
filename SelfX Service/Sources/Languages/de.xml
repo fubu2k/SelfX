@@ -415,6 +415,13 @@ Durch das Löschen der Cookies werden Sie auf vielen Webseiten abgemeldet und m�
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: Zwischenspeicher leeren</Name>
+				<Explanation>Webseiten laden in Microsoft Edge nicht oder werden falsch angezeigt. Die Aktion leert nur den Zwischenspeicher des Standardprofils.</Explanation>
+				<Alerte_MSG>Microsoft Edge wird sofort geschlossen. Ungespeicherte Eingaben auf Webseiten gehen verloren. Danach wird der Zwischenspeicher (Cache) des Standardprofils geleert. Cookies, Verlauf, gespeicherte Kennwörter, Lesezeichen und andere Profile sind nicht betroffen, Sie bleiben auf Webseiten angemeldet.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Firefox_Cache">
 				<Name>Firefox: Browserdaten löschen</Name>
 				<Explanation>Webseiten laden in Firefox nicht oder werden falsch angezeigt. Die Aktion löscht gespeicherte Browserdaten aller Firefox-Profile.</Explanation>
