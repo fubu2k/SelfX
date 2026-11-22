@@ -35,11 +35,15 @@ Anhebung der Version ausgeliefert.
 - Die Tests `Test-ServicePipe.ps1` und `Test-HealthStatus.ps1` übersetzen den Dienst auch
   in PowerShell 7; `Test-InstallBinaries.ps1` prüft die neue Voraussetzung.
 
-### Bekannte Einschränkung
-
-- In PowerShell 7 gibt es die Windows-Update-Schnittstelle des Orchestrators (WinRT,
-  Windows 11 24H2 und neuer) noch nicht. Die Skripte fallen auf den Windows Update
-  Agent zurück. Der Ersatz folgt im nächsten Schritt.
+- Neue Bibliothek `SelfXWinRT.dll` (.NET 10, Windows-SDK-Projektion) ersetzt in
+  PowerShell 7 den WinRT-Zugriff auf den Windows-Update-Orchestrator (Windows 11 24H2
+  und neuer), den PowerShell 7 nicht mehr nach Namen laden kann. Sie enthält keine
+  eigene Logik und liefert nur das Manager-Objekt. `Build-SelfXBinaries.ps1` baut sie
+  zusammen mit den zwei Projektionsdateien nach `Bin\WinRT`; `Install.ps1` prüft jede
+  Datei per SHA256 und kopiert sie nach `%ProgramFiles%\SelfX\WinRT`. Auf älterem Windows
+  fallen die Skripte wie bisher auf den Windows Update Agent zurück.
+- Manifest `SelfX.Binaries.json` hat jetzt Format 3 (Einträge `WinRT/...`). Pakete mit
+  Format 2 lehnt der Installer ab: Paket neu bauen.
 
 ## 2.7.0 - 2026-11-22 (SelfX Service)
 
