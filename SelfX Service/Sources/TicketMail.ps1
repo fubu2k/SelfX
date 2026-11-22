@@ -186,7 +186,6 @@ function Read-SelfXTicketConfig {
     $errors = New-Object System.Collections.Generic.List[string]
     $units = @{}
     $rules = New-Object System.Collections.Generic.List[object]
-    $result = [pscustomobject]@{ Units = $units; Rules = $rules; Errors = $errors }
     $doc = New-Object Xml.XmlDocument
     $doc.XmlResolver = $null
     $reader = $null
@@ -198,7 +197,7 @@ function Read-SelfXTicketConfig {
         $doc.Load($reader)
     } catch {
         $errors.Add("The file cannot be read: $($_.Exception.Message)")
-        return $result
+        return [pscustomobject]@{ Units = $units; Rules = @(); Errors = $errors.ToArray() }
     } finally {
         if ($reader) { $reader.Dispose() }
     }
@@ -239,7 +238,8 @@ function Read-SelfXTicketConfig {
         if ($unit -and -not $units.ContainsKey($unit)) { $errors.Add("Rule ${count}: unit '$unit' is not listed: skipped."); continue }
         $rules.Add([pscustomobject]@{ Index = $count; Source = $sourceName; Match = $match; Regex = $regex; Unit = $unit })
     }
-    return $result
+    # Plain arrays (not generic lists) in the result.
+    return [pscustomobject]@{ Units = $units; Rules = $rules.ToArray(); Errors = $errors.ToArray() }
 }
 
 function Resolve-SelfXTicketUnit {
