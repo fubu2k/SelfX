@@ -134,10 +134,17 @@ if (@(Get-Command -Name Get-AppLockerFileInformation, New-AppLockerPolicy -Error
     New-Item -ItemType Directory -Path $buildFolder -Force | Out-Null
     $policyPath = Join-Path $buildFolder 'SelfX.AppLocker.xml'
     $paths = @($manifestBinaries.Keys | ForEach-Object { Join-Path $OutputFolder $_ })
-    $policy = Get-AppLockerFileInformation -Path $paths |
-        New-AppLockerPolicy -RuleType Hash -User Everyone -RuleNamePrefix ("SelfX " + $manifest.ToolVersion) -Xml
-    [IO.File]::WriteAllText($policyPath, $policy, (New-Object System.Text.UTF8Encoding($false)))
-    Write-Output "AppLocker hash rules: $policyPath (merge into your policy; replace the rules of the previous build)."
+    # The rules are a convenience: a problem here must not fail the build (PowerShell 7 reaches the AppLocker
+    # cmdlets only through a compatibility layer; use Windows PowerShell 5.1 for the rules in that case).
+    try {
+        $policy = Get-AppLockerFileInformation -Path $paths |
+            New-AppLockerPolicy -RuleType Hash -User Everyone -RuleNamePrefix ("SelfX " + $manifest.ToolVersion) -Xml
+        [IO.File]::WriteAllText($policyPath, $policy, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Output "AppLocker hash rules: $policyPath (merge into your policy; replace the rules of the previous build)."
+    }
+    catch {
+        Write-Warning "The AppLocker hash rules could not be created: $($_.Exception.Message) Run the script in Windows PowerShell 5.1 (powershell.exe) or create the rules from the files in Bin."
+    }
 }
 else {
     Write-Warning 'AppLocker cmdlets not available: no build\SelfX.AppLocker.xml. Create the hash rules from the files in Bin on a machine with the AppLocker module.'
