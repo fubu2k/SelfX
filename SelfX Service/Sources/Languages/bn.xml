@@ -186,6 +186,18 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Ticket_Manual_Text>আপনার মেল প্রোগ্রাম খোলা হয়েছে। ফাইল {0} (ফাইল এক্সপ্লোরারে নির্বাচিত) ইমেলে সংযুক্ত করুন, যাচাই করুন এবং পাঠান।</Ticket_Manual_Text>
 		<Ticket_Error_Text>ইমেল প্রস্তুত করা যায়নি: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>ইমেল পাঠানো হবে: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Copilot Chat-কে জিজ্ঞাসা করুন</Copilot_Row_Label>
+		<Copilot_Row_Text>এই পিসি সম্পর্কে Microsoft 365 Copilot Chat-এর জন্য একটি ছোট লেখা তৈরি করে, যাতে সে সমস্যাটি সহজ ভাষায় ব্যাখ্যা করতে পারে।</Copilot_Row_Text>
+		<Copilot_Button>লেখা প্রস্তুত করুন</Copilot_Button>
+		<Copilot_Window_Title>Copilot Chat-কে জিজ্ঞাসা করুন</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX Copilot Chat-এর জন্য একটি ছোট লেখা তৈরি করে। এতে আপনার বিবরণ ও ডিভাইসের মৌলিক তথ্য থাকে। নাম, ইমেল ঠিকানা ও নেটওয়ার্ক ঠিকানা প্লেসহোল্ডার দিয়ে বদলে দেওয়া হয়।</Copilot_Intro_Text>
+		<Copilot_Description_Label>কী কাজ করছে না? (ঐচ্ছিক)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Copilot Chat-এর জন্য লেখা (আপনি এটি বদলাতে পারেন)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>লেখা তৈরি করুন</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX লেখাটি কপি করে এবং {0} খোলে। আপনি সেখানে লেখাটি পেস্ট করে নিজে পাঠান। SelfX কিছু পাঠায় না।</Copilot_Target_Text>
+		<Copilot_Open_Button>কপি করুন ও Copilot খুলুন</Copilot_Open_Button>
+		<Copilot_Opened_Text>লেখাটি ক্লিপবোর্ডে আছে এবং Copilot Chat খোলা হয়েছে। সেখানে পেস্ট করুন (Ctrl+V) ও পাঠান।</Copilot_Opened_Text>
+		<Copilot_Error_Text>লেখা প্রস্তুত করা যায়নি: {0}</Copilot_Error_Text>
 		<Version_Text>সংস্করণ {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: সব ঠিক আছে</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0}টি সমস্যা, {1}টি সতর্কতা</Tray_Tooltip_Issues>

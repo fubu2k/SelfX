@@ -186,6 +186,18 @@
 		<Ticket_Manual_Text>已打开您的邮件程序。请将文件 {0}（已在文件资源管理器中选中）附加到电子邮件，检查后发送。</Ticket_Manual_Text>
 		<Ticket_Error_Text>无法准备电子邮件：{0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>电子邮件将发送至：{0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>询问 Copilot Chat</Copilot_Row_Label>
+		<Copilot_Row_Text>为 Microsoft 365 Copilot Chat 准备一段关于这台电脑的简短文字，以便它用通俗的语言解释问题。</Copilot_Row_Text>
+		<Copilot_Button>准备文字</Copilot_Button>
+		<Copilot_Window_Title>询问 Copilot Chat</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX 会为 Copilot Chat 准备一段简短文字，其中包含您的描述和设备的基本信息。姓名、电子邮件地址和网络地址会被占位符替换。</Copilot_Intro_Text>
+		<Copilot_Description_Label>哪里出了问题？（可选）</Copilot_Description_Label>
+		<Copilot_Preview_Label>给 Copilot Chat 的文字（可以修改）</Copilot_Preview_Label>
+		<Copilot_Preview_Button>生成文字</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX 会复制文字并打开 {0}。请您在那里粘贴文字并自行发送。SelfX 不会发送任何内容。</Copilot_Target_Text>
+		<Copilot_Open_Button>复制并打开 Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>文字已在剪贴板中，Copilot Chat 已打开。请在那里粘贴（Ctrl+V）并发送。</Copilot_Opened_Text>
+		<Copilot_Error_Text>无法准备文字：{0}</Copilot_Error_Text>
 		<Version_Text>版本 {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 一切正常</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} 个问题，{1} 个警告</Tray_Tooltip_Issues>

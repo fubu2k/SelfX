@@ -186,6 +186,18 @@
 		<Ticket_Manual_Text>已開啟您的郵件程式。請將檔案 {0}（已在檔案總管中選取）附加到電子郵件，檢查後傳送。</Ticket_Manual_Text>
 		<Ticket_Error_Text>無法準備電子郵件：{0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>電子郵件將傳送至：{0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>詢問 Copilot Chat</Copilot_Row_Label>
+		<Copilot_Row_Text>為 Microsoft 365 Copilot Chat 準備一段關於這台電腦的簡短文字，讓它以淺顯的語言說明問題。</Copilot_Row_Text>
+		<Copilot_Button>準備文字</Copilot_Button>
+		<Copilot_Window_Title>詢問 Copilot Chat</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX 會為 Copilot Chat 準備一段簡短文字，其中包含您的描述和裝置的基本資訊。姓名、電子郵件地址和網路位址會以預留位置取代。</Copilot_Intro_Text>
+		<Copilot_Description_Label>哪裡有問題？（選填）</Copilot_Description_Label>
+		<Copilot_Preview_Label>給 Copilot Chat 的文字（可以修改）</Copilot_Preview_Label>
+		<Copilot_Preview_Button>產生文字</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX 會複製文字並開啟 {0}。請您在該處貼上文字並自行傳送。SelfX 不會傳送任何內容。</Copilot_Target_Text>
+		<Copilot_Open_Button>複製並開啟 Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>文字已在剪貼簿中，Copilot Chat 已開啟。請在該處貼上（Ctrl+V）並傳送。</Copilot_Opened_Text>
+		<Copilot_Error_Text>無法準備文字：{0}</Copilot_Error_Text>
 		<Version_Text>版本 {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 一切正常</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} 個問題，{1} 個警告</Tray_Tooltip_Issues>

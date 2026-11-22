@@ -186,6 +186,18 @@
 		<Ticket_Manual_Text>Открыта ваша почтовая программа. Приложите к письму файл {0} (выбран в проводнике), проверьте письмо и отправьте его.</Ticket_Manual_Text>
 		<Ticket_Error_Text>Не удалось подготовить письмо: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>Письмо будет отправлено по адресу: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Спросить Copilot Chat</Copilot_Row_Label>
+		<Copilot_Row_Text>Готовит короткий текст об этом компьютере для Microsoft 365 Copilot Chat, чтобы он мог объяснить проблему простым языком.</Copilot_Row_Text>
+		<Copilot_Button>Подготовить текст</Copilot_Button>
+		<Copilot_Window_Title>Спросить Copilot Chat</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX готовит короткий текст для Copilot Chat. В нём содержатся ваше описание и основные сведения об устройстве. Имена, адреса электронной почты и сетевые адреса заменяются заполнителями.</Copilot_Intro_Text>
+		<Copilot_Description_Label>Что не работает? (необязательно)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Текст для Copilot Chat (его можно изменить)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>Создать текст</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX копирует текст и открывает {0}. Вы вставляете текст там и отправляете его сами. SelfX ничего не отправляет.</Copilot_Target_Text>
+		<Copilot_Open_Button>Копировать и открыть Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>Текст находится в буфере обмена, Copilot Chat открыт. Вставьте текст туда (Ctrl+V) и отправьте.</Copilot_Opened_Text>
+		<Copilot_Error_Text>Не удалось подготовить текст: {0}</Copilot_Error_Text>
 		<Version_Text>Версия {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: всё в порядке</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: проблем: {0}, предупреждений: {1}</Tray_Tooltip_Issues>

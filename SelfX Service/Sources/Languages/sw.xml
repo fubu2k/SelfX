@@ -186,6 +186,18 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Ticket_Manual_Text>Programu yako ya barua pepe imefunguliwa. Ambatisha faili {0} (iliyochaguliwa kwenye File Explorer) kwenye barua pepe, ikague kisha uitume.</Ticket_Manual_Text>
 		<Ticket_Error_Text>Barua pepe haikuweza kuandaliwa: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>Barua pepe inatumwa kwa: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Uliza Copilot Chat</Copilot_Row_Label>
+		<Copilot_Row_Text>Huandaa maandishi mafupi kuhusu kompyuta hii kwa Microsoft 365 Copilot Chat, ili iweze kueleza tatizo kwa lugha rahisi.</Copilot_Row_Text>
+		<Copilot_Button>Andaa maandishi</Copilot_Button>
+		<Copilot_Window_Title>Uliza Copilot Chat</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX huandaa maandishi mafupi kwa ajili ya Copilot Chat. Yana maelezo yako na taarifa za msingi za kifaa. Majina, anwani za barua pepe na anwani za mtandao hubadilishwa na vishikilia nafasi.</Copilot_Intro_Text>
+		<Copilot_Description_Label>Nini hakifanyi kazi? (si lazima)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Maandishi ya Copilot Chat (unaweza kuyabadilisha)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>Unda maandishi</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX hunakili maandishi na kufungua {0}. Unabandika maandishi hapo na kuyatuma mwenyewe. SelfX haitumi chochote.</Copilot_Target_Text>
+		<Copilot_Open_Button>Nakili na ufungue Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>Maandishi yako kwenye ubao wa kunakili na Copilot Chat imefunguliwa. Yabandike hapo (Ctrl+V) kisha uyatume.</Copilot_Opened_Text>
+		<Copilot_Error_Text>Maandishi hayakuweza kuandaliwa: {0}</Copilot_Error_Text>
 		<Version_Text>Toleo {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: kila kitu kiko sawa</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: matatizo {0}, maonyo {1}</Tray_Tooltip_Issues>

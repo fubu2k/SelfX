@@ -186,6 +186,18 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Ticket_Manual_Text>Chương trình thư của bạn đã được mở. Hãy đính kèm tệp {0} (được chọn trong File Explorer) vào thư, kiểm tra rồi gửi.</Ticket_Manual_Text>
 		<Ticket_Error_Text>Không thể chuẩn bị thư: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>Thư được gửi đến: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Hỏi Copilot Chat</Copilot_Row_Label>
+		<Copilot_Row_Text>Chuẩn bị một đoạn văn bản ngắn về máy tính này cho Microsoft 365 Copilot Chat để nó giải thích sự cố bằng ngôn ngữ đơn giản.</Copilot_Row_Text>
+		<Copilot_Button>Chuẩn bị văn bản</Copilot_Button>
+		<Copilot_Window_Title>Hỏi Copilot Chat</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX chuẩn bị một đoạn văn bản ngắn cho Copilot Chat. Văn bản gồm mô tả của bạn và thông tin cơ bản về thiết bị. Tên, địa chỉ email và địa chỉ mạng được thay bằng ký hiệu giữ chỗ.</Copilot_Intro_Text>
+		<Copilot_Description_Label>Điều gì không hoạt động? (không bắt buộc)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Văn bản cho Copilot Chat (bạn có thể chỉnh sửa)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>Tạo văn bản</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX sao chép văn bản và mở {0}. Bạn dán văn bản vào đó và tự gửi. SelfX không gửi gì cả.</Copilot_Target_Text>
+		<Copilot_Open_Button>Sao chép và mở Copilot</Copilot_Open_Button>
+		<Copilot_Opened_Text>Văn bản đã nằm trong bộ nhớ tạm và Copilot Chat đã được mở. Hãy dán vào đó (Ctrl+V) rồi gửi.</Copilot_Opened_Text>
+		<Copilot_Error_Text>Không thể chuẩn bị văn bản: {0}</Copilot_Error_Text>
 		<Version_Text>Phiên bản {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: mọi thứ đều ổn</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} sự cố, {1} cảnh báo</Tray_Tooltip_Issues>

@@ -108,6 +108,7 @@ The file contains settings only, no texts. All texts are in the language files (
 | `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | The help button (?) and its contacts (see [User interface](#user-interface)). `Support_Mail` is also the recipient of the e-mail with the device logs. |
 | `DeviceLogs_Days`, `DeviceLogs_Compress` | Device logs: days of event log history (1 to 60, default 7) and `.zip` (default) or `.txt`. |
 | `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket by e-mail (see [Ticket](#ticket-by-e-mail)). |
+| `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Hand-over to Copilot Chat (see [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | How long logs are kept (see [Logs](#logs-and-retention)). |
 | `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | The tray icon (see [Tray icon](#tray-icon)). |
 | `Brand_*`, `Tool_Theme`, `Tool_Color` | Appearance (see [Branding](#branding)). |
@@ -437,6 +438,53 @@ whether this works in your version before you turn it on. The device information
 contains addresses (for example proxy) and device data and is meant for the IT. The log
 names only the result (`Outlook`, `Manual`, `Error`) and the number of lines, never the
 text.
+
+### Copilot Chat
+
+Optional and off by default (`Copilot_Enabled` = `False`). When the function is on and
+`Copilot_Url` is a valid address, the help dialog (?) shows the row *Ask Copilot Chat*
+with the button *Prepare text*. The help button must be visible for this
+(`Show_Support_Button` = `True`). Copilot Chat is the chat function in Microsoft 365.
+SelfX uses no interface and no token: the user pastes the text into Copilot Chat.
+
+**Flow (user context, no elevated rights):**
+
+1. The user describes the problem in their own words (optional, up to 1000 characters)
+   and chooses *Create text*.
+2. SelfX shows the finished text in a preview. The user can read and change it.
+3. *Copy and open Copilot* puts the text in the clipboard and opens the address from
+   `Copilot_Url`. The user pastes the text (Ctrl+V) and sends it. SelfX sends nothing.
+4. Copilot Chat is asked to answer in plain language. With `Copilot_Audience` = `Admin`
+   it answers for IT staff with technical steps.
+
+**What is in the text (fixed list):** Windows edition, version and build, SelfX version
+and language, days since the last restart, drives (letter, percent used, GB free) and
+the device status (name of the check, state, shortened details). The building blocks
+can do more (apps with errors, network, updates), but this data is not collected yet
+in this version.
+
+**What is not in the text:** device name, user name, domain, e-mail addresses, IP and
+MAC addresses, serial numbers, the *System information* page, logs. If such values
+appear in the description or in details, they are replaced by placeholders (`<email>`,
+`<ip>`, `<device>`, `<user>`, `<server 1>` ...). Recognition by patterns is not
+complete, which is why the user sees the text before it is copied. The text is limited
+to 6000 characters.
+
+| Setting | Meaning |
+|---|---|
+| `Copilot_Enabled` | `False` (default) or `True`. |
+| `Copilot_Url` | Address that is opened. Default `https://m365.cloud.microsoft/chat`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
+| `Copilot_Audience` | `User` (default): plain answers for users. `Admin`: technical answers for IT staff. |
+| `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: only the error codes. |
+
+**Security:** The address and the settings come only from `Tool_Config.xml` (writable
+by administrators only). The user cannot change the address. Only this address is
+opened, and it is checked again before it is opened. SelfX makes no network access and
+no service call. The collection reads local values only (registry, drives, the device
+status that is already collected). The text sits between `BEGIN DATA` and `END DATA`,
+and the instruction tells Copilot that only data is inside. The log names only the
+audience, the length and the host, never the text. Before you turn it on, decide
+whether your policies allow users to paste text from SelfX into Copilot Chat.
 
 ### Logs and retention
 

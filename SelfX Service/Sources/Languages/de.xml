@@ -184,6 +184,18 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Ticket_Manual_Text>Ihr Mailprogramm wurde geöffnet. Hängen Sie die Datei {0} (im Explorer markiert) an die E-Mail an, prüfen Sie sie und senden Sie sie ab.</Ticket_Manual_Text>
 		<Ticket_Error_Text>Die E-Mail konnte nicht vorbereitet werden: {0}</Ticket_Error_Text>
 		<Ticket_Recipient_Text>Die E-Mail geht an: {0}</Ticket_Recipient_Text>
+		<Copilot_Row_Label>Copilot Chat fragen</Copilot_Row_Label>
+		<Copilot_Row_Text>Bereitet einen kurzen Text zu diesem PC für Microsoft 365 Copilot Chat vor, damit dieser das Problem in einfacher Sprache erklären kann.</Copilot_Row_Text>
+		<Copilot_Button>Text vorbereiten</Copilot_Button>
+		<Copilot_Window_Title>Copilot Chat fragen</Copilot_Window_Title>
+		<Copilot_Intro_Text>SelfX bereitet einen kurzen Text für Copilot Chat vor. Er enthält Ihre Beschreibung und grundlegende Gerätedaten. Namen, E-Mail-Adressen und Netzwerkadressen werden durch Platzhalter ersetzt.</Copilot_Intro_Text>
+		<Copilot_Description_Label>Was funktioniert nicht? (optional)</Copilot_Description_Label>
+		<Copilot_Preview_Label>Text für Copilot Chat (Sie können ihn ändern)</Copilot_Preview_Label>
+		<Copilot_Preview_Button>Text erstellen</Copilot_Preview_Button>
+		<Copilot_Target_Text>SelfX kopiert den Text und öffnet {0}. Sie fügen den Text dort ein und senden ihn selbst ab. SelfX sendet nichts.</Copilot_Target_Text>
+		<Copilot_Open_Button>Kopieren und Copilot öffnen</Copilot_Open_Button>
+		<Copilot_Opened_Text>Der Text liegt in der Zwischenablage und Copilot Chat wurde geöffnet. Fügen Sie ihn dort ein (Strg+V) und senden Sie ihn ab.</Copilot_Opened_Text>
+		<Copilot_Error_Text>Der Text konnte nicht vorbereitet werden: {0}</Copilot_Error_Text>
 		<Service_Short_Running>SelfX-Dienst aktiv</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX-Dienst läuft nicht</Service_Short_Unavailable>
 		<Version_Text>Version {0}</Version_Text>
