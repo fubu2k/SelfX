@@ -99,7 +99,7 @@ Initialize-SelfXLog -Component 'SelfX_Tray'
 # Same language as SelfX: choice of the user (SelfX > Settings) or Tool_Language / Windows display language.
 Function Get-TrayLanguageSetting
 	{
-		return (Resolve-SelfXLanguageSetting -ConfigLanguage (Get-TrayConfig 'Tool_Language' 'Auto') -UserLanguage ([string](Get-TrayUserSetting 'Language' '')) `
+		return (Resolve-SelfXLanguageSetting -ConfigLanguage (Get-TrayConfig 'Tool_Language' 'de') -UserLanguage ([string](Get-TrayUserSetting 'Language' '')) `
 			-AllowUserChoice ((Get-TrayConfig 'Show_Language_Setting' 'True') -eq 'True') -LanguageFolder (Join-Path $Global:Tray_Folder 'Languages'))
 	}
 $Global:Tray_Language_Setting = Get-TrayLanguageSetting

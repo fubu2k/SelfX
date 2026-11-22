@@ -92,7 +92,7 @@ are not used.
 
 | Key | Purpose |
 |---|---|
-| `Tool_Language` | Default language. `Auto` (default) uses the Windows display language of the user. A culture name such as `de`, `fr-CH` or `zh-Hans` sets the language. Users can choose another language in the settings unless `Show_Language_Setting` is `False`; see [Languages](#languages). |
+| `Tool_Language` | Default language. `de` (default, base language) shows German. `Auto` uses the Windows display language of the user (German if no language file matches). Another culture name such as `en`, `fr-CH` or `zh-Hans` sets that language. Texts that are missing in a language are shown in English. Users can choose another language in the settings unless `Show_Language_Setting` is `False`; see [Languages](#languages). |
 | `Tool_Name` | Text in the title bar and the About dialog |
 | `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | Shortcuts for all users created by `Install.ps1` |
 | `Show_Computer_Name_MainGUI`, `Show_Computer_Name_title_bar` | Show the computer name beside the title |
@@ -773,13 +773,14 @@ How the language is selected (`Localization.ps1`):
    the new language is used the next time SelfX is opened. The choice is
    ignored when `Show_Language_Setting` is `False`, when the value is not a
    culture name, or when its language file no longer exists.
-2. `Tool_Language` in `Tool_Config.xml`: `Auto` uses the Windows display
-   language, any other value is used as the culture name.
+2. `Tool_Language` in `Tool_Config.xml`: `de` (default) is German, `Auto` uses
+   the Windows display language, any other value is used as the culture name.
 3. The culture and its parent cultures are tried in order. For example
    `de-CH` uses `de.xml`, `pt-BR` uses `pt.xml`, `zh-CN` uses `zh-Hans.xml` and
    `zh-TW` uses `zh-Hant.xml`. Swiss German (`gsw`, including `gsw-CH`)
    also uses `de.xml` when no Swiss German language file is available.
-4. If no file matches, `en.xml` is used.
+4. If no file matches, `de.xml` (the base language) is used. A text that is
+   missing in the selected language is shown in English (`en.xml`).
 
 Each text is looked up in the selected language first and then in English, so a
 missing entry never leaves an empty label. Catalogue texts fall back to the

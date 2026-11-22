@@ -15,10 +15,10 @@
       3. The culture and its parent cultures are tried in order, for example
          de-CH -> de, zh-TW -> zh-Hant -> zh, pt-BR -> pt.
          Swiss German (gsw, including gsw-CH) also falls back to German (de).
-      4. If no file matches, English (en.xml) is used.
+      4. If no file matches, German (de.xml, the base language) is used.
 
-    Every text is looked up in the selected language first and then in English. Catalogue texts that are
-    missing in both files fall back to the English base text in Issues_List.xml. A new language therefore
+    Every text is looked up in the selected language first and then in English (fallback). Catalogue texts that are
+    missing in both files use the English text in Issues_List.xml. A new language therefore
     only needs a new file in the Languages folder; no code change is required.
 
     The script only reads local files. It does not need a network connection.
@@ -27,7 +27,7 @@
     Name    : Localization.ps1
     Package : SelfX Service
     Context : GUI helper (dot-sourced by Self_X.ps1 as the signed-in user)
-    Version : 2.5.9
+    Version : 2.6.12
 
     History:
     Version  Date        Author               Change
@@ -37,6 +37,7 @@
     2.4.0    2026-11-02  Wolfgang Baeck       Pass the Post_Action field of catalogue actions
     2.5.9    2026-11-05  Wolfgang Baeck       Language chosen by the user: Get-SelfXLanguageList, Resolve-SelfXLanguageSetting,
                                               Get-SelfXLanguageFileCulture
+    2.6.12   2026-11-22  fubu2k               German is the base language (no matching file -> de.xml); English stays the fallback for missing texts
 #>
 
 $Script:SelfX_Language = $null
@@ -140,7 +141,8 @@ Function Get-SelfXLanguageFileCulture
 		{
 			If(Test-Path -LiteralPath (Join-Path $LanguageFolder "$Name.xml") -PathType Leaf) { return $Name }
 		}
-	return 'en'
+	# Base language of SelfX
+	return 'de'
 }
 
 Function Get-SelfXLanguageList
@@ -220,8 +222,14 @@ Function Initialize-SelfXLanguage
 
 	If($Script:SelfX_Language -eq $null)
 		{
-			$Script:SelfX_Language = $Script:SelfX_LanguageFallback
-			$Selected_File = Join-Path $LanguageFolder 'en.xml'
+			# No file for the language: German is the base language, English the fallback if de.xml is missing.
+			$Script:SelfX_Language = Read-SelfXLanguageFile -Path (Join-Path $LanguageFolder 'de.xml')
+			$Selected_File = Join-Path $LanguageFolder 'de.xml'
+			If($Script:SelfX_Language -eq $null)
+				{
+					$Script:SelfX_Language = $Script:SelfX_LanguageFallback
+					$Selected_File = Join-Path $LanguageFolder 'en.xml'
+				}
 		}
 
 	$Root = $null
@@ -230,12 +238,12 @@ Function Initialize-SelfXLanguage
 	$Flow = 'LeftToRight'
 	If(($Root -ne $null) -and ($Root.GetAttribute('FlowDirection') -eq 'RightToLeft')) { $Flow = 'RightToLeft' }
 
-	$Culture_Name = 'en'
+	$Culture_Name = 'de'
 	If(($Root -ne $null) -and $Root.GetAttribute('Culture')) { $Culture_Name = $Root.GetAttribute('Culture') }
 
 	return [pscustomobject]@{
 		Culture       = $Culture_Name
-		Name          = $(If($Root -ne $null){ $Root.GetAttribute('NativeName') } Else { 'English' })
+		Name          = $(If($Root -ne $null){ $Root.GetAttribute('NativeName') } Else { 'Deutsch' })
 		FlowDirection = $Flow
 		File          = $Selected_File
 		WindowsCulture = $Culture.Name

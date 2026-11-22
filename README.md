@@ -20,7 +20,7 @@ projects are not part of this fork; use the upstream repositories if you need
 them. The work in this fork concentrates on the security, the tests and the
 deployment of SelfX Service: see
 [Security hardening in this fork](#security-hardening-in-this-fork) and the
-[Changelog](CHANGELOG.md). Current version: **2.6.11**.
+[Changelog](CHANGELOG.md). Current version: **2.6.12**.
 
 ## Screenshots
 

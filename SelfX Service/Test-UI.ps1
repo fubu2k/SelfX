@@ -143,6 +143,10 @@ try {
     Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'gsw-CH') 'de' 'Swiss German uses de.xml'
     Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'zh-TW') 'zh-Hant' 'zh-TW uses zh-Hant.xml'
     Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'fr') 'fr' 'Exact language file'
+    Assert-Equal (Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'cs') 'de' 'Language without a file uses German (base language)'
+    Assert-Equal (Initialize-SelfXLanguage -LanguageFolder $languages -Language 'cs').Culture 'de' 'No matching file: German is loaded'
+    # The following checks use English again.
+    [void](Initialize-SelfXLanguage -LanguageFolder $languages -Language 'en')
     $list = @(Get-SelfXLanguageList -LanguageFolder $languages)
     Assert-Equal $list.Count @(Get-ChildItem -LiteralPath $languages -Filter '*.xml').Count 'Every language file is listed'
     Assert-Equal (($list | Where-Object Culture -eq 'de').Name) 'Deutsch' 'Languages are listed by their own name'
@@ -161,7 +165,8 @@ try {
     . ([scriptblock]::Create((Get-FunctionText $gui 'Set-SelfXUserLanguage').Replace('Local\SelfX.Tray.Command', 'Local\SelfX.Test.' + [guid]::NewGuid().ToString('N'))))
     $choices = @(Get-SelfXLanguageChoices)
     Assert-Equal $choices[0].Culture 'Auto' 'Automatic is the first choice'
-    $defaultCulture = Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'Auto'
+    # The test configuration has no Tool_Language: the default of SelfX is German.
+    $defaultCulture = Get-SelfXLanguageFileCulture -LanguageFolder $languages -Language 'de'
     Assert-Equal $choices[0].Text (Get-SelfXString 'Settings_Language_Auto' (($list | Where-Object Culture -eq $defaultCulture).Name)) 'Automatic shows the default language'
     Assert-Equal $choices.Count ($list.Count + 1) 'All languages can be chosen'
     $Nav_Status = [pscustomobject]@{ IsChecked = $true }

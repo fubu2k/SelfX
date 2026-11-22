@@ -25,8 +25,8 @@
     Settings and branding (company logo, colors) come from Tool_Config.xml (Branding.ps1). All texts are
     loaded from Languages\<culture>.xml (Localization.ps1): in the language chosen by the user in the
     settings (HKCU\Software\SelfX\Language, unless Show_Language_Setting is False), otherwise in
-    Tool_Language or the Windows display language of the user. English is used when the language is not
-    available. After a change of the language SelfX restarts itself on the same page. Only one window runs
+    Tool_Language or the Windows display language of the user. German (base language) is used when the language is not
+    available; English is the fallback for missing texts. After a change of the language SelfX restarts itself on the same page. Only one window runs
     per user: starting SelfX again (for example from the tray icon) brings the open window to the front.
 
 .PARAMETER Page
@@ -236,10 +236,10 @@ Function Get-SelfXConfigValue
 		return (Get-SelfXText $Name $Default)
 	}
 
-# Language: choice of the user (SelfX > Settings), else Tool_Language (Auto = Windows display language), English as fallback
+# Language: choice of the user (SelfX > Settings), else Tool_Language (default de; Auto = Windows display language), German as base language, English as fallback for missing texts
 $Show_Language_Setting = (Get-SelfXText "Show_Language_Setting" "True") -eq 'True'
 $Global:SelfX_LanguageFolder = Join-Path $Current_Folder 'Languages'
-$Global:SelfX_Language_Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "Auto") `
+$Global:SelfX_Language_Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "de") `
 	-UserLanguage ([string](Get-SelfXUserSetting 'Language' '')) -AllowUserChoice $Show_Language_Setting -LanguageFolder $Global:SelfX_LanguageFolder
 $SelfX_UI_Language = Initialize-SelfXLanguage -LanguageFolder $Global:SelfX_LanguageFolder -Language $Global:SelfX_Language_Setting
 
@@ -2067,7 +2067,7 @@ Function Set-SelfXTrayEnabled
 # Entries of the language list: "Automatic (<default language>)" first, then all languages by name.
 Function Get-SelfXLanguageChoices
 	{
-		$Default_Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "Auto") -UserLanguage '' -LanguageFolder $Global:SelfX_LanguageFolder
+		$Default_Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "de") -UserLanguage '' -LanguageFolder $Global:SelfX_LanguageFolder
 		$Default_Culture = Get-SelfXLanguageFileCulture -LanguageFolder $Global:SelfX_LanguageFolder -Language $Default_Setting
 		$Languages = @(Get-SelfXLanguageList -LanguageFolder $Global:SelfX_LanguageFolder)
 		$Default_Name = $Default_Culture
@@ -2085,7 +2085,7 @@ Function Set-SelfXUserLanguage
 		param([string]$Culture)
 		Set-SelfXUserSetting 'Language' $Culture
 		Write-SelfXLog "Language chosen by the user: $Culture"
-		$Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "Auto") -UserLanguage $Culture `
+		$Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "de") -UserLanguage $Culture `
 			-AllowUserChoice $Show_Language_Setting -LanguageFolder $Global:SelfX_LanguageFolder
 		Try { $Signal = [System.Threading.EventWaitHandle]::OpenExisting('Local\SelfX.Tray.Command'); [void]$Signal.Set(); $Signal.Dispose() } Catch {}
 		If((Get-SelfXLanguageFileCulture -LanguageFolder $Global:SelfX_LanguageFolder -Language $Setting) -eq $SelfX_UI_Language.Culture) { return $False }
