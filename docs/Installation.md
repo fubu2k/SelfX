@@ -166,6 +166,20 @@ Protokolldateien, die älter sind als `Log_Retention_Days` (Standard 90), werden
 automatisch gelöscht; siehe
 [Protokollierung](Configuration.md#protokolle-und-aufbewahrung).
 
+Sicherheitsrelevante Ereignisse schreibt der Dienst zusätzlich in das Windows-Ereignisprotokoll
+(Protokoll *Anwendung*, Quelle `SelfXService`), damit Defender for Endpoint, Intune oder ein SIEM sie
+auswerten können. Die Texte sind fest und enthalten keine Anfragetexte und keine Nutzernamen (das
+Anwendungsprotokoll kann jeder Nutzer lesen); Einzelheiten stehen im geschützten `SelfXService.log`. Je
+Ereignis-ID gelten höchstens 10 Einträge in 10 Minuten, danach meldet 4099 die Zahl der ausgelassenen.
+
+| ID | Stufe | Bedeutung |
+|---|---|---|
+| 4001 | Fehler | Der Pipe-Name gehört schon einem anderen Prozess; der Dienst nimmt keine Verbindungen an, bis er frei ist. |
+| 4002 | Warnung | Eine Anfrage oder Verbindung wurde abgelehnt (ungültig, nicht erlaubt, Begrenzung). |
+| 4003 | Warnung | PowerShell 7 ist nicht gegen Änderungen durch Nutzer geschützt; Aktionen als SYSTEM werden nicht gestartet. |
+| 4004 | Fehler | `%ProgramData%\SelfX` ist nicht geschützt (Verknüpfung oder fremder Besitzer); der Dienst schreibt dort nichts, bis ein Administrator es repariert (SelfX neu installieren). |
+| 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
+
 Der Installer endet bei Erfolg mit Exitcode 0 und bei einem Fehler mit 1. Den Grund
 finden Sie in der letzten Zeile von `Install.log` (`Installation failed: ...`).
 

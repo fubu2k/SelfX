@@ -13,6 +13,8 @@
       - A4: silent connections are closed by the service after the read deadline (5 s), and PING answers again.
       - A4: a client that sends slowly cannot extend the deadline (one deadline for the whole request).
       - An oversized request without a line end is cut and rejected, not answered with PONG.
+      - N3: when another process already owns the pipe name, the service does not join it (FirstPipeInstance), logs
+        the problem and serves as soon as the name is free.
     Runs as a normal user, needs no administrator rights. Duration about 30 seconds. Windows PowerShell 5.1:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-ServicePipe.ps1
 
@@ -27,6 +29,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.11   2026-11-22  fubu2k               Initial version (security review findings A4 and A5).
+    2.8.0    2026-11-23  fubu2k               First pipe instance check (finding N3).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -130,8 +133,21 @@ function Invoke-TestRequest([string]$Request, [int]$TimeoutMs = 5000) {
 $service = New-Object SelfX.SelfXService($pipeName, $logDirectory)
 $silent = New-Object System.Collections.Generic.List[object]
 try {
-	$service.StartListening()
-	Start-Sleep -Milliseconds 500
+	# 0. N3: another process already owns the pipe name. The service must not join it (FirstPipeInstance): it logs the
+	#    problem, keeps retrying, and serves as soon as the name is free.
+	$squatter = New-Object System.IO.Pipes.NamedPipeServerStream($pipeName, [IO.Pipes.PipeDirection]::InOut, 254, [IO.Pipes.PipeTransmissionMode]::Byte, [IO.Pipes.PipeOptions]::Asynchronous)
+	try {
+		$service.StartListening()
+		Start-Sleep -Milliseconds 2500
+		$logPath = Join-Path $logDirectory 'SelfXService.log'
+		$logText = if (Test-Path -LiteralPath $logPath) { [IO.File]::ReadAllText($logPath) } else { '' }
+		Assert-True ($logText -match 'already in use by another process') 'N3: the service logs that the pipe name is already in use'
+	}
+	finally { $squatter.Dispose() }
+	Start-Sleep -Milliseconds 2500
+	Assert-True ((Invoke-TestRequest 'PING') -like 'PONG *') 'N3: the service answers as soon as the pipe name is free'
+	$logText = [IO.File]::ReadAllText($logPath)
+	Assert-True ($logText -match 'is free now') 'N3: the service logs that the pipe name is free'
 
 	# 1. Basic answer.
 	Assert-True ((Invoke-TestRequest 'PING') -like 'PONG *') 'PING answers PONG'
