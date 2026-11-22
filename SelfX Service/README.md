@@ -132,6 +132,10 @@ user, for example the device logs report.
   it (2.6.10): the device logs report contains only the machine logs from
   `%ProgramData%\SelfX\Logs`. The SelfX window adds the own user logs to its
   copy of the report with the rights of the user.
+- Multi-user devices (2.6.10): the device logs report contains only the own
+  data of the requesting user. Only an elevated administrator (token read by the
+  service, `SELFX_CALLER_ADMIN=1`) gets the complete report. See
+  [Configuration](../docs/Configuration.md).
 - Every System action can be started by any signed-in user. Add only scripts to
   the catalogue that are safe for everyone to run.
 - The status cache of the background checks (`%ProgramData%\SelfX\Cache`) can
