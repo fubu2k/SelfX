@@ -102,12 +102,12 @@ SelfX Service is installed machine-wide and works without any network connection
 
 ```text
 User ──► Self_X.ps1 (user session)
-            │  User action ──► powershell.exe -File Scripts_to_run\<script>.ps1   (user rights)
+            │  User action ──► pwsh.exe -File Scripts_to_run\<script>.ps1   (user rights)
             │  System action
             ▼
          named pipe \\.\pipe\SelfX.Service  (local only)
             ▼
-         SelfXService (LocalSystem) ──► checks catalogue ──► powershell.exe -File <script>.ps1 (SYSTEM)
+         SelfXService (LocalSystem) ──► checks catalogue ──► pwsh.exe -File <script>.ps1 (SYSTEM)
 ```
 
 The service accepts `PING` for availability, `HEALTH [<Id> [<base64 name>]]` for the fixed local status

@@ -7,14 +7,22 @@ Windows-Geräten, insbesondere mit Microsoft Intune.
 
 ## Voraussetzungen
 
-- Ein unterstützter Windows-Desktop mit Windows PowerShell und WPF.
 - Das vollständige Paketverzeichnis, einschließlich der Inhalte von `assembly` und
   `Scripts_to_run`.
-- Für SelfX Service auf dem Gerät: 64-Bit-Windows und die in Windows enthaltene
-  64-Bit-Windows-PowerShell 5.1. Eine .NET-Installation ist **nicht** nötig: Dienst
-  und Starter sind .NET-10-Programme, die alles Nötige selbst mitbringen
-  (self-contained). Ob Ihre Windows-Version von .NET 10 unterstützt wird, steht in
-  der Support-Richtlinie von Microsoft.
+- Für SelfX Service auf dem Gerät (ab 2.8.0):
+  - **Windows 11 25H2 (Build 26200) oder neuer**, 64 Bit. Der Installer bricht auf
+    älteren Versionen ab, bevor er etwas ändert.
+  - **PowerShell 7.6 oder neuer**, für alle Nutzer installiert (Microsoft-MSI) unter
+    `%ProgramFiles%\PowerShell\7\pwsh.exe`. Dienst, Fenster und Statussymbol starten
+    dieses PowerShell 7. Die Store-Variante (MSIX) ist nicht nutzbar, weil sie nur
+    für einen Nutzer installiert wird. Wie Sie PowerShell 7 mit Intune verteilen,
+    steht unter [Windows-Version und PowerShell 7](#windows-version-und-powershell-7-ab-280).
+  - Die in Windows enthaltene 64-Bit-Windows-PowerShell 5.1 braucht SelfX nur noch für
+    `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` und `Collect-DeviceLogs.ps1`. Sie
+    müssen diese vier Dateien auch ohne PowerShell 7 ausführen können (zum Beispiel
+    bei Autopilot).
+  - Eine .NET-Installation ist **nicht** nötig: Dienst und Starter sind
+    .NET-10-Programme, die alles Nötige selbst mitbringen (self-contained).
 - Für das Bauen des Pakets (nicht auf den Geräten): ein Windows-Rechner mit dem
   .NET SDK 10, siehe [Schnellstart](#schnellstart-eine-neue-version-ausrollen). Der
   Installer installiert nur die vorgebauten Programme aus dem Ordner `Bin` des
@@ -127,8 +135,8 @@ Von einem 32-Bit-Agenten aus verwenden Sie
    die Installation mit Exitcode 1 und die bisherige Installation bleibt unverändert
    (2.7.0). Auf dem Gerät wird nichts kompiliert.
    `SelfX.exe` ist ein kleiner Starter ohne Konsole: Er startet SelfX
-   (`/page:<Seite>` optional) oder das Statussymbol (`/tray`) mit einer
-   versteckten Windows PowerShell, sodass kein Befehlsfenster erscheint, auch nicht
+   (`/page:<Seite>` optional) oder das Statussymbol (`/tray`) mit einem
+   versteckten PowerShell 7 (`pwsh.exe`), sodass kein Befehlsfenster erscheint, auch nicht
    mit Windows Terminal als Standardterminal.
 4. Registriert und startet den **SelfX-Dienst** (`SelfXService`). Er läuft als
    LocalSystem, startet automatisch und wird nach einem Fehler neu gestartet.
@@ -176,6 +184,8 @@ Für Intune-Win32-Apps:
 | Deinstallationsbefehl | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` |
 | Installationsverhalten | System |
 | Erkennung | Benutzerdefiniertes Skript `Detection.ps1`. Setzen Sie `$ExpectedVersion` auf die `Tool_Version` des Releases. |
+| Voraussetzung (Requirement) | Windows 11 25H2 (Build 26200) oder neuer, siehe [Windows-Version und PowerShell 7](#windows-version-und-powershell-7-ab-280). |
+| Abhängigkeit | App „PowerShell 7“ (Automatisch installieren: Ja), siehe denselben Abschnitt. |
 
 Erhöhen Sie bei jedem Release `Tool_Version` (`Sources\Tool_Config.xml`) und
 `$ExpectedVersion` (`Detection.ps1`) auf denselben Wert. Lassen Sie sie unverändert,
@@ -228,6 +238,66 @@ Sprachprüfung aus: `& '.\SelfX Service\Test-LanguageFiles.ps1'` (optional mit
 Mocks. `Test-ServicePipe.ps1` startet den Pipe-Listener des Dienstes im Testprozess
 unter einem Test-Pipe-Namen; es wird nichts installiert und es sind keine
 Administratorrechte nötig.
+
+### Windows-Version und PowerShell 7 (ab 2.8.0)
+
+Der Installer prüft beides, **bevor** er etwas auf dem Gerät ändert. Autopilot
+installiert Apps in beliebiger Reihenfolge und darf nie an SelfX scheitern. Deshalb
+ist ein fehlendes PowerShell 7 nur eine Warnung, ein unsicheres dagegen ein harter
+Abbruch:
+
+| Lage auf dem Gerät | Installer | Dienst |
+|---|---|---|
+| Windows älter als 25H2 (Build 26200) | Abbruch vor jeder Änderung, Exitcode 1. Eine vorhandene Installation bleibt unverändert. | nicht betroffen |
+| PowerShell 7 fehlt oder ist älter als 7.6 | **Warnung** im Installationsprotokoll, die Installation läuft weiter | startet kein Skript und meldet den Grund. Er prüft vor **jedem** Skriptstart erneut, sodass SelfX nach der Installation von PowerShell 7 ohne weiteres Zutun arbeitet. |
+| Der Ordner `%ProgramFiles%\PowerShell\7` oder `pwsh.exe` ist für normale Nutzer änderbar | Abbruch vor jeder Änderung, Exitcode 1 | startet nichts (der Dienst führt `pwsh.exe` als SYSTEM aus) |
+
+Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Install.log`.
+
+**PowerShell 7 mit Intune verteilen**
+
+1. Laden Sie die MSI-Datei (`PowerShell-7.6.x-win-x64.msi`) von Microsoft und
+   verpacken Sie sie als **Win32-App**, nicht als Branchen-App (MSI). Die Mischung
+   aus Branchen-App (MSI) und Win32-App bei Autopilot kann fehlschlagen, weil beide
+   den Dienst TrustedInstaller nutzen.
+2. Installationsbefehl, zum Beispiel:
+   `msiexec.exe /package PowerShell-7.6.x-win-x64.msi /quiet DISABLE_TELEMETRY=1 USE_MU=0 ENABLE_MU=0`
+   (keine Telemetrie, Updates nur über Intune). Den Installationsordner nicht
+   ändern: SelfX nutzt den festen Pfad `%ProgramFiles%\PowerShell\7\pwsh.exe`.
+   `ADD_PATH` ist nicht nötig. Prüfen Sie den Befehl vor der Verteilung auf einem
+   Testgerät.
+3. Erkennungsregel: Datei `%ProgramFiles%\PowerShell\7\pwsh.exe`, Dateiversion
+   größer oder gleich 7.6.0.
+4. Neue PowerShell-Versionen verteilen Sie als neue Version dieser App.
+
+**SelfX mit PowerShell 7 verbinden**
+
+- **Abhängigkeit (empfohlen).** In der SelfX-App unter *Abhängigkeiten* die App
+  „PowerShell 7“ hinzufügen, *Automatisch installieren* = Ja (Standard). Intune
+  installiert dann zuerst PowerShell 7. Schlägt das fehl, wird SelfX nicht
+  installiert und Intune versucht es erneut (drei Versuche im Abstand von fünf
+  Minuten, danach etwa alle 24 Stunden). Ohne Abhängigkeit installiert SelfX auch
+  ohne PowerShell 7 (mit Warnung) und arbeitet, sobald PowerShell 7 da ist.
+- **Autopilot und Statusseite (ESP).** Beide Apps als Win32-App einrichten. Nehmen
+  Sie weder SelfX noch PowerShell 7 in die Liste der blockierenden Apps auf (ESP:
+  *Block device use until these required apps are installed if they are assigned to
+  the user/device* = *Selected*, ohne diese beiden Apps). Ein Fehler bei einer dieser Apps hält
+  dann die Bereitstellung nicht auf. Wenn Sie PowerShell 7 trotzdem blockierend
+  wollen, beachten Sie die Zeitbegrenzung der ESP (Standard 60 Minuten) und die
+  Einstellung *Allow users to use device if installation error occurs*.
+- **Voraussetzungsregel Windows 11 25H2.** Prüfen Sie im Portal, ob das
+  Mindest-Betriebssystem „Windows 11 25H2“ zur Auswahl steht. Wenn nicht, legen Sie
+  eine zusätzliche Voraussetzungsregel vom Typ *Skript* an: Ausgabedatentyp
+  *Ganzzahl*, Operator *Größer oder gleich*, Wert `26200`, Skript:
+
+  ```powershell
+  [int](Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber)
+  ```
+
+  Ältere Geräte erhalten die App dann nicht (statt eines Installationsfehlers).
+- **Erkennung.** `Detection.ps1` bleibt wie bisher: Es erkennt SelfX nur bei exakt
+  passender `Tool_Version` und registriertem Dienst. Für PowerShell 7 gilt die
+  Erkennungsregel der PowerShell-App, nicht `Detection.ps1`.
 
 ### Update: immer das ganze Paket verteilen
 
@@ -285,6 +355,11 @@ Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20   # als Admi
 6. Auf einem Gerät testen, das nicht produktiv ist: Neuinstallation, Update von der
    vorherigen Version, Deinstallation, Erkennung. Als Standardnutzer testen und, wenn
    Sie gemeinsam genutzte Geräte haben, mit einem zweiten angemeldeten Nutzer.
+   Zusätzlich (ab 2.8.0): Installation ohne PowerShell 7 (Warnung im Protokoll, der
+   Dienst startet keine Skripte, nach der Installation von PowerShell 7 funktioniert
+   SelfX ohne weiteres Zutun), mit änderbarem PowerShell-7-Ordner (Abbruch,
+   Exitcode 1) und auf Windows 11 24H2 (Abbruch, Exitcode 1). Einen Autopilot-Lauf
+   mit beiden Apps prüfen (die Bereitstellung darf nicht hängen).
 7. Das Paket in Intune veröffentlichen.
 
 ### Programme bauen (SelfX Service ab 2.7.0)
@@ -342,8 +417,9 @@ wenn `Bin` fehlt oder nicht zu den Quelltexten passt, und packt die
 > **Hinweis zum Wechsel von 2.6.x:** Version 2.6.x hat den Dienst auf dem Gerät mit
 > dem .NET Framework kompiliert. Ab 2.7.0 ist das nicht mehr möglich. Verteilen Sie
 > immer das ganze Paket (siehe [Update: immer das ganze Paket
-> verteilen](#update-immer-das-ganze-paket-verteilen)). Der Dienst startet
-> weiterhin die Skripte mit Windows PowerShell 5.1.
+> verteilen](#update-immer-das-ganze-paket-verteilen)). Der Dienst startet die
+> Skripte mit PowerShell 7 (ab 2.8.0, siehe [Windows-Version und PowerShell
+> 7](#windows-version-und-powershell-7-ab-280)).
 
 ## Intune-Paket erstellen
 

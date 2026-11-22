@@ -21,6 +21,9 @@ Anhebung der Version ausgeliefert.
 
 ### Geändert
 
+- Dokumentation: `docs/Installation.md` beschreibt Windows 11 25H2 und PowerShell 7 als Voraussetzung, das Verhalten des
+  Installers und des Dienstes, die Verteilung von PowerShell 7 mit Intune (Win32-App, Abhängigkeit, Autopilot/ESP,
+  Voraussetzungsregel für Build 26200) und die erweiterte Release-Checkliste.
 - DNS-Cache leeren und Systemlaufwerk prüfen ohne Kompatibilitätsschicht: CIM (`MSFT_DNSClientCache.Clear`,
   `MSFT_Volume.Repair` mit `OfflineScanAndFix`) statt `Clear-DnsClientCache` und `Repair-Volume`.
 - BitLocker und TPM ohne Module: Gerätestatus und Compliance-Prüfung lesen CIM (`Win32_EncryptableVolume`, `Win32_Tpm`,
