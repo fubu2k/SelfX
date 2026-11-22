@@ -16,6 +16,7 @@ histories of the single files show where a change was made. Changes marked
 ## Unreleased (SelfX Service)
 
 ### Added
+- Foundation for "open a ticket from SelfX" (`Sources\TicketMail.ps1`, test `Test-Ticket.ps1`): ticket model with a standardised subject and body, cleaned fields, the free text in a fenced block and a validated mailto link. Building blocks only, no function and no user interface yet; nothing changes for users.
 
 - System information: the "Uptime" row is shown as a warning with the hint "restart recommended (not "Shut down")" from 7 days without a restart (read-only; SelfX never restarts Windows). Reason: with fast startup "Shut down" does not reset the uptime.
 - System information, Network section: new rows "Proxy (user setting)" (manual proxy with server and port, address of the configuration script; credentials in addresses are masked) and "Network drives" (drive letters only, also disconnected ones, no share paths). Read-only, no network access. Note: the proxy addresses also appear in the export of the system information.
