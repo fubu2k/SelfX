@@ -217,6 +217,7 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 # Ticket e-mail (functions only, nothing runs when they are loaded)
 . "$Current_Folder\SupportReport.ps1"
 . "$Current_Folder\TicketMail.ps1"
+. "$Current_Folder\SupportLinks.ps1"
 . "$Current_Folder\TicketSend.ps1"
 . "$Current_Folder\SystemInfo.ps1"
 # Optional hand-over to Copilot Chat (functions only, nothing runs when they are loaded)
@@ -1473,7 +1474,7 @@ Function Start-SelfXSystemAction
 			{
 				# Texts are prepared here in the language of the user; the background runspace only opens the e-mail.
 				$Global:SvcAction_Runspace.SessionStateProxy.SetVariable('SelfXMail', @{
-					To      = $Support_Mail
+					To      = $(If(Test-SelfXTicketAddress ("$Support_Mail".Trim())) { "$Support_Mail".Trim() } Else { '' })
 					Subject = Get-SelfXString 'Report_Mail_Subject' $env:COMPUTERNAME
 					Body    = (Get-SelfXString 'Report_Mail_Body' $env:COMPUTERNAME (ConvertTo-SelfXUserTime ([datetime]::UtcNow)).ToString('g')) + "`r`n`r`n"
 					# Days of the own user logs added to the report (SupportReport.ps1 checks 1-60, default 7).
@@ -1963,7 +1964,7 @@ Function Invoke-SysInfoAction
 	}
 $SysInfo_SyncApps.Add_Click({ Invoke-SysInfoAction { Start-Process "intunemanagementextension://syncapp" } })
 $SysInfo_SyncCompliance.Add_Click({ Invoke-SysInfoAction { Start-Process "intunemanagementextension://synccompliance" } })
-$SysInfo_CompanyPortal.Add_Click({ Invoke-SysInfoAction { Start-Process "explorer.exe" -ArgumentList "shell:AppsFolder\Microsoft.CompanyPortal_8wekyb3d8bbwe!App" } })
+$SysInfo_CompanyPortal.Add_Click({ Invoke-SysInfoAction { Start-Process (Join-Path $env:SystemRoot "explorer.exe") -ArgumentList "shell:AppsFolder\Microsoft.CompanyPortal_8wekyb3d8bbwe!App" } })
 $SysInfo_QuickAssist.Add_Click({
 	Invoke-SysInfoAction {
 		$QuickAssist_Exe = "$env:SystemRoot\System32\quickassist.exe"
@@ -1973,10 +1974,13 @@ $SysInfo_QuickAssist.Add_Click({
 $SysInfo_MdmDiagnostics.Add_Click({
 	Invoke-SysInfoAction {
 		$Mdm_Folder = Join-Path $env:TEMP "SelfX_MDMDiagnostics"
+		# Full paths (no search through the program path or the working directory).
+		$Mdm_Tool = Join-Path $env:SystemRoot "System32\MdmDiagnosticsTool.exe"
+		If(-not (Test-Path -LiteralPath $Mdm_Tool -PathType Leaf)) { throw "MdmDiagnosticsTool.exe was not found." }
 		# cmd.exe without console window (CreateNoWindow): no black window opens while the logs are collected.
 		$Mdm_Start = New-Object System.Diagnostics.ProcessStartInfo
 		$Mdm_Start.FileName = "$env:SystemRoot\System32\cmd.exe"
-		$Mdm_Start.Arguments = "/c MdmDiagnosticsTool.exe -out `"$Mdm_Folder`" & explorer.exe `"$Mdm_Folder`""
+		$Mdm_Start.Arguments = "/c `"`"$Mdm_Tool`" -out `"$Mdm_Folder`" & `"$env:SystemRoot\explorer.exe`" `"$Mdm_Folder`"`""
 		$Mdm_Start.UseShellExecute = $False
 		$Mdm_Start.CreateNoWindow = $True
 		$Mdm_Start.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
@@ -1993,7 +1997,10 @@ If((Get-SelfXText "Show_SystemInfo_Intune_Actions" "True") -ne 'True') { $SysInf
 Function Open-SelfXUri
 	{
 		param([string]$Uri)
-		Try { Start-Process $Uri } Catch { $msgbar.SetDangerAlert($_.Exception.Message) }
+		# Only https, a plain mailto address and the Teams chat link of SelfX are opened (SupportLinks.ps1).
+		$Safe_Uri = Get-SelfXSafeUri $Uri
+		If(-not $Safe_Uri) { Write-SelfXLog "A link was not opened: only https, mailto with one address and msteams chat links are allowed." 'Warning'; return }
+		Try { Start-Process $Safe_Uri } Catch { $msgbar.SetDangerAlert($_.Exception.Message) }
 	}
 
 # Ticket by e-mail: the user describes the issue, the device information is always added (text and file).
@@ -2147,7 +2154,13 @@ Function Show-SelfXHelpDialog
 		$Hours = Get-SelfXText "Support_Hours" ""
 		If($Hours) { $Entries.Add(@(0xE823, (Get-SelfXString 'Support_Hours_Label'), $Hours, '', '')) }
 		If($Support_Phone_number) { $Entries.Add(@(0xE717, (Get-SelfXString 'Support_Phone_Label'), $Support_Phone_number, '', '')) }
-		If($Support_Mail) { $Entries.Add(@(0xE715, (Get-SelfXString 'Support_Mail_Label'), $Support_Mail, (Get-SelfXString 'Support_Mail_Button'), "mailto:$Support_Mail")) }
+		If($Support_Mail)
+			{
+				# The button only exists for one plain address (no list, no mailto parameters)
+				$Mail_Uri = Get-SelfXSafeUri "mailto:$($Support_Mail.Trim())"
+				If($Mail_Uri) { $Entries.Add(@(0xE715, (Get-SelfXString 'Support_Mail_Label'), $Support_Mail, (Get-SelfXString 'Support_Mail_Button'), $Mail_Uri)) }
+				Else { Write-SelfXLog "Support_Mail is not one plain e-mail address; shown without a button." 'Warning'; $Entries.Add(@(0xE715, (Get-SelfXString 'Support_Mail_Label'), $Support_Mail, '', '')) }
+			}
 		$Teams = Get-SelfXText "Support_Teams" ""
 		If($Teams)
 			{
@@ -2155,10 +2168,17 @@ Function Show-SelfXHelpDialog
 				If($Teams -match '^https://') { $Teams_Uri = $Teams }
 				ElseIf(Test-Path -LiteralPath 'Registry::HKEY_CLASSES_ROOT\msteams') { $Teams_Uri = 'msteams:/l/chat/0/0?users=' + [uri]::EscapeDataString($Teams) }
 				Else { $Teams_Uri = 'https://teams.microsoft.com/l/chat/0/0?users=' + [uri]::EscapeDataString($Teams) }
-				$Entries.Add(@(0xE8BD, (Get-SelfXString 'Support_Teams_Label'), $Teams, (Get-SelfXString 'Support_Teams_Button'), $Teams_Uri))
+				$Teams_Safe = Get-SelfXSafeUri $Teams_Uri
+				If($Teams_Safe) { $Entries.Add(@(0xE8BD, (Get-SelfXString 'Support_Teams_Label'), $Teams, (Get-SelfXString 'Support_Teams_Button'), $Teams_Safe)) }
+				Else { Write-SelfXLog "Support_Teams gives no valid link (https or a plain address); shown without a button." 'Warning'; $Entries.Add(@(0xE8BD, (Get-SelfXString 'Support_Teams_Label'), $Teams, '', '')) }
 			}
 		$Website = Get-SelfXText "Support_Website" ""
-		If($Website -match '^https?://') { $Entries.Add(@(0xE774, (Get-SelfXString 'Support_Website_Label'), $Website, (Get-SelfXString 'Support_Website_Button'), $Website)) }
+		If($Website)
+			{
+				$Website_Uri = ConvertTo-SelfXSupportWebUri $Website
+				If($Website_Uri) { $Entries.Add(@(0xE774, (Get-SelfXString 'Support_Website_Label'), $Website, (Get-SelfXString 'Support_Website_Button'), $Website_Uri)) }
+				Else { Write-SelfXLog "Support_Website is ignored: only https:// links are allowed." 'Warning' }
+			}
 
 		If(-not $Entries.Count)
 			{

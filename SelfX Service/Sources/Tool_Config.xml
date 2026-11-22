@@ -88,7 +88,7 @@
 	<Support_Hours>Mon-Fri 08:00-17:00</Support_Hours> <!-- Support hours (placeholder), e.g. Mon-Fri 08:00-17:00 -->
 	<Support_Phone_number>+1 555 0100</Support_Phone_number> <!-- Support phone number (placeholder) -->
 	<Support_Teams></Support_Teams> <!-- Teams chat: address of a user or shared support account (opens a chat), or a full https Teams link -->
-	<Support_Website>https://support.example.com</Support_Website> <!-- Placeholder. Website or ticket system, must start with https:// or http:// -->
+	<Support_Website>https://support.example.com</Support_Website> <!-- Placeholder. Website or ticket system, must start with https:// (http:// is ignored) -->
 	<Support_Mail>support@example.com</Support_Mail> <!-- Placeholder. Support e-mail address. Also the recipient of the device logs e-mail (Post_Action MailReport). Empty = the user enters the recipient -->
 
 	<!-- Ticket by e-mail (button in the help dialog): the user describes the issue, SelfX adds the device information (text and file) and opens the e-mail, the user sends it -->

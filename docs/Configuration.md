@@ -150,7 +150,9 @@ läuft nur ein Fenster. Ein zweiter Start holt das offene Fenster nach vorn.
   `Support_Hours`, `Support_Phone_number`, `Support_Mail` (öffnet eine E-Mail),
   `Support_Teams` (eine Nutzer- oder Postfachadresse öffnet einen Teams-Chat, ein
   vollständiger `https://`-Link wird unverändert geöffnet) und `Support_Website`
-  (nur `http://` oder `https://`). Ohne Kontakt bittet der Dialog, die IT-Abteilung
+  (nur `https://`; `http://` wird ignoriert und im Protokoll vermerkt). Die Adresse in
+  `Support_Mail` muss eine einzelne E-Mail-Adresse sein (keine Liste, keine Zusätze
+  wie `?cc=`), sonst zeigt der Dialog sie ohne Schaltfläche. Ohne Kontakt bittet der Dialog, die IT-Abteilung
   zu kontaktieren.
 
 ### Hintergrundprüfungen
