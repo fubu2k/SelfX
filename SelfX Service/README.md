@@ -136,6 +136,12 @@ user, for example the device logs report.
   data of the requesting user. Only an elevated administrator (token read by the
   service, `SELFX_CALLER_ADMIN=1`) gets the complete report. See
   [Configuration](../docs/Configuration.md).
+- Pipe limits (2.6.10): a connection must send its request within 5 seconds and
+  must read the answer, otherwise the service closes it. At most 64 connections
+  are open at once (8 per user). After a check, the same user must wait 3
+  seconds for the next one, and after an action 15 seconds before the same
+  action can be started again; the service then answers *busy*. This keeps one
+  user from using up the connections or the run slot of all other users.
 - Text from requests is cleaned before it is logged (control characters and line
   separators become `?`, long text is shortened), and rejected requests are
   logged at most 20 times per minute, so a user cannot forge log lines or push

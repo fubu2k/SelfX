@@ -19,6 +19,7 @@
         2.6.9  2026-11-19  Wolfgang Baeck  Test the pending restart from the Windows Update Agent and the orchestrator.
         2.6.10 2026-11-22  fubu2k          Test that a single check with an unknown name never changes the shared status cache.
         2.6.10 2026-11-22  fubu2k          Test the service regex anchors (\z), the cleaning of log text and the rate limit of rejected requests.
+        2.6.10 2026-11-22  fubu2k          Test the pipe limits (connections per user, pause after an action) and the read deadline.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -619,6 +620,44 @@ try {
             $lines = @([IO.File]::ReadAllLines($logFile))
             Assert-Equal $lines.Count 20 'Rejected requests: only 20 log lines per minute'
             Assert-Equal @($lines | Where-Object { $_ -notmatch '^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d  Rejected invalid request from TEST' }).Count 0 'Rejected requests: no injected log lines'
+            # Pipe limits (F3): per-user connection limit, pause after an action, key of the limits.
+            $static = [Reflection.BindingFlags]'Static,NonPublic'
+            $enter = $type.GetMethod('EnterUser',$flags); $leave = $type.GetMethod('LeaveUser',$flags)
+            $inCooldown = $type.GetMethod('InCooldown',$flags); $startCooldown = $type.GetMethod('StartCooldown',$flags)
+            $granted = 0
+            foreach ($i in 1..12) { if ($enter.Invoke($instance,@('S-1-5-21-1-1-1-1001'))) { $granted++ } }
+            Assert-Equal $granted 8 'Pipe limits: at most 8 open connections per user'
+            Assert-Equal $enter.Invoke($instance,@('S-1-5-21-1-1-1-1002')) $true 'Pipe limits: another user is not affected'
+            [void]$leave.Invoke($instance,@('S-1-5-21-1-1-1-1001'))
+            Assert-Equal $enter.Invoke($instance,@('S-1-5-21-1-1-1-1001')) $true 'Pipe limits: a closed connection frees a slot'
+            Assert-Equal $inCooldown.Invoke($instance,@('RUN|unknown')) $false 'Pause: unknown key is not paused'
+            [void]$startCooldown.Invoke($instance,@('RUN|a',60))
+            Assert-Equal $inCooldown.Invoke($instance,@('RUN|a')) $true 'Pause: the same action of the same user is paused'
+            Assert-Equal $inCooldown.Invoke($instance,@('RUN|b')) $false 'Pause: another user or action is not paused'
+            [void]$startCooldown.Invoke($instance,@('RUN|c',-1))
+            Assert-Equal $inCooldown.Invoke($instance,@('RUN|c')) $false 'Pause: an expired pause ends'
+            $limitKey = $type.GetMethod('LimitKey',$static)
+            Assert-Equal $limitKey.Invoke($null,@('DOM\bob','S-1-5-21-1-1-1-1001')) 'S-1-5-21-1-1-1-1001' 'Limit key: SID of the client token'
+            Assert-Equal $limitKey.Invoke($null,@('DOM\bob',$null)) 'user:DOM\bob' 'Limit key: user name when the SID is unknown'
+            # Deadline: a client that sends nothing must not block the connection thread (real pipe in this process).
+            if (-not ('SelfXTest.DeadlineProbe' -as [type])) {
+                Add-Type -TypeDefinition 'using System; using System.IO.Pipes; using System.Reflection; namespace SelfXTest { public static class DeadlineProbe { public static bool ReadByteWithDeadline(MethodInfo method, NamedPipeServerStream pipe, int milliseconds) { Action operation = delegate { pipe.ReadByte(); }; return (bool)method.Invoke(null, new object[] { pipe, milliseconds, operation }); } } }' -ReferencedAssemblies 'System.Core.dll'
+            }
+            $deadline = $type.GetMethod('RunWithDeadline',$static)
+            $pipeName = 'SelfXTest-' + [guid]::NewGuid().ToString('N')
+            $server = New-Object System.IO.Pipes.NamedPipeServerStream($pipeName, [System.IO.Pipes.PipeDirection]::InOut, 1)
+            $client = New-Object System.IO.Pipes.NamedPipeClientStream('.', $pipeName, [System.IO.Pipes.PipeDirection]::InOut)
+            try {
+                $connecting = $server.WaitForConnectionAsync()
+                $client.Connect(3000)
+                [void]$connecting.Wait(3000)
+                $client.WriteByte(1); $client.Flush()
+                Assert-Equal ([SelfXTest.DeadlineProbe]::ReadByteWithDeadline($deadline, $server, 3000)) $true 'Deadline: a read that gets data finishes normally'
+                $watch = [Diagnostics.Stopwatch]::StartNew()
+                $finished = [SelfXTest.DeadlineProbe]::ReadByteWithDeadline($deadline, $server, 500)
+                $watch.Stop()
+                Assert-Equal "$finished/$($watch.ElapsedMilliseconds -ge 400 -and $watch.ElapsedMilliseconds -lt 5000)" 'False/True' 'Deadline: a read without data is cancelled after the deadline'
+            } finally { $client.Dispose(); $server.Dispose() }
         } finally { $instance.Dispose() }
     }
     & {
