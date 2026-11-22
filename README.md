@@ -6,31 +6,21 @@ and fix common problems with Teams, Office, OneDrive, Outlook, Intune, Windows
 Update and the network on their own, before they call the support. They can also
 send the logs of their device to the support in a few clicks.
 
-The repository contains three packages:
-
-- **SelfX Service** (recommended) combines Standard and
-  Admin into one package. It is installed machine-wide, works fully offline and
-  runs actions either as the user or, through the local **SelfXService**
-  Windows service, with SYSTEM rights. No network access, SCCM or Intune is
-  needed to fix a problem. See [Features](#features-of-selfx-service).
-- **SelfX Standard** is installed per user and offers quick and detailed
-  troubleshooting actions, plus a **System information** tab that shows device,
-  Windows, user/Intune and network details that users can copy or export for the
-  support team.
-- **SelfX Admin** is a separately launched interface for actions that may
-  require an elevated execution context. It does not install a service. Its
-  `ServiceUI.exe` can display an application started by a deployment system in a
-  signed-in user's session; it does not grant administrator rights or change the
-  token used by the process.
+**SelfX Service** is installed machine-wide and works fully offline. It runs
+actions either as the signed-in user or, through the local **SelfXService**
+Windows service, with SYSTEM rights. No network access, SCCM or Intune is
+needed to fix a problem. See [Features](#features-of-selfx-service).
 
 SelfX has no central backend, push messaging or centralized task reporting.
 
 This repository ([fubu2k/SelfX](https://github.com/fubu2k/SelfX)) is a fork of
-[wbaeck/SelfX](https://github.com/wbaeck/SelfX) (SelfX Service 2.6.9), which in
-turn builds on the original SelfX by Damien Van Robaeys (see
-[Upstream and credits](#upstream-and-credits)). It continues with the security
-of SelfX Service: see [Security hardening in this fork](#security-hardening-in-this-fork)
-and the [Changelog](CHANGELOG.md). Current version: **2.6.11**.
+[wbaeck/SelfX](https://github.com/wbaeck/SelfX) and is developed **only for
+SelfX Service**. SelfX Standard (per user) and SelfX Admin of the upstream
+projects are not part of this fork; use the upstream repositories if you need
+them. The work in this fork concentrates on the security, the tests and the
+deployment of SelfX Service: see
+[Security hardening in this fork](#security-hardening-in-this-fork) and the
+[Changelog](CHANGELOG.md). Current version: **2.6.11**.
 
 ## Screenshots
 
@@ -236,11 +226,6 @@ November 2026 and hardened in versions 2.6.10 and 2.6.11; the details are in the
 - **Automatic checks.** Every pull request compiles the service and runs the
   tests and a script analysis.
 
-SelfX Standard and SelfX Admin are older code bases and were not part of this
-hardening. SelfX Admin runs its actions with the token of the process that
-starts it; started as SYSTEM by a deployment tool, they run as SYSTEM. Use SelfX
-Service for actions that need administrator rights.
-
 Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## Documentation
@@ -248,9 +233,7 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 - [Installation](docs/Installation.md), including the release checklist of SelfX Service
 - [Configuration](docs/Configuration.md)
 - [User manual](docs/User-Manual.md)
-- [SelfX Service package notes](SelfX%20Service/README.md)
-- [SelfX Standard package notes](SelfX%20Standard/README.md)
-- [SelfX Admin package notes](SelfX%20Admin/README.md)
+- [Package notes of SelfX Service](SelfX%20Service/README.md)
 - [Changelog](CHANGELOG.md)
 - [Security policy](SECURITY.md)
 
@@ -258,12 +241,10 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 | Directory | Contents |
 |---|---|
-| `SelfX Service` | Machine-wide offline package: installer, local Windows service (C# source), merged action catalogue with User and System actions, WPF application and scripts |
-| `SelfX Standard` | Per-user installer, detection and uninstall scripts, WPF application, XML configuration and troubleshooting scripts |
-| `SelfX Admin` | WPF application, ServiceUI launcher, XML action list and administrative troubleshooting scripts |
-| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune packages with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/Installation.md#building-the-intune-packages)), and `Build-SelfXBinaries.ps1`, which builds the optional prebuilt programs of SelfX Service (see [Prebuilt programs](docs/Installation.md#prebuilt-programs-selfx-service-2611)) |
+| `SelfX Service` | The package: installer, local Windows service (C# source), action catalogue with User and System actions, WPF application, scripts and tests |
+| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/Installation.md#building-the-intune-package)), and `Build-SelfXBinaries.ps1`, which builds the optional prebuilt programs of SelfX Service (see [Prebuilt programs](docs/Installation.md#prebuilt-programs-selfx-service-2611)) |
 | `.github` | GitHub Actions workflow (compile, tests, script analysis), `CODEOWNERS`, Dependabot configuration |
-| `build` | Not committed. Output of `New-SelfXIntuneWin.ps1`: `SelfX-Admin-<version>.intunewin`, `SelfX-Service-<version>.intunewin`, `SelfX-User-<version>.intunewin`; and of `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
+| `build` | Not committed. Output of `New-SelfXIntuneWin.ps1`: `SelfX-Service-<version>.intunewin`; and of `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 
 Review each action script and its execution context before deploying it. Actions
 are started as hidden PowerShell processes and may change device state or
@@ -272,27 +253,29 @@ terminate applications.
 ## Upstream and credits
 
 SelfX was created by **Damien Van Robaeys** ([Syst & Deploy](https://www.systanddeploy.com))
-as a tool that helps users solve common IT issues on their own. SelfX Service
-was added in the fork of Wolfgang Baeck ([wbaeck/SelfX](https://github.com/wbaeck/SelfX)),
-and this repository is a fork of that project. The original project is here:
+as a tool that helps users solve common IT issues on their own. **Wolfgang Baeck**
+([wbaeck/SelfX](https://github.com/wbaeck/SelfX)) built SelfX Service on it: the
+local Windows service, the merged action catalogue, the health checks, the status
+icon, the languages and the Intune packaging. This repository is a fork of his
+project. The original project is here:
 
 - Original repository: [damienvanrobaeys/SelfX](https://github.com/damienvanrobaeys/SelfX)
 - Introduction of the tool: [blog post on Syst & Deploy (August 2022)](https://www.systanddeploy.com/2022/08/selfx-tool-allowing-users-to-solve.html)
 
 Many thanks to Damien for the idea, the original WPF interface, the XML action
-catalogue and the troubleshooting scripts this project builds on. SelfX Service,
-the local Windows service, the health checks, the status icon and the other
-extensions described above were added in the fork by Wolfgang Baeck. The
+catalogue and the troubleshooting scripts. Many thanks to Wolfgang Baeck: this
+fork would not exist without his SelfX Service, his clear structure, his
+documentation and his tests, which made the security work possible. The
 security hardening, the additional tests, the prebuilt programs and the CI were
 added in this fork (see the [Changelog](CHANGELOG.md)). The license of the
 original project is kept in [LICENSE.md](LICENSE.md).
 
-The System information tab of SelfX Standard is based on the idea and data
-points of the [System Information Tool](https://github.com/JayRHa/windows-system-information)
+The System information tab is based on the idea and data points of the
+[System Information Tool](https://github.com/JayRHa/windows-system-information)
 by Jannik Reinhard (MIT License, Copyright (c) 2026 Jannik Reinhard). SelfX
-reimplements the collection in `SelfX Standard\Sources\SystemInfo.ps1` (also used by SelfX Service).
+reimplements the collection in `SelfX Service\Sources\SystemInfo.ps1`.
 
-The Intune packages are built with Microsoft's
+The Intune package is built with Microsoft's
 [Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool).
 The executable is not included in this repository; the build script verifies
 its Microsoft Authenticode signature before use.

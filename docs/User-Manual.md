@@ -1,10 +1,9 @@
 # SelfX user manual
 
 SelfX is a self-service interface for selected troubleshooting tasks. The
-available actions depend on the package and the XML catalogue configured by
-your support team.
+available actions depend on the XML catalogue configured by your support team.
 
-## SelfX Service
+## SelfX
 
 SelfX helps you solve common problems on your device yourself. It is installed
 on your device and also works without a network connection.
@@ -178,74 +177,10 @@ next to the clock also uses it. **Automatic** goes back to the language of
 Windows. If your language is not available, SelfX is shown in English. Your
 support team can hide the choice and set a fixed language.
 
-## SelfX Standard
-
-1. Start **SelfX (Self fix)** from the Desktop or Start menu shortcut.
-2. Choose **Simplified view** for the short list or **Detailed view** for
-   additional product-specific actions.
-3. Filter by category or type a keyword to find a task.
-4. Use the play button to read the confirmation prompt and start an action.
-   Choose **Cancel** to leave the device unchanged by that action.
-5. Use the information button to read the action description.
-
-Actions run in the background. The current application may close and reopen,
-network access may briefly be interrupted, or caches and temporary files may
-be removed. Save work before starting an action and read its confirmation
-message carefully. SelfX does not currently show a central execution report.
-
-### System information tab
-
-Open the **System information** tab when the support team asks for details
-about your device. SelfX collects the information when the tab is first opened
-(this can take a few seconds) and only reads it; nothing on the device is
-changed. The tab shows:
-
-- **Device**: computer name, manufacturer, model, serial number, BIOS version,
-  processor, memory, free space on the system drive and battery level.
-- **Windows**: version, build, last boot, uptime, last installed update and
-  time zone.
-- **User and management**: current user, user principal name, domain, Entra ID
-  and domain join state, tenant, Entra device ID, Intune enrolled user and last
-  Intune sync.
-- **Network**: LAN, Wi-Fi, mobile broadband and VPN state, Wi-Fi name, Internet
-  reachability, IP addresses, gateway, DNS servers and MAC addresses.
-
-Use the buttons to work with the information:
-
-- **Refresh** collects the information again.
-- **Copy all** copies the full report to the clipboard, for example to paste it
-  into a support ticket or chat. Double-click a single line to copy only its
-  value.
-- **Export** saves the report as a text, HTML, CSV or JSON file.
-- **Sync Intune apps** and **Check compliance** ask the Intune Management
-  Extension to synchronize; **Company Portal** and **Quick Assist** open these
-  applications; **Collect MDM logs** creates an MDM diagnostics report in
-  `%TEMP%\SelfX_MDMDiagnostics` and opens the folder. Your support team can hide
-  these buttons.
-
-The report contains identifying information such as the serial number, user
-name and IP addresses. Share it only with your support team.
-
-## SelfX Admin
-
-SelfX Admin is intended for support or administrative use:
-
-1. Launch `Run_SelX.ps1` from the `SelfX Admin` directory, or use the
-   organization's configured deployment entry point.
-2. Expand a category to see its available actions.
-3. Select an action's play button, read the warning, and confirm only when
-   appropriate.
-4. Use the information button to read the description.
-
-The action's permissions are determined by the process token that launched
-SelfX Admin. The label “Admin” does not itself grant elevated rights. If an
-action requires elevation and is started without it, it may fail.
-
 ## Important cautions
 
 - Save open documents before actions that restart or terminate applications.
-- The OneDrive CHKDSK action runs `chkdsk /r /f` on the system drive. In SelfX
-  Service it is scheduled for the next restart; restart the device afterwards.
+- The OneDrive CHKDSK action runs `chkdsk /r /f` on the system drive. It is scheduled for the next restart; restart the device afterwards.
   The check can take a long time.
 - The network-adapter action interrupts network connectivity while adapters
   restart.

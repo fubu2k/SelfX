@@ -1,22 +1,19 @@
 # Configuration
 
-SelfX uses XML files for its UI and action catalogues. The Standard and Admin
-packages have different schemas; do not copy an issue list from one package to
-the other. SelfX Service uses the Standard schema with two extra action
-elements.
+SelfX uses XML files for its settings and its action catalogue. Edit them in
+the package before installation.
 
 ## SelfX Service
 
-SelfX Service is configured with the same files as SelfX Standard, in
-`SelfX Service\Sources`. Edit them in the package before installation. After
+SelfX Service is configured with the files in `SelfX Service\Sources`. Edit them in the package before installation. After
 installation, the files in `%ProgramFiles%\SelfX` can be changed only by
 administrators. Deploy changes by publishing a new package version. There is no
 remote update and no download at launch.
 
 ### Action catalogue
 
-`Issues_List.xml` uses the Standard structure (`XML_Version`, `Quick_Solution`,
-`Detailed_Solution`, `Action`) with English base texts. SelfX Service adds:
+`Issues_List.xml` has the structure `XML_Version`, `Quick_Solution`,
+`Detailed_Solution`, `Action` with English base texts. It also contains:
 
 - An `Id` attribute on every action, for example `<Action Id="D_Teams_SoundCuts">`.
   It must be unique. The language files use it to translate the action.
@@ -32,7 +29,7 @@ Each action has these additional elements:
 
 | Element | Values | Purpose |
 |---|---|---|
-| `Context` | `User` or `System` | `User` runs the script as the signed-in user, as in SelfX Standard. `System` sends the script name to the SelfXService, which runs it as SYSTEM. If the element is missing or has another value, the action is treated as `User`. |
+| `Context` | `User` or `System` | `User` runs the script as the signed-in user. `System` sends the script name to the SelfXService, which runs it as SYSTEM. If the element is missing or has another value, the action is treated as `User`. |
 | `TimeoutSeconds` | 1–7200, default 900 | Only for `System` actions. The service stops the script and its child processes after this time and reports a timeout. |
 | `OtherSessions` | empty or `Block` | Optional, only for `System` actions. `Block`: a normal user cannot start the action while another user has an **active** session on the device (the service answers `ERROR OtherSessions`, the window shows a notice). Elevated administrators are not restricted. If the sessions cannot be read, the action is blocked (fail closed). Set it on every entry of the same script; the service blocks when any `System` entry of the script says `Block`. Default in the delivered catalog: restart of the Intune service, restart of the network adapters and the CHKDSK repair. |
 | `Post_Action` | empty or `MailReport` | Optional, only for `System` actions. `MailReport`: after a successful run the GUI attaches the newest report of the user to a new support e-mail. See [Device logs for the support](#device-logs-for-the-support-selfx-service-240). |
@@ -77,7 +74,7 @@ When you add an action, give it a new `Id` and add its translations to the
 language files (see [Languages](#languages)). Without a translation, the English
 text from `Issues_List.xml` is shown.
 
-The included `System` actions, adopted from SelfX Admin, are:
+The included `System` actions are:
 
 | Script | Purpose |
 |---|---|
@@ -89,9 +86,9 @@ The included `System` actions, adopted from SelfX Admin, are:
 ### UI settings
 
 `Tool_Config.xml` contains only settings. All texts of the window are in the
-language files (see [Languages](#languages)), so the text keys of SelfX Standard
-(`Main_Title_Text`, `Subtitle_Text`, `SystemInfo_*_Text` and so on) are not used.
-The keys `Link_Scripts` and the install toast keys are not used either.
+language files (see [Languages](#languages)). Text keys such as `Main_Title_Text`,
+`Subtitle_Text` or `SystemInfo_*_Text`, `Link_Scripts` and install toast keys
+are not used.
 
 | Key | Purpose |
 |---|---|
@@ -224,8 +221,7 @@ problems are still remembered, so switching the notifications on again does not
 announce problems that were already known. Answers to actions of the user
 (*Check status now*, *Hide this icon*) are always shown.
 
-SelfX Service has no notification after the installation: the
-`Show_Install_Toast` setting exists only in SelfX Standard.
+SelfX Service has no notification after the installation.
 
 Each user can hide the icon (menu *Hide this icon* or SelfX > Settings) and
 show it again in SelfX > Settings; the choice is stored in
@@ -819,107 +815,6 @@ To add a language:
 
 No code change is needed. To change a text for your company, for example the
 main title, edit it in the language files.
-
-## SelfX Standard
-
-### UI settings
-
-Edit `SelfX Standard\Sources\Tool_Config.xml` before installation. It controls
-the application name, shortcut name and locations, theme, colors, labels,
-support details, optional install toast, default solution view, and reboot
-warning. `Install.ps1` copies the contents of `Sources` to the current user's
-`%LOCALAPPDATA%\SelfX`.
-
-### System information tab
-
-The System information tab is configured in `Tool_Config.xml`. All keys are
-optional; when a key is missing, SelfX uses the English default shown below.
-
-| Key | Default | Purpose |
-|---|---|---|
-| `Show_SystemInfo_Tab` | `True` | Show or hide the tab |
-| `Troubleshooting_Tab_Text` | `Troubleshooting` | Header of the actions tab |
-| `SystemInfo_Tab_Text` | `System information` | Header of the tab |
-| `SystemInfo_Title_Text` | `Information about your device` | Title inside the tab |
-| `SystemInfo_Hint_Text`, `SystemInfo_Loading_Text`, `SystemInfo_Copied_Text` | English texts | Status line texts |
-| `SystemInfo_Refresh_Text`, `SystemInfo_Copy_Text`, `SystemInfo_Export_Text` | `Refresh`, `Copy all`, `Export` | Button labels |
-| `SystemInfo_Internet_Test_Host` | `www.msftconnecttest.com` | Host for the "Internet reachable" TCP check |
-| `SystemInfo_Internet_Test_Port` | `80` | Port for the "Internet reachable" TCP check |
-| `Show_SystemInfo_Intune_Actions` | `True` | Show or hide the Intune and support buttons |
-| `SystemInfo_SyncApps_Text`, `SystemInfo_SyncCompliance_Text`, `SystemInfo_CompanyPortal_Text`, `SystemInfo_QuickAssist_Text`, `SystemInfo_MdmDiagnostics_Text` | English labels | Labels of the Intune and support buttons |
-
-The information is collected by `Sources\SystemInfo.ps1` in a background
-runspace when the tab is first opened. The collector only reads CIM/WMI classes,
-registry values, `dsregcmd /status`, `whoami /upn` and `netsh wlan show
-interfaces`, and opens one TCP connection for the Internet check. To change the
-collected data, edit `Get-SelfXSystemInfo` in that file; each entry is a
-`Category`, `Property` and `Value` object, and entries are grouped by category in
-the tab. The Intune buttons use the `intunemanagementextension://` protocol, the
-Company Portal app, Quick Assist and `MdmDiagnosticsTool.exe`; hide them with
-`Show_SystemInfo_Intune_Actions` if these are not used in your organization.
-
-### Action catalogue
-
-Edit `SelfX Standard\Sources\Issues_List.xml`. The file contains:
-
-- `XML_Version` at the `Actions` root.
-- `Quick_Solution` and `Detailed_Solution` groups.
-- Each `Action`'s `Name`, `Buttons`, `Explanation`, `Script`, `Category` and
-  `Alerte_MSG`.
-
-The `Script` value must match a file in
-`SelfX Standard\Sources\Scripts_to_run`. The interface starts the selected
-script from the installed `Scripts_to_run` directory. Keep user-facing
-confirmation text aligned with the actual script behavior, including any
-possibility of unsaved work or data loss.
-
-### Remote updates
-
-When `Install.ps1` receives `XML_Link`, it writes a download-mode
-`List_config.xml` and downloads the issue list and script archive. At launch,
-SelfX compares the installed `Actions.XML_Version` with the remote
-`Actions.XML_Version`. When the versions differ, it downloads the archive
-referenced by `Actions.GUI_Config.Link_Scripts` in the remote issue list and
-updates the local catalogue and scripts.
-
-Ensure that the remote issue list's `GUI_Config.Link_Scripts` value points to
-the current ZIP archive. The installer parameter `ZIP_Link` is used for the
-initial package download; subsequent update runs use the URL in the XML.
-
-Use monotonically changing version values when publishing updates. The current
-mechanism downloads and expands remote XML/ZIP content without a package
-signature check. Protect the hosting location and use HTTPS; only publish
-content you intend clients to execute.
-
-## SelfX Admin
-
-### Runtime configuration
-
-`SelfX Admin\List_config.xml` selects manual or download mode. The supplied
-configuration uses manual mode and the app uses the bundled `Issues_List.xml`.
-For Admin, deploy catalogue or script changes by publishing an updated package;
-the existing download-mode code writes into the user's `%LOCALAPPDATA%\SelfX`
-directory and is not a supported package-update path for this separately
-launched Admin folder.
-
-The Admin action list uses a different schema:
-
-- UI settings and version values are inside `Actions.GUI_Config`.
-- Action entries are direct children of `Actions`.
-- Each action uses `Name`, `Buttons`, `Explanation`, `Script`, `Category` and
-  `Alerte_MSG`.
-
-The `Script` value must match a file under
-`SelfX Admin\Scripts_to_run`. The action list's `GUI_Config.Link_Scripts` value is used by the legacy
-download-mode code, but package replacement is the supported Admin update
-method described above.
-
-### Execution context
-
-Admin actions inherit the token of the PowerShell process started by
-`Run_SelX.ps1`. The package does not create a service, scheduled task or
-independent privilege mechanism. Confirm deployment context separately from
-the XML configuration.
 
 ## Editing and publishing safely
 
