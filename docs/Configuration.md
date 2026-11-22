@@ -247,3 +247,307 @@ haben, bekommen es nicht zurück. Nach einer Deinstallation werden die Symbole
 geschlossen. Das Öffnen von SelfX startet das Symbol ebenfalls, wenn es noch nicht
 läuft (zum Beispiel nach einer manuellen Installation).
 
+### Geräteprotokolle für den Support (SelfX Service 2.4.0)
+
+Die Aktion **Geräteprotokolle an den Support senden** (`Q_Device_SendLogs` in der
+vereinfachten Ansicht, `D_Device_SendLogs` in der detaillierten Ansicht, Kategorie
+`Device`) und die Schaltflächen **Protokolle an Support senden** (Navigationsleiste,
+Seite Systeminformationen und Statussymbol) sammeln alle Protokolle, die zur Analyse
+eines Geräteproblems nötig sind, und öffnen eine neue E-Mail an den Support mit dem
+Bericht im Anhang. Der Nutzer beschreibt das Problem und sendet die E-Mail; nichts
+wird automatisch gesendet.
+
+Funktionsweise:
+
+1. Der Nutzer bestätigt die Aktion. Die Oberfläche sendet
+   `RUN SelfX_Device_CollectLogs.ps1` an den lokalen Dienst (Schild-Aktion, Timeout
+   1800 Sekunden).
+2. Der Dienst führt den Wrapper als SYSTEM aus und übergibt die SID des anfragenden
+   Nutzers in `SELFX_CALLER_SID`. Der Wrapper startet den nur lesenden Collector
+   `Scripts_to_run\Collect-DeviceLogs.ps1` mit Administratorrechten. Er schreibt
+   einen Bericht nach
+   `%ProgramData%\SelfX\Reports\<Nutzer-SID>\DeviceLogs-<Computer>-<Zeit>.txt` und
+   komprimiert ihn zu einer `.zip`-Datei (sofern `DeviceLogs_Compress` nicht `False`
+   ist).
+3. Der Berichtsordner des Nutzers hat eine geschützte ACL: SYSTEM und
+   Administratoren haben Vollzugriff, nur der anfragende Nutzer kann lesen. Kein
+   anderer Nutzer kann den Bericht lesen. Der vorherige Bericht des Nutzers wird bei
+   jedem Lauf gelöscht; Berichte, die älter als 7 Tage sind, werden für alle Nutzer
+   gelöscht.
+4. Nach einem erfolgreichen Lauf kopiert die Oberfläche den Bericht nach
+   `%LOCALAPPDATA%\SelfX\Reports` und öffnet eine neue E-Mail mit der Kopie im
+   Anhang:
+   - klassisches Outlook über COM: Empfänger `Support_Mail`, lokalisierter Betreff
+     (`Report_Mail_Subject`) und Text (`Report_Mail_Body`) werden eingetragen;
+   - sonst `outlook.exe /a <Datei>` (der Nutzer trägt den Empfänger ein);
+   - sonst (zum Beispiel neues Outlook, das keine COM-Schnittstelle hat) die
+     Standard-Mail-App über `mailto:` und ein Explorer-Fenster mit der markierten
+     Datei, sodass der Nutzer sie anhängen kann.
+
+Der Collector liest das Gerät nur: Er ändert nichts, lädt keine Registry-Struktur,
+startet keine Installation und sendet nichts. Der Bericht enthält den Computernamen,
+Nutzer- und Mandantennamen und Protokollinhalte des Geräts (Autopilot-/ESP-Status,
+IME- und Win32-App-Protokolle, Servicing-Protokolle, Ereignisprotokolle, AppX,
+Windows Update, Netzwerk- und Sprachstatus). Er läuft etwa ein bis einige Minuten.
+Die Liste der Abschnitte und die Parameter stehen im Kopf von
+`Collect-DeviceLogs.ps1`; ersetzen Sie die Datei, um den Collector zu aktualisieren.
+
+**Umfang des Berichts auf Geräten mit mehreren Nutzern (2.6.10):** Der Bericht wird
+pro Nutzer beschnitten. Der Dienst liest das Token des Pipe-Clients und übergibt
+`SELFX_CALLER_ADMIN` an das Skript: `1` nur, wenn die lokale Gruppe *Administratoren*
+in diesem Token **aktiviert** ist (ein Administrator mit erhöhten Rechten), sonst
+`0`. Ein fehlender oder anderer Wert (zum Beispiel bei einem älteren Dienst) gilt als
+normaler Nutzer (fail closed).
+
+| | Administrator (`1`) | Normaler Nutzer (`0` oder fehlend) |
+|---|---|---|
+| Collector | vollständig | `-UserView -CallerSid <eigene SID>` |
+| Seriennummer, Konsolennutzer | ja | nein |
+| Sitzungen (`quser`) | alle | nur die eigene Sitzung |
+| Beitrittsstatus (`dsregcmd`) | alles | nur Beitritts- und Anmeldestatus, keine Mandanten-, Geräte- oder Nutzer-IDs |
+| Profile und Nutzerstrukturen der Registry | alle | eigenes Profil und eigene Struktur |
+| AppX-Nutzereinträge | alle | eigener Eintrag |
+| Namen, SIDs und Profilordner anderer lokaler Nutzer in jeder Zeile | unverändert | ersetzt durch `<other user>` |
+| SelfX-Geräteprotokolle (`SelfXService.log`, Skriptprotokolle) | ja | nein (sie nennen alle Nutzer) |
+| Eigene SelfX-Nutzerprotokolle | ja | ja |
+
+Der Collector läuft auch ohne `-UserView` (Intune-Win32-App, Remediation, manueller
+Lauf): Der Bericht ist dann wie bisher vollständig. Beachten Sie, dass ein
+Administrator, der SelfX **ohne** erhöhte Rechte ausführt, als normaler Nutzer
+behandelt wird, weil die Gruppe Administratoren im gefilterten Token nur „deny-only“
+ist.
+
+**SelfX-Protokolle im Bericht (2.6.4, geändert in 2.6.10):** Der Bericht enthält die
+Protokolle von SelfX selbst (siehe
+[Protokollierung](#protokollierung-und-aufbewahrung-selfx-service-260)). Sie werden
+von zwei verschiedenen Seiten hinzugefügt, jede mit ihren eigenen Rechten:
+
+- der **Wrapper (SYSTEM)** fügt, **nur für Administratoren** (siehe Tabelle oben),
+  die Geräteprotokolle aus `%ProgramData%\SelfX\Logs` hinzu: immer
+  `SelfXService.log`, `Install.log` und `Uninstall.log`, außerdem alle anderen
+  `*.log`-Dateien (Skripte, Gesundheitsprüfungen, Erkennung) der letzten
+  `DeviceLogs_Days` Tage. Es werden nur die Dateien direkt in diesem Ordner gelesen;
+  der Unterordner `Logs\Users` wird als SYSTEM nie gelesen;
+- das **SelfX-Fenster (der angemeldete Nutzer)** fügt die Protokolle des **eigenen
+  Nutzers** (Fenster, Statussymbol, Nutzeraktionen) aus
+  `%ProgramData%\SelfX\Logs\Users\<eigene SID>` der letzten `DeviceLogs_Days` Tage
+  seiner Kopie des Berichts in `%LOCALAPPDATA%\SelfX\Reports` hinzu, mit den Rechten
+  des Nutzers. Protokolle anderer Nutzer werden nie hinzugefügt.
+
+In der `.zip` sind sie eigene Dateien im Ordner `SelfX-Logs` (`SelfX-Logs\User` für
+die Nutzerprotokolle); in einem `.txt`-Bericht werden sie als letzter Abschnitt
+angehängt. Es werden höchstens die letzten 2 MB jeder Datei und 30 MB pro Seite
+hinzugefügt.
+
+Warum: Nutzer können ihren eigenen Ordner unter `Logs\Users` anlegen und ändern.
+Würde SYSTEM ihn lesen, könnte ein Nutzer das Lesen (zum Beispiel mit einer
+Junction, die zwischen Prüfung und Lesen ausgetauscht wird) auf eine geschützte
+Datei umlenken, deren Inhalt dann im Bericht stünde, den der Nutzer öffnen kann. Weil
+das Fenster die eigenen Protokolle mit den Rechten des Nutzers liest, kann es nur
+hinzufügen, was der Nutzer ohnehin lesen könnte. Ein Problem beim Hinzufügen der
+Nutzerprotokolle stoppt die E-Mail nie. Übersprungen werden eine Junction als Ordner
+und Dateien, die ein anderes Konto besitzt.
+
+Beachten Sie, dass `SelfXService.log` (Geräteprotokolle) die Nutzer nennt, die auf
+diesem Gerät Aktionen gestartet haben.
+
+Exitcodes von `SelfX_Device_CollectLogs.ps1`: `0` Bericht erstellt, `1` Sammeln oder
+Komprimieren fehlgeschlagen, `2` anfragender Nutzer unbekannt (Dienst älter als
+2.4.0). Der Wrapper schreibt die Zusammenfassung des Collectors und den Berichtspfad
+nach `SelfXService.log` und (2.6.0) in sein eigenes Protokoll.
+
+Um die Funktion mit einem anderen Berichtsskript zu nutzen, behalten Sie
+`Post_Action` `MailReport` bei und schreiben Sie den Bericht als `DeviceLogs-*.zip`
+oder `DeviceLogs-*.txt` mit derselben ACL nach
+`%ProgramData%\SelfX\Reports\<SELFX_CALLER_SID>`. Entfernen Sie beide
+Katalogaktionen, um die Funktion auszublenden; die Schaltfläche in den
+Systeminformationen erscheint nur, wenn eine `System`-Aktion mit `MailReport`
+existiert.
+
+### Protokollierung und Aufbewahrung (SelfX Service 2.6.0)
+
+Alle Skripte von SelfX Service protokollieren über das gemeinsame Modul
+`Sources\SelfXLog.ps1` nach `%ProgramData%\SelfX\Logs`: das Fenster, das
+Statussymbol, die Gesundheitsprüfungen, die Compliance-Prüfung, das
+Erkennungsskript und jedes Aktions- und Reparaturskript. Eine Datei pro Skript und
+Tag, `<Skript>_<jjjj-MM-tt>.log`, UTF-8 mit BOM, eine Zeile pro Eintrag in der
+Ortszeit des Geräts:
+
+```text
+2026-11-06 13:29:56.522 | Info    |  52068 | SelfX 2.6.0 opened: language de (setting de), page ''.
+2026-11-06 13:30:04.426 | Warning |  52068 | Message (Warning): Windows restarts in about 30 seconds. ...
+```
+
+| Ordner | Inhalt | Lesbar für |
+|---|---|---|
+| `Logs` | Skripte, die als SYSTEM laufen (Reparaturen und über den Dienst gestartete System-Aktionen, `HealthStatus`, `Check-Compliance`, `Detection`), `SelfXService.log`, `Install.log`, `Uninstall.log` | SYSTEM und Administratoren |
+| `Logs\Users\<SID>` | Skripte des Nutzers: das Fenster (`SelfX_*`), das Statussymbol (`SelfX_Tray_*`) und die Nutzeraktionen | Den Nutzer, SYSTEM und Administratoren |
+
+Das Fenster protokolliert seinen Start, jede Aktion mit der Antwort des Nutzers, das
+Ergebnis jeder Dienstaktion (Status und Exitcode), die vom Nutzer gestarteten
+Statusprüfungen, die Sprachwechsel und **jede dem Nutzer angezeigte Meldung**. Das
+Statussymbol protokolliert Statusänderungen, Benachrichtigungen und warum es endet.
+Jedes Aktionsskript protokolliert seine Schritte und sein Ergebnis; unerwartete
+Fehler werden protokolliert, bevor das Skript endet. `HealthStatus` protokolliert
+jedes Prüfergebnis der Hintergrundprüfungen (eine Zeile pro Prüfung alle 15
+Minuten).
+
+`Install.ps1` legt `Logs\Users` so an, dass Nutzer nur ihren eigenen Ordner anlegen
+können (CREATOR OWNER = Vollzugriff darauf) und die Ordner anderer Nutzer weder
+auflisten noch lesen können. Ein Ordner, der ein Link ist oder einem anderen Konto
+gehört, wird nie verwendet. Ohne diesen Ordner (Installationen vor 2.6.0 oder wenn er
+nicht verwendet werden kann) gehen die Nutzerprotokolle nach
+`%LOCALAPPDATA%\SelfX\Logs`.
+
+**Aufbewahrung:** Protokolldateien, die älter sind als `Log_Retention_Days` in
+`Tool_Config.xml` (1–3650, Standard **90**), werden gelöscht:
+
+- Der SelfX-Dienst löscht alte `*.log`- und `*.old`-Dateien in `Logs` einmal am Tag
+  (das erste Mal nach der Startverzögerung der Hintergrundprüfungen), auch wenn die
+  Hintergrundprüfungen ausgeschaltet sind, und protokolliert die Anzahl der
+  gelöschten Dateien in `SelfXService.log`.
+- Jeder Nutzer löscht die alten Dateien seines eigenen Ordners `Logs\Users\<SID>`,
+  höchstens einmal am Tag, wenn ein SelfX-Skript startet. Der Dienst löscht nie in
+  `Logs\Users`: Nutzer können dort Ordner anlegen, und ein Löschen als SYSTEM darf
+  keinem Link folgen, den ein Nutzer anlegen könnte.
+
+`Uninstall.ps1` behält die Protokolle; `-RemoveLogs` löscht `%ProgramData%\SelfX`.
+
+### Gesundheitsstatus (SelfX Service 2.3.0)
+
+Die Seite Gerätestatus (seit 2.5.0; zuvor im Reiter Systeminformationen) zeigt das
+Ergebnis der lokalen Gesundheitsprüfungen des Dienstes. Sie liest den Status-Cache
+der Hintergrundprüfungen, wenn SelfX geöffnet wird, und fordert `HEALTH` an, wenn der
+Nutzer erneut prüft. Sie zeigt **In Ordnung** (grün), **Ausstehend** (gelbe Warnung),
+**Fehler** (rot) oder **Unbekannt** (grau). Ausstehend bedeutet eine offene Aktion
+(zu installierende Updates, Gerät noch nicht konform); das ist eine Warnung, kein
+Fehler. Unbekannt bedeutet fehlende Daten, eine nicht unterstützte Quelle oder einen
+nicht verfügbaren Dienst; es ist keine erfolgreiche Prüfung. Technische Details
+bleiben englisch; Beschriftungen und Statuswörter folgen der Sprache der Oberfläche.
+Kopieren und alle Exporte enthalten die Ergebnisse. Die vorhandenen Abschnitte Gerät,
+Windows, Nutzer/Verwaltung, Netzwerk und Bericht bleiben zuerst; der Gesundheitsstatus
+wird darunter in derselben Liste angehängt. Der Bericht ist eine Momentaufnahme, keine
+laufende Überwachung.
+
+Konfigurieren Sie `Sources\Health_Config.xml` vor dem Paketieren. Der Installer
+kopiert sie neben `HealthStatus.ps1`, mit Schreibzugriff nur für Administratoren/SYSTEM.
+Der Client kann dem Dienst weder einen Pfad noch Code übergeben.
+
+| Prüfung | Auslegung |
+|---|---|
+| IME | `IntuneManagementExtension` muss laufen; fehlend oder gestoppt ist Fehler. |
+| Defender | Dienst, Virenschutz und Echtzeitschutz müssen aktiviert sein; die Signaturen dürfen nicht als veraltet gemeldet werden und höchstens 7 Tage alt sein. Passiver Modus/Virenschutz von Drittanbietern kann deshalb Fehler ergeben. Eine fehlgeschlagene Abfrage ist Unbekannt. Das Detail beginnt mit der Signaturversion und der Zeit des letzten Signatur-Updates, gefolgt von Produkt- und Engine-Version. Standardmäßig bietet die Zeile **Beheben**, das `Update-MpSignature` ausführt (siehe [Reparaturen der Gesundheitsprüfung](#reparaturen-der-gesundheitsprüfung)). |
+| Compliance | Intune bewertet die Compliance in der Cloud; Windows speichert keinen lokalen Compliance-Status, SelfX kann den Status des Unternehmensportals also nicht lesen. Seit 2.5.5 enthält das Paket `HealthChecks\Check-Compliance.ps1`, aktiviert mit `<Compliance Script="Check-Compliance.ps1" />`: Es prüft die lokalen Kriterien einer typischen Intune-Windows-Compliance-Richtlinie (Intune-Registrierung, BitLocker auf dem Systemlaufwerk, Secure Boot, TPM, Firewall für alle Profile, Defender-Virenschutz/Spyware-Schutz/Echtzeitschutz, aktuelle Signaturen, optional eine Mindestversion von Windows) und zeigt die nicht erfüllten Kriterien. Gleichen Sie `$Require` im Skript mit Ihrer Compliance-Richtlinie ab; das Unternehmensportal bleibt maßgeblich. Exit `0` = In Ordnung, jeder andere Exitcode = **Ausstehend** (Warnung). Ein fehlendes Skript, eine Ausnahme oder ein Timeout ist Fehler. Ohne das Element `Compliance` ist die Zeile Unbekannt. Solange die Zeile nicht in Ordnung ist, bietet sie **Beheben** an, um die Defender-Signaturen zu aktualisieren, die häufigste Ursache nach längerer Abwesenheit. |
+| Anwendungen | Bestmöglicher **lokaler IME-Win32-App-Berichts-Cache**, plus konfigurierte Anwendungsprüfungen. Ein bekannter zwischengespeicherter Erfolg (`1000`) ist In Ordnung; Fehlerzustände (`5000` bis `5999`) sind Fehler; andere Zustände sind Unbekannt. Fehler hat Vorrang vor Unbekannt, das Vorrang vor In Ordnung hat. Ohne einbezogene Ergebnisse ist das Gesamtergebnis Unbekannt. |
+| Datenträger | Jedes feste logische Laufwerk: Fehler, wenn der belegte Speicher **mindestens 90 % ODER der freie Speicher unter 20 GiB** beträgt (als GB angezeigt, PowerShell `1GB`). Genau 20 GiB genügen nur, wenn die Belegung unter 90 % liegt. Die Schwellenwerte sind konfigurierbar. |
+| BitLocker | Jedes zurückgegebene OS-/feste Datenvolume muss vollständig verschlüsselt und der Schutz aktiviert sein; ausgesetzte, unverschlüsselte oder teilweise verschlüsselte Volumes sind Fehler. Nicht unterstützte/nicht lesbare Daten sind Unbekannt. Es werden keine Schlüssel oder Wiederherstellungsgeheimnisse erfasst. |
+| Neustart ausstehend | Fehler, wenn Windows einen ausstehenden Neustart meldet: der Schlüssel `RebootPending` des Component Based Servicing, der Schlüssel `RebootRequired` von Windows Update, `RebootRequired` des Windows Update Agents (`Microsoft.Update.SystemInfo`), Updates des Windows-Update-Orchestrators, die auf den Neustart warten (`ReadyToReboot`, Windows 11 24H2+, was die Einstellungen als *Jetzt neu starten* zeigen; seit 2.6.9 nennt das Detail die Updates) oder eine ausstehende Umbenennung des Computers. `PendingFileRenameOperations` wird absichtlich ignoriert, weil Installer und Sicherheitsprodukte es oft dauerhaft gesetzt lassen. Nicht lesbare Registry-Daten sind Unbekannt; eine fehlschlagende Windows-Update-API verbirgt das Registry-Ergebnis nicht. |
+| Zu installierende Updates | Durchsucht nur den **lokalen Cache des Windows Update Agents** (offline, kein Scan, Download oder Installation). Jedes nicht installierte, nicht ausgeblendete Update (außer reinen Browse-Updates/optionalen) ist **Ausstehend** (Warnung) und im Detail aufgelistet. Ein leerer Cache ist nur in Ordnung, wenn der letzte erfolgreiche Windows-Update-Scan höchstens `MaxSearchAgeDays` alt ist (Standard 14); sonst, oder wenn das Scan-Datum unbekannt ist, ist das Ergebnis Unbekannt. Updates, die nur über ConfigMgr verteilt werden, sind nicht Teil dieser Cache-Ansicht. Solange die Zeile Ausstehend ist, installiert **Beheben** die ausstehenden Windows-Updates und startet die Updates der Microsoft-Store-Apps als SYSTEM, ohne Neustart (seit 2.5.6, siehe [Reparaturen der Gesundheitsprüfung](#reparaturen-der-gesundheitsprüfung)). |
+| Zusätzliche Dienste | Genauer Dienstname und erwarteter Zustand (`Running` oder `Stopped`). |
+| Skriptprüfungen | Exit `0` = In Ordnung; Exit `1` = Fehler. Andere Exitcodes, fehlende Dateien, Ausnahmen und Timeouts sind ebenfalls Fehler. |
+
+**Einschränkungen bei Anwendungen:** Der IME-Registry-Cache ist ein
+Implementierungsdetail, keine stabile Microsoft-API, kein Inventar installierter
+Software und kein Live-Bericht von Intune. Er kann veraltet sein und mehrere
+Nutzer-/Geräteeinträge für dieselbe App enthalten. Alle verfügbaren einbezogenen
+Einträge werden berücksichtigt (ein fehlgeschlagener Eintrag wird nicht verworfen,
+weil ein anderer Eintrag erfolgreich war). Änderungen des Cache-Formats oder nicht
+lesbare Daten ergeben Unbekannt. Eine erfolgreiche Installation beweist nicht, dass
+die Anwendung funktioniert. Verwenden Sie ausdrückliche Prüfungen für Apps ohne IME
+oder Funktionsprüfungen; SelfX kann nicht jede installierte Anwendung automatisch
+diagnostizieren.
+
+```xml
+<HealthConfig>
+  <Disk UsedPercentError="90" MinimumFreeGB="20" />
+  <Updates MaxSearchAgeDays="14" />
+  <Applications>
+    <Exclude Name="Test application*" />
+    <Exclude Name="00000000-0000-0000-0000-000000000001" />
+    <Application Id="00000000-0000-0000-0000-000000000002"
+                 Name="Business client" />
+    <Application Name="Business client"
+                 Script="Check-BusinessClient.ps1" TimeoutSeconds="15" />
+  </Applications>
+  <Services>
+    <Service Name="Spooler" Expected="Running" />
+  </Services>
+  <Compliance Script="Check-Compliance.ps1" TimeoutSeconds="30" />
+  <CustomChecks>
+    <Check Name="Local support data"
+           Script="Check-SupportData.ps1" TimeoutSeconds="10" />
+  </CustomChecks>
+</HealthConfig>
+```
+
+Ausschlüsse vergleichen Namen **ohne Beachtung der Groß-/Kleinschreibung mit
+PowerShell-Platzhaltern** (`*`, `?`, Klammerausdrücke); auch App-IDs können
+ausgeschlossen werden. Namen aus dem IME-Cache werden verwendet, wenn sie verfügbar
+sind; sonst übernimmt SelfX den Namen aus den App-Richtlinien in den IME-Protokollen
+(`AppWorkload.log`, seit 2.6.0) und zeigt erst dann die App-ID. Geben Sie eine
+Zuordnung `Application Id="..." Name="..."` an, wenn Sie namensbasierte Ausschlüsse
+brauchen, aber kein Name gefunden wird. Ausgeschlossene Prüfungen werden nicht
+ausgeführt. Der Ausschluss aller Apps erzeugt kein In-Ordnung-Ergebnis. Seit 2.6.0
+heißt die Zeile **Unternehmens-Apps (Intune)**; ihr Detail nennt die Apps, die mit
+ihrem Fehlercode fehlgeschlagen sind (zum Beispiel `Monitoring Agent (error
+0x87D1041C)`), und Apps, die für das Gerät nicht gelten (EnforcementState
+3000-3999, Voraussetzungen nicht erfüllt), werden nicht gezählt. Die App-ID wird aus
+dem Schlüssel `Win32Apps\<Nutzer>\<App-ID>_<Revision>` gelesen; vor 2.6.0 konnte
+statt der App die Nutzer-ID angezeigt werden.
+
+Legen Sie `Sources\HealthChecks` an und legen Sie dort Erweiterungs-`.ps1`-Dateien
+ab. Es werden nur einfache Dateinamen akzeptiert (keine Unterverzeichnisse,
+absoluten Pfade oder `..`); Reparse Points in diesem Ordner oder am Skript werden
+abgewiesen. Das Standardpaket enthält nur `Check-Compliance.ps1` (siehe die Zeile
+Compliance oben). Beispiel für eine nur lesende Anwendungsprüfung:
+
+```powershell
+<#
+.SYNOPSIS
+    Check whether the installed business client executable is present.
+.NOTES
+    Version: 1.0.0
+    History:
+    1.0.0  2026-10-28  Your company  Initial presence check.
+#>
+$ErrorActionPreference = 'Stop'
+try {
+    if (Test-Path -LiteralPath 'C:\Program Files\BusinessClient\Client.exe' -PathType Leaf) {
+        exit 0
+    }
+    exit 1
+} catch { exit 1 }
+```
+
+**Sicherheit und Laufzeitvertrag:** Die Prüfungen laufen bei jeder Aktualisierung
+nicht interaktiv als SYSTEM, ohne Bestätigungsabfrage. Sie müssen nur lesend und
+idempotent sein und dürfen nie neu starten, abmelden, Einstellungen ändern, Eingaben
+abfragen oder losgelöste Arbeit starten. Prüfen/signieren Sie sie vor der
+Bereitstellung; beliebige vom Administrator gelieferte Skripte kann SelfX nicht als
+nur lesend beweisen. In Skripten sollten keine Anmeldedaten stehen. Exitcodes legen
+ihren Status fest; die letzte nicht leere stdout-Zeile (höchstens 400 Zeichen) wird
+als Detailtext angezeigt, sonst `Exit code: N`. stderr wird geleert, aber nicht in
+den Bericht aufgenommen. Der Timeout beträgt 1–30 Sekunden pro Skript, Standard 30;
+höchstens 5 Skriptprüfungen insgesamt (Compliance, App-Prüfungen und eigene
+zusammen) und 16 zusätzliche Dienste. Bei einem Timeout versucht SelfX, diesen
+Prozessbaum zu beenden. Die gesamte Dienstanfrage ist auf 240 Sekunden und 20.000
+Zeichen begrenzt; zu große Ergebnisse werden ausdrücklich abgewiesen, nicht als In
+Ordnung angezeigt. Reparaturaktionen und von SelfX angeforderte Prüfungen teilen
+eine Sperre: Eine gleichzeitige Anfrage liefert Busy; versuchen Sie es nach dem
+Ende erneut. Eine Prüfung, die angefordert wird, während eine Hintergrundprüfung
+läuft, wartet bis zu deren Ende.
+
+Führen Sie vor dem Paketieren alle Tests des Pakets aus, siehe die
+[Release-Checkliste](Installation.md#release-checkliste-selfx-service). Der Katalog
+und die Gesundheitskonfiguration werden außerdem von `Test-Catalog.ps1` (2.6.10)
+geprüft.
+
+Die Tests ersetzen alle Systemprüfungen und Skriptausführungen durch Mocks. Sie
+installieren keinen Dienst und führen keine echten eigenen Skripte aus;
+`Test-ServicePipe.ps1` startet nur den Pipe-Listener des Dienstes unter einem
+Test-Pipe-Namen. `Test-Scripts.ps1` (2.6.0) führt jedes Aktions- und
+Reparaturskript in einer temporären Sandbox mit Mocks für die Befehle aus (es wird
+kein Prozess geschlossen, nichts gestartet oder neu gestartet) und prüft Ergebnis
+und Protokoll; nur die nur lesenden Skripte `Check-Compliance.ps1`, `Detection.ps1`
+und `HealthStatus.ps1` laufen echt.
+
