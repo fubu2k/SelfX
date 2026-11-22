@@ -29,6 +29,7 @@ gekennzeichnet sind, entstanden vor der Anhebung der Paketversion; sie werden mi
 - Neue Aktion „Die Uhrzeit Ihres Geräts stimmt nicht“ (Systemkontext über den SelfX-Dienst, Kategorie Gerät, `SelfX_Device_SyncTime.ps1`): startet bei Bedarf den Windows-Zeitdienst und führt `w32tm.exe /resync /force` mit festen Argumenten aus. Zeitquelle, Konfiguration und Zeitzone werden nicht verändert. Gesperrt, solange ein anderer Nutzer angemeldet ist (`OtherSessions=Block`). Deutscher Text in `de.xml`, andere Sprachen zeigen den englischen Text.
 
 ### Geändert
+- Übersetzungen ergänzt: In allen 22 Sprachdateien (außer Deutsch und Englisch) fehlten 28 Texte und wurden bisher auf Englisch angezeigt: Hinweis bei angemeldeter anderer Person (`Service_OtherSessions_Text`), Ticket-Dialog (`Ticket_*`), Hinweis zur Betriebszeit, Proxy und Netzlaufwerke sowie die Netzwerk-Messungen (`Latency_*`).
 
 - Statuszeile „Neustart ausstehend“: Der Text nennt jetzt den letzten Neustart und, wenn die letzte Update-Installation danach lag, deren Zeitpunkt (nur lesend, Zeiten in der Zeitzone des Nutzers). Fehlen die Quellen, entfällt nur der Zusatz.
 

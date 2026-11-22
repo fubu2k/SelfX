@@ -78,6 +78,7 @@
 		<Service_Running_Text>SelfX سروس چل رہی ہے: ایڈمنسٹریٹر کے حقوق کے ساتھ چلنے والی شیلڈ کے ساتھ نشان زد ایکشن۔</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX سروس نہیں چل رہی ہے: شیلڈ سے نشان زد ایکشن دستیاب نہیں ہیں۔</Service_Unavailable_Text>
 		<Service_Busy_Text>ایک اور کارروائی ابھی جاری ہے۔ براہ کرم اس کے مکمل ہونے تک انتظار کریں۔</Service_Busy_Text>
+		<Service_OtherSessions_Text>جب تک کوئی اور صارف اس آلے میں سائن اِن ہے، یہ کارروائی ممکن نہیں۔ IT سپورٹ سے رابطہ کریں یا جب آپ واحد صارف ہوں تو دوبارہ کوشش کریں۔</Service_OtherSessions_Text>
 		<Action_Running_Text>کارروائی جاری ہے: {0}</Action_Running_Text>
 		<Action_Running_Label>جاری ہے…</Action_Running_Label>
 		<Action_Success_Text>کارروائی مکمل ہو گئی: {0}</Action_Success_Text>
@@ -169,6 +170,20 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<Support_None_Text>رابطے کی کوئی تفصیلات ترتیب نہیں دی گئیں۔ براہ کرم اپنے IT شعبے سے رابطہ کریں۔</Support_None_Text>
 		<Service_Short_Running>SelfX سروس چل رہی ہے</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX سروس دستیاب نہیں</Service_Short_Unavailable>
+		<Ticket_Row_Label>مسئلے کی اطلاع دیں</Ticket_Row_Label>
+		<Ticket_Row_Text>IT سپورٹ کو ایک ای میل کھولتا ہے جس میں آپ کی وضاحت اور اس پی سی کی معلومات ہوں گی۔</Ticket_Row_Text>
+		<Ticket_Button>ٹکٹ بنائیں</Ticket_Button>
+		<Ticket_Window_Title>ٹکٹ بنائیں</Ticket_Window_Title>
+		<Ticket_Intro_Text>بتائیں کہ کیا کام نہیں کر رہا۔ SelfX IT سپورٹ کے لیے ایک ای میل تیار کرتا ہے۔</Ticket_Intro_Text>
+		<Ticket_Description_Label>آپ کی وضاحت</Ticket_Description_Label>
+		<Ticket_Info_Text>ای میل میں ہمیشہ اس پی سی کی معلومات (سسٹم کی معلومات اور آلے کی حالت) متن میں اور منسلک فائل کے طور پر شامل ہوتی ہیں۔ بھیجنے سے پہلے آپ سب کچھ جانچ سکتے ہیں۔ کچھ بھی خود بخود نہیں بھیجا جاتا۔</Ticket_Info_Text>
+		<Ticket_Open_Button>ای میل کھولیں</Ticket_Open_Button>
+		<Ticket_Kind_Text>واقعہ</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>آلے کی معلومات ابھی جمع نہیں ہوئیں۔</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>آلے کی معلومات کے ساتھ ای میل کھل گئی ہے۔ اسے جانچیں اور بھیجیں۔</Ticket_Opened_Text>
+		<Ticket_Manual_Text>آپ کا میل پروگرام کھل گیا ہے۔ فائل {0} (فائل ایکسپلورر میں منتخب) کو ای میل کے ساتھ منسلک کریں، جانچیں اور بھیجیں۔</Ticket_Manual_Text>
+		<Ticket_Error_Text>ای میل تیار نہیں ہو سکی: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>ای میل اس پتے پر جاتی ہے: {0}</Ticket_Recipient_Text>
 		<Version_Text>ورژن {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: سب کچھ ٹھیک ہے</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} مسائل، {1} انتباہات</Tray_Tooltip_Issues>
@@ -205,6 +220,7 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<Last_Boot>آخری بوٹ</Last_Boot>
 		<Uptime>اپ ٹائم</Uptime>
 		<Uptime_Value>{0} دن {1:D2}:{2:D2} h</Uptime_Value>
+		<Uptime_Restart_Hint>ری اسٹارٹ تجویز کیا جاتا ہے (“شٹ ڈاؤن” نہیں)</Uptime_Restart_Hint>
 		<Last_Update>آخری اپ ڈیٹ انسٹال ہو گیا۔</Last_Update>
 		<Time_Zone>ٹائم زون</Time_Zone>
 		<Current_User>موجودہ صارف</Current_User>
@@ -227,6 +243,18 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<Gateway>ڈیفالٹ گیٹ وے</Gateway>
 		<DNS>DNS سرورز</DNS>
 		<MAC>MAC ایڈریس</MAC>
+		<Proxy>پراکسی (صارف کی ترتیب)</Proxy>
+		<Proxy_None>کوئی پراکسی نہیں</Proxy_None>
+		<Proxy_Manual>دستی پراکسی</Proxy_Manual>
+		<Proxy_Script>خودکار کنفیگریشن اسکرپٹ</Proxy_Script>
+		<Network_Drives>نیٹ ورک ڈرائیوز</Network_Drives>
+		<Network_Drives_None>کوئی نہیں</Network_Drives_None>
+		<Latency_Gateway>تاخیر: ڈیفالٹ گیٹ وے</Latency_Gateway>
+		<Latency_Dns>DNS تلاش: {0}</Latency_Dns>
+		<Latency_Connection>کنکشن: {0}</Latency_Connection>
+		<Latency_Value>{0} ملی سیکنڈ (کم از کم {1}، زیادہ سے زیادہ {2}، {4} میں سے {3} ضائع)</Latency_Value>
+		<Latency_Failed>قابل رسائی نہیں ({1} میں سے {0} ناکام)</Latency_Failed>
+		<Latency_Skipped>ناپا نہیں گیا (وقت کی حد پوری ہو گئی)</Latency_Skipped>
 		<Collected_At>پر جمع کیا گیا۔</Collected_At>
 		<Error>خرابی</Error>
 		<Yes>جی ہاں</Yes>

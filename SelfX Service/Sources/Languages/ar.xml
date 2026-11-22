@@ -80,6 +80,7 @@
 		<Service_Running_Text>خدمة SelfX قيد التشغيل: يتم تشغيل الإجراءات المميزة بدرع مع حقوق المسؤول.</Service_Running_Text>
 		<Service_Unavailable_Text>خدمة SelfX لا تعمل: الإجراءات المميزة بالدرع غير متوفرة.</Service_Unavailable_Text>
 		<Service_Busy_Text>لا يزال هناك إجراء آخر قيد التنفيذ. يرجى الانتظار حتى يتم الانتهاء منه.</Service_Busy_Text>
+		<Service_OtherSessions_Text>لا يمكن تنفيذ هذا الإجراء أثناء تسجيل دخول مستخدم آخر إلى هذا الجهاز. تواصل مع دعم تقنية المعلومات أو أعد المحاولة عندما تكون المستخدم الوحيد.</Service_OtherSessions_Text>
 		<Action_Running_Text>الإجراء قيد التشغيل: {0}</Action_Running_Text>
 		<Action_Running_Label>قيد التشغيل…</Action_Running_Label>
 		<Action_Success_Text>اكتمل الإجراء: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@
 		<Support_None_Text>لم يتم تكوين بيانات اتصال. يرجى الاتصال بقسم تكنولوجيا المعلومات.</Support_None_Text>
 		<Service_Short_Running>خدمة SelfX تعمل</Service_Short_Running>
 		<Service_Short_Unavailable>خدمة SelfX غير متاحة</Service_Short_Unavailable>
+		<Ticket_Row_Label>الإبلاغ عن مشكلة</Ticket_Row_Label>
+		<Ticket_Row_Text>يفتح رسالة بريد إلى دعم تقنية المعلومات تتضمن وصفك ومعلومات هذا الكمبيوتر.</Ticket_Row_Text>
+		<Ticket_Button>إنشاء تذكرة</Ticket_Button>
+		<Ticket_Window_Title>إنشاء تذكرة</Ticket_Window_Title>
+		<Ticket_Intro_Text>صف ما لا يعمل. يقوم SelfX بإعداد رسالة بريد إلى دعم تقنية المعلومات.</Ticket_Intro_Text>
+		<Ticket_Description_Label>وصفك</Ticket_Description_Label>
+		<Ticket_Info_Text>تتضمن الرسالة دائمًا معلومات هذا الكمبيوتر (معلومات النظام وحالة الجهاز) في النص وكملف مرفق. يمكنك مراجعة كل شيء قبل الإرسال. لا يتم إرسال أي شيء تلقائيًا.</Ticket_Info_Text>
+		<Ticket_Open_Button>فتح الرسالة</Ticket_Open_Button>
+		<Ticket_Kind_Text>حادثة</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>لم يتم جمع معلومات الجهاز بعد.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>تم فتح الرسالة مع إرفاق معلومات الجهاز. راجعها ثم أرسلها.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>تم فتح برنامج البريد لديك. أرفق الملف {0} (المحدد في مستكشف الملفات) بالرسالة، ثم راجعها وأرسلها.</Ticket_Manual_Text>
+		<Ticket_Error_Text>تعذر إعداد الرسالة: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>ترسل الرسالة إلى: {0}</Ticket_Recipient_Text>
 		<Version_Text>الإصدار {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: كل شيء على ما يرام</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} مشكلة، {1} تحذير</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@
 		<Last_Boot>التمهيد الأخير</Last_Boot>
 		<Uptime>الجهوزية</Uptime>
 		<Uptime_Value>{0} يوم (أيام) {1:D2}:{2:D2} ح</Uptime_Value>
+		<Uptime_Restart_Hint>يوصى بإعادة التشغيل (وليس «إيقاف التشغيل»)</Uptime_Restart_Hint>
 		<Last_Update>تم تثبيت التحديث الأخير</Last_Update>
 		<Time_Zone>المنطقة الزمنية</Time_Zone>
 		<Current_User>المستخدم الحالي</Current_User>
@@ -229,6 +245,18 @@
 		<Gateway>البوابة الافتراضية</Gateway>
 		<DNS>خادم (خوادم) DNS</DNS>
 		<MAC>عنوان (عناوين) MAC</MAC>
+		<Proxy>الخادم الوكيل (إعداد المستخدم)</Proxy>
+		<Proxy_None>لا يوجد خادم وكيل</Proxy_None>
+		<Proxy_Manual>خادم وكيل يدوي</Proxy_Manual>
+		<Proxy_Script>برنامج نصي للتكوين التلقائي</Proxy_Script>
+		<Network_Drives>محركات أقراص الشبكة</Network_Drives>
+		<Network_Drives_None>لا شيء</Network_Drives_None>
+		<Latency_Gateway>زمن الاستجابة: البوابة الافتراضية</Latency_Gateway>
+		<Latency_Dns>استعلام DNS: {0}</Latency_Dns>
+		<Latency_Connection>الاتصال: {0}</Latency_Connection>
+		<Latency_Value>{0} مللي ثانية (الأدنى {1}، الأقصى {2}، فُقد {3} من {4})</Latency_Value>
+		<Latency_Failed>لا يمكن الوصول ({0} من {1} فشلت)</Latency_Failed>
+		<Latency_Skipped>لم يتم القياس (تم بلوغ حد الوقت)</Latency_Skipped>
 		<Collected_At>تم جمعها في</Collected_At>
 		<Error>خطأ</Error>
 		<Yes>نعم</Yes>

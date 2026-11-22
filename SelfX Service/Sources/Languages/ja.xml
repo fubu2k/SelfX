@@ -80,6 +80,7 @@
 		<Service_Running_Text>SelfX サービスは実行中です: 盾のアイコンが付いたアクションは管理者権限で実行されます。</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX サービスが実行されていません: 盾のアイコンが付いたアクションは利用できません。</Service_Unavailable_Text>
 		<Service_Busy_Text>別のアクションがまだ実行中です。完了するまでお待ちください。</Service_Busy_Text>
+		<Service_OtherSessions_Text>別のユーザーがこのデバイスにサインインしている間は、この操作は実行できません。IT サポートに問い合わせるか、自分だけになってからもう一度お試しください。</Service_OtherSessions_Text>
 		<Action_Running_Text>アクションを実行中: {0}</Action_Running_Text>
 		<Action_Running_Label>実行中…</Action_Running_Label>
 		<Action_Success_Text>アクションが完了しました: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Support_None_Text>連絡先が設定されていません。IT 部門にお問い合わせください。</Support_None_Text>
 		<Service_Short_Running>SelfX サービス実行中</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX サービス利用不可</Service_Short_Unavailable>
+		<Ticket_Row_Label>問題を報告する</Ticket_Row_Label>
+		<Ticket_Row_Text>あなたの説明とこの PC のデバイス情報を添えて、IT サポート宛てのメールを開きます。</Ticket_Row_Text>
+		<Ticket_Button>チケットを作成</Ticket_Button>
+		<Ticket_Window_Title>チケットを作成する</Ticket_Window_Title>
+		<Ticket_Intro_Text>うまくいかないことを説明してください。SelfX が IT サポート宛てのメールを用意します。</Ticket_Intro_Text>
+		<Ticket_Description_Label>あなたの説明</Ticket_Description_Label>
+		<Ticket_Info_Text>メールには、この PC のデバイス情報 (システム情報とデバイスの状態) が本文と添付ファイルとして必ず含まれます。送信前にすべて確認できます。自動的に送信されることはありません。</Ticket_Info_Text>
+		<Ticket_Open_Button>メールを開く</Ticket_Open_Button>
+		<Ticket_Kind_Text>インシデント</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>デバイス情報はまだ収集されていません。</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>デバイス情報を添付したメールを開きました。内容を確認して送信してください。</Ticket_Opened_Text>
+		<Ticket_Manual_Text>メール プログラムを開きました。ファイル {0} (エクスプローラーで選択済み) をメールに添付し、内容を確認して送信してください。</Ticket_Manual_Text>
+		<Ticket_Error_Text>メールを準備できませんでした: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>メールの宛先: {0}</Ticket_Recipient_Text>
 		<Version_Text>バージョン {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 問題ありません</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: 問題 {0} 件、警告 {1} 件</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Last_Boot>最終起動</Last_Boot>
 		<Uptime>稼働時間</Uptime>
 		<Uptime_Value>{0} 日 {1:D2}:{2:D2} 時間</Uptime_Value>
+		<Uptime_Restart_Hint>再起動を推奨 (「シャットダウン」ではありません)</Uptime_Restart_Hint>
 		<Last_Update>最後にインストールされた更新プログラム</Last_Update>
 		<Time_Zone>タイム ゾーン</Time_Zone>
 		<Current_User>現在のユーザー</Current_User>
@@ -229,6 +245,18 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Gateway>デフォルト ゲートウェイ</Gateway>
 		<DNS>DNS サーバー</DNS>
 		<MAC>MAC アドレス</MAC>
+		<Proxy>プロキシ (ユーザー設定)</Proxy>
+		<Proxy_None>プロキシなし</Proxy_None>
+		<Proxy_Manual>手動プロキシ</Proxy_Manual>
+		<Proxy_Script>自動構成スクリプト</Proxy_Script>
+		<Network_Drives>ネットワーク ドライブ</Network_Drives>
+		<Network_Drives_None>なし</Network_Drives_None>
+		<Latency_Gateway>遅延: デフォルト ゲートウェイ</Latency_Gateway>
+		<Latency_Dns>DNS 参照: {0}</Latency_Dns>
+		<Latency_Connection>接続: {0}</Latency_Connection>
+		<Latency_Value>{0} ミリ秒 (最小 {1}、最大 {2}、{4} 回中 {3} 回損失)</Latency_Value>
+		<Latency_Failed>到達できません ({1} 回中 {0} 回失敗)</Latency_Failed>
+		<Latency_Skipped>未測定 (制限時間に達しました)</Latency_Skipped>
 		<Collected_At>収集日時</Collected_At>
 		<Error>エラー</Error>
 		<Yes>はい</Yes>

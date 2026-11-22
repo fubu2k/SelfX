@@ -80,6 +80,7 @@ We raden de gedetailleerde weergave aan als de eenvoudige weergave uw probleem n
 		<Service_Running_Text>De SelfX-service wordt uitgevoerd: acties met een schild worden uitgevoerd met beheerdersrechten.</Service_Running_Text>
 		<Service_Unavailable_Text>De SelfX-service wordt niet uitgevoerd: acties met een schild zijn niet beschikbaar.</Service_Unavailable_Text>
 		<Service_Busy_Text>Er wordt nog een andere actie uitgevoerd. Wacht tot deze is voltooid.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Deze actie is niet mogelijk zolang een andere gebruiker is aangemeld op dit apparaat. Neem contact op met de IT-support of probeer het opnieuw wanneer u de enige gebruiker bent.</Service_OtherSessions_Text>
 		<Action_Running_Text>Actie wordt uitgevoerd: {0}</Action_Running_Text>
 		<Action_Running_Label>Wordt uitgevoerd…</Action_Running_Label>
 		<Action_Success_Text>Actie voltooid: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Support_None_Text>Er zijn geen contactgegevens ingesteld. Neem contact op met uw IT-afdeling.</Support_None_Text>
 		<Service_Short_Running>SelfX-service actief</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX-service niet beschikbaar</Service_Short_Unavailable>
+		<Ticket_Row_Label>Een probleem melden</Ticket_Row_Label>
+		<Ticket_Row_Text>Opent een e-mail aan de IT-support met uw beschrijving en de gegevens van deze pc.</Ticket_Row_Text>
+		<Ticket_Button>Ticket maken</Ticket_Button>
+		<Ticket_Window_Title>Een ticket maken</Ticket_Window_Title>
+		<Ticket_Intro_Text>Beschrijf wat niet werkt. SelfX bereidt een e-mail voor de IT-support voor.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Uw beschrijving</Ticket_Description_Label>
+		<Ticket_Info_Text>De e-mail bevat altijd de apparaatgegevens van deze pc (systeeminformatie en apparaatstatus), in de tekst en als bijgevoegd bestand. U kunt alles controleren voordat u het verzendt. Er wordt niets automatisch verzonden.</Ticket_Info_Text>
+		<Ticket_Open_Button>E-mail openen</Ticket_Open_Button>
+		<Ticket_Kind_Text>Incident</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>De apparaatgegevens zijn nog niet verzameld.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>De e-mail is geopend met de apparaatgegevens als bijlage. Controleer de e-mail en verzend deze.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Uw e-mailprogramma is geopend. Voeg het bestand {0} (geselecteerd in Verkenner) toe aan de e-mail, controleer de e-mail en verzend deze.</Ticket_Manual_Text>
+		<Ticket_Error_Text>De e-mail kon niet worden voorbereid: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>De e-mail wordt verzonden naar: {0}</Ticket_Recipient_Text>
 		<Version_Text>Versie {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: alles in orde</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} probleem/problemen, {1} waarschuwing(en)</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Last_Boot>Laatste keer opgestart</Last_Boot>
 		<Uptime>Uptime</Uptime>
 		<Uptime_Value>{0} dag(en) {1:D2}:{2:D2} u</Uptime_Value>
+		<Uptime_Restart_Hint>opnieuw opstarten aanbevolen (niet “Afsluiten”)</Uptime_Restart_Hint>
 		<Last_Update>Laatst geïnstalleerde update</Last_Update>
 		<Time_Zone>Tijdzone</Time_Zone>
 		<Current_User>Huidige gebruiker</Current_User>
@@ -229,6 +245,18 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Gateway>Standaardgateway</Gateway>
 		<DNS>DNS-server(s)</DNS>
 		<MAC>MAC-adres(sen)</MAC>
+		<Proxy>Proxy (gebruikersinstelling)</Proxy>
+		<Proxy_None>Geen proxy</Proxy_None>
+		<Proxy_Manual>Handmatige proxy</Proxy_Manual>
+		<Proxy_Script>Automatisch configuratiescript</Proxy_Script>
+		<Network_Drives>Netwerkstations</Network_Drives>
+		<Network_Drives_None>Geen</Network_Drives_None>
+		<Latency_Gateway>Latentie: standaardgateway</Latency_Gateway>
+		<Latency_Dns>DNS-opzoeking: {0}</Latency_Dns>
+		<Latency_Connection>Verbinding: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} van {4} verloren)</Latency_Value>
+		<Latency_Failed>niet bereikbaar ({0} van {1} mislukt)</Latency_Failed>
+		<Latency_Skipped>niet gemeten (tijdslimiet bereikt)</Latency_Skipped>
 		<Collected_At>Verzameld op</Collected_At>
 		<Error>Fout</Error>
 		<Yes>Ja</Yes>

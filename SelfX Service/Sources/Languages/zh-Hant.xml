@@ -80,6 +80,7 @@
 		<Service_Running_Text>SelfX 服務正在執行：帶盾牌圖示的操作將以管理員許可權執行。</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX 服務未執行：帶盾牌圖示的操作不可用。</Service_Unavailable_Text>
 		<Service_Busy_Text>另一項操作仍在執行。請等待其完成。</Service_Busy_Text>
+		<Service_OtherSessions_Text>其他使用者登入此裝置時，無法執行此操作。請聯絡 IT 支援，或在您是唯一使用者時重試。</Service_OtherSessions_Text>
 		<Action_Running_Text>正在執行操作：{0}</Action_Running_Text>
 		<Action_Running_Label>正在執行…</Action_Running_Label>
 		<Action_Success_Text>操作已完成：{0}</Action_Success_Text>
@@ -171,6 +172,20 @@
 		<Support_None_Text>未設定聯絡資訊。請聯絡您的 IT 部門。</Support_None_Text>
 		<Service_Short_Running>SelfX 服務正在執行</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX 服務無法使用</Service_Short_Unavailable>
+		<Ticket_Row_Label>回報問題</Ticket_Row_Label>
+		<Ticket_Row_Text>開啟寄給 IT 支援的電子郵件，內含您的說明和這台電腦的裝置資訊。</Ticket_Row_Text>
+		<Ticket_Button>建立工單</Ticket_Button>
+		<Ticket_Window_Title>建立工單</Ticket_Window_Title>
+		<Ticket_Intro_Text>請說明哪裡出了問題。SelfX 會為 IT 支援準備一封電子郵件。</Ticket_Intro_Text>
+		<Ticket_Description_Label>您的說明</Ticket_Description_Label>
+		<Ticket_Info_Text>電子郵件一律包含這台電腦的裝置資訊（系統資訊和裝置狀態），內容在本文中並作為附件。傳送前您可以檢查所有內容。不會自動傳送任何內容。</Ticket_Info_Text>
+		<Ticket_Open_Button>開啟電子郵件</Ticket_Open_Button>
+		<Ticket_Kind_Text>事件</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>尚未收集裝置資訊。</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>已開啟電子郵件，並附上裝置資訊。請檢查後傳送。</Ticket_Opened_Text>
+		<Ticket_Manual_Text>已開啟您的郵件程式。請將檔案 {0}（已在檔案總管中選取）附加到電子郵件，檢查後傳送。</Ticket_Manual_Text>
+		<Ticket_Error_Text>無法準備電子郵件：{0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>電子郵件將傳送至：{0}</Ticket_Recipient_Text>
 		<Version_Text>版本 {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 一切正常</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0} 個問題，{1} 個警告</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@
 		<Last_Boot>上次啟動時間</Last_Boot>
 		<Uptime>執行時間</Uptime>
 		<Uptime_Value>{0} 天 {1:D2}:{2:D2} 小時</Uptime_Value>
+		<Uptime_Restart_Hint>建議重新啟動（而不是「關機」）</Uptime_Restart_Hint>
 		<Last_Update>最近安裝的更新</Last_Update>
 		<Time_Zone>時區</Time_Zone>
 		<Current_User>當前使用者</Current_User>
@@ -229,6 +245,18 @@
 		<Gateway>預設閘道器</Gateway>
 		<DNS>DNS 伺服器</DNS>
 		<MAC>MAC 地址</MAC>
+		<Proxy>Proxy（使用者設定）</Proxy>
+		<Proxy_None>無 Proxy</Proxy_None>
+		<Proxy_Manual>手動 Proxy</Proxy_Manual>
+		<Proxy_Script>自動設定指令碼</Proxy_Script>
+		<Network_Drives>網路磁碟機</Network_Drives>
+		<Network_Drives_None>無</Network_Drives_None>
+		<Latency_Gateway>延遲：預設閘道器</Latency_Gateway>
+		<Latency_Dns>DNS 查詢：{0}</Latency_Dns>
+		<Latency_Connection>連線：{0}</Latency_Connection>
+		<Latency_Value>{0} 毫秒（最小 {1}，最大 {2}，{4} 次中遺失 {3} 次）</Latency_Value>
+		<Latency_Failed>無法連線（{1} 次中失敗 {0} 次）</Latency_Failed>
+		<Latency_Skipped>未測量（已達時間限制）</Latency_Skipped>
 		<Collected_At>收集時間</Collected_At>
 		<Error>錯誤</Error>
 		<Yes>是</Yes>
