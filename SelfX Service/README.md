@@ -7,7 +7,7 @@ Netzwerkverbindung. Aktuelle Version: **2.6.12** (siehe das
 [Änderungsprotokoll](../CHANGELOG.md)).
 
 - Eine moderne Oberfläche mit änderbarer Größe für Nutzer ohne technisches Wissen
-  (2.5.0): Navigationsleiste mit **Fehlerbehebung**, **Gerätestatus** und
+  (2.5.0): Navigationsleiste mit **Probleme lösen**, **Gerätestatus** und
   **Systeminformationen**, Symbolschaltflächen mit erklärenden Kurzinfos, dunkles
   und helles Design, Hilfe-Dialog mit den Support-Kontakten (Zeiten, Telefon,
   E-Mail, Teams-Chat, Website / Ticketsystem). Siehe

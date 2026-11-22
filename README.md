@@ -100,8 +100,8 @@ Menü öffnet SelfX, prüft den Status oder sendet die Protokolle.
   - Support: Geräteprotokolle an den Support senden.
   - Administratoren können eigene Aktionen in einer XML-Datei ergänzen.
 - **Seite Gerätestatus**
-  - Eine Karte pro Prüfung mit dem Zustand OK (grün), Ausstehend (gelbe
-    Warnung), Fehler (rot) oder Unbekannt (grau), Probleme zuerst. Ein Zähler an
+  - Eine Karte pro Prüfung mit dem Zustand OK (grün), Bald erledigen (gelbe
+    Warnung, technisch „Pending“), Fehler (rot) oder Unbekannt (grau), Probleme zuerst. Ein Zähler an
     der Navigation zeigt die Zahl der offenen Punkte.
   - **Beheben** repariert ein Problem nach Bestätigung:
     - Defender-Signaturen aktualisieren;

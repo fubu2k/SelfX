@@ -20,7 +20,7 @@ Die Leiste links hat drei Bereiche:
 
 | Bereich | Was Sie dort finden |
 |---|---|
-| **Fehlerbehebung** | Lösungen für häufige Probleme |
+| **Probleme lösen** | Lösungen für häufige Probleme |
 | **Gerätestatus** | Prüfungen Ihres Geräts, zum Beispiel Speicherplatz oder Updates. Die Zahl zeigt, wie viele Punkte Ihre Aufmerksamkeit brauchen. |
 | **Systeminformationen** | Informationen über Ihr Gerät für das Support-Team |
 
@@ -29,7 +29,7 @@ Bestätigung geschieht nichts.
 
 ### Ein Problem lösen
 
-1. Öffnen Sie **Fehlerbehebung**.
+1. Öffnen Sie **Probleme lösen**.
 2. Geben Sie ein Wort in das Suchfeld ein (zum Beispiel *Teams* oder *langsam*)
    oder klicken Sie auf eine Kategorie.
 3. Klicken Sie auf die Schaltfläche **i**, um mehr über eine Lösung zu lesen.
@@ -63,13 +63,13 @@ Starten Sie Ihr Gerät neu oder wenden Sie sich an Ihr Support-Team.
 
 ### Gerätestatus
 
-Der Bereich **Gerätestatus** zeigt eine Karte pro Prüfung: Windows-Verwaltung
-(IME), Microsoft Defender, Compliance, Anwendungen, Speicherplatz, BitLocker,
+Der Bereich **Gerätestatus** zeigt eine Karte pro Prüfung: Firmenverwaltung
+(Intune-Dienst), Microsoft Defender, Compliance, Anwendungen, Speicherplatz, BitLocker,
 ausstehender Neustart und zu installierende Updates. Ihr Support-Team kann weitere
 Prüfungen ergänzen. Probleme stehen zuerst.
 
 - **Grün / In Ordnung:** Alles ist gut.
-- **Gelb / Ausstehend:** Bald sollte etwas getan werden, zum Beispiel
+- **Gelb / Bald erledigen:** Bald sollte etwas getan werden, zum Beispiel
   Updates installieren. Das ist eine Warnung, kein Fehler.
 - **Rot / Fehler:** Es gibt ein Problem. Lesen Sie den Text auf der Karte.
 - **Grau / Unbekannt:** SelfX kann es nicht sagen, zum Beispiel weil die
