@@ -288,6 +288,8 @@ try {
 	$run = Invoke-TestScript 'SelfX_Defender_UpdateSignature.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Defender-Update' 'Defender: the update runs through CIM (MSFT_MpSignature.Update) only'
 
+	$run = Invoke-TestScript 'SelfX_Device_SyncTime.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)|$($script:calls[0] -like '*\System32\w32tm.exe /resync /force')" '0|1|True' "Time sync: w32tm called once with fixed arguments ($($run.Error))"
 	$run = Invoke-TestScript 'SelfX_Intune_RestartService.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Restart-Service IntuneManagementExtension' 'IME restart'
 
