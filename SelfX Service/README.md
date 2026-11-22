@@ -1,7 +1,8 @@
 # SelfX Service
 
 SelfX Service combines SelfX Standard and SelfX Admin into one package that is
-installed locally and works without any network connection.
+installed locally and works without any network connection. Current version:
+**2.6.11** (see the [Changelog](../CHANGELOG.md)).
 
 - One modern, resizable user interface for users without technical knowledge
   (2.5.0): navigation bar with **Troubleshooting**, **Device status** and
@@ -147,6 +148,12 @@ user, for example the device logs report.
   data of the requesting user. Only an elevated administrator (token read by the
   service, `SELFX_CALLER_ADMIN=1`) gets the complete report. See
   [Configuration](../docs/Configuration.md).
+- Blocked actions on multi-user devices (2.6.10): for actions with
+  `OtherSessions=Block` (restart, Windows updates, disk check, restart of the
+  network adapters and of the Intune service) a normal user gets a notice
+  instead of the action while another user has an active session. Elevated
+  administrators are not restricted. If the sessions cannot be read, the action
+  is blocked.
 - Pipe limits (2.6.10): a connection must send its request within 5 seconds and
   must read the answer, otherwise the service closes it. At most 64 connections
   are open at once (8 per user). After a check, the same user must wait 3
@@ -160,6 +167,11 @@ user, for example the device logs report.
   is the owner of the client process as reported by Windows; connections whose
   owner cannot be read share one limit of 8. `Test-ServicePipe.ps1` checks these
   limits with the real service code under a test pipe name.
+- Programs (2.6.11): `SelfXService.exe` and `SelfX.exe` are either prebuilt
+  (folder `Bin`, checked against the SHA256 manifest during the installation,
+  allowed with AppLocker hash rules) or compiled on the device with the
+  temporary files in a protected folder. See
+  [Installation](../docs/Installation.md#prebuilt-programs-selfx-service-2611).
 - Text from requests is cleaned before it is logged (control characters and line
   separators become `?`, long text is shortened), and rejected requests are
   logged at most 20 times per minute, so a user cannot forge log lines or push

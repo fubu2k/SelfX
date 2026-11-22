@@ -13,8 +13,10 @@ execution context.
 - For SelfX Admin, `ServiceUI.exe` and a signed-in interactive user session if
   the UI is to be displayed to that user.
 - For SelfX Service, 64-bit Windows PowerShell 5.1 and .NET Framework 4.x. The
-  installer compiles the service with the C# compiler that ships with the .NET
-  Framework, so no internet access or SDK is needed.
+  installer either installs the prebuilt programs of the package (folder `Bin`,
+  see [Prebuilt programs](#prebuilt-programs-selfx-service-2611)) or compiles
+  the service with the C# compiler that ships with the .NET Framework. No
+  internet access or SDK is needed.
 
 ## SelfX Service
 
@@ -36,8 +38,13 @@ From a 32-bit agent, use
    retried for 20 seconds. The installer then
    replaces inherited permissions so that SYSTEM and Administrators have full
    control and Users can only read and execute.
-3. Compiles `Service\SelfXService.cs` to `%ProgramFiles%\SelfX\SelfXService.exe`
-   and `Service\SelfXLauncher.cs` to `%ProgramFiles%\SelfX\SelfX.exe` (2.5.3).
+3. Installs `%ProgramFiles%\SelfX\SelfXService.exe` (the service) and
+   `%ProgramFiles%\SelfX\SelfX.exe` (2.5.3). When the package contains the
+   folder `Bin`, the installer first checks the prebuilt programs against their
+   SHA256 manifest and copies them (2.6.11); a failed check stops the
+   installation. Without `Bin` it compiles `Service\SelfXService.cs` and
+   `Service\SelfXLauncher.cs`; the compiler then writes its temporary files to
+   a folder below the install folder, not to `C:\Windows\Temp`.
    `SelfX.exe` is a small starter without a console: it starts SelfX
    (`/page:<Page>` optional) or the status icon (`/tray`) with a hidden Windows
    PowerShell, so no command window appears, also not with Windows Terminal as
@@ -87,6 +94,12 @@ For Intune Win32 apps:
 | Install behavior | System |
 | Detection | Custom script `Detection.ps1`. Set `$ExpectedVersion` to the `Tool_Version` of the release. |
 
+Raise `Tool_Version` (`Sources\Tool_Config.xml`) and `$ExpectedVersion`
+(`Detection.ps1`) for every release, to the same value. If you leave them
+unchanged, Intune finds the old version, treats the device as up to date and
+does not install the new package. `tools\New-SelfXIntuneWin.ps1` stops when the
+two values differ.
+
 `Uninstall.ps1` removes the service, `%ProgramFiles%\SelfX`, the shortcuts,
 the Apps & Features entry, the status icon autostart (`SelfXTray`), the status
 cache (`%ProgramData%\SelfX\Cache`) and the device logs reports
@@ -113,18 +126,23 @@ well. Per-user settings and caches (`HKCU\Software\SelfX`,
 > (including `Collect-DeviceLogs.ps1`) with a trusted code-signing
 > certificate.
 
-Before you build the package after changing or adding a language file, check
-the language files. The script exits with code 1 if a file has errors:
+Run all tests of SelfX Service before you build a package (see the
+[release checklist](#release-checklist-selfx-service)). Every test exits with
+code 1 when it finds an error; GitHub Actions runs the same tests for every
+pull request:
 
 ```powershell
-& '.\SelfX Service\Test-LanguageFiles.ps1'
-powershell.exe -NoProfile -File '.\SelfX Service\Test-HealthStatus.ps1'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-DeviceLogs.ps1'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-Catalog.ps1'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-Uninstall.ps1'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-UI.ps1'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\SelfX Service\Test-Scripts.ps1'
+Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $_.FullName
+    if ($LASTEXITCODE -ne 0) { Write-Warning "$($_.Name) failed" }
+}
 ```
+
+After you change or add a language file, run only the language check:
+`& '.\SelfX Service\Test-LanguageFiles.ps1'` (optionally with `-Culture <code>`).
+The tests mock the commands that change the device. `Test-ServicePipe.ps1`
+starts the pipe listener of the service in the test process under a test pipe
+name; nothing is installed and no administrator rights are needed.
 
 For version 2.3.0 health reporting, redeploy the **entire package**: the service
 binary is rebuilt by the installer and must support `HEALTH`. Copying only the
@@ -153,6 +171,9 @@ creates `Logs\Users` and the service compiles the log housekeeping. Configure
 `Sources\Health_Config.xml` and optionally add reviewed read-only scripts under
 `Sources\HealthChecks` before packaging; see
 [Health status](Configuration.md#health-status-selfx-service-230).
+Versions 2.6.10 and 2.6.11 (security hardening, see the
+[Changelog](../CHANGELOG.md)) change the service and the installer. Redeploy the
+**entire package** and raise `Tool_Version` and `$ExpectedVersion`.
 Do not grant users write access to the install folder or check scripts.
 
 Check the installation:
@@ -161,6 +182,64 @@ Check the installation:
 Get-Service SelfXService
 Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20   # as administrator
 ```
+
+### Release checklist (SelfX Service)
+
+1. Adapt the configuration: branding and support contacts in
+   `Sources\Tool_Config.xml`, `Sources\Health_Config.xml`, the catalogue.
+2. Raise `Tool_Version` in `Sources\Tool_Config.xml` and set the same value as
+   `$ExpectedVersion` in `Detection.ps1`; add a line to the history of both
+   files.
+3. Run all tests (see above). Fix every error before you continue.
+4. Optional: build the prebuilt programs with `tools\Build-SelfXBinaries.ps1`
+   (see below) and merge the hash rules of `build\SelfX.AppLocker.xml` into your
+   AppLocker policy. A new build has new hashes: replace the rules of the
+   previous build.
+5. Build the package with `tools\New-SelfXIntuneWin.ps1` (see
+   [Building the Intune packages](#building-the-intune-packages)).
+6. Test on a device that is not in production: new installation, update from
+   the previous version, uninstallation, detection. Test as a standard user and,
+   if you have shared devices, with a second signed-in user.
+7. Publish the package in Intune.
+
+### Prebuilt programs (SelfX Service 2.6.11)
+
+Without further steps, `Install.ps1` compiles `SelfXService.exe` and `SelfX.exe`
+on every device. The files then have a different hash on each device, so
+AppLocker or WDAC cannot allow them with a hash rule. Build them once instead,
+on a build machine with Windows PowerShell 5.1:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
+```
+
+The script writes `SelfX Service\Bin` (not committed): `SelfXService.exe`,
+`SelfX.exe`, `SelfXSessionStarter.dll` (used only by the installer) and the
+manifest `SelfX.Binaries.json` with the SHA256 of the three sources and the
+three files. The files are not signed. When the AppLocker cmdlets are
+available on the build machine, the script also writes
+`SelfX.AppLocker.xml` next to the `Bin` folder (in `build\`, not in the
+package): hash rules for the three files, ready to merge into your AppLocker
+policy (`Set-AppLockerPolicy -XmlPolicy ... -Merge` or import in the policy
+editor / Intune). AppLocker uses its own hash of the file (Authenticode
+SHA256), not the SHA256 of the manifest; always take the rules from this file.
+Build the Intune package afterwards; the `Bin` folder is part of it.
+
+When the package contains `Bin`, `Install.ps1` checks before installing:
+
+- the manifest and all three files exist;
+- the sources of the package (`Service\*.cs`) have the hashes of the manifest,
+  so the programs were built from exactly these sources;
+- each file has the hash of the manifest.
+
+Any failed check stops the installation with exit code `1`; nothing is compiled
+instead. The reason is in `%ProgramData%\SelfX\Logs\Install.log`. Without `Bin`
+the device compiles as before; the temporary files of the compiler are then
+written to a folder below the install folder instead of `C:\Windows\Temp`.
+`tools\New-SelfXIntuneWin.ps1` refuses to package a `Bin` folder that was built
+from other sources. Rebuild `Bin` after every change of `Service\*.cs`, and
+replace the hash rules in AppLocker at the same time: a new build has new
+hashes, and the old rules no longer match.
 
 ## SelfX Standard
 
@@ -224,49 +303,16 @@ the interactive user's session while the actions retain the SYSTEM token. This
 behavior depends on the deployment tool and the active session; it is not an
 installed SelfX service and it does not elevate a standard-user process.
 
+SelfX Admin is an older code base and was not part of the security hardening of
+SelfX Service (2.6.10 and 2.6.11). If you can, use SelfX Service for actions that
+need administrator rights. If you use SelfX Admin, store it only in a folder that
+only administrators can change, keep `List_config.xml` on `Manual` (no download)
+and do not start it as SYSTEM unless the actions need it.
+
 If running manually, use an appropriately elevated PowerShell process only
 when the selected actions require it. Keep the working directory at
 `SelfX Admin`, because the scripts use relative paths for XML, XAML and
 assemblies.
-
-### Prebuilt programs (SelfX Service 2.6.11)
-
-Without further steps, `Install.ps1` compiles `SelfXService.exe` and `SelfX.exe`
-on every device. The files then have a different hash on each device, so
-AppLocker or WDAC cannot allow them with a hash rule. Build them once instead,
-on a build machine with Windows PowerShell 5.1:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
-```
-
-The script writes `SelfX Service\Bin` (not committed): `SelfXService.exe`,
-`SelfX.exe`, `SelfXSessionStarter.dll` (used only by the installer) and the
-manifest `SelfX.Binaries.json` with the SHA256 of the three sources and the
-three files. The files are not signed. When the AppLocker cmdlets are
-available on the build machine, the script also writes
-`SelfX.AppLocker.xml` next to the `Bin` folder (in `build\`, not in the
-package): hash rules for the three files, ready to merge into your AppLocker
-policy (`Set-AppLockerPolicy -XmlPolicy ... -Merge` or import in the policy
-editor / Intune). AppLocker uses its own hash of the file (Authenticode
-SHA256), not the SHA256 of the manifest; always take the rules from this file.
-Build the Intune package afterwards; the `Bin` folder is part of it.
-
-When the package contains `Bin`, `Install.ps1` checks before installing:
-
-- the manifest and all three files exist;
-- the sources of the package (`Service\*.cs`) have the hashes of the manifest,
-  so the programs were built from exactly these sources;
-- each file has the hash of the manifest.
-
-Any failed check stops the installation with exit code `1`; nothing is compiled
-instead. The reason is in `%ProgramData%\SelfX\Logs\Install.log`. Without `Bin`
-the device compiles as before; the temporary files of the compiler are then
-written to a folder below the install folder instead of `C:\Windows\Temp`.
-`tools\New-SelfXIntuneWin.ps1` refuses to package a `Bin` folder that was built
-from other sources. Rebuild `Bin` after every change of `Service\*.cs`, and
-replace the hash rules in AppLocker at the same time: a new build has new
-hashes, and the old rules no longer match.
 
 ## Building the Intune packages
 
@@ -316,3 +362,4 @@ Use the packages in Intune as follows:
 4. Confirm the deployment tool presents the UI in the intended user session.
 5. Keep the complete package together; do not omit `assembly`, icons, XML,
    XAML or action scripts.
+6. For SelfX Service, follow the [release checklist](#release-checklist-selfx-service).
