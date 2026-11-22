@@ -678,6 +678,23 @@ try {
         Assert-Equal ([IO.File]::ReadAllText($cache)) $before 'Collection placeholder is not stored'
         [IO.File]::Delete($cache)
 
+        # Pipe server check (F4): a process that is not the running service must be refused before a request is sent.
+        function Get-SelfXPipeServerState { param($Pipe, $ServiceName) if ($script:pipeStateFails) { throw 'Mock failure' }; $script:pipeState }
+        $script:pipeStateFails = $false
+        $script:pipeState = 1
+        Test-SelfXPipeServer -Pipe $null
+        Assert-Throws { $script:pipeState = 0; Test-SelfXPipeServer -Pipe $null } 'Pipe server check: a process that is not the service is refused'
+        $script:pipeState = -1
+        Test-SelfXPipeServer -Pipe $null
+        $script:pipeState = 1; $script:pipeStateFails = $true
+        Test-SelfXPipeServer -Pipe $null
+        $script:pipeStateFails = $false
+        Assert-Equal $true $true 'Pipe server check: undetermined state and errors do not stop the request'
+        $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
+        Assert-Equal ($clientText.IndexOf('Test-SelfXPipeServer -Pipe $pipe') -gt 0 -and $clientText.IndexOf('Test-SelfXPipeServer -Pipe $pipe') -lt $clientText.IndexOf('$writer.WriteLine($Request)')) $true 'Pipe server check runs before the request is written'
+        Assert-Equal ($clientText.Contains('GetNamedPipeServerProcessId') -and $clientText.Contains('QueryServiceStatusEx')) $true 'Pipe server check compares the pipe server and service process IDs'
+        Remove-Item Function:\Get-SelfXPipeServerState
+
         # STATUS client: validated cache answer of the service, no request reaches a real pipe.
         $json = ConvertTo-Json -InputObject @($full) -Compress
         $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
