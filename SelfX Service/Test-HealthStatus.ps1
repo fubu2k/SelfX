@@ -776,7 +776,7 @@ try {
             $answer = $statusMethod.Invoke($instance, @())
             Assert-Equal ($answer -match '^STATUS 2026-11-04T09:30:05Z 15 Active ([A-Za-z0-9+/=]+)$') $true 'STATUS with cache time and data'
             Assert-Equal ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Matches[1])).Contains('"IME"')) $true 'STATUS carries the cache content'
-            Assert-Equal ($type.GetMethod('ProcessRequest', $flags).Invoke($instance, @('STATUS', 'test', $null)) -like 'STATUS 2026-11-04T09:30:05Z*') $true 'STATUS request is answered without running a script'
+            Assert-Equal ($type.GetMethod('ProcessRequest', $flags).Invoke($instance, @('STATUS', 'test', $null, $false, [long]0)) -like 'STATUS 2026-11-04T09:30:05Z*') $true 'STATUS request is answered without running a script'
             [IO.Directory]::Delete((Split-Path $cacheFile), $true)
         } finally { $instance.Dispose() }
     }
