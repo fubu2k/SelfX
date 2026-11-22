@@ -68,11 +68,14 @@ try {
 	# 3. An existing file whose owner is not in the list (created in advance by a user) is removed and replaced.
 	$file3 = Join-Path $root 'foreign.log'
 	Set-Content -LiteralPath $file3 -Value 'planted'
-	$id3 = (Get-Item -LiteralPath $file3).CreationTimeUtc
-	Start-Sleep -Milliseconds 50
+	# A second name for the planted file shows that it is replaced, not truncated (the creation time cannot be used: Windows
+	# restores it for a file that is recreated with the same name within seconds).
+	$alias3 = Join-Path $root 'foreign-alias.txt'
+	$null = & cmd.exe /c mklink /H "`"$alias3`"" "`"$file3`"" 2>&1
+	$aliased = ($LASTEXITCODE -eq 0)
 	Write-Report $file3 @('S-1-5-18-no-match')
 	Assert-Equal (Read-Text $file3) 'new report' 'file of an untrusted owner is replaced'
-	Assert-Equal ((Get-Item -LiteralPath $file3).CreationTimeUtc -gt $id3) $true 'file of an untrusted owner is a new file (not the planted one)'
+	if ($aliased) { Assert-Equal (Read-Text $alias3) 'planted' 'file of an untrusted owner: the planted file itself is not written' }
 
 	# 4. A symbolic link at the report path: the link is removed, the target is not written.
 	$target4 = Join-Path $root 'target4.txt'
