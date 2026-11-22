@@ -207,6 +207,7 @@ How to answer:
 - No commands for PowerShell or the command prompt, no registry, no downloads, do not turn off security features.
 - Do not ask for passwords or personal data.
 - If only the IT can solve the problem, say so clearly.
+- Answer in the language of the problem description. If there is none, use the language named in the "SelfX:" line of the data.
 
 Structure your answer like this:
 1. What is probably going on? (1-2 sentences)
@@ -226,6 +227,7 @@ How to answer:
 - Suggest read-only checks first (for example Get cmdlets, event logs, the Intune portal). Mark every step that changes something clearly with "CHANGES".
 - Point to Microsoft documentation where possible.
 - Do not guess values that are missing in the data; say which information is missing.
+- Answer in the language of the problem description. If there is none, use the language named in the "SelfX:" line of the data.
 
 Structure your answer like this:
 1. Summary (2 sentences)

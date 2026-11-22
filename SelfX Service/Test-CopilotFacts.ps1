@@ -142,6 +142,7 @@ foreach ($pair in @(@('en', 'en'), @('de', 'de'))) {
 		Assert-Equal ([regex]::Matches($fileText, '\{DATA\}').Count) 1 "language $($pair[0]): Copilot_Prompt_$audience contains {DATA} once"
 		Assert-Equal ($fileText -like '*BEGIN DATA*END DATA*') $true "language $($pair[0]): Copilot_Prompt_$audience names the data block markers"
 		Assert-Equal ($fileText.Length -le 3000) $true "language $($pair[0]): Copilot_Prompt_$audience has at most 3000 characters"
+		if ($pair[0] -ceq 'en') { Assert-Equal ($fileText -like '*Answer in the language of the problem description*') $true "language $($pair[0]): Copilot_Prompt_$audience asks for the answer language" }
 		Assert-Equal ($fileText -ceq (ConvertTo-PromptNormal (Get-SelfXCopilotTemplate -Audience $audience -Language $pair[1]))) $true "language $($pair[0]): Copilot_Prompt_$audience equals the built-in fallback text"
 	}
 }
