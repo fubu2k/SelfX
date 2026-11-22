@@ -551,3 +551,350 @@ kein Prozess geschlossen, nichts gestartet oder neu gestartet) und prüft Ergebn
 und Protokoll; nur die nur lesenden Skripte `Check-Compliance.ps1`, `Detection.ps1`
 und `HealthStatus.ps1` laufen echt.
 
+### Reparaturen der Gesundheitsprüfung
+
+Die Gesundheitsprüfungen bleiben nur lesend. Um eine vom Nutzer ausgelöste
+Schaltfläche **Beheben** an einer Statuszeile anzubieten, legen Sie ein
+Reparaturskript unter `Sources\Scripts_to_run` ab und tragen es in
+`Health_Config.xml` ein:
+
+```xml
+<Remediations>
+  <Remediation Id="IME" Script="SelfX_Intune_RestartService.ps1" />
+  <Remediation Id="Service" Name="Spooler" Script="Repair-Spooler.ps1" />
+  <Remediation Id="Disk" Name="C:" Script="Repair-Disk.ps1" />
+  <Remediation Id="Custom" Name="Business check" Script="Repair-BusinessCheck.ps1" />
+  <Remediation Id="Compliance" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
+</Remediations>
+```
+
+`Id` entspricht einem Ergebnistyp (`IME`, `Defender`, `Compliance`, `Applications`,
+`Disk`, `BitLocker`, `PendingReboot`, `Updates`, `Service`, `Custom`). Das optionale
+`Name` entspricht dem genauen technischen Namen, nicht der übersetzten Beschriftung.
+Ohne Name gilt die Zuordnung für jede Zeile dieses Typs. Konfigurieren Sie für eine
+Zeile keine sich überschneidenden Zuordnungen: Mehrdeutige Zuordnungen werden als
+Konfigurationsfehler gemeldet. Das optionale `When="NotOK"` bietet die Reparatur nur
+an, solange die Zeile nicht in Ordnung ist (Ausstehend, Fehler oder Unbekannt); der
+Standard `Always` bietet sie bei jedem Status an.
+
+**Standardreparatur (2.3.4):** Das Paket enthält
+`Scripts_to_run\SelfX_Defender_UpdateSignature.ps1`, das `Update-MpSignature` als
+SYSTEM mit den durch die Defender-Richtlinie festgelegten Update-Quellen ausführt,
+und aktiviert es in der mitgelieferten `Health_Config.xml`:
+
+```xml
+<Remediation Id="Defender" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
+<Remediation Id="Compliance" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
+```
+
+Seit 2.5.4 zeigen die Zeilen Defender und Compliance **Beheben** nur, solange sie
+nicht in Ordnung sind, weil veraltete Signaturen nach längerer Abwesenheit eine
+häufige Ursache für fehlende Compliance sind. Um das Signatur-Update auch bei einer
+Defender-Zeile in Ordnung anzubieten, entfernen Sie `When="NotOK"` aus der
+Defender-Zeile. Das Update braucht eine erreichbare Update-Quelle; offline schlägt es
+fehl (Exit 1) und der Status bleibt unverändert. Entfernen Sie die beiden Zeilen, um
+es zu deaktivieren.
+
+**Reparatur der Updates (2.5.6, korrigiert in 2.6.3 und 2.6.9):** Das Paket enthält
+`Scripts_to_run\SelfX_Updates_Install.ps1` und aktiviert es in der mitgelieferten
+`Health_Config.xml`:
+
+```xml
+<Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" />
+```
+
+Solange Updates ausstehen, bietet die Zeile **Zu installierende Updates**
+**Beheben** an. Während die Installation läuft, zeigt die Schaltfläche **Läuft…**,
+und die Meldungsleiste sagt, dass die Updates gesucht, geladen und installiert
+werden; danach meldet SelfX, dass Windows Update fertig ist, und prüft den gesamten
+Gerätestatus erneut (Updates, Neustart ausstehend, Compliance). Das Skript läuft als
+SYSTEM und
+
+1. startet den Update-Scan für Microsoft-Store-Apps der MDM-Bridge
+   (`MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod`). Das
+   funktioniert auch, wenn der Store für Nutzer gesperrt ist. Der Store aktualisiert
+   die Apps asynchron im Hintergrund.
+2. startet unter Windows 11 24H2 und neuer (2.6.9) **„Nach Updates suchen“ des
+   Windows-Update-Orchestrators** über die dokumentierte WinRT-API
+   `Windows.Management.Update.WindowsUpdateManager`
+   (`StartScan(userInitiated: true)`, dasselbe wie die Schaltfläche in den
+   Einstellungen). Windows lädt und installiert die Updates selbst, mit den
+   Richtlinien des Geräts, und **Einstellungen > Windows Update zeigt den
+   Fortschritt**. Das Skript wartet, bis kein Update mehr geladen oder installiert
+   wird (höchstens 90 Minuten), und protokolliert jedes Update mit seiner Aktion, dem
+   Fortschritt und dem Grund, warum es wartet, zum Beispiel
+   `2026-11 Security Update (KB5132061): action Install, progress Install 70` oder
+   `Optional driver: waiting: SeekerUpdate`. Updates, die nur noch auf den Neustart
+   warten (`ReadyToReboot`), gelten als erledigt. Feature-Updates (neue
+   Windows-Version) überlässt es der Update-Richtlinie.
+3. installiert, was der Orchestrator übrig lässt (und unter älteren Windows-Versionen
+   alles), über die dokumentierte **Windows-Update-Agent-API**: Online-Suche an der
+   Update-Quelle der Geräterichtlinie (Intune-Update-Ringe / Windows Update for
+   Business, WSUS oder Microsoft Update), EULAs akzeptiert, Download und stille
+   Installation jedes nicht installierten, nicht ausgeblendeten Updates. Optionale
+   (Browse-only-)Updates, Updates, die Nutzereingaben brauchen, Feature-Updates
+   (Kategorie *Upgrades*) und Updates, die nur auf den Neustart warten, werden
+   übersprungen. Installiert Windows Update gerade, wartet das Skript darauf
+   (höchstens 10 Minuten). Jedes Update wird in
+   `%ProgramData%\SelfX\Logs\SelfX_Updates_Install_<Datum>.log` mit Titel und
+   Ergebnis protokolliert, zum Beispiel
+   `Installed: 2026-10 .NET Framework Security Update (restart required)`, und die
+   Zusammenfassung nennt die KB-Nummern (`Windows Update: 2 of 2 update(s) installed
+   (KB5127690, KB890830); restart required to complete`). Danach aktualisiert ein
+   Hintergrundscan des Orchestrators die Seite in den Einstellungen. Arbeitet der
+   Orchestrator nach 90 Minuten noch, wird der WUA-Schritt übersprungen (zwei
+   gleichzeitige Installationen würden kollidieren) und die Reparatur endet mit Exit
+   `1`; Windows arbeitet im Hintergrund weiter.
+
+Die Versionen 2.6.0 bis 2.6.2 nutzten `UsoClient.exe StartDownload` /
+`StartInstall`. Windows 11 24H2 weist diese Befehle ab (Exitcode `-2147024809` /
+`0x80070057` im Protokoll), sodass nur ein Scan lief und nichts installiert wurde;
+ein bereits ausstehender Neustart wurde sogar als installiert gemeldet. 2.6.3
+verwendet `UsoClient.exe` nicht mehr. Die Versionen 2.6.3 bis 2.6.8 nutzten nur die
+Windows-Update-Agent-API. Microsoft dokumentiert, dass die Seite Windows Update in
+den Einstellungen nur Updates des Orchestrators zeigt und dass über die WUA-API
+behandelte Updates dort nicht erscheinen und mit ihm kollidieren können, sodass die
+Updates in den Einstellungen weiterhin als ausstehend angezeigt werden konnten. Vor
+2.6.9 wurde ein Klick auf **Beheben** außerdem mit „Eine andere Aktion läuft noch“
+abgewiesen, während SelfX den zwischengespeicherten Status las (einmal pro Minute,
+für einen Moment).
+
+Das Skript startet Windows **nie neu**. Braucht ein Update einen Neustart, zeigt ihn
+die Zeile **Neustart ausstehend**. Exit `0` = alle ausgewählten Updates installiert
+(oder nichts zu installieren); Exit `1` = Suche, Download oder Installation ist bei
+mindestens einem Update fehlgeschlagen (die fehlgeschlagenen KB-Nummern stehen im
+Protokoll). Ein Store-Scan, der sich nicht starten lässt (zum Beispiel ohne
+MDM-Bridge), wird protokolliert, lässt die Reparatur aber nicht fehlschlagen.
+Entfernen Sie die Zeile, um sie zu deaktivieren.
+
+**Reparatur Neustart (2.6.0):** Die Zeile **Neustart ausstehend** bietet **Jetzt neu
+starten** an:
+
+```xml
+<Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" />
+```
+
+SelfX erkennt dieses Skript und fragt mit einer eigenen Warnung: Windows startet neu,
+um die ausstehenden Updates und Änderungen abzuschließen, der Nutzer soll seine
+Arbeit speichern und alle Programme schließen, der Neustart beginnt etwa 30 Sekunden
+nach der Bestätigung (**Jetzt neu starten** / **Abbrechen**). Nach der Bestätigung
+führt der Dienst `shutdown.exe /r /t 30 /d p:4:1` als SYSTEM aus; Windows zeigt seine
+Neustart-Benachrichtigung. Der Neustart ist **nie** Teil von **Alle Probleme
+beheben**. Entfernen Sie die Zeile, um die Schaltfläche auszublenden.
+
+**Reparatur App-Wiederholung (2.6.0):** Die Zeile **Unternehmens-Apps (Intune)**
+bietet **Erneut versuchen** an, solange eine App-Installation fehlgeschlagen ist:
+
+```xml
+<Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" />
+```
+
+Die Intune Management Extension wiederholt eine fehlgeschlagene Win32-App erst nach
+ihrem Wiederholungsplan (standardmäßig 24 Stunden). `SelfX_Apps_RetryInstall.ps1`
+entfernt für jede App, deren letztes Ergebnis im lokalen IME-Cache ein Fehler ist,
+dieses zwischengespeicherte Ergebnis und die Einträge des Wiederholungsplans (GRS)
+der App und startet den Dienst IntuneManagementExtension neu. Die IME meldet sich
+dann bei Intune und installiert die App innerhalb weniger Minuten erneut; der Nutzer
+sieht den Fortschritt im Unternehmensportal. Es wird keine App deinstalliert, und
+geändert wird nur der IME-Cache unter
+`HKLM\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps`. Schlägt die
+Installation erneut fehl, liegt das Problem in der App oder ihrer Zuweisung; der
+Nutzer kann die Geräteprotokolle an den Support senden, und das Support-Team sieht
+den Fehlercode in Intune.
+
+Das optionale `TimeoutSeconds` an einer `Remediation` (seit 2.5.6) legt das
+Laufzeitlimit des Dienstes für diese Reparatur fest: eine positive Zahl, auf 7200
+Sekunden begrenzt; der Standard sind 900 Sekunden.
+
+Das optionale `OtherSessions="Block"` an einer `Remediation` wirkt wie das
+Katalogelement `OtherSessions`: Ein normaler Nutzer kann die Reparatur nicht
+starten, solange ein anderer Nutzer eine aktive Sitzung hat. Die mitgelieferte
+Konfiguration setzt es für `Updates` und für den Neustart (`PendingReboot`). Ein
+Skript, das zugleich eine `System`-Aktion im Katalog ist, verwendet zuerst den
+Katalogeintrag; setzen Sie `Block` auch dort.
+
+Die Schaltfläche **Beheben** erscheint nur auf Karten mit einer konfigurierten
+Reparatur (auch auf Karten In Ordnung und Unbekannt, sofern nicht `When="NotOK"`
+gilt). Der Neustart und die App-Wiederholung nutzen **Jetzt neu starten** und
+**Erneut versuchen**. Die Texte der Schaltflächen und Bestätigungen sind in allen 24
+Sprachen der Oberfläche enthalten. Jede Karte hat außerdem eine Schaltfläche
+**Erneut prüfen** (Pfeile), die nur diesen Status ohne Bestätigung und ohne
+Ausführung einer Reparatur erneut prüft (siehe [Einzelprüfung](#einzelprüfung)). Vor
+2.5.0 zeigten Zeilen ohne Reparatur eine Schaltfläche mit der Beschriftung In
+Ordnung, Ausstehend oder Fehler. Der Nutzer muss vor der Ausführung bestätigen. Der
+lokale Dienst prüft das Skript gegen die geschützte Positivliste der Reparaturen
+(oder den vorhandenen Katalog der System-Aktionen) und führt es dann als SYSTEM mit
+dem vorhandenen Zeitlimit und der Protokollierung aus. Es werden keine beliebigen
+Pfade, Befehlsargumente oder vom Nutzer gelieferten Skripte akzeptiert.
+Reparaturskripte brauchen keinen zusätzlichen Eintrag im Fehlerbehebungskatalog.
+Jeder lokale angemeldete Nutzer kann diese freigegebenen Reparaturen anfordern,
+genau wie die vorhandenen System-Aktionen.
+
+Das Fenster verhindert eine zweite Reparatur, solange eine läuft. Nach dem Ende,
+auch bei Fehler oder Timeout, prüft es nur den reparierten Status erneut (Zeilen der
+Erfassung selbst fallen auf eine vollständige Aktualisierung zurück). Das Ergebnis
+der Aktion bleibt in der Meldungsleiste; der angezeigte Gesundheitsstatus wird vom
+frischen Prüfergebnis bestimmt, nicht vom Exitcode des Skripts. Eine Reparatur, die
+0 zurückgibt, kann daher einen roten Status hinterlassen. Ist die Prüfung oder der
+Dienst nicht verfügbar, ist das aktualisierte Ergebnis Unbekannt statt eines
+erfundenen In-Ordnung.
+
+### Einzelprüfung
+
+Seit 2.3.2 kann der Client eine einzelne Prüfung mit
+`HEALTH <Id> [<Base64-UTF-8-Name>]` anfordern, zum Beispiel `HEALTH Disk Qzo=` für
+das Laufwerk `C:`. Der Dienst akzeptiert nur die bekannten Ids (`IME`, `Defender`,
+`Compliance`, `Applications`, `Disk`, `BitLocker`, `PendingReboot`, `Updates`,
+`Service`, `Custom`) und einen streng Base64-codierten Namen; alles andere wird
+abgewiesen. `HealthStatus.ps1` führt dann nur diese Prüfung aus der geschützten
+`Health_Config.xml` aus: Ein Name, der dort nicht konfiguriert ist, wird nie
+geprüft und ergibt eine Zeile Unbekannt. Die Oberfläche ersetzt nur die betroffene
+Karte, und der Dienst aktualisiert nur diese Zeilen im Status-Cache; alle anderen
+Informationen bleiben erhalten. Zeilen vom Typ `Collection` (Fehler des Collectors)
+lösen stattdessen eine vollständige Aktualisierung aus.
+
+Reparaturen müssen ohne Nutzerinteraktion ausführbar sein. Verwenden Sie in diesen
+Skripten nie Abmelden, Neustart, Herunterfahren, Energiesparmodus oder losgelöste
+Aktionen. Das gilt auch für `PendingReboot`: Die erneute Prüfung zeigt nur, ob noch
+ein Neustart aussteht; den Neustart führt der Nutzer selbst aus. Administratoren
+müssen sie prüfen, bereitstellen und, wo nötig, signieren. Seit 2.3.4 ist standardmäßig
+nur das Defender-Signatur-Update aktiviert (Defender immer, Compliance wenn nicht in
+Ordnung).
+
+### Branding
+
+Firmenlogo, Symbol und Farben werden im Abschnitt `Branding` von `Tool_Config.xml`
+festgelegt. Kopieren Sie die Bilddateien vor dem Bau des Pakets nach
+`SelfX Service\Sources` oder in einen Unterordner wie `Sources\Branding`. Pfade sind
+relativ zum Installationsordner. Alle Schlüssel sind optional; ist ein Wert leer oder
+ungültig oder fehlt die Datei, verwendet SelfX den Standard.
+
+Die mitgelieferte `Tool_Config.xml` enthält Platzhalter (2.6.8): das Logo
+`Branding\company_logo.png` („YOUR LOGO“), das Blau des SelfX-Logos (`#0072BC`) und
+die Support-Kontakte `Mon-Fri 08:00-17:00`, `+1 555 0100`, `support@example.com` und
+`https://support.example.com`. Ersetzen Sie sie vor dem Bau des Pakets durch die
+Werte Ihres Unternehmens oder leeren Sie sie, um sie auszublenden.
+
+| Schlüssel | Standard | Zweck |
+|---|---|---|
+| `Brand_Logo` | leer (kein Logo) | Firmenlogo oben in der Navigationsleiste und im Info-Dialog. PNG, JPG, BMP, GIF oder ICO, in der Navigation höchstens 196 Pixel breit. Ein transparentes PNG passt am besten zu beiden Designs. Ist es leer, zeigt der Info-Dialog `About_Logo`. |
+| `Brand_Logo_Height` | `40` | Höhe des Logos in der Navigationsleiste in Pixeln (16–120). Die Breite wird passend skaliert. |
+| `Brand_Icon` | `Repair.ico` | Symbol des Fensters, der Taskleiste und des Statussymbols. Ist es eine `.ico`-Datei, verwendet `Install.ps1` es auch für die Verknüpfungen und den Eintrag unter Apps & Features. Seit 2.6.2 hat SelfX eine eigene Taskleistenschaltfläche (AppUserModelID `SelfX.SelfService`) mit diesem Symbol statt des PowerShell-Symbols; ein an die Taskleiste angeheftetes SelfX startet `SelfX.exe`. Verwenden Sie eine `.ico` mit 256 × 256 Pixeln für ein scharfes Taskleistensymbol. |
+| `Brand_Accent_Color` | leer (nutzt `Tool_Color`) | Firmenfarbe als `#RRGGBB` für Schaltflächen, Auswahlen, die Markierung der Navigation, Links und Symbole. Die Textfarbe auf der Akzentfarbe (weiß oder schwarz) wird automatisch gewählt; eine sehr dunkle oder sehr helle Farbe wird für Text und Symbole aufgehellt oder abgedunkelt, damit sie auf beiden Designs lesbar bleibt. |
+| `Brand_TitleBar_Color` | Fensterhintergrund | Hintergrund der Titelleiste als `#RRGGBB`, zum Beispiel die Unternehmensfarbe. Die Textfarbe wird automatisch gewählt. |
+| `Brand_Run_Button_Color` | Akzentfarbe | Start-Schaltflächen (Play) und **Beheben**. |
+| `Brand_Info_Button_Color` | Akzentfarbe | Symbole „Mehr Informationen“. |
+
+Beispiel:
+
+```xml
+<Brand_Logo>Branding\contoso.png</Brand_Logo>
+<Brand_Logo_Height>48</Brand_Logo_Height>
+<Brand_Icon>Branding\contoso.ico</Brand_Icon>
+<Brand_Accent_Color>#E20074</Brand_Accent_Color>
+<Brand_TitleBar_Color>#3A0021</Brand_TitleBar_Color>
+<Brand_Run_Button_Color>#E20074</Brand_Run_Button_Color>
+<Brand_Info_Button_Color>#6C6C6C</Brand_Info_Button_Color>
+```
+
+`Tool_Theme` (`Auto`, `Dark` oder `Light`) wählt das Standarddesign; seit 2.6.7 ist
+der Standard `Auto` (auch wenn der Wert fehlt oder unbekannt ist). Jeder Nutzer kann
+es im Einstellungsdialog ändern (wenn `Show_Theme_Button` `True` ist):
+*Automatisch*, *Dunkel* oder *Hell*. *Automatisch* (`Auto`, 2.6.6) nutzt den
+App-Modus von Windows (Einstellungen > Personalisierung > Farben,
+`AppsUseLightTheme` in `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`;
+hell, wenn der Wert fehlt) und folgt einer Änderung, während SelfX geöffnet ist. Die
+Wahl des Nutzers wird in `HKCU\Software\SelfX\Theme` gespeichert und hat Vorrang vor
+`Tool_Theme`; Nutzer, die zuvor *Dunkel* oder *Hell* gewählt haben, behalten ihre
+Wahl. Die Branding-Farben gelten für beide Designs. `Tool_Color` akzeptiert die
+früheren MahApps-Farbnamen (`Cyan`, `Teal`, `Blue` ...). Seit 2.5.0 verwendet
+SelfX Service MahApps.Metro nicht mehr; für die Farben wird keine Datei geschrieben
+und kein Netzwerkzugriff genutzt.
+
+### Sprachen
+
+Die Basissprache der Oberfläche ist Deutsch (2.6.12). Mit `Tool_Language` auf `Auto`
+folgt sie der Anzeigesprache von Windows des angemeldeten Nutzers. Nutzer können in
+SelfX > Einstellungen (Zahnrad) selbst eine andere Sprache wählen. Die Texte stehen
+in `Sources\Languages\<Kultur>.xml`. Enthaltene Sprachen:
+
+| Datei | Sprache | Datei | Sprache | Datei | Sprache |
+|---|---|---|---|---|---|
+| `en.xml` | Englisch (Referenz) | `pl.xml` | Polnisch | `hi.xml` | Hindi |
+| `de.xml` | Deutsch (Basissprache) | `ru.xml` | Russisch | `bn.xml` | Bengalisch |
+| `fr.xml` | Französisch | `uk.xml` | Ukrainisch | `zh-Hans.xml` | Chinesisch (vereinfacht) |
+| `es.xml` | Spanisch | `tr.xml` | Türkisch | `zh-Hant.xml` | Chinesisch (traditionell) |
+| `it.xml` | Italienisch | `ar.xml` | Arabisch (rechts nach links) | `ja.xml` | Japanisch |
+| `pt.xml` | Portugiesisch | `fa.xml` | Persisch (rechts nach links) | `ko.xml` | Koreanisch |
+| `nl.xml` | Niederländisch | `ur.xml` | Urdu (rechts nach links) | `vi.xml` | Vietnamesisch |
+| `id.xml` | Indonesisch | `th.xml` | Thailändisch | `sw.xml` | Suaheli |
+
+Englisch ist die Referenz für die Schlüssel und der Rückfall; die anderen Dateien
+wurden maschinell übersetzt. Lassen Sie sie vor einem Rollout von Muttersprachlern
+prüfen.
+
+So wird die Sprache gewählt (`Localization.ps1`):
+
+1. Die vom Nutzer gewählte Sprache (2.5.9). Der Einstellungsdialog listet
+   **Automatisch (<Sprache>)** und jede Sprachdatei unter ihrem eigenen Namen, zum
+   Beispiel *Deutsch*, *français*, *日本語*. Die Wahl wird pro Nutzer in
+   `HKCU\Software\SelfX\Language` gespeichert. *Automatisch* speichert `Auto`, das
+   „Schritt 2 verwenden“ bedeutet. Nach einer Änderung startet SelfX auf derselben
+   Seite in der neuen Sprache neu, und das Statussymbol folgt. Läuft noch eine
+   Reparatur, wird die neue Sprache beim nächsten Öffnen von SelfX verwendet. Die
+   Wahl wird ignoriert, wenn `Show_Language_Setting` `False` ist, wenn der Wert kein
+   Kulturname ist oder wenn seine Sprachdatei nicht mehr existiert.
+2. `Tool_Language` in `Tool_Config.xml`: `de` (Standard) ist Deutsch, `Auto` nutzt
+   die Anzeigesprache von Windows, jeder andere Wert wird als Kulturname verwendet.
+3. Die Kultur und ihre übergeordneten Kulturen werden der Reihe nach versucht. Zum
+   Beispiel nutzt `de-CH` die `de.xml`, `pt-BR` die `pt.xml`, `zh-CN` die
+   `zh-Hans.xml` und `zh-TW` die `zh-Hant.xml`. Schweizerdeutsch (`gsw`, auch
+   `gsw-CH`) nutzt ebenfalls `de.xml`, wenn keine Sprachdatei für Schweizerdeutsch
+   vorhanden ist.
+4. Passt keine Datei, wird `de.xml` (die Basissprache) verwendet. Ein Text, der in
+   der gewählten Sprache fehlt, erscheint auf Englisch (`en.xml`).
+
+Jeder Text wird zuerst in der gewählten Sprache und dann auf Englisch gesucht,
+sodass ein fehlender Eintrag nie eine leere Beschriftung hinterlässt. Katalogtexte
+fallen auf den englischen Basistext in `Issues_List.xml` zurück.
+
+Eine Sprachdatei hat vier Teile:
+
+| Abschnitt | Inhalt |
+|---|---|
+| `UI` | Texte des Hauptfensters, der Dialoge, Kurzinfos, der Meldungsleiste, der Seiten Gerätestatus und Systeminformationen und des Statussymbols. `{0}`, `{1}` sind Platzhalter, zum Beispiel für den Aktionsnamen. |
+| `SystemInfo` | Beschriftungen und Werte der Seite Systeminformationen und der Statusprüfungen |
+| `Catalog/Categories` | Anzeigenamen der Kategorie-Ids |
+| `Catalog/Messages`, `Catalog/Actions` | Übersetzungen der gemeinsamen Meldungen und von `Name`, `Explanation` und `Alerte_MSG` pro Aktions-`Id`. Felder mit `Ref` übernehmen die übersetzte Meldung. |
+
+Um eine Sprache hinzuzufügen:
+
+1. Kopieren Sie `en.xml` (oder eine vollständige Übersetzung wie `de.xml`) nach
+   `<Kultur>.xml`. Verwenden Sie den neutralen Kulturnamen, zum Beispiel `cs.xml`
+   für Tschechisch, damit alle regionalen Varianten sie nutzen.
+2. Setzen Sie `Culture`, `Name` und `NativeName` am Wurzelelement. Setzen Sie
+   `FlowDirection="RightToLeft"` für Schriften von rechts nach links.
+3. Übersetzen Sie die Texte. Behalten Sie Elementnamen, Ids und Platzhalter bei.
+   Behalten Sie das Muster `|*.txt|` in `SystemInfo_Export_Filter` bei.
+4. Prüfen Sie die Datei und bauen Sie dann das Paket:
+
+   ```powershell
+   & '.\SelfX Service\Test-LanguageFiles.ps1' -Culture cs
+   ```
+
+   Die Prüfung meldet fehlende oder unbekannte Schlüssel, defekte Platzhalter und
+   Katalogeinträge, die nicht existieren. Ohne `-Culture` prüft sie alle Dateien.
+
+Es ist keine Codeänderung nötig. Um einen Text für Ihr Unternehmen zu ändern, zum
+Beispiel den Haupttitel, bearbeiten Sie ihn in den Sprachdateien.
+
+## Änderungen sicher bearbeiten und veröffentlichen
+
+1. Sichern Sie die aktuellen XML-Dateien und Skripte.
+2. Prüfen Sie, dass das XML wohlgeformt bleibt.
+3. Prüfen Sie, dass jedes referenzierte Skript im entsprechenden Paket existiert.
+4. Testen Sie das Verhalten der Aktionen und die Bestätigungstexte auf einem
+   Testgerät.
+5. Liefern Sie Änderungen nur als neue Paketversion aus (Intune-Paket, siehe
+   [Installation](Installation.md#intune-paket-erstellen)). SelfX lädt keine
+   Konfiguration aus dem Netzwerk nach.
