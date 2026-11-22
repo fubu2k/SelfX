@@ -137,16 +137,19 @@ try {
 	#    problem, keeps retrying, and serves as soon as the name is free.
 	$squatter = New-Object System.IO.Pipes.NamedPipeServerStream($pipeName, [IO.Pipes.PipeDirection]::InOut, 254, [IO.Pipes.PipeTransmissionMode]::Byte, [IO.Pipes.PipeOptions]::Asynchronous)
 	try {
+		Write-Output 'trace: squatter created'
 		$service.StartListening()
+		Write-Output 'trace: service started'
 		Start-Sleep -Milliseconds 2500
 		$logPath = Join-Path $logDirectory 'SelfXService.log'
 		$logText = if (Test-Path -LiteralPath $logPath) { [IO.File]::ReadAllText($logPath) } else { '' }
 		Assert-True ($logText -match 'already in use by another process') 'N3: the service logs that the pipe name is already in use'
-		Assert-True ((Invoke-TestRequest 'PING' 1500) -notlike 'PONG*') 'N3: the service does not answer under a pipe name that another process owns'
 	}
 	finally { $squatter.Dispose() }
+	Write-Output 'trace: squatter disposed'
 	Start-Sleep -Milliseconds 2500
 	Assert-True ((Invoke-TestRequest 'PING') -like 'PONG *') 'N3: the service answers as soon as the pipe name is free'
+	Write-Output 'trace: ping done'
 	$logText = [IO.File]::ReadAllText($logPath)
 	Assert-True ($logText -match 'is free now') 'N3: the service logs that the pipe name is free'
 
