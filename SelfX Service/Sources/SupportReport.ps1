@@ -91,7 +91,14 @@ function Get-SelfXUserLogFiles {
         if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
         if ($file.Name -notlike '*.log' -or $file.LastWriteTime -lt $limit) { continue }
         $owner = $null
-        try { $owner = [IO.File]::GetAccessControl($file.FullName, [Security.AccessControl.AccessControlSections]::Owner).GetOwner([Security.Principal.SecurityIdentifier]).Value } catch { }
+        # Fails closed: when the owner cannot be read, the file is skipped. .NET Framework (Windows PowerShell 5.1) has
+        # File.GetAccessControl, .NET 10 (PowerShell 7) only the FileSystemAclExtensions.
+        try {
+            $sections = [Security.AccessControl.AccessControlSections]::Owner
+            if ($PSVersionTable.PSEdition -eq 'Core') { $acl = [IO.FileSystemAclExtensions]::GetAccessControl($file, $sections) }
+            else { $acl = [IO.File]::GetAccessControl($file.FullName, $sections) }
+            $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
+        } catch { }
         if ($owner -ne $Sid) { continue }
         $files.Add([pscustomobject]@{ Path = $file.FullName; Entry = "SelfX-Logs\User\$($file.Name)" })
     }
