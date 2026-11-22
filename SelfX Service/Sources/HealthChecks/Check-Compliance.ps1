@@ -101,7 +101,8 @@ if ($Require.Firewall) {
 
 if ($Require.Defender -or $Require.Signatures) {
     $mp = $null
-    try { $mp = Get-MpComputerStatus -ErrorAction Stop } catch { $Failed.Add("Defender (not readable: $($_.Exception.Message))") }
+    . (Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXDefender.ps1')
+    try { $mp = Get-SelfXDefenderStatus } catch { $Failed.Add("Defender (not readable: $($_.Exception.Message))") }
     if ($mp -and $Require.Defender) {
         Test-Criterion 'Defender' {
             $off = @()

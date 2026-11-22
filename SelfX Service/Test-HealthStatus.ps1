@@ -65,7 +65,7 @@ function Assert-Throws([scriptblock]$Action, $Message) {
 # Each involved command resolves to a function mock, never to an autoloaded system module.
 function Get-Service { param($Name, $ErrorAction) if ($script:serviceMissing) { throw 'Mock service missing' }; [pscustomobject]@{ Status = $script:serviceState } }
 function Get-CimInstance { param($ClassName, $Filter, $ErrorAction) $script:disks }
-function Get-MpComputerStatus { param($ErrorAction) if ($script:defenderMissing) { throw 'Mock access denied' }; $script:defender }
+function Get-SelfXDefenderStatus { if ($script:defenderMissing) { throw 'Mock access denied' }; $script:defender }
 function Get-BitLockerVolume { param($ErrorAction) $script:volumes }
 function Get-SelfXAppReports { $script:reports }
 function Get-SelfXPendingRebootMarkers { if ($script:rebootFails) { throw 'Mock registry denied' }; $script:rebootMarkers }
@@ -81,7 +81,7 @@ function New-ScheduledTaskAction { throw 'Forbidden in tests' }
 function New-ScheduledTaskTrigger { throw 'Forbidden in tests' }
 function New-ScheduledTaskPrincipal { throw 'Forbidden in tests' }
 function New-ScheduledTaskSettingsSet { throw 'Forbidden in tests' }
-foreach ($name in @('Get-Service','Get-CimInstance','Get-MpComputerStatus','Get-BitLockerVolume',
+foreach ($name in @('Get-Service','Get-CimInstance','Get-SelfXDefenderStatus','Get-BitLockerVolume',
     'Get-SelfXAppReports','Get-SelfXPendingRebootMarkers','Get-SelfXUpdateSearchResult','Get-SelfXWuaRebootRequired','Get-SelfXOrchestratorRebootTitles',
     'Invoke-SelfXHealthScript','Start-Process','Invoke-CimMethod',
     'Register-ScheduledTask','New-ScheduledTask','New-ScheduledTaskAction','New-ScheduledTaskTrigger',

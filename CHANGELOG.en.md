@@ -21,6 +21,9 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- Defender without the Defender module: status (device status, compliance) and signature update use CIM
+  (`root\Microsoft\Windows\Defender`, new file `Sources\SelfXDefender.ps1`) instead of `Get-MpComputerStatus`
+  and `Update-MpSignature`. Update sources and their order still come from the Defender policy.
 - Network without the NetAdapter module: adapters, default routes and the adapter restart ("Restart network")
   use CIM (`root\StandardCimv2`, new file `Sources\SelfXNetwork.ps1`) instead of `Get-NetAdapter`,
   `Get-NetRoute` and `Restart-NetAdapter`. PowerShell 7 no longer starts Windows PowerShell 5.1 for it.
