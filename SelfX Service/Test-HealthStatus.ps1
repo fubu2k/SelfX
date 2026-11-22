@@ -5,7 +5,7 @@
     All system data and external process calls are mocked. No service is installed, no task
     is registered and no extension script is executed. Module autoloading is disabled.
 .NOTES
-    Version: 2.6.9
+    Version: 2.6.10
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial isolated health-check tests.
     2.3.1  2026-10-28  Wolfgang Baeck  Test remediation mapping, service allowlist and recheck callbacks.
@@ -17,6 +17,7 @@
         2.5.5  2026-11-05  Wolfgang Baeck  Test the last output line of script checks as detail text.
         2.5.6  2026-11-05  Wolfgang Baeck  Test the Updates remediation and the remediation TimeoutSeconds of the service.
         2.6.9  2026-11-19  Wolfgang Baeck  Test the pending restart from the Windows Update Agent and the orchestrator.
+        2.6.10 2026-11-22  fubu2k          Test that a single check with an unknown name never changes the shared status cache.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -641,7 +642,18 @@ try {
         Update-SelfXHealthCache -Path $cache -Results @([pscustomobject]@{ Id='Disk'; Name='C:'; Status='OK'; Detail='e'; Remediation='' }) -OnlyId Disk
         Assert-Equal ((Read-TestCache $cache).Count) 3 'Check without name replaces all rows of that check'
         Update-SelfXHealthCache -Path $cache -Results @([pscustomobject]@{ Id='Service'; Name='Spooler'; Status='OK'; Detail='f'; Remediation='' }) -OnlyId Service -OnlyName Spooler
-        Assert-Equal ((Read-TestCache $cache)[-1].Name) 'Spooler' 'New check is appended'
+        Assert-Equal ((Read-TestCache $cache).Count) 3 'A single check that is not in the cache is not appended'
+        # Every signed-in user can request a single check with any name (HEALTH <Id> <name>): the shared cache must not grow.
+        $before = [IO.File]::ReadAllText($cache)
+        foreach ($i in 1..200) {
+            Update-SelfXHealthCache -Path $cache -Results @([pscustomobject]@{ Id='Collection'; Name="x$i"; Status='Unknown'; Detail='The requested check is no longer configured or returned no result.'; Remediation='' }) -OnlyId Disk -OnlyName "x$i"
+            Update-SelfXHealthCache -Path $cache -Results @([pscustomobject]@{ Id='Service'; Name="x$i"; Status='OK'; Detail='y'; Remediation='' }) -OnlyId Service -OnlyName "x$i"
+        }
+        Assert-Equal ([IO.File]::ReadAllText($cache)) $before 'Unknown names (200 requests) leave the cache byte for byte unchanged'
+        Assert-Equal (Test-Path "$cache.tmp") $false 'No temporary file is left behind'
+        # The placeholder for "no result" is never stored, not even by a full collection.
+        Update-SelfXHealthCache -Path $cache -Results @([pscustomobject]@{ Id='Collection'; Name=''; Status='Unknown'; Detail='none'; Remediation='' })
+        Assert-Equal ([IO.File]::ReadAllText($cache)) $before 'Collection placeholder is not stored'
         [IO.File]::Delete($cache)
 
         # STATUS client: validated cache answer of the service, no request reaches a real pipe.
