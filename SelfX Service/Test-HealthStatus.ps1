@@ -18,6 +18,7 @@
         2.5.6  2026-11-05  Wolfgang Baeck  Test the Updates remediation and the remediation TimeoutSeconds of the service.
         2.6.9  2026-11-19  Wolfgang Baeck  Test the pending restart from the Windows Update Agent and the orchestrator.
         2.6.10 2026-11-22  fubu2k          Test that a single check with an unknown name never changes the shared status cache.
+        2.6.10 2026-11-22  fubu2k          Test the service regex anchors (\z), the cleaning of log text and the rate limit of rejected requests.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -597,6 +598,27 @@ try {
                 @('HEALTH Disk Qzo= extra',$false), @('HEALTHX',$false))) {
                 Assert-Equal $pattern.IsMatch($case[0]) $case[1] "Service HEALTH request validation: $($case[0])"
             }
+            # Anchors: '$' would also match before a trailing line feed, '\z' does not.
+            Assert-Equal $pattern.IsMatch("HEALTH IME`n") $false 'Service HEALTH request: trailing line feed is rejected'
+            $namePattern = $type.GetField('ScriptNamePattern',[Reflection.BindingFlags]'Static,NonPublic').GetValue($null)
+            foreach ($case in @(@('Repair-IME.ps1',$true), @('A_b-1.PS1',$true), @("Repair-IME.ps1`n",$false), @('a.ps1 ',$false), @('..\a.ps1',$false), @('a.ps1.txt',$false))) {
+                Assert-Equal $namePattern.IsMatch($case[0]) $case[1] "Service script name validation: $($case[0] -replace "`n",'<LF>')"
+            }
+            # Log hardening (F7): control characters and line separators are replaced, long text is shortened.
+            $clean = $type.GetMethod('CleanLogText',[Reflection.BindingFlags]'Static,NonPublic')
+            $dirty = "a`r`nFAKE ENTRY`tb$([char]0x2028)c$([char]0x0085)d$([char]0)e"
+            Assert-Equal $clean.Invoke($null,@($dirty)) 'a??FAKE ENTRY?b?c?d?e' 'Log text: control characters and line separators replaced'
+            Assert-Equal $clean.Invoke($null,@($null)) '' 'Log text: null becomes empty'
+            $long = [string]$clean.Invoke($null,@('x' * 5000))
+            Assert-Equal "$($long.Length)/$($long.EndsWith('...'))" '603/True' 'Log text: long text shortened'
+            # Rejected requests are rate limited: 100 rejected requests write at most 20 lines, none with a line break inside.
+            $logFile = Join-Path $temp 'SelfXService.log'
+            if (Test-Path -LiteralPath $logFile) { [IO.File]::Delete($logFile) }
+            $logRejected = $type.GetMethod('LogRejected',$flags)
+            foreach ($i in 1..100) { [void]$logRejected.Invoke($instance,@("Rejected invalid request from TEST: 'x$i`r`nINJECTED'.")) }
+            $lines = @([IO.File]::ReadAllLines($logFile))
+            Assert-Equal $lines.Count 20 'Rejected requests: only 20 log lines per minute'
+            Assert-Equal @($lines | Where-Object { $_ -notmatch '^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d  Rejected invalid request from TEST' }).Count 0 'Rejected requests: no injected log lines'
         } finally { $instance.Dispose() }
     }
     & {

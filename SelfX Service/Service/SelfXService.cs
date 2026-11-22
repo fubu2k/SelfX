@@ -62,6 +62,8 @@ Notes:
     2.5.3    2026-11-04  Wolfgang Baeck       Log uses the current time zone (cache cleared after time zone changes)
     2.5.6    2026-11-05  Wolfgang Baeck       Optional TimeoutSeconds on Health_Config remediations (max. 7200)
     2.6.0    2026-11-06  Wolfgang Baeck       Daily log housekeeping (Log_Retention_Days in Tool_Config.xml, default 90)
+    2.6.10   2026-11-22  fubu2k               Log hardening: request text is cleaned and shortened, rejected requests are rate limited;
+                                              regex anchors use \z instead of $
     2.6.10   2026-11-22  fubu2k               RUN children also receive SELFX_CALLER_ADMIN (1 = elevated administrator, from the client token)
 */
 
@@ -97,11 +99,19 @@ namespace SelfX
         const int MaxCacheLength = 60000;
         const int HealthTimeoutSeconds = 240;
         const long MaxLogBytes = 5 * 1024 * 1024;
+        // Log hardening: text from requests is shortened and cleaned; rejected requests are rate limited so that a user
+        // cannot flood the log and rotate older entries out (the log keeps only one .old file).
+        const int MaxLogMessageLength = 600;
+        const int MaxRejectedLogsPerWindow = 20;
+        static readonly TimeSpan RejectedLogWindow = TimeSpan.FromMinutes(1);
+        DateTime rejectedWindowStart = DateTime.MinValue;
+        int rejectedInWindow = 0;
+        int rejectedSuppressed = 0;
         const int DefaultLogRetentionDays = 90;
 
-        static readonly Regex ScriptNamePattern = new Regex(@"^[A-Za-z0-9_\-\.]{1,100}\.ps1$", RegexOptions.IgnoreCase);
+        static readonly Regex ScriptNamePattern = new Regex(@"^[A-Za-z0-9_\-\.]{1,100}\.ps1\z", RegexOptions.IgnoreCase);
         static readonly Regex HealthRequestPattern = new Regex(
-            @"^HEALTH(?: (IME|Defender|Compliance|Applications|Disk|BitLocker|PendingReboot|Updates|Service|Custom)(?: ([A-Za-z0-9+/]{2,400}={0,2}))?)?$",
+            @"^HEALTH(?: (IME|Defender|Compliance|Applications|Disk|BitLocker|PendingReboot|Updates|Service|Custom)(?: ([A-Za-z0-9+/]{2,400}={0,2}))?)?\z",
             RegexOptions.CultureInvariant);
 
         readonly string installRoot;
@@ -470,7 +480,7 @@ namespace SelfX
             string scriptName = request.Substring(4).Trim();
             if (!ScriptNamePattern.IsMatch(scriptName) || scriptName.Contains(".."))
             {
-                Log("Rejected invalid request from " + user + ": '" + scriptName + "'.");
+                LogRejected("Rejected invalid request from " + user + ": '" + scriptName + "'.");
                 return "ERROR Invalid action";
             }
 
@@ -478,14 +488,14 @@ namespace SelfX
             // Elevation is granted only to System entries, never arbitrary client-supplied scripts.
             if (!TryGetSystemAction(scriptName, out timeoutSeconds))
             {
-                Log("Rejected request from " + user + ": '" + scriptName + "' is not a System action in the catalog.");
+                LogRejected("Rejected request from " + user + ": '" + scriptName + "' is not a System action in the catalog.");
                 return "ERROR Action is not allowed";
             }
 
             string scriptPath = Path.GetFullPath(Path.Combine(scriptsRoot, scriptName));
             if (!scriptPath.StartsWith(scriptsRoot + "\\", StringComparison.OrdinalIgnoreCase) || !File.Exists(scriptPath))
             {
-                Log("Rejected request from " + user + ": script '" + scriptName + "' not found.");
+                LogRejected("Rejected request from " + user + ": script '" + scriptName + "' not found.");
                 return "ERROR Script not found";
             }
 
@@ -915,10 +925,75 @@ namespace SelfX
         }
 
         /// <summary>
+        /// Make text from a request safe for one log line: control characters and Unicode line or
+        /// paragraph separators become '?', and the text is shortened.
+        /// </summary>
+        static string CleanLogText(string text)
+        {
+            if (text == null)
+            {
+                return "";
+            }
+            StringBuilder clean = new StringBuilder(Math.Min(text.Length, MaxLogMessageLength + 3));
+            foreach (char c in text)
+            {
+                if (clean.Length >= MaxLogMessageLength)
+                {
+                    clean.Append("...");
+                    break;
+                }
+                bool unsafeChar = char.IsControl(c) || c == '\u2028' || c == '\u2029' || c == '\u0085';
+                clean.Append(unsafeChar ? '?' : c);
+            }
+            return clean.ToString();
+        }
+
+        /// <summary>
+        /// Log a rejected request, at most MaxRejectedLogsPerWindow per minute; the rest is only counted.
+        /// </summary>
+        void LogRejected(string message)
+        {
+            string summary = null;
+            bool write = false;
+            lock (logLock)
+            {
+                DateTime now = DateTime.UtcNow;
+                if (now - rejectedWindowStart >= RejectedLogWindow)
+                {
+                    if (rejectedSuppressed > 0)
+                    {
+                        summary = "Rate limit: " + rejectedSuppressed + " further rejected request(s) in the last minute were not logged.";
+                    }
+                    rejectedWindowStart = now;
+                    rejectedInWindow = 0;
+                    rejectedSuppressed = 0;
+                }
+                if (rejectedInWindow < MaxRejectedLogsPerWindow)
+                {
+                    rejectedInWindow++;
+                    write = true;
+                }
+                else
+                {
+                    rejectedSuppressed++;
+                }
+            }
+            if (summary != null)
+            {
+                Log(summary);
+            }
+            if (write)
+            {
+                Log(message);
+            }
+        }
+
+        /// <summary>
         /// Append a timestamped entry with serialized size-based log rotation.
         /// </summary>
         void Log(string message)
         {
+            message = CleanLogText(message);
             try
             {
                 lock (logLock)

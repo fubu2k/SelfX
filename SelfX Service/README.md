@@ -136,6 +136,10 @@ user, for example the device logs report.
   data of the requesting user. Only an elevated administrator (token read by the
   service, `SELFX_CALLER_ADMIN=1`) gets the complete report. See
   [Configuration](../docs/Configuration.md).
+- Text from requests is cleaned before it is logged (control characters and line
+  separators become `?`, long text is shortened), and rejected requests are
+  logged at most 20 times per minute, so a user cannot forge log lines or push
+  older entries out of the log by flooding it (2.6.10).
 - Every System action can be started by any signed-in user. Add only scripts to
   the catalogue that are safe for everyone to run.
 - The status cache of the background checks (`%ProgramData%\SelfX\Cache`) can
