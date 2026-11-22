@@ -107,12 +107,12 @@ Netzwerkverbindung. Aktuelle Version: **2.7.0** (siehe das
 
 ```text
 Nutzer ──► Self_X.ps1 (Nutzersitzung)
-              │  Nutzeraktion ──► powershell.exe -File Scripts_to_run\<Skript>.ps1   (Nutzerrechte)
+              │  Nutzeraktion ──► pwsh.exe -File Scripts_to_run\<Skript>.ps1   (Nutzerrechte)
               │  Systemaktion
               ▼
            Named Pipe \\.\pipe\SelfX.Service  (nur lokal)
               ▼
-           SelfXService (LocalSystem) ──► prüft den Katalog ──► powershell.exe -File <Skript>.ps1 (SYSTEM)
+           SelfXService (LocalSystem) ──► prüft den Katalog ──► pwsh.exe -File <Skript>.ps1 (SYSTEM)
 ```
 
 Der Dienst akzeptiert `PING` zur Erreichbarkeit, `HEALTH [<Id> [<Base64-Name>]]` für

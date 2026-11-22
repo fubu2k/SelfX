@@ -21,6 +21,9 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- Documentation: `docs/en/Installation.md` describes Windows 11 25H2 and PowerShell 7 as requirements, the behavior of the
+  installer and the service, deploying PowerShell 7 with Intune (Win32 app, dependency, Autopilot/ESP, requirement rule for
+  build 26200) and the extended release checklist.
 - Clearing the DNS cache and checking the system drive without the compatibility layer: CIM (`MSFT_DNSClientCache.Clear`,
   `MSFT_Volume.Repair` with `OfflineScanAndFix`) instead of `Clear-DnsClientCache` and `Repair-Volume`.
 - BitLocker and TPM without modules: device status and compliance check read CIM (`Win32_EncryptableVolume`, `Win32_Tpm`,
