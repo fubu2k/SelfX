@@ -75,7 +75,7 @@ function New-SelfXTicket {
         [string]$KindText = 'Incident',
         [string]$Category,
         [string]$Unit,
-        [string]$ComputerName,
+        [string]$DeviceName,
         [string]$WindowsBuild,
         [string]$SelfXVersion,
         [string]$ActionId,
@@ -85,7 +85,7 @@ function New-SelfXTicket {
         [datetime]$Timestamp = [datetime]::UtcNow
     )
     if ($Tag -notmatch '^[A-Za-z0-9._-]{1,20}\z') { $Tag = 'SelfX' }
-    $computer = if ($ComputerName -match '^[A-Za-z0-9-]{1,63}\z') { $ComputerName } else { 'unknown' }
+    $computer = if ($DeviceName -match '^[A-Za-z0-9-]{1,63}\z') { $DeviceName } else { 'unknown' }
     $kind = ConvertTo-SelfXTicketField $KindText 30
     if (-not $kind) { $kind = 'Incident' }
     $categoryText = ConvertTo-SelfXTicketField $Category 40

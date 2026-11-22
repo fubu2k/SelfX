@@ -54,23 +54,23 @@ $noBell = ConvertTo-SelfXTicketFreeText ("a" + $bell + "b")
 Assert-Equal $noBell.Contains($bell) $false 'free text: control characters removed'
 
 # --- ticket -------------------------------------------------------------------------------------
-$ticket = New-SelfXTicket -Tag 'SelfX' -KindText 'Stoerung' -Category 'Kategorie-A' -Unit 'IT1' -ComputerName 'PC-0815' -WindowsBuild '26300' -SelfXVersion '2.8.0' -ActionId 'Q_Outlook' -ActionResult 'Success' -DeviceStatus 'Network: ok' -UserText 'Outlook hangs' -Timestamp $time
+$ticket = New-SelfXTicket -Tag 'SelfX' -KindText 'Stoerung' -Category 'Kategorie-A' -Unit 'IT1' -DeviceName 'PC-0815' -WindowsBuild '26300' -SelfXVersion '2.8.0' -ActionId 'Q_Outlook' -ActionResult 'Success' -DeviceStatus 'Network: ok' -UserText 'Outlook hangs' -Timestamp $time
 Assert-Equal $ticket.Subject '[SelfX][Stoerung] Kategorie-A - PC-0815' 'ticket: subject follows the fixed scheme'
 Assert-Equal ($ticket.Body -match '(?m)^Time \(UTC\): 2026-11-22 14:30\r?$') $true 'ticket: time is UTC'
 Assert-Equal ($ticket.Body -match '(?m)^Computer: PC-0815\r?$') $true 'ticket: computer name field'
 Assert-Equal ($ticket.Body -match '(?m)^Support unit: IT1\r?$') $true 'ticket: unit field'
 Assert-Equal ($ticket.Body -match '(?m)^Action: Q_Outlook\r?$') $true 'ticket: action field'
 Assert-Equal ($ticket.Body -match 'Description of the user:\r\n```\nOutlook hangs\n```$') $true 'ticket: free text comes last in a fenced block'
-$minimal = New-SelfXTicket -ComputerName 'PC-1' -Timestamp $time
+$minimal = New-SelfXTicket -DeviceName 'PC-1' -Timestamp $time
 Assert-Equal $minimal.Subject '[SelfX][Incident] PC-1' 'ticket: defaults and no category'
 Assert-Equal ($minimal.Body -match 'Description') $false 'ticket: no free text, no description block'
 Assert-Equal ($minimal.Body -match 'Support unit') $false 'ticket: empty fields are left out'
-$bad = New-SelfXTicket -Tag "X]`r`nBcc: a@b.de" -KindText "Fault`r`nBcc: a@b.de" -Category "Cat`r`nBcc: a@b.de" -ComputerName "PC`r`nBcc: a@b.de" -Timestamp $time
+$bad = New-SelfXTicket -Tag "X]`r`nBcc: a@b.de" -KindText "Fault`r`nBcc: a@b.de" -Category "Cat`r`nBcc: a@b.de" -DeviceName "PC`r`nBcc: a@b.de" -Timestamp $time
 Assert-Equal ($bad.Subject -match "[\r\n]") $false 'ticket: no line break can get into the subject'
 Assert-Equal $bad.Subject.StartsWith('[SelfX][') $true 'ticket: invalid tag falls back to SelfX'
 Assert-Equal ($bad.Subject -match 'PC.*Bcc') $false 'ticket: invalid computer name is replaced'
 Assert-Equal ($bad.Subject.EndsWith(' unknown')) $true 'ticket: invalid computer name shows unknown'
-$field = New-SelfXTicket -ComputerName 'PC-1' -ActionResult "ok`r`nBcc: a@b.de" -Timestamp $time
+$field = New-SelfXTicket -DeviceName 'PC-1' -ActionResult "ok`r`nBcc: a@b.de" -Timestamp $time
 Assert-Equal ($field.Body -match '(?m)^Bcc') $false 'ticket: no field can add a line to the body'
 
 # --- mailto -------------------------------------------------------------------------------------
