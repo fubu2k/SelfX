@@ -14,7 +14,7 @@
     Name    : Test-InstallBinaries.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.7.0
+    Version : 2.8.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -22,6 +22,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.11   2026-11-22  fubu2k               Initial version (security review finding F9).
     2.7.0    2026-11-22  fubu2k               .NET 10: manifest format 2, Bin is required; the test of the compiler TEMP was removed.
+    2.8.0    2026-11-22  fubu2k               Manifest format 3 (WinRT files), PowerShell 7 and Windows build checks.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
