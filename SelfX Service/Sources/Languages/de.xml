@@ -393,6 +393,13 @@ Möchten Sie fortfahren?</Alerte_MSG>
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Die Uhrzeit Ihres Geräts stimmt nicht</Name>
+				<Explanation>Es treten Anmelde- oder Zertifikatsfehler auf, oder die Uhr Ihres Geräts zeigt die falsche Zeit an. Das geschieht über den SelfX-Dienst mit Administratorrechten.</Explanation>
+				<Alerte_MSG>Die Uhr Ihres Geräts wird mit der Zeitquelle Ihrer Organisation abgeglichen. Die Zeitzone wird nicht geändert. Versuchen Sie es danach noch einmal.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="Q_Intune_Restart">
 				<Name>Intune-Dienst neu starten</Name>
 			</Action>

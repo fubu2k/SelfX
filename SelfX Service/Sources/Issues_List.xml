@@ -35,9 +35,10 @@
 	  2.4.1    2026-11-22  fubu2k               Base texts match the scripts: Chrome (default profile, cookies, history, autofill), Teams (cache is cleared), Word and Excel (documents are not reopened)
 	  2.4.2    2026-11-22  fubu2k               New action D_Edge_Cache (Microsoft Edge: clear the cache)
 	  2.4.3    2026-11-22  fubu2k               New action Q_Outlook (restart classic Outlook)
+	  2.4.4    2026-11-22  fubu2k               New action Q_Device_SyncTime (synchronize the clock, Context System)
 -->
 <Actions>
-	<XML_Version>2.4.3</XML_Version>
+	<XML_Version>2.4.4</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -202,6 +203,20 @@ Do you want to continue?</Alerte_MSG>
 			<Context>User</Context>
 			<Category>Device</Category>
 			<Alerte_MSG>Temporary files and the content of the recycle bin will be deleted.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="Q_Device_SyncTime">
+			<Name>The time of your device is wrong</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>Sign-in or certificate errors occur, or the clock of your device shows the wrong time. This action runs with administrator rights through the local SelfX service.</Explanation>
+			<Script>SelfX_Device_SyncTime.ps1</Script>
+			<Context>System</Context>
+			<OtherSessions>Block</OtherSessions>
+			<TimeoutSeconds>120</TimeoutSeconds>
+			<Category>Device</Category>
+			<Alerte_MSG>The clock of your device will be synchronized with the time source of your organization. The time zone is not changed. Try again after clicking OK.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>

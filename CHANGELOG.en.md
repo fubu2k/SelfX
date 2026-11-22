@@ -19,6 +19,7 @@ histories of the single files show where a change was made. Changes marked
 
 - New action "Microsoft Edge: clear the cache" (user context, category Browser, `SelfX_Browser_ClearEdgeCache.ps1`): closes Edge of the own session and removes only the `Cache`, `Code Cache` and `GPUCache` folders of the Default profile; cookies, history, passwords and bookmarks stay. Linked folders (junctions) are skipped. German text in `de.xml`, other languages show the English text.
 - New action "Solve an issue with Outlook" (user context, category Outlook, `SelfX_Outlook_Reboot.ps1`): closes classic Outlook of the own session and starts it again. Profile, data files and add-ins stay unchanged; the new Outlook (`olk.exe`) is not affected. German text in `de.xml`, other languages show the English text.
+- New action "The time of your device is wrong" (system context through the SelfX service, category Device, `SelfX_Device_SyncTime.ps1`): starts the Windows Time service when needed and runs `w32tm.exe /resync /force` with fixed arguments. Time source, configuration and time zone are not changed. Blocked while another user is signed in (`OtherSessions=Block`). German text in `de.xml`, other languages show the English text.
 
 ### Changed
 
