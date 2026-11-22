@@ -160,6 +160,19 @@ each user can only create and read the own folder. Log files older than
 `Log_Retention_Days` (default 90) are deleted automatically; see
 [Logging](Configuration.md#logs-and-retention).
 
+The service also writes security-relevant events to the Windows event log (log *Application*, source
+`SelfXService`) so that Defender for Endpoint, Intune or a SIEM can evaluate them. The texts are fixed and
+contain no request text and no user names (every user can read the Application log); details are in the protected
+`SelfXService.log`. Per event ID at most 10 entries are written in 10 minutes; 4099 then reports how many were left out.
+
+| ID | Level | Meaning |
+|---|---|---|
+| 4001 | Error | The pipe name is already owned by another process; the service accepts no connections until it is free. |
+| 4002 | Warning | A request or connection was rejected (invalid, not allowed, limit). |
+| 4003 | Warning | PowerShell 7 is not protected against changes by users; actions as SYSTEM are not started. |
+| 4004 | Error | `%ProgramData%\SelfX` is not protected (link or foreign owner); the service writes nothing there until an administrator repairs it (reinstall SelfX). |
+| 4099 | Warning | Further events of the same ID were not written (limit). |
+
 The installer exits with code 0 on success and 1 on an error. The reason is
 the last line of `Install.log` (`Installation failed: ...`). Up to version
 2.5.1, an update failed with exit code 1 while a user had SelfX or the status

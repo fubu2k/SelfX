@@ -70,6 +70,10 @@ Notes:
     2.6.10   2026-11-22  fubu2k               RUN children also receive SELFX_CALLER_ADMIN (1 = elevated administrator, from the client token)
     2.6.10   2026-11-22  fubu2k               OtherSessions=Block (catalog element / Health_Config attribute): a normal user cannot start
                                               such an action while another user has an active session (answer ERROR OtherSessions)
+    2.8.0    2026-11-23  fubu2k               First pipe instance with FirstPipeInstance (a pipe name that another process already owns is
+                                              not joined: logged, retried); Windows event log entries 4001-4004 and 4099 (fixed texts,
+                                              rate limited); ProgramData\SelfX is checked at start and daily (link, owner), the service
+                                              writes nothing there while it is not safe (N3, N6, F12)
     2.6.11   2026-11-22  fubu2k               Pipe deadlines use overlapped I/O (asynchronous pipe handle), so a cancelled read or write
                                               ends reliably; one deadline for the whole request. The per-user connection limit is
                                               applied when the connection is accepted (owner of the client process), before any data
@@ -192,6 +196,28 @@ namespace SelfX
         readonly SemaphoreSlim healthLock = new SemaphoreSlim(1, 1);
         readonly ManualResetEvent stopEvent = new ManualResetEvent(false);
         volatile bool stopping;
+        // Defense in depth (finding F12): ProgramData\SelfX is checked when the service starts and before the daily housekeeping.
+        // While it is not safe (link, or an owner other than SYSTEM, administrators, TrustedInstaller or the service account)
+        // nothing is written there and no status cache is read or produced.
+        volatile bool dataFolderSafe = true;
+        static readonly string[] TrustedOwnerSids = { "S-1-5-18", "S-1-5-32-544", "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464" };
+        // The first pipe instance is created with FirstPipeInstance (finding N3): when another process already owns the pipe
+        // name, the service does not join it but logs the problem and retries.
+        bool firstPipeInstanceCreated;
+        int pipeInUseFailures;
+        // Windows event log (finding N6): only when running under the Service Control Manager, fixed texts, rate limited per
+        // event ID (the Application log can be read by every user, so no request text and no user names go there).
+        bool securityEventsEnabled;
+        readonly object eventLock = new object();
+        readonly Dictionary<int, EventWindow> eventWindows = new Dictionary<int, EventWindow>();
+        const int MaxSecurityEventsPerWindow = 10;
+        static readonly TimeSpan SecurityEventWindow = TimeSpan.FromMinutes(10);
+        const int EventPipeInUse = 4001;
+        const int EventRejected = 4002;
+        const int EventPowerShellUnprotected = 4003;
+        const int EventDataFolderUnsafe = 4004;
+        const int EventSuppressed = 4099;
+        sealed class EventWindow { public DateTime Start = DateTime.MinValue; public int Count; public int Suppressed; }
         volatile string backgroundState = "Active";
         volatile int backgroundInterval = 15;
         volatile int backgroundProcessId;
@@ -281,7 +307,13 @@ namespace SelfX
         {
             stopping = false;
             stopEvent.Reset();
-            try { Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)); } catch { }
+            firstPipeInstanceCreated = false;
+            pipeInUseFailures = 0;
+            VerifyDataFolder();
+            if (dataFolderSafe)
+            {
+                try { Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)); } catch { }
+            }
             listener = new Thread(ListenLoop);
             listener.IsBackground = true;
             listener.Name = "SelfXPipeListener";
@@ -353,14 +385,30 @@ namespace SelfX
                 NamedPipeServerStream server = null;
                 try
                 {
+                    PipeOptions pipeOptions = PipeOptions.Asynchronous;
+                    if (!firstPipeInstanceCreated)
+                    {
+                        // Fails when any other process already owns this pipe name (for example a user process that
+                        // was faster at start): the service must not serve under a name that it does not control.
+                        pipeOptions |= PipeOptions.FirstPipeInstance;
+                    }
 #if NET
                     // .NET (since 5): the constructor with PipeSecurity no longer exists, the access rules are set by this factory.
                     server = NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security);
+                        PipeTransmissionMode.Byte, pipeOptions, 4096, 4096, security);
 #else
                     server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security);
+                        PipeTransmissionMode.Byte, pipeOptions, 4096, 4096, security);
 #endif
+                    if (!firstPipeInstanceCreated)
+                    {
+                        firstPipeInstanceCreated = true;
+                        if (pipeInUseFailures > 0)
+                        {
+                            Log("The pipe name '" + pipeName + "' is free now; the service accepts connections.");
+                        }
+                        pipeInUseFailures = 0;
+                    }
                     server.WaitForConnection();
                     if (stopping)
                     {
@@ -400,7 +448,18 @@ namespace SelfX
                     {
                         server.Dispose();
                     }
-                    if (!stopping)
+                    if (!stopping && !firstPipeInstanceCreated)
+                    {
+                        // Logged on the first failure and then once a minute (the retry runs every second).
+                        pipeInUseFailures++;
+                        if (pipeInUseFailures == 1 || pipeInUseFailures % 60 == 0)
+                        {
+                            Log("The pipe name '" + pipeName + "' is already in use by another process or cannot be created (" + ex.GetType().Name + "); the service does not accept connections until it is free.");
+                            SecurityEvent(EventPipeInUse, EventLogEntryType.Error, "The pipe name of the SelfX service is already in use by another process; the service does not accept connections until it is free.");
+                        }
+                        Thread.Sleep(1000);
+                    }
+                    else if (!stopping)
                     {
                         Log("Listener error: " + ex.Message);
                         Thread.Sleep(1000);
@@ -955,6 +1014,10 @@ namespace SelfX
         {
             // PowerShell 7 at its fixed machine-wide location (no PATH search, no user-writable folder). A missing
             // installation fails the action with a clear text instead of running anything else.
+            if (health && !dataFolderSafe)
+            {
+                return "ERROR Data folder is not protected";
+            }
             string powershell = PowerShellPath;
             if (!File.Exists(powershell))
             {
@@ -965,6 +1028,7 @@ namespace SelfX
             if (!IsPowerShellProtected(powershell, out unprotectedReason))
             {
                 Log("PowerShell 7 is not protected: " + unprotectedReason + "; '" + scriptName + "' was not started.");
+                SecurityEvent(EventPowerShellUnprotected, EventLogEntryType.Warning, "PowerShell 7 is not protected against changes by normal users: " + unprotectedReason + ". SelfX actions as SYSTEM are not started.");
                 return "ERROR PowerShell 7 is not protected";
             }
             FileVersionInfo version = FileVersionInfo.GetVersionInfo(powershell);
@@ -1087,6 +1151,7 @@ namespace SelfX
             string state = backgroundState;
             string prefix = "STATUS ";
             string suffix = " " + backgroundInterval.ToString(CultureInfo.InvariantCulture) + " " + state + " ";
+            if (!dataFolderSafe) return prefix + "NONE" + suffix + "-";
             for (int attempt = 0; attempt < 3; attempt++)
             {
                 try
@@ -1189,6 +1254,7 @@ namespace SelfX
                 if (DateTime.UtcNow - lastHousekeeping >= TimeSpan.FromHours(24))
                 {
                     lastHousekeeping = DateTime.UtcNow;
+                    VerifyDataFolder();
                     CleanupLogs();
                 }
                 try
@@ -1285,6 +1351,7 @@ namespace SelfX
         /// </summary>
         public int CleanupLogs()
         {
+            if (!dataFolderSafe) return 0;
             int days = ReadLogRetentionDays();
             DateTime limit = DateTime.UtcNow.AddDays(-days);
             int deleted = 0;
@@ -1393,7 +1460,121 @@ namespace SelfX
             if (write)
             {
                 Log(message);
+                SecurityEvent(EventRejected, EventLogEntryType.Warning, "A request or connection to the SelfX service was rejected. Details are in SelfXService.log in the protected log folder.");
             }
+        }
+
+        /// <summary>
+        /// Check ProgramData\SelfX (finding F12): no link, and an owner that only administrators can set. The installer prepares
+        /// the folder; this check is the second line of defense when a user changed it later or created it before an update.
+        /// </summary>
+        bool CheckDataFolder(out string reason)
+        {
+            reason = "";
+            string dataRoot = Path.GetDirectoryName(logDirectory.TrimEnd('\\'));
+            string current = WindowsIdentity.GetCurrent().User.Value;
+            foreach (string path in new string[] { dataRoot, logDirectory, Path.GetDirectoryName(cacheFile) })
+            {
+                if (string.IsNullOrEmpty(path)) continue;
+                try
+                {
+                    DirectoryInfo directory = new DirectoryInfo(path);
+                    if (!directory.Exists) continue;
+                    if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                    {
+                        reason = "'" + path + "' is a link";
+                        return false;
+                    }
+                    SecurityIdentifier owner = (SecurityIdentifier)directory.GetAccessControl().GetOwner(typeof(SecurityIdentifier));
+                    string ownerSid = owner == null ? "" : owner.Value;
+                    if (ownerSid != current && Array.IndexOf(TrustedOwnerSids, ownerSid) < 0)
+                    {
+                        reason = "'" + path + "' is owned by an account that is not trusted";
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Fail closed: a folder that cannot be checked is not used.
+                    reason = "'" + path + "' could not be checked (" + ex.GetType().Name + ")";
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        void VerifyDataFolder()
+        {
+            string reason;
+            bool safe = CheckDataFolder(out reason);
+            bool was = dataFolderSafe;
+            dataFolderSafe = safe;
+            if (!safe && was)
+            {
+                // Nothing is written to the folder while it is not safe, so this goes to the Windows event log only.
+                SecurityEvent(EventDataFolderUnsafe, EventLogEntryType.Error, "The SelfX data folder is not protected: " + reason + ". The service writes no log, cache or report there until an administrator repairs it (reinstall SelfX).");
+            }
+            else if (safe && !was)
+            {
+                Log("The data folder is protected again.");
+            }
+        }
+
+        /// <summary>
+        /// Enable the Windows event log entries (called only when running under the Service Control Manager).
+        /// </summary>
+        public void EnableSecurityEvents()
+        {
+            securityEventsEnabled = true;
+        }
+
+        /// <summary>
+        /// Write a security-relevant event to the Application log: fixed texts only, at most MaxSecurityEventsPerWindow per
+        /// event ID and 10 minutes; the number of events that were left out is reported once the window is over.
+        /// </summary>
+        void SecurityEvent(int id, EventLogEntryType type, string message)
+        {
+            if (!securityEventsEnabled) return;
+            int suppressedBefore = 0;
+            bool write = false;
+            lock (eventLock)
+            {
+                EventWindow window;
+                if (!eventWindows.TryGetValue(id, out window))
+                {
+                    window = new EventWindow();
+                    eventWindows[id] = window;
+                }
+                DateTime now = DateTime.UtcNow;
+                if (now - window.Start >= SecurityEventWindow)
+                {
+                    suppressedBefore = window.Suppressed;
+                    window.Start = now;
+                    window.Count = 0;
+                    window.Suppressed = 0;
+                }
+                if (window.Count < MaxSecurityEventsPerWindow)
+                {
+                    window.Count++;
+                    write = true;
+                }
+                else
+                {
+                    window.Suppressed++;
+                }
+            }
+            try
+            {
+                if (suppressedBefore > 0)
+                {
+                    this.EventLog.WriteEntry("Event " + id + ": " + suppressedBefore + " further event(s) of this kind were not written.", EventLogEntryType.Warning, EventSuppressed);
+                }
+                if (write)
+                {
+                    this.EventLog.WriteEntry(message.Length > 800 ? message.Substring(0, 800) : message, type, id);
+                }
+            }
+            catch { }
         }
 
         /// <summary>
@@ -1402,6 +1583,7 @@ namespace SelfX
         void Log(string message)
         {
             message = CleanLogText(message);
+            if (!dataFolderSafe) return;
             try
             {
                 lock (logLock)
@@ -1461,6 +1643,7 @@ namespace SelfX
             SelfXService service = new SelfXService(pipeName, logDirectory);
             if (!console)
             {
+                service.EnableSecurityEvents();
                 ServiceBase.Run(service);
                 return 0;
             }
