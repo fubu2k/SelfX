@@ -448,8 +448,10 @@ try {
     Assert-Equal $info[0].Status Error 'Status preserved for row styling'
     $short = Get-SelfXUptimeInfo -Uptime ([timespan]::FromDays(6.9))
     $long = Get-SelfXUptimeInfo -Uptime ([timespan]::FromDays(7))
-    Assert-Equal "$($short.Status)|$($short.Value.Contains('('))" '|False' 'Uptime below 7 days: no status, no hint'
-    Assert-Equal "$($long.Status)|$($long.Value.Contains($script:SelfXInfoText.Uptime_Restart_Hint))" 'Pending|True' 'Uptime of 7 days: warning with restart hint'
+    $shortHasHint = $short.Value.Contains($script:SelfXInfoText.Uptime_Restart_Hint)
+    $longHasHint = $long.Value.Contains($script:SelfXInfoText.Uptime_Restart_Hint)
+    Assert-Equal "$($short.Status)|$shortHasHint" '|False' 'Uptime below 7 days: no status, no hint'
+    Assert-Equal "$($long.Status)|$longHasHint" 'Pending|True' 'Uptime of 7 days: warning with restart hint'
     Assert-Equal (Get-SelfXUptimeInfo -Uptime ([timespan]::FromDays(3)) -WarnDays 2).Status 'Pending' 'Uptime warning limit can be set'
     Assert-Equal $info[0].Category $script:SelfXInfoText.Category_Health 'Localized health category'
     Assert-Equal $info[0].Value.StartsWith($script:SelfXInfoText.Health_Error) $true 'Localized error text'
