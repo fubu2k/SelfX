@@ -302,7 +302,7 @@ seine Tests gäbe es diesen Fork nicht, und die Sicherheitsarbeit wäre nicht
 möglich gewesen. Die Sicherheitshärtung, die zusätzlichen Tests, die
 gebauten .NET-10-Programme und die CI wurden in diesem Fork ergänzt (siehe das
 [Änderungsprotokoll](CHANGELOG.md)). Die Lizenz des ursprünglichen Projekts
-bleibt in [LICENSE.md](LICENSE.md) erhalten.
+bleibt in [LICENSE.md](LICENSE.md) erhalten; Urheber und Quellen stehen in [NOTICE.md](NOTICE.md).
 
 Die Seite Systeminformationen beruht auf der Idee und den Datenpunkten des
 [System Information Tool](https://github.com/JayRHa/windows-system-information)
