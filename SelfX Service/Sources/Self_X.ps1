@@ -1440,6 +1440,8 @@ Function Start-SelfXSystemAction
 					To      = $Support_Mail
 					Subject = Get-SelfXString 'Report_Mail_Subject' $env:COMPUTERNAME
 					Body    = (Get-SelfXString 'Report_Mail_Body' $env:COMPUTERNAME (ConvertTo-SelfXUserTime ([datetime]::UtcNow)).ToString('g')) + "`r`n`r`n"
+					# Days of the own user logs added to the report (SupportReport.ps1 checks 1-60, default 7).
+					Days    = Get-SelfXConfigValue 'DeviceLogs_Days' '7'
 				})
 				$Run_Command = $Global:SelfXSupportReport_Script + "`r`n" +
 					"`$Result = $Run_Command`r`n" +

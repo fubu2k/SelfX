@@ -11,14 +11,17 @@
     The report is compressed to a .zip file with the same name unless DeviceLogs_Compress is False
     in Tool_Config.xml. DeviceLogs_Days (1-60, default 7) sets the event log history.
 
-    The logs of SelfX itself are added (2.6.4): the logs of the SelfX service and scripts in
+    The machine logs of SelfX itself are added (2.6.4): the logs of the SelfX service and scripts in
     ProgramData\SelfX\Logs (SelfXService.log, Install.log and Uninstall.log always, the other
-    *.log files of the last DeviceLogs_Days days) and the own logs of the requesting user in
-    Logs\Users\<SID> (never those of other users). In the .zip they are separate files in the folder
-    SelfX-Logs (SelfX-Logs\User for the user logs); in a .txt report they are appended as the last
-    section. At most the last 2 MB of each file and 30 MB in total are added. Users can create their
-    folder under Logs\Users, so the script reads there only from a normal folder (no junction) and
-    only files the user owns, so no protected file of another account can get into the report.
+    *.log files of the last DeviceLogs_Days days). In the .zip they are separate files in the
+    folder SelfX-Logs; in a .txt report they are appended as the last section. At most the last
+    2 MB of each file and 30 MB in total are added.
+
+    The logs of the user in Logs\Users\<SID> are NOT read here (2.6.10): users can create and change
+    that folder, so reading it as SYSTEM could be redirected (junction swap between check and read)
+    to protected files. The SelfX GUI adds the user's own logs to its copy of the report with the
+    rights of the user (SupportReport.ps1, Add-SelfXUserLogsToReport), so a user can only add what
+    that user can read anyway.
 
     The SID comes from the service (SELFX_CALLER_SID, read from the pipe client token). The
     report folder gets a protected ACL: SYSTEM and administrators full control, the requesting
@@ -49,7 +52,7 @@
     Name    : SelfX_Device_CollectLogs.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.6.4
+    Version : 2.6.10
 
     History:
     Version  Date        Author               Change
@@ -59,6 +62,8 @@
                                               in parameter defaults of Windows PowerShell 5.1)
     2.6.0    2026-11-06  Wolfgang Baeck       Logging to ProgramData\SelfX\Logs (SelfXLog.ps1)
     2.6.4    2026-11-06  Wolfgang Baeck       The SelfX logs (service, scripts, own logs of the user) are added to the report
+    2.6.10   2026-11-22  fubu2k               Security: the user logs (Logs\Users\<SID>) are no longer read as SYSTEM (race on a
+                                              user-writable folder); the GUI adds them with the rights of the user
 #>
 
 [CmdletBinding()]
@@ -116,13 +121,13 @@ function Invoke-DeviceLogCollector {
     return @(& $powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $CollectorPath -OutputPath $OutputPath -Days $Days 2>&1)
 }
 
-# SelfX logs for the report: the logs of the SelfX service and scripts (ProgramData\SelfX\Logs, written by SYSTEM)
-# and the own logs of the requesting user (Logs\Users\<caller SID>). Logs of other users are never added.
+# SelfX machine logs for the report: the logs of the SelfX service and scripts (ProgramData\SelfX\Logs, written by
+# SYSTEM, readable only by SYSTEM and administrators). Only the files directly in that folder are listed: the
+# subfolder Logs\Users is user-writable and is never read as SYSTEM (the GUI adds the user's own logs instead).
 # Only *.log / *.log.old files changed in the last Days days; SelfXService.log, Install.log and Uninstall.log
-# are always added. Users can create their folder under Logs\Users, so SYSTEM reads there only from a normal
-# folder (no junction) and only files that the user owns (no hard link to a protected file of another account).
-function Get-SelfXOwnLogFiles {
-    param([string]$LogRoot, [string]$CallerSid, [int]$Days = 7)
+# are always added.
+function Get-SelfXServiceLogFiles {
+    param([string]$LogRoot, [int]$Days = 7)
     $files = New-Object System.Collections.Generic.List[object]
     if (-not $LogRoot -or -not (Test-Path -LiteralPath $LogRoot -PathType Container)) { return $files }
     $root = Get-Item -LiteralPath $LogRoot -Force
@@ -134,22 +139,6 @@ function Get-SelfXOwnLogFiles {
         if ($file.Name -notlike '*.log' -and $file.Name -notlike '*.log.old') { continue }
         if ($always -notcontains $file.Name -and $file.LastWriteTime -lt $limit) { continue }
         $files.Add([pscustomobject]@{ Path = $file.FullName; Entry = "SelfX-Logs\$($file.Name)" })
-    }
-    if ($CallerSid) {
-        $userFolder = Join-Path (Join-Path $LogRoot 'Users') $CallerSid
-        if (Test-Path -LiteralPath $userFolder -PathType Container) {
-            $folder = Get-Item -LiteralPath $userFolder -Force
-            if (-not ($folder.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-                foreach ($file in @(Get-ChildItem -LiteralPath $userFolder -File -Force -ErrorAction SilentlyContinue | Sort-Object Name)) {
-                    if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
-                    if ($file.Name -notlike '*.log' -or $file.LastWriteTime -lt $limit) { continue }
-                    $owner = $null
-                    try { $owner = [IO.File]::GetAccessControl($file.FullName, [Security.AccessControl.AccessControlSections]::Owner).GetOwner([Security.Principal.SecurityIdentifier]).Value } catch { }
-                    if ($owner -ne $CallerSid) { continue }
-                    $files.Add([pscustomobject]@{ Path = $file.FullName; Entry = "SelfX-Logs\User\$($file.Name)" })
-                }
-            }
-        }
     }
     return $files
 }
@@ -222,9 +211,10 @@ function Invoke-SelfXCollectLogs {
         }
 
         $report = $textFile
-        # SelfX logs (service, scripts, the own logs of the user); a problem here never fails the report.
+        # SelfX machine logs (service, scripts); a problem here never fails the report. The logs of the user are
+        # added later by the GUI with the rights of the user (SupportReport.ps1), never read here as SYSTEM.
         $ownLogs = @()
-        try { $ownLogs = @(Get-SelfXOwnLogFiles -LogRoot $LogRoot -CallerSid $callerSid -Days $days) } catch { Write-Output "SelfX logs not added: $($_.Exception.Message)" }
+        try { $ownLogs = @(Get-SelfXServiceLogFiles -LogRoot $LogRoot -Days $days) } catch { Write-Output "SelfX logs not added: $($_.Exception.Message)" }
         $logTotal = 0L
         $logLimit = 30MB
         if ($compress) {

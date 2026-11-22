@@ -10,10 +10,13 @@
     Module autoloading is disabled and SystemRoot points to a non-existent folder.
     Run in Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-DeviceLogs.ps1
 .NOTES
-    Version: 2.6.4
+    Version: 2.6.10
     History:
     2.4.0  2026-11-02  Wolfgang Baeck  Initial device logs tests.
     2.6.4  2026-11-06  Wolfgang Baeck  SelfX logs in the report (selection, own user logs only, no junctions, size limit).
+    2.6.10 2026-11-22  fubu2k          User logs are no longer read as SYSTEM: the System action adds machine logs only; the GUI
+                                       helper adds the own user logs with the rights of the user (own SID folder, no junction,
+                                       no foreign owner, zip and txt, tolerant of a broken copy).
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -194,15 +197,10 @@ try {
     New-LogFile 'Users\S-1-5-21-9-9-9-1001\SelfX_2026-11-06.log' 0 'other user'
     $bigContent = (('x' * 1023) + "`n") * 2600
     New-LogFile 'Big_2026-11-06.log' 0 $bigContent
-    $selected = @(Get-SelfXOwnLogFiles -LogRoot $logRoot -CallerSid $me -Days 7 | ForEach-Object { $_.Entry })
-    Assert-Equal ($selected -join ';') "SelfX-Logs\Big_2026-11-06.log;SelfX-Logs\HealthStatus_2026-11-06.log;SelfX-Logs\Install.log;SelfX-Logs\SelfXService.log;SelfX-Logs\User\SelfX_2026-11-06.log" 'SelfX logs: service/install always, others of the last days, own user logs only'
-    # Files in the user folder that belong to another account (for example a hard link) are never read.
-    Assert-Equal (@(Get-SelfXOwnLogFiles -LogRoot $logRoot -CallerSid 'S-1-5-21-9-9-9-1001' -Days 7 | Where-Object { $_.Entry -like '*\User\*' }).Count) 0 'SelfX logs: user files not owned by the caller are skipped'
-    $outside = Join-Path $temp 'Outside'; [void][IO.Directory]::CreateDirectory($outside); [IO.File]::WriteAllText((Join-Path $outside 'secret.log'), 'secret')
-    $linkSid = 'S-1-5-21-9-9-9-1002'
-    New-Item -ItemType Junction -Path (Join-Path $logRoot "Users\$linkSid") -Value $outside | Out-Null
-    Assert-Equal (@(Get-SelfXOwnLogFiles -LogRoot $logRoot -CallerSid $linkSid -Days 7 | Where-Object { $_.Entry -like '*\User\*' }).Count) 0 'SelfX logs: a junction as user folder is not followed'
-    [IO.Directory]::Delete((Join-Path $logRoot "Users\$linkSid"))
+    # 2.6.10: the System action reads only the machine logs. Logs\Users is user-writable and is never read as SYSTEM.
+    $selected = @(Get-SelfXServiceLogFiles -LogRoot $logRoot -Days 7 | ForEach-Object { $_.Entry })
+    Assert-Equal ($selected -join ';') "SelfX-Logs\Big_2026-11-06.log;SelfX-Logs\HealthStatus_2026-11-06.log;SelfX-Logs\Install.log;SelfX-Logs\SelfXService.log" 'SelfX logs: service/install always, others of the last days, nothing from Logs\Users'
+    Assert-Equal ((Get-Command Get-SelfXServiceLogFiles).Parameters.ContainsKey('CallerSid')) $false 'SelfX logs: the System function has no user (SID) parameter'
     $tail = Read-SelfXLogText -Path (Join-Path $logRoot 'Big_2026-11-06.log')
     Assert-Equal ($tail.StartsWith('[... only the last 2 MB') -and $tail.Length -lt 2.2MB) $true 'SelfX logs: only the last 2 MB of a large file'
     $env:SELFX_CALLER_SID = $me
@@ -210,13 +208,13 @@ try {
     $script:aclCalls = @()
     $output = @(Invoke-SelfXCollectLogs -ReportRoot $root -CollectorPath $collector -ConfigPath $config -LogRoot $logRoot)
     Assert-Equal ($output | Select-Object -Last 1) 0 'Report with SelfX logs created'
-    Assert-Equal (@($output) -contains 'SelfX logs added: 5 file(s)') $true 'Number of SelfX logs reported'
+    Assert-Equal (@($output) -contains 'SelfX logs added: 4 file(s)') $true 'Number of SelfX logs reported'
     $zipPath = @(Get-ChildItem -LiteralPath $meFolder -Filter '*.zip')[0].FullName
     $zip = [IO.Compression.ZipFile]::OpenRead($zipPath)
     try {
         $names = @($zip.Entries | ForEach-Object { $_.FullName })
-        Assert-Equal $names.Count 6 'Zip: report and 5 SelfX logs'
-        Assert-Equal ($names -contains 'SelfX-Logs\User\SelfX_2026-11-06.log') $true 'Zip: own user log in SelfX-Logs\User'
+        Assert-Equal $names.Count 5 'Zip: report and 4 SelfX machine logs'
+        Assert-Equal (@($names | Where-Object { $_ -like '*User*' }).Count) 0 'Zip: no user logs from the System action'
         $reader = New-Object System.IO.StreamReader($zip.GetEntry('SelfX-Logs\SelfXService.log').Open())
         Assert-Equal $reader.ReadToEnd() 'service log' 'Zip: content of the service log'
         $reader.Dispose()
@@ -224,8 +222,8 @@ try {
     Set-TestConfig 7 False
     $output = @(Invoke-SelfXCollectLogs -ReportRoot $root -CollectorPath $collector -ConfigPath $config -LogRoot $logRoot)
     $text = [IO.File]::ReadAllText(@(Get-ChildItem -LiteralPath $meFolder -Filter '*.txt')[0].FullName)
-    Assert-Equal ($text.StartsWith($script:collectorContent) -and $text.Contains('SelfX logs (ProgramData\SelfX\Logs)') -and $text.Contains("----- SelfX-Logs\User\SelfX_2026-11-06.log -----`r`nmy gui log")) $true 'Text report: SelfX logs appended as last section'
-    Assert-Equal ($text.Contains('other user') -or $text.Contains('not a log') -or $text.Contains('health old')) $false 'Text report: no logs of other users, no other files, no old logs'
+    Assert-Equal ($text.StartsWith($script:collectorContent) -and $text.Contains('SelfX logs (ProgramData\SelfX\Logs)') -and $text.Contains("----- SelfX-Logs\SelfXService.log -----`r`nservice log")) $true 'Text report: SelfX machine logs appended as last section'
+    Assert-Equal ($text.Contains('my gui log') -or $text.Contains('other user') -or $text.Contains('not a log') -or $text.Contains('health old')) $false 'Text report: no user logs (not read as SYSTEM), no other files, no old logs'
     Remove-Item -LiteralPath $meFolder -Recurse -Force
     $env:SELFX_CALLER_SID = $sid
     Set-TestConfig 7 True
@@ -250,7 +248,10 @@ try {
     $junction = $null
     Assert-Throws { & $realSetReportAcl -Path $temp -ReaderSid $sid } 'Real icacls is not reachable in tests'
 
-    # --- Report lookup and copy (SupportReport.ps1) ----------------------------------------------
+    # The other Send-SelfXSupportReport tests must not read the real ProgramData of the test machine.
+    $PSDefaultParameterValues['Send-SelfXSupportReport:UsersRoot'] = (Join-Path $temp 'NoUserLogs')
+
+    # --- Report lookup and copy (SupportReport.ps1)----------------------------------------------
     Assert-Equal (Get-SelfXReportFolder -Root 'C:\R') ('C:\R\' + [Security.Principal.WindowsIdentity]::GetCurrent().User.Value) 'Report folder of the current user'
     $reports = Join-Path $temp 'UserReports'
     Assert-Equal (Get-SelfXLatestReport -Folder $reports) $null 'Missing report folder'
@@ -329,6 +330,70 @@ try {
     Set-Content -LiteralPath $blocked -Value 'a file, not a folder'
     $result = Send-SelfXSupportReport -To 'x' -Subject 'S' -Body 'B' -ReportFolder $reports -Destination $blocked
     Assert-Equal $result.Status 'Error' 'Copy failure'
+
+    # --- Own user logs added by the GUI with the rights of the user (2.6.10) -------------------------------
+    $usersRoot = Join-Path $logRoot 'Users'
+    New-LogFile "Users\$me\old_2026-09-01.log" 30 'old user log'
+    New-LogFile "Users\$me\notes.txt" 0 'not a log'
+    $mine = @(Get-SelfXUserLogFiles -UsersRoot $usersRoot -Sid $me -Days 7 | ForEach-Object { $_.Entry })
+    Assert-Equal ($mine -join ';') 'SelfX-Logs\User\SelfX_2026-11-06.log' 'User logs: only *.log of the last days from the folder of the own SID'
+    # Files that another account owns in a folder (for example planted in a folder created in advance) are skipped.
+    Assert-Equal (@(Get-SelfXUserLogFiles -UsersRoot $usersRoot -Sid 'S-1-5-21-9-9-9-1001' -Days 7).Count) 0 'User logs: files not owned by the SID are skipped'
+    $outside = Join-Path $temp 'Outside'; [void][IO.Directory]::CreateDirectory($outside); [IO.File]::WriteAllText((Join-Path $outside 'secret.log'), 'secret')
+    $linkSid = 'S-1-5-21-9-9-9-1002'
+    New-Item -ItemType Junction -Path (Join-Path $usersRoot $linkSid) -Value $outside | Out-Null
+    Assert-Equal (@(Get-SelfXUserLogFiles -UsersRoot $usersRoot -Sid $linkSid -Days 7).Count) 0 'User logs: a junction as user folder is not followed'
+    [IO.Directory]::Delete((Join-Path $usersRoot $linkSid))
+    Assert-Equal (@(Get-SelfXUserLogFiles -UsersRoot (Join-Path $temp 'NoSuchFolder') -Sid $me -Days 7).Count) 0 'User logs: missing folder'
+    foreach ($case in @(@('99', 7), @('0', 7), @('abc', 7), @('', 7), @('14', 14), @('1', 1), @('60', 60))) {
+        Assert-Equal (ConvertTo-SelfXLogDays $case[0]) $case[1] "Days '$($case[0])'"
+    }
+    $tail = Read-SelfXUserLogText -Path (Join-Path $logRoot 'Big_2026-11-06.log')
+    Assert-Equal ($tail.StartsWith('[... only the last 2 MB') -and $tail.Length -lt 2.2MB) $true 'User logs: only the last 2 MB of a large file'
+
+    # zip copy: the user log is added as SelfX-Logs\User\<name>, other users' logs never
+    $copyZip = Join-Path $temp 'Copy.zip'
+    $archive = [IO.Compression.ZipFile]::Open($copyZip, [IO.Compression.ZipArchiveMode]::Create)
+    try { [void]$archive.CreateEntry('Report.txt') } finally { $archive.Dispose() }
+    Assert-Equal (Add-SelfXUserLogsToReport -Report $copyZip -UsersRoot $usersRoot -Sid $me -Days 7) 1 'Zip copy: one user log added'
+    $zip = [IO.Compression.ZipFile]::OpenRead($copyZip)
+    try {
+        $names = @($zip.Entries | ForEach-Object { $_.FullName })
+        Assert-Equal ($names -join ';') 'Report.txt;SelfX-Logs\User\SelfX_2026-11-06.log' 'Zip copy: report and the own user log'
+        $reader = New-Object System.IO.StreamReader($zip.GetEntry('SelfX-Logs\User\SelfX_2026-11-06.log').Open())
+        Assert-Equal $reader.ReadToEnd() 'my gui log' 'Zip copy: content of the user log'
+        $reader.Dispose()
+    } finally { $zip.Dispose() }
+
+    # text copy: appended as a last section
+    $copyTxt = Join-Path $temp 'Copy.txt'
+    [IO.File]::WriteAllText($copyTxt, 'report')
+    Assert-Equal (Add-SelfXUserLogsToReport -Report $copyTxt -UsersRoot $usersRoot -Sid $me -Days 7) 1 'Text copy: one user log added'
+    $text = [IO.File]::ReadAllText($copyTxt)
+    Assert-Equal ($text.StartsWith('report') -and $text.Contains('SelfX logs of the user') -and $text.Contains("----- SelfX-Logs\User\SelfX_2026-11-06.log -----`r`nmy gui log")) $true 'Text copy: user log appended as last section'
+    Assert-Equal ($text.Contains('other user') -or $text.Contains('old user log') -or $text.Contains('not a log')) $false 'Text copy: no other users, no old logs, no other files'
+    Assert-Equal (Add-SelfXUserLogsToReport -Report $copyTxt -UsersRoot (Join-Path $temp 'NoSuchFolder') -Sid $me -Days 7) 0 'Nothing to add: copy unchanged'
+
+    # end to end: Send-SelfXSupportReport adds the logs to the COPY only; the System report stays untouched
+    $script:classicOutlook = $true
+    $script:comFails = $false
+    $realReports = Join-Path $temp 'RealZipReports'
+    [void][IO.Directory]::CreateDirectory($realReports)
+    $systemZip = Join-Path $realReports 'DeviceLogs-PC-9.zip'
+    $archive = [IO.Compression.ZipFile]::Open($systemZip, [IO.Compression.ZipArchiveMode]::Create)
+    try { [void]$archive.CreateEntry('DeviceLogs-PC-9.txt') } finally { $archive.Dispose() }
+    $result = Send-SelfXSupportReport -To 'help@contoso.com' -Subject 'S' -Body 'B' -ReportFolder $realReports -Destination (Join-Path $temp 'RealCopies') -UsersRoot $usersRoot -Days 7
+    Assert-Equal $result.Status 'Outlook' 'Send: e-mail opened'
+    Assert-Equal $result.UserLogs 1 'Send: user log added to the copy'
+    $zip = [IO.Compression.ZipFile]::OpenRead($result.Path)
+    try { Assert-Equal $zip.Entries.Count 2 'Send: copy holds report and user log' } finally { $zip.Dispose() }
+    $zip = [IO.Compression.ZipFile]::OpenRead($systemZip)
+    try { Assert-Equal $zip.Entries.Count 1 'Send: the System report itself is not changed' } finally { $zip.Dispose() }
+    # A broken copy never stops the e-mail
+    $result = Send-SelfXSupportReport -To 'help@contoso.com' -Subject 'S' -Body 'B' -ReportFolder $reports -Destination (Join-Path $temp 'BrokenCopies') -UsersRoot $usersRoot -Days 7
+    Assert-Equal $result.Status 'Outlook' 'Send: a copy that is not a valid zip still opens the e-mail'
+    Assert-Equal $result.UserLogs 0 'Send: no user logs counted for a broken copy'
+    Assert-Equal (Get-Content -LiteralPath $result.Path -Raw).Trim() 'newest' 'Send: broken copy unchanged'
 
     # --- Catalogue: Post_Action and translations ---------------------------------------------------------
     $catalog = New-Object System.Xml.XmlDocument

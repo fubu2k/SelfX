@@ -128,6 +128,10 @@ user, for example the device logs report.
   user; every script also writes its own log (2.6.0). Only SYSTEM and
   administrators can read the logs; users can read only their own folder under
   `Logs\Users`.
+- Users can write in their own folder under `Logs\Users`, so SYSTEM never reads
+  it (2.6.10): the device logs report contains only the machine logs from
+  `%ProgramData%\SelfX\Logs`. The SelfX window adds the own user logs to its
+  copy of the report with the rights of the user.
 - Every System action can be started by any signed-in user. Add only scripts to
   the catalogue that are safe for everyone to run.
 - The status cache of the background checks (`%ProgramData%\SelfX\Cache`) can
