@@ -21,6 +21,8 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 
 ### Changed
 
+- Clearing the DNS cache and checking the system drive without the compatibility layer: CIM (`MSFT_DNSClientCache.Clear`,
+  `MSFT_Volume.Repair` with `OfflineScanAndFix`) instead of `Clear-DnsClientCache` and `Repair-Volume`.
 - BitLocker and TPM without modules: device status and compliance check read CIM (`Win32_EncryptableVolume`, `Win32_Tpm`,
   file `Sources\SelfXDeviceSecurity.ps1`) instead of `Get-BitLockerVolume` and `Get-Tpm`. This fixes an earlier bug: data
   drives were never checked because the type was named "Data", not "FixedData". Fixed data drives without BitLocker

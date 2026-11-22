@@ -64,9 +64,10 @@ function global:Get-Service { param($Name, $ErrorAction) [pscustomobject]@{ Name
 function global:Restart-NetAdapter { throw 'Restart-NetAdapter is not allowed (use SelfXNetwork.ps1)' }
 function global:Get-NetAdapter { throw 'Get-NetAdapter is not allowed (use SelfXNetwork.ps1)' }
 function global:Get-NetRoute { throw 'Get-NetRoute is not allowed (use SelfXNetwork.ps1)' }
-function global:Repair-Volume { param($DriveLetter, [switch]$OfflineScanAndFix, [switch]$Scan, [switch]$SpotFix, $ErrorAction) $global:SelfXTestCalls.Add("Repair-Volume $DriveLetter offline=$OfflineScanAndFix"); 'ScanScheduled' }
+# Repair-Volume and Clear-DnsClientCache (compatibility layer in PowerShell 7) are not used any more: calling them fails the test. The scripts use CIM.
+function global:Repair-Volume { throw 'Repair-Volume is not allowed (use CIM MSFT_Volume.Repair)' }
 function global:Clear-RecycleBin { param([switch]$Force, $Confirm, $ErrorAction) $global:SelfXTestCalls.Add('Clear-RecycleBin'); throw 'The system cannot find the path specified.' }
-function global:Clear-DnsClientCache { param($ErrorAction) $global:SelfXTestCalls.Add('Clear-DnsClientCache'); if ($global:DnsFails) { throw 'Access denied' } }
+function global:Clear-DnsClientCache { throw 'Clear-DnsClientCache is not allowed (use CIM MSFT_DNSClientCache.Clear)' }
 # The Defender module is not used any more (compatibility layer in PowerShell 7): calling it fails the test. SelfXDefender.ps1 reads CIM.
 function global:Get-MpComputerStatus { throw 'Get-MpComputerStatus is not allowed (use SelfXDefender.ps1)' }
 function global:Update-MpSignature { throw 'Update-MpSignature is not allowed (use SelfXDefender.ps1)' }
@@ -77,11 +78,21 @@ function global:Get-CimInstance {
 	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpComputerStatus') { return [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00' } }
 	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftVolumeEncryption' -and $ClassName -eq 'Win32_EncryptableVolume') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeVolumes }
 	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftTpm' -and $ClassName -eq 'Win32_Tpm') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeTpm }
+	if ($Namespace -eq 'root\Microsoft\Windows\Storage' -and $ClassName -eq 'MSFT_Volume') { return @([pscustomobject]@{ DriveLetter = [char]'Z' }, [pscustomobject]@{ DriveLetter = [char]("$env:SystemDrive".TrimEnd(':', '\')[0]) }) }
 	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetRoute') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeRoutes }
 	throw "Get-CimInstance is not allowed in tests ($ClassName)"
 }
 function global:Invoke-CimMethod {
-	param($InputObject, $Namespace, $ClassName, $MethodName, $ErrorAction)
+	param($InputObject, $Namespace, $ClassName, $MethodName, $Arguments, $ErrorAction)
+	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_DNSClientCache' -and $MethodName -eq 'Clear') {
+		$global:SelfXTestCalls.Add('Dns-Clear')
+		if ($global:DnsFails) { throw 'Access denied' }
+		return $null
+	}
+	if ($MethodName -eq 'Repair' -and $InputObject.DriveLetter) {
+		$global:SelfXTestCalls.Add("Repair $($InputObject.DriveLetter) offline=$($Arguments.OfflineScanAndFix)")
+		return [pscustomobject]@{ ReturnValue = $(if ($null -ne $global:RepairReturn) { $global:RepairReturn } else { 0 }); Output = 0 }
+	}
 	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpSignature' -and $MethodName -eq 'Update') {
 		$global:SelfXTestCalls.Add('Defender-Update')
 		if ($global:UpdateFails) { throw 'No connection' }
@@ -191,6 +202,7 @@ try {
 
 	$global:DnsFails = $false
 	Assert-Equal (Invoke-TestScript 'SelfX_Device_ClearCache.ps1').ExitCode 0 'DNS cache: exit code'
+	Assert-Equal ($script:calls -join ';') 'Dns-Clear' 'DNS cache: cleared through CIM (MSFT_DNSClientCache.Clear) only'
 	$global:DnsFails = $true
 	Assert-Equal (Invoke-TestScript 'SelfX_Device_ClearCache.ps1').ExitCode 1 'DNS cache: failure is exit 1'
 	Assert-Equal ((Get-SandboxLog 'SelfX_Device_ClearCache') -match 'Error.*Access denied') $true 'DNS cache: failure logged'
@@ -280,7 +292,11 @@ try {
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Restart-Service IntuneManagementExtension' 'IME restart'
 
 	$run = Invoke-TestScript 'SelfX_OneDrive_CHKDSK.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Repair-Volume $("$env:SystemDrive".TrimEnd(':')) offline=True" 'Disk check: offline scan and fix scheduled (language independent)'
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Repair $("$env:SystemDrive".TrimEnd(':', '\')) offline=True" 'Disk check: offline scan and fix scheduled through CIM (language independent)'
+	$global:RepairReturn = 5
+	$run = Invoke-TestScript 'SelfX_OneDrive_CHKDSK.ps1'
+	Assert-Equal ($run.ExitCode -eq 1 -and "$($run.Output)" -like '*Repair returned 5*') $true 'Disk check: a return value other than 0 is an error (exit 1)'
+	$global:RepairReturn = $null
 
 	# Network adapters: host with cable, Wi-Fi, hidden cellular profiles and a Hyper-V switch; then a virtual machine.
 	function New-FakeCimAdapter($Name, $Description, $Index, $Operational, $Admin, [bool]$Disconnected, $Ndis, $NdisMedium, [bool]$Hardware, [bool]$Virtual, [bool]$Hidden = $false) {

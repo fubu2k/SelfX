@@ -5,7 +5,8 @@
 .DESCRIPTION
     Runs non-interactively as LOCAL SYSTEM through the local SelfX service and named pipe
     "SelfX.Service". Schedules an offline scan and repair of the system drive (SystemDrive)
-    with Repair-Volume -OfflineScanAndFix; Windows runs it at the next restart, the same as
+    with the CIM method Repair (OfflineScanAndFix) of MSFT_Volume (root\Microsoft\Windows\Storage), which is
+    what Repair-Volume -OfflineScanAndFix does; Windows runs it at the next restart, the same as
     "chkdsk /f". Used for OneDrive files that are locked by a damaged reparse point
     (error 0x80071129). This script does not restart Windows; the user restarts later.
     The check at the next start can take several minutes.
@@ -18,7 +19,7 @@
     Name    : SelfX_OneDrive_CHKDSK.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.6.0
+    Version : 2.6.10
 
     History:
     Version  Date        Author               Change
@@ -28,6 +29,7 @@
     2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
     2.6.0    2026-11-06  Wolfgang Baeck       Repair-Volume -OfflineScanAndFix instead of "echo Y| chkdsk" (worked
                                               only in English Windows); logging (SelfXLog.ps1)
+    2.6.10   2026-11-22  fubu2k               CIM method Repair instead of Repair-Volume (no compatibility layer in PowerShell 7)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -38,9 +40,12 @@ else { function Write-SelfXLog { param($Message, $Level) } }
 $letter = "$env:SystemDrive".TrimEnd(':', '\')
 try {
 	# On the system drive the offline repair cannot run now; Windows schedules it for the next start.
-	$result = Repair-Volume -DriveLetter $letter -OfflineScanAndFix -ErrorAction Stop
-	Write-SelfXLog "Repair-Volume -OfflineScanAndFix $($letter): $result"
-	Write-Output "Check and repair of drive $($letter): scheduled for the next restart ($result)."
+	$volume = @(Get-CimInstance -Namespace 'root\Microsoft\Windows\Storage' -ClassName MSFT_Volume -ErrorAction Stop | Where-Object { "$($_.DriveLetter)" -eq $letter }) | Select-Object -First 1
+	if (-not $volume) { throw "Drive $($letter): was not found." }
+	$result = Invoke-CimMethod -InputObject $volume -MethodName Repair -Arguments @{ OfflineScanAndFix = $true } -ErrorAction Stop
+	if ($null -ne $result.ReturnValue -and [int]$result.ReturnValue -ne 0) { throw "Repair returned $($result.ReturnValue)." }
+	Write-SelfXLog "MSFT_Volume.Repair OfflineScanAndFix $($letter): ReturnValue $($result.ReturnValue), Output $($result.Output)"
+	Write-Output "Check and repair of drive $($letter): scheduled for the next restart."
 	exit 0
 } catch {
 	Write-SelfXLog "Could not schedule the check of drive $($letter): $($_.Exception.Message)" Error
