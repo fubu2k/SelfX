@@ -80,6 +80,7 @@
 		<Service_Running_Text>Служба SelfX працює: дії зі значком щита запускаються з правами адміністратора.</Service_Running_Text>
 		<Service_Unavailable_Text>Служба SelfX не працює: дії зі значком щита недоступні.</Service_Unavailable_Text>
 		<Service_Busy_Text>Виконується інша дія. Дочекайтеся її завершення.</Service_Busy_Text>
+		<Service_OtherSessions_Text>Ця дія неможлива, поки на пристрої виконано вхід іншого користувача. Зверніться до ІТ-підтримки або повторіть спробу, коли ви будете єдиним користувачем.</Service_OtherSessions_Text>
 		<Action_Running_Text>Виконується дія: {0}</Action_Running_Text>
 		<Action_Running_Label>Виконується…</Action_Running_Label>
 		<Action_Success_Text>Дію завершено: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@
 		<Support_None_Text>Контактні дані не налаштовано. Зверніться до ІТ-відділу.</Support_None_Text>
 		<Service_Short_Running>Служба SelfX працює</Service_Short_Running>
 		<Service_Short_Unavailable>Служба SelfX недоступна</Service_Short_Unavailable>
+		<Ticket_Row_Label>Повідомити про проблему</Ticket_Row_Label>
+		<Ticket_Row_Text>Відкриває лист до ІТ-підтримки з вашим описом і відомостями про цей комп’ютер.</Ticket_Row_Text>
+		<Ticket_Button>Створити заявку</Ticket_Button>
+		<Ticket_Window_Title>Створення заявки</Ticket_Window_Title>
+		<Ticket_Intro_Text>Опишіть, що не працює. SelfX підготує лист до ІТ-підтримки.</Ticket_Intro_Text>
+		<Ticket_Description_Label>Ваш опис</Ticket_Description_Label>
+		<Ticket_Info_Text>Лист завжди містить відомості про цей комп’ютер (відомості про систему та стан пристрою) у тексті та у вкладеному файлі. Перед надсиланням усе можна перевірити. Автоматично нічого не надсилається.</Ticket_Info_Text>
+		<Ticket_Open_Button>Відкрити лист</Ticket_Open_Button>
+		<Ticket_Kind_Text>Інцидент</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>Відомості про пристрій ще не зібрано.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>Лист відкрито, відомості про пристрій додано. Перевірте його й надішліть.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>Відкрито вашу поштову програму. Додайте до листа файл {0} (вибраний у Провіднику), перевірте лист і надішліть його.</Ticket_Manual_Text>
+		<Ticket_Error_Text>Не вдалося підготувати лист: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>Лист буде надіслано на адресу: {0}</Ticket_Recipient_Text>
 		<Version_Text>Версія {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: усе гаразд</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: проблем: {0}, попереджень: {1}</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@
 		<Last_Boot>Останнє завантаження</Last_Boot>
 		<Uptime>Час роботи</Uptime>
 		<Uptime_Value>{0} дн. {1:D2}:{2:D2} год</Uptime_Value>
+		<Uptime_Restart_Hint>рекомендовано перезавантаження (не «Завершення роботи»)</Uptime_Restart_Hint>
 		<Last_Update>Останнє інстальоване оновлення</Last_Update>
 		<Time_Zone>Часовий пояс</Time_Zone>
 		<Current_User>Поточний користувач</Current_User>
@@ -229,6 +245,18 @@
 		<Gateway>Шлюз за замовчуванням</Gateway>
 		<DNS>Сервери DNS</DNS>
 		<MAC>Адреси MAC</MAC>
+		<Proxy>Проксі (налаштування користувача)</Proxy>
+		<Proxy_None>Без проксі</Proxy_None>
+		<Proxy_Manual>Проксі вручну</Proxy_Manual>
+		<Proxy_Script>Скрипт автоматичного налаштування</Proxy_Script>
+		<Network_Drives>Мережеві диски</Network_Drives>
+		<Network_Drives_None>Немає</Network_Drives_None>
+		<Latency_Gateway>Затримка: шлюз за замовчуванням</Latency_Gateway>
+		<Latency_Dns>DNS-запит: {0}</Latency_Dns>
+		<Latency_Connection>Підключення: {0}</Latency_Connection>
+		<Latency_Value>{0} мс (мін. {1}, макс. {2}, втрачено {3} із {4})</Latency_Value>
+		<Latency_Failed>недоступний (збоїв: {0} із {1})</Latency_Failed>
+		<Latency_Skipped>не виміряно (досягнуто ліміту часу)</Latency_Skipped>
 		<Collected_At>Зібрано</Collected_At>
 		<Error>Помилка</Error>
 		<Yes>Так</Yes>

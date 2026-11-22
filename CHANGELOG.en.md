@@ -29,6 +29,7 @@ histories of the single files show where a change was made. Changes marked
 - New action "The time of your device is wrong" (system context through the SelfX service, category Device, `SelfX_Device_SyncTime.ps1`): starts the Windows Time service when needed and runs `w32tm.exe /resync /force` with fixed arguments. Time source, configuration and time zone are not changed. Blocked while another user is signed in (`OtherSessions=Block`). German text in `de.xml`, other languages show the English text.
 
 ### Changed
+- Translations added: all 22 language files (except German and English) were missing 28 texts, which were shown in English: notice while another person is signed in (`Service_OtherSessions_Text`), ticket dialog (`Ticket_*`), uptime hint, proxy and network drives, and the network measurements (`Latency_*`).
 
 - Status row "Restart pending": the text now names the last restart and, when the last update installation was after it, its time (read-only, times in the time zone of the user). If the sources are missing, only the addition is left out.
 

@@ -80,6 +80,7 @@
 		<Service_Running_Text>SelfX 서비스가 실행 중입니다. 방패 아이콘이 표시된 작업은 관리자 권한으로 실행됩니다.</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX 서비스가 실행되고 있지 않습니다. 방패 아이콘이 표시된 작업은 사용할 수 없습니다.</Service_Unavailable_Text>
 		<Service_Busy_Text>다른 작업이 아직 실행 중입니다. 완료될 때까지 기다려 주세요.</Service_Busy_Text>
+		<Service_OtherSessions_Text>다른 사용자가 이 장치에 로그인해 있는 동안에는 이 작업을 할 수 없습니다. IT 지원팀에 문의하거나 본인만 사용 중일 때 다시 시도하세요.</Service_OtherSessions_Text>
 		<Action_Running_Text>작업 실행 중: {0}</Action_Running_Text>
 		<Action_Running_Label>실행 중…</Action_Running_Label>
 		<Action_Success_Text>작업 완료: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Support_None_Text>연락처 정보가 구성되지 않았습니다. IT 부서에 문의하세요.</Support_None_Text>
 		<Service_Short_Running>SelfX 서비스 실행 중</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX 서비스를 사용할 수 없음</Service_Short_Unavailable>
+		<Ticket_Row_Label>문제 신고</Ticket_Row_Label>
+		<Ticket_Row_Text>사용자의 설명과 이 PC의 장치 정보를 담아 IT 지원팀에 보낼 메일을 엽니다.</Ticket_Row_Text>
+		<Ticket_Button>티켓 만들기</Ticket_Button>
+		<Ticket_Window_Title>티켓 만들기</Ticket_Window_Title>
+		<Ticket_Intro_Text>작동하지 않는 내용을 설명해 주세요. SelfX가 IT 지원팀에 보낼 메일을 준비합니다.</Ticket_Intro_Text>
+		<Ticket_Description_Label>내 설명</Ticket_Description_Label>
+		<Ticket_Info_Text>메일에는 이 PC의 장치 정보(시스템 정보 및 장치 상태)가 본문과 첨부 파일로 항상 포함됩니다. 보내기 전에 모두 확인할 수 있습니다. 자동으로 전송되는 것은 없습니다.</Ticket_Info_Text>
+		<Ticket_Open_Button>메일 열기</Ticket_Open_Button>
+		<Ticket_Kind_Text>인시던트</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>장치 정보가 아직 수집되지 않았습니다.</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>장치 정보가 첨부된 메일이 열렸습니다. 확인한 후 보내세요.</Ticket_Opened_Text>
+		<Ticket_Manual_Text>메일 프로그램이 열렸습니다. 파일 {0}(파일 탐색기에서 선택됨)을 메일에 첨부하고 확인한 후 보내세요.</Ticket_Manual_Text>
+		<Ticket_Error_Text>메일을 준비하지 못했습니다: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>메일 받는 사람: {0}</Ticket_Recipient_Text>
 		<Version_Text>버전 {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: 모두 정상</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: 문제 {0}개, 경고 {1}개</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Last_Boot>마지막 부팅</Last_Boot>
 		<Uptime>가동 시간</Uptime>
 		<Uptime_Value>{0}일 {1:D2}:{2:D2}시간</Uptime_Value>
+		<Uptime_Restart_Hint>다시 시작 권장(“시스템 종료”가 아님)</Uptime_Restart_Hint>
 		<Last_Update>마지막으로 설치된 업데이트</Last_Update>
 		<Time_Zone>표준 시간대</Time_Zone>
 		<Current_User>현재 사용자</Current_User>
@@ -229,6 +245,18 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Gateway>기본 게이트웨이</Gateway>
 		<DNS>DNS 서버</DNS>
 		<MAC>MAC 주소</MAC>
+		<Proxy>프록시(사용자 설정)</Proxy>
+		<Proxy_None>프록시 없음</Proxy_None>
+		<Proxy_Manual>수동 프록시</Proxy_Manual>
+		<Proxy_Script>자동 구성 스크립트</Proxy_Script>
+		<Network_Drives>네트워크 드라이브</Network_Drives>
+		<Network_Drives_None>없음</Network_Drives_None>
+		<Latency_Gateway>대기 시간: 기본 게이트웨이</Latency_Gateway>
+		<Latency_Dns>DNS 조회: {0}</Latency_Dns>
+		<Latency_Connection>연결: {0}</Latency_Connection>
+		<Latency_Value>{0}ms(최소 {1}, 최대 {2}, {4}회 중 {3}회 손실)</Latency_Value>
+		<Latency_Failed>연결할 수 없음({1}회 중 {0}회 실패)</Latency_Failed>
+		<Latency_Skipped>측정 안 됨(제한 시간 도달)</Latency_Skipped>
 		<Collected_At>수집 시간</Collected_At>
 		<Error>오류</Error>
 		<Yes>예</Yes>

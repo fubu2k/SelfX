@@ -80,6 +80,7 @@
 		<Service_Running_Text>บริการ SelfX กำลังทำงาน: การดำเนินการที่ทำเครื่องหมายด้วยโล่ทำงานด้วยสิทธิ์ของผู้ดูแลระบบ</Service_Running_Text>
 		<Service_Unavailable_Text>บริการ SelfX ไม่ทำงาน: ไม่มีการดำเนินการที่ทำเครื่องหมายด้วยโล่</Service_Unavailable_Text>
 		<Service_Busy_Text>การดำเนินการอื่นยังคงดำเนินอยู่ โปรดรอจนกว่าจะเสร็จสิ้น</Service_Busy_Text>
+		<Service_OtherSessions_Text>ไม่สามารถดำเนินการนี้ได้ขณะที่ผู้ใช้อื่นลงชื่อเข้าใช้อุปกรณ์นี้อยู่ โปรดติดต่อฝ่ายสนับสนุนไอที หรือลองอีกครั้งเมื่อคุณเป็นผู้ใช้เพียงคนเดียว</Service_OtherSessions_Text>
 		<Action_Running_Text>กำลังดำเนินการ: {0}</Action_Running_Text>
 		<Action_Running_Label>กำลังดำเนินการ…</Action_Running_Label>
 		<Action_Success_Text>ดำเนินการเสร็จแล้ว: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@
 		<Support_None_Text>ยังไม่ได้กำหนดข้อมูลติดต่อ โปรดติดต่อฝ่ายไอทีของคุณ</Support_None_Text>
 		<Service_Short_Running>บริการ SelfX กำลังทำงาน</Service_Short_Running>
 		<Service_Short_Unavailable>บริการ SelfX ไม่พร้อมใช้งาน</Service_Short_Unavailable>
+		<Ticket_Row_Label>แจ้งปัญหา</Ticket_Row_Label>
+		<Ticket_Row_Text>เปิดอีเมลถึงฝ่ายสนับสนุนไอที พร้อมคำอธิบายของคุณและข้อมูลอุปกรณ์ของพีซีเครื่องนี้</Ticket_Row_Text>
+		<Ticket_Button>สร้างตั๋ว</Ticket_Button>
+		<Ticket_Window_Title>สร้างตั๋ว</Ticket_Window_Title>
+		<Ticket_Intro_Text>อธิบายว่าอะไรใช้งานไม่ได้ SelfX จะเตรียมอีเมลถึงฝ่ายสนับสนุนไอทีให้</Ticket_Intro_Text>
+		<Ticket_Description_Label>คำอธิบายของคุณ</Ticket_Description_Label>
+		<Ticket_Info_Text>อีเมลจะมีข้อมูลอุปกรณ์ของพีซีเครื่องนี้ (ข้อมูลระบบและสถานะอุปกรณ์) เสมอ ทั้งในข้อความและเป็นไฟล์แนบ คุณตรวจสอบทุกอย่างได้ก่อนส่ง ไม่มีสิ่งใดถูกส่งโดยอัตโนมัติ</Ticket_Info_Text>
+		<Ticket_Open_Button>เปิดอีเมล</Ticket_Open_Button>
+		<Ticket_Kind_Text>เหตุการณ์</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>ยังไม่ได้รวบรวมข้อมูลอุปกรณ์</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>เปิดอีเมลพร้อมแนบข้อมูลอุปกรณ์แล้ว โปรดตรวจสอบและส่ง</Ticket_Opened_Text>
+		<Ticket_Manual_Text>เปิดโปรแกรมอีเมลของคุณแล้ว แนบไฟล์ {0} (ที่เลือกไว้ใน File Explorer) ไปกับอีเมล ตรวจสอบ แล้วส่ง</Ticket_Manual_Text>
+		<Ticket_Error_Text>ไม่สามารถเตรียมอีเมลได้: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>อีเมลจะถูกส่งไปที่: {0}</Ticket_Recipient_Text>
 		<Version_Text>เวอร์ชัน {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: ทุกอย่างเรียบร้อย</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: ปัญหา {0} รายการ คำเตือน {1} รายการ</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@
 		<Last_Boot>บูตครั้งสุดท้าย</Last_Boot>
 		<Uptime>เวลาทำงาน</Uptime>
 		<Uptime_Value>{0} วัน {1:D2}:{2:D2} ชม.</Uptime_Value>
+		<Uptime_Restart_Hint>แนะนำให้รีสตาร์ท (ไม่ใช่ “ปิดเครื่อง”)</Uptime_Restart_Hint>
 		<Last_Update>ติดตั้งการอัปเดตครั้งล่าสุด</Last_Update>
 		<Time_Zone>เขตเวลา</Time_Zone>
 		<Current_User>ผู้ใช้ปัจจุบัน</Current_User>
@@ -229,6 +245,18 @@
 		<Gateway>เกตเวย์เริ่มต้น</Gateway>
 		<DNS>เซิร์ฟเวอร์ DNS</DNS>
 		<MAC>ที่อยู่ MAC</MAC>
+		<Proxy>พร็อกซี (การตั้งค่าของผู้ใช้)</Proxy>
+		<Proxy_None>ไม่มีพร็อกซี</Proxy_None>
+		<Proxy_Manual>พร็อกซีแบบกำหนดเอง</Proxy_Manual>
+		<Proxy_Script>สคริปต์กำหนดค่าอัตโนมัติ</Proxy_Script>
+		<Network_Drives>ไดรฟ์เครือข่าย</Network_Drives>
+		<Network_Drives_None>ไม่มี</Network_Drives_None>
+		<Latency_Gateway>เวลาแฝง: เกตเวย์เริ่มต้น</Latency_Gateway>
+		<Latency_Dns>การค้นหา DNS: {0}</Latency_Dns>
+		<Latency_Connection>การเชื่อมต่อ: {0}</Latency_Connection>
+		<Latency_Value>{0} มิลลิวินาที (ต่ำสุด {1}, สูงสุด {2}, สูญหาย {3} จาก {4})</Latency_Value>
+		<Latency_Failed>เข้าถึงไม่ได้ (ล้มเหลว {0} จาก {1})</Latency_Failed>
+		<Latency_Skipped>ไม่ได้วัด (ถึงขีดจำกัดเวลาแล้ว)</Latency_Skipped>
 		<Collected_At>รวบรวมได้ที่</Collected_At>
 		<Error>ข้อผิดพลาด</Error>
 		<Yes>ใช่</Yes>

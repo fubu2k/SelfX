@@ -80,6 +80,7 @@
 		<Service_Running_Text>SelfX পরিষেবা চলছে: প্রশাসকের অধিকার সহ একটি ঢাল দ্বারা চিহ্নিত ক্রিয়াকলাপ।</Service_Running_Text>
 		<Service_Unavailable_Text>SelfX পরিষেবা চলছে না: একটি ঢাল দ্বারা চিহ্নিত ক্রিয়াগুলি উপলব্ধ নেই৷</Service_Unavailable_Text>
 		<Service_Busy_Text>আরেকটি কার্যক্রম এখনো চলছে। এটি শেষ না হওয়া পর্যন্ত অপেক্ষা করুন.</Service_Busy_Text>
+		<Service_OtherSessions_Text>অন্য কোনো ব্যবহারকারী এই ডিভাইসে সাইন ইন থাকলে এই কাজটি করা যায় না। আইটি সহায়তার সঙ্গে যোগাযোগ করুন অথবা আপনি একমাত্র ব্যবহারকারী হলে আবার চেষ্টা করুন।</Service_OtherSessions_Text>
 		<Action_Running_Text>কাজ চলছে: {0}</Action_Running_Text>
 		<Action_Running_Label>চলছে…</Action_Running_Label>
 		<Action_Success_Text>কাজ সম্পন্ন হয়েছে: {0}</Action_Success_Text>
@@ -171,6 +172,20 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Support_None_Text>কোনো যোগাযোগের তথ্য কনফিগার করা নেই। অনুগ্রহ করে আপনার আইটি বিভাগে যোগাযোগ করুন।</Support_None_Text>
 		<Service_Short_Running>SelfX পরিষেবা চলছে</Service_Short_Running>
 		<Service_Short_Unavailable>SelfX পরিষেবা উপলব্ধ নয়</Service_Short_Unavailable>
+		<Ticket_Row_Label>সমস্যা জানান</Ticket_Row_Label>
+		<Ticket_Row_Text>আপনার বিবরণ এবং এই পিসির ডিভাইস তথ্যসহ আইটি সহায়তার জন্য একটি ইমেল খোলে।</Ticket_Row_Text>
+		<Ticket_Button>টিকিট তৈরি করুন</Ticket_Button>
+		<Ticket_Window_Title>টিকিট তৈরি করুন</Ticket_Window_Title>
+		<Ticket_Intro_Text>কী কাজ করছে না তা বর্ণনা করুন। SelfX আইটি সহায়তার জন্য একটি ইমেল প্রস্তুত করে।</Ticket_Intro_Text>
+		<Ticket_Description_Label>আপনার বিবরণ</Ticket_Description_Label>
+		<Ticket_Info_Text>ইমেলে সবসময় এই পিসির ডিভাইস তথ্য (সিস্টেম তথ্য ও ডিভাইসের অবস্থা) লেখায় এবং সংযুক্ত ফাইল হিসেবে থাকে। পাঠানোর আগে আপনি সবকিছু যাচাই করতে পারবেন। কিছুই স্বয়ংক্রিয়ভাবে পাঠানো হয় না।</Ticket_Info_Text>
+		<Ticket_Open_Button>ইমেল খুলুন</Ticket_Open_Button>
+		<Ticket_Kind_Text>ঘটনা</Ticket_Kind_Text>
+		<Ticket_No_Info_Text>ডিভাইস তথ্য এখনো সংগ্রহ করা হয়নি।</Ticket_No_Info_Text>
+		<Ticket_Opened_Text>ডিভাইস তথ্য সংযুক্ত করে ইমেল খোলা হয়েছে। এটি যাচাই করে পাঠান।</Ticket_Opened_Text>
+		<Ticket_Manual_Text>আপনার মেল প্রোগ্রাম খোলা হয়েছে। ফাইল {0} (ফাইল এক্সপ্লোরারে নির্বাচিত) ইমেলে সংযুক্ত করুন, যাচাই করুন এবং পাঠান।</Ticket_Manual_Text>
+		<Ticket_Error_Text>ইমেল প্রস্তুত করা যায়নি: {0}</Ticket_Error_Text>
+		<Ticket_Recipient_Text>ইমেল পাঠানো হবে: {0}</Ticket_Recipient_Text>
 		<Version_Text>সংস্করণ {0}</Version_Text>
 		<Tray_Tooltip_OK>SelfX: সব ঠিক আছে</Tray_Tooltip_OK>
 		<Tray_Tooltip_Issues>SelfX: {0}টি সমস্যা, {1}টি সতর্কতা</Tray_Tooltip_Issues>
@@ -207,6 +222,7 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Last_Boot>শেষ বুট</Last_Boot>
 		<Uptime>আপটাইম</Uptime>
 		<Uptime_Value>{0} দিন(গুলি) {1:D2}:{2:D2} h</Uptime_Value>
+		<Uptime_Restart_Hint>রিস্টার্ট করার পরামর্শ দেওয়া হচ্ছে (“শাট ডাউন” নয়)</Uptime_Restart_Hint>
 		<Last_Update>শেষ আপডেট ইনস্টল করা হয়েছে</Last_Update>
 		<Time_Zone>সময় অঞ্চল</Time_Zone>
 		<Current_User>বর্তমান ব্যবহারকারী</Current_User>
@@ -229,6 +245,18 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Gateway>ডিফল্ট গেটওয়ে</Gateway>
 		<DNS>DNS সার্ভার(গুলি)</DNS>
 		<MAC>MAC ঠিকানা(গুলি)</MAC>
+		<Proxy>প্রক্সি (ব্যবহারকারীর সেটিং)</Proxy>
+		<Proxy_None>কোনো প্রক্সি নেই</Proxy_None>
+		<Proxy_Manual>ম্যানুয়াল প্রক্সি</Proxy_Manual>
+		<Proxy_Script>স্বয়ংক্রিয় কনফিগারেশন স্ক্রিপ্ট</Proxy_Script>
+		<Network_Drives>নেটওয়ার্ক ড্রাইভ</Network_Drives>
+		<Network_Drives_None>নেই</Network_Drives_None>
+		<Latency_Gateway>বিলম্ব: ডিফল্ট গেটওয়ে</Latency_Gateway>
+		<Latency_Dns>DNS লুকআপ: {0}</Latency_Dns>
+		<Latency_Connection>সংযোগ: {0}</Latency_Connection>
+		<Latency_Value>{0} ms (সর্বনিম্ন {1}, সর্বোচ্চ {2}, {4}-এর মধ্যে {3}টি হারিয়েছে)</Latency_Value>
+		<Latency_Failed>পৌঁছানো যাচ্ছে না ({1}-এর মধ্যে {0}টি ব্যর্থ)</Latency_Failed>
+		<Latency_Skipped>মাপা হয়নি (সময়সীমা শেষ)</Latency_Skipped>
 		<Collected_At>এ সংগৃহীত</Collected_At>
 		<Error>ত্রুটি</Error>
 		<Yes>হ্যাঁ</Yes>
