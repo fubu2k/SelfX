@@ -33,9 +33,10 @@
 	  2.2.0    2026-10-28  Wolfgang Baeck       Added Id and shared messages for translations, all base texts in English
 	  2.4.0    2026-11-02  Wolfgang Baeck       Post_Action field; send device logs to the support (Collect-DeviceLogs.ps1)
 	  2.4.1    2026-11-22  fubu2k               Base texts match the scripts: Chrome (default profile, cookies, history, autofill), Teams (cache is cleared), Word and Excel (documents are not reopened)
+	  2.4.2    2026-11-22  fubu2k               New action D_Edge_Cache (Microsoft Edge: clear the cache)
 -->
 <Actions>
-	<XML_Version>2.4.1</XML_Version>
+	<XML_Version>2.4.2</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -252,6 +253,18 @@ Do you want to continue?</Alerte_MSG>
 			<Context>User</Context>
 			<Category>Browser</Category>
 			<Alerte_MSG>Google Chrome will close immediately; unsaved input on websites is lost. In the default profile the cache, cookies, history, visited links, top sites and saved form data (autofill) are deleted. You will be signed out of many websites. Bookmarks and saved passwords are kept. Other Chrome profiles are not affected.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="D_Edge_Cache">
+			<Name>Microsoft Edge: clear the cache</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>Websites do not load or display correctly in Microsoft Edge. The action clears the cache of the default profile only.</Explanation>
+			<Script>SelfX_Browser_ClearEdgeCache.ps1</Script>
+			<Context>User</Context>
+			<Category>Browser</Category>
+			<Alerte_MSG>Microsoft Edge will close immediately; unsaved input on websites is lost. Then the cache of the default profile is cleared. Cookies, history, saved passwords, bookmarks and other profiles are not affected, so you stay signed in to websites.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>

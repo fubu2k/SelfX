@@ -167,7 +167,7 @@ try {
 		$errors = $null
 		[void][Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$errors)
 		Assert-Equal @($errors).Count 0 "$($file.Name) parses"
-		Assert-Equal ($text -match 'Version\s*:\s*2\.6\.\d+') $true "$($file.Name) header version 2.6.x"
+		Assert-Equal ($text -match 'Version\s*:\s*2\.\d+\.\d+') $true "$($file.Name) header version 2.x.y"
 		Assert-Equal ($code.Contains('Initialize-SelfXLog')) $true "$($file.Name) initializes the logging"
 		Assert-Equal ($code -match '(?i)-like\s+"\*(word|teams)\*"') $false "$($file.Name) uses no *word* / *teams* wildcards"
 		Assert-Equal ($code.Contains('echo Y|')) $false "$($file.Name) does not answer prompts in English only"
@@ -193,6 +193,18 @@ try {
 	Assert-Equal "$(Test-Path (Join-Path $chrome 'Cache'))/$(Test-Path (Join-Path $chrome 'Cookies'))/$(Test-Path (Join-Path $chrome 'Bookmarks'))" 'False/False/True' 'Chrome cache: caches removed, bookmarks kept'
 	Assert-Equal ($script:calls -contains 'Stop-Process chrome') $true 'Chrome cache: Chrome closed'
 	Assert-Equal ((Get-SandboxLog 'SelfX_Browser_ClearChromeCache') -match 'Removed Cache') $true 'Chrome cache: logged'
+
+	$edge = Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\User Data\Default'
+	foreach ($item in 'Cache\data_0', 'Code Cache\js\a', 'GPUCache\x', 'Cookies', 'Network\Cookies', 'History', 'Login Data', 'Bookmarks') { New-SandboxFile (Join-Path $edge $item) }
+	New-FakeProcess 'msedge' 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+	$run = Invoke-TestScript 'SelfX_Browser_ClearEdgeCache.ps1'
+	Assert-Equal $run.ExitCode 0 "Edge cache: exit code ($($run.Error) $($run.Output -join ' '))"
+	Assert-Equal "$(Test-Path (Join-Path $edge 'Cache'))/$(Test-Path (Join-Path $edge 'Code Cache'))/$(Test-Path (Join-Path $edge 'GPUCache'))" 'False/False/False' 'Edge cache: cache folders removed'
+	Assert-Equal "$(Test-Path (Join-Path $edge 'Cookies'))/$(Test-Path (Join-Path $edge 'Network\Cookies'))/$(Test-Path (Join-Path $edge 'History'))/$(Test-Path (Join-Path $edge 'Login Data'))/$(Test-Path (Join-Path $edge 'Bookmarks'))" 'True/True/True/True/True' 'Edge cache: cookies, history, passwords and bookmarks kept'
+	Assert-Equal ($script:calls -contains 'Stop-Process msedge') $true 'Edge cache: Edge closed'
+	Assert-Equal ((Get-SandboxLog 'SelfX_Browser_ClearEdgeCache') -match 'Removed Cache') $true 'Edge cache: logged'
+	$run = Invoke-TestScript 'SelfX_Browser_ClearEdgeCache.ps1'
+	Assert-Equal $run.ExitCode 0 'Edge cache: second run without cache folders is fine'
 
 	foreach ($root in $env:LOCALAPPDATA, $env:APPDATA) { New-SandboxFile (Join-Path $root 'Mozilla\Firefox\Profiles\abc.default\cache2\entries\x'); New-SandboxFile (Join-Path $root 'Mozilla\Firefox\Profiles\abc.default\cookies.sqlite'); New-SandboxFile (Join-Path $root 'Mozilla\Firefox\Profiles\abc.default\places.sqlite') }
 	$run = Invoke-TestScript 'SelfX_Browser_ClearFirefoxCache.ps1'

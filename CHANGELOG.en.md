@@ -15,6 +15,10 @@ histories of the single files show where a change was made. Changes marked
 
 ## Unreleased (SelfX Service)
 
+### Added
+
+- New action "Microsoft Edge: clear the cache" (user context, category Browser, `SelfX_Browser_ClearEdgeCache.ps1`): closes Edge of the own session and removes only the `Cache`, `Code Cache` and `GPUCache` folders of the Default profile; cookies, history, passwords and bookmarks stay. Linked folders (junctions) are skipped. German text in `de.xml`, other languages show the English text.
+
 ### Changed
 
 - Status row "Restart pending": the text now names the last restart and, when the last update installation was after it, its time (read-only, times in the time zone of the user). If the sources are missing, only the addition is left out.
