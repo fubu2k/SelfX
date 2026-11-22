@@ -82,6 +82,7 @@ The included `System` actions are:
 |---|---|
 | `SelfX_Intune_RestartService.ps1` | Restart the Intune Management Extension service |
 | `SelfX_Device_AirePlaneMode.ps1` | Restart all enabled physical network adapters |
+| `SelfX_Device_SyncTime.ps1` | Synchronize the clock with the configured time source (`w32tm /resync /force`, configuration unchanged) |
 | `SelfX_OneDrive_CHKDSK.ps1` | Schedule `chkdsk /r /f` of the system drive for the next restart |
 | `SelfX_Device_CollectLogs.ps1` | Collect the device logs with `Collect-DeviceLogs.ps1` and open a support e-mail with the report (`Post_Action` `MailReport`) |
 
