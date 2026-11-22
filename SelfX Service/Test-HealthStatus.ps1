@@ -582,14 +582,14 @@ try {
             [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="IME" Script="Repair-IME.ps1"/></Remediations></HealthConfig>')
             $method = $type.GetMethod('TryGetSystemAction',$flags)
             foreach ($case in @(@('Repair-IME.ps1',$true), @('Catalog.ps1',$true), @('NotAllowed.ps1',$false))) {
-                $arguments = [object[]]@($case[0],0)
+                $arguments = [object[]]@($case[0],0,$false)
                 $allowed = $method.Invoke($instance,$arguments)
                 Assert-Equal $allowed $case[1] "Service whitelist: $($case[0])"
                 if ($case[1]) { Assert-Equal $arguments[1] 900 "Service default timeout: $($case[0])" }
             }
             foreach ($case in @(@('3600',3600), @('99999',7200), @('0',900), @('abc',900))) {
                 [IO.File]::WriteAllText("$temp\Health_Config.xml", "<HealthConfig><Remediations><Remediation Id=`"Updates`" Script=`"Upd.ps1`" TimeoutSeconds=`"$($case[0])`"/></Remediations></HealthConfig>")
-                $arguments = [object[]]@('Upd.ps1',0)
+                $arguments = [object[]]@('Upd.ps1',0,$false)
                 Assert-Equal $method.Invoke($instance,$arguments) $true "Service remediation with TimeoutSeconds=$($case[0]) allowed"
                 Assert-Equal $arguments[1] $case[1] "Service remediation timeout TimeoutSeconds=$($case[0])"
             }
