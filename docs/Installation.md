@@ -299,6 +299,42 @@ Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Install.log`.
   passender `Tool_Version` und registriertem Dienst. Für PowerShell 7 gilt die
   Erkennungsregel der PowerShell-App, nicht `Detection.ps1`.
 
+### Ticket-Zuordnung: Werte per Intune setzen (ab 2.8.6)
+
+Nur nötig, wenn die Ticket-Funktion (`Ticket_Enabled`) mit Regeln für Group-Tag oder Kategorie in `Ticket_Config.xml` genutzt wird (siehe [Konfiguration](Configuration.md#ticket-per-e-mail-selfx-service-285-zuordnung-286)). SelfX liest die Werte nur; sie stehen in `HKLM\SOFTWARE\SelfX\Support` (`GroupTag`, `Category`, je REG_SZ, bis 64 Zeichen: Buchstaben, Ziffern, Leerzeichen, `.`, `_`, `-`). Das Paket SelfX legt den Schlüssel nicht an. Hybrid-Geräte können zusätzlich nach der OU zugeordnet werden; dafür ist nichts zu setzen.
+
+Beispiel mit einem Intune-Plattformskript (*Geräte > Skripte und Fehlerbehebungen > Plattformskripts*):
+1. Das Skript unten je Einheit oder Kategorie kopieren und die beiden Werte oben anpassen.
+2. Einstellungen: *Dieses Skript mit den Anmeldeinformationen des angemeldeten Benutzers ausführen* = **Nein** (läuft als SYSTEM), *Skripthost in 64-Bit-PowerShell ausführen* = **Ja**.
+3. Einer Entra-Gerätegruppe zuweisen, deren Mitglieder zu diesem Wert passen (zum Beispiel dynamische Gruppe nach Group-Tag oder Gerätekategorie). Das Skript ist wiederholbar: erneutes Ausführen setzt dieselben Werte.
+4. Bei vielen Einheiten: ein Skript je Einheit, oder ein Skript, das den Wert aus einer Tabelle nach Gerätename oder Gruppe wählt. Anzahl und Namen der Tags sind frei; sie müssen nur zu den Regeln in `Ticket_Config.xml` passen.
+5. Kontrolle auf dem Gerät (lesend): `Get-ItemProperty 'HKLM:\SOFTWARE\SelfX\Support'`. Vor der Verteilung prüft `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ...`, welche Einheit herauskommt.
+
+Das Skript läuft in Windows PowerShell 5.1 und in PowerShell 7 und ändert nur diese zwei Werte; ungültige Werte brechen ab, bevor etwas geschrieben wird.
+
+```powershell
+# Set-SelfXSupportUnit.ps1 (example) - sets the values SelfX reads for the ticket routing.
+# Intune platform script: run as SYSTEM (not as the signed-in user), 64-bit, one copy per assignment.
+$GroupTag = 'DE-IT1-BER'   # up to 64 characters: letters, digits, space, . _ -   (empty = remove the value)
+$Category = 'Category-A'   # same rules                                              (empty = remove the value)
+
+$ErrorActionPreference = 'Stop'
+$key = 'HKLM:\SOFTWARE\SelfX\Support'    # below HKLM\SOFTWARE: only administrators can write, users can only read
+$values = [ordered]@{ GroupTag = $GroupTag; Category = $Category }
+foreach ($name in $values.Keys) {
+    $value = "$($values[$name])".Trim()
+    if ($value -and $value -notmatch '^[A-Za-z0-9._ -]{1,64}\z') { Write-Output "$name has an invalid value."; exit 1 }
+    if ($value) {
+        if (-not (Test-Path -LiteralPath $key)) { New-Item -Path $key -Force | Out-Null }
+        New-ItemProperty -LiteralPath $key -Name $name -Value $value -PropertyType String -Force | Out-Null
+    } elseif (Test-Path -LiteralPath $key) {
+        Remove-ItemProperty -LiteralPath $key -Name $name -ErrorAction SilentlyContinue
+    }
+}
+Write-Output "SelfX support values set: GroupTag='$GroupTag', Category='$Category'."
+exit 0
+```
+
 ### Update: immer das ganze Paket verteilen
 
 Verteilen Sie bei jedem Update das **gesamte Paket**, nie nur einzelne Dateien.
