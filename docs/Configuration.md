@@ -34,6 +34,7 @@ Each action has these additional elements:
 |---|---|---|
 | `Context` | `User` or `System` | `User` runs the script as the signed-in user, as in SelfX Standard. `System` sends the script name to the SelfXService, which runs it as SYSTEM. If the element is missing or has another value, the action is treated as `User`. |
 | `TimeoutSeconds` | 1–7200, default 900 | Only for `System` actions. The service stops the script and its child processes after this time and reports a timeout. |
+| `OtherSessions` | empty or `Block` | Optional, only for `System` actions. `Block`: a normal user cannot start the action while another user has an **active** session on the device (the service answers `ERROR OtherSessions`, the window shows a notice). Elevated administrators are not restricted. If the sessions cannot be read, the action is blocked (fail closed). Set it on every entry of the same script; the service blocks when any `System` entry of the script says `Block`. Default in the delivered catalog: restart of the Intune service, restart of the network adapters and the CHKDSK repair. |
 | `Post_Action` | empty or `MailReport` | Optional, only for `System` actions. `MailReport`: after a successful run the GUI attaches the newest report of the user to a new support e-mail. See [Device logs for the support](#device-logs-for-the-support-selfx-service-240). |
 
 Example:
@@ -646,6 +647,11 @@ the device logs to the support, and the support team sees the error code in Intu
 
 Optional `TimeoutSeconds` on a `Remediation` (since 2.5.6) sets the run time limit of the service
 for this repair: a positive number, capped at 7200 seconds; the default is 900 seconds.
+
+Optional `OtherSessions="Block"` on a `Remediation` works like the catalog element `OtherSessions`: a
+normal user cannot start the repair while another user has an active session. The delivered
+configuration sets it for `Updates` and for the restart (`PendingReboot`). A script that is also a
+catalog `System` action uses the catalog entry first; set `Block` there as well.
 
 The **Fix** button is shown only on cards with a configured repair (including OK and
 Unknown cards unless `When="NotOK"`). It is labelled **Beheben** in German and **Fix** in English;

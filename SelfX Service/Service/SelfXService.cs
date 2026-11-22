@@ -68,6 +68,8 @@ Notes:
     2.6.10   2026-11-22  fubu2k               Log hardening: request text is cleaned and shortened, rejected requests are rate limited;
                                               regex anchors use \z instead of $
     2.6.10   2026-11-22  fubu2k               RUN children also receive SELFX_CALLER_ADMIN (1 = elevated administrator, from the client token)
+    2.6.10   2026-11-22  fubu2k               OtherSessions=Block (catalog element / Health_Config attribute): a normal user cannot start
+                                              such an action while another user has an active session (answer ERROR OtherSessions)
 */
 
 using System;
@@ -129,6 +131,31 @@ namespace SelfX
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool CancelIoEx(SafePipeHandle handle, IntPtr overlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetNamedPipeClientSessionId(SafePipeHandle pipe, out uint clientSessionId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool CloseHandle(IntPtr handle);
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct WtsSessionInfo
+        {
+            public int SessionId;
+            public IntPtr WinStationName;
+            public int State;
+        }
+
+        [DllImport("wtsapi32.dll", SetLastError = true)]
+        static extern bool WTSEnumerateSessions(IntPtr server, int reserved, int version, out IntPtr sessionInfo, out int count);
+
+        [DllImport("wtsapi32.dll")]
+        static extern void WTSFreeMemory(IntPtr memory);
+
+        [DllImport("wtsapi32.dll", SetLastError = true)]
+        static extern bool WTSQueryUserToken(int sessionId, out IntPtr token);
+
+        const int WtsActive = 0;
 
         static readonly Regex ScriptNamePattern = new Regex(@"^[A-Za-z0-9_\-\.]{1,100}\.ps1\z", RegexOptions.IgnoreCase);
         static readonly Regex HealthRequestPattern = new Regex(
@@ -473,13 +500,15 @@ namespace SelfX
                     try { user = pipe.GetImpersonationUserName(); } catch { }
                     string callerSid = GetCallerSid(pipe);
                     bool callerIsAdmin = GetCallerIsAdmin(pipe);
+                    long callerSession = -1;
+                    try { uint sessionId; if (GetNamedPipeClientSessionId(pipe.SafePipeHandle, out sessionId)) callerSession = sessionId; } catch { }
 
                     string key = LimitKey(user, callerSid);
                     string response;
                     if (EnterUser(key))
                     {
                         limitKey = key;
-                        response = ProcessRequest(request, user, callerSid, callerIsAdmin);
+                        response = ProcessRequest(request, user, callerSid, callerIsAdmin, callerSession);
                     }
                     else
                     {
@@ -585,7 +614,7 @@ namespace SelfX
         /// <summary>
         /// Validate a request and run one approved action, or return a protocol rejection.
         /// </summary>
-        string ProcessRequest(string request, string user, string callerSid, bool callerIsAdmin)
+        string ProcessRequest(string request, string user, string callerSid, bool callerIsAdmin, long callerSession)
         {
             if (string.IsNullOrEmpty(request))
             {
@@ -657,8 +686,9 @@ namespace SelfX
             }
 
             int timeoutSeconds;
+            bool blockOtherSessions;
             // Elevation is granted only to System entries, never arbitrary client-supplied scripts.
-            if (!TryGetSystemAction(scriptName, out timeoutSeconds))
+            if (!TryGetSystemAction(scriptName, out timeoutSeconds, out blockOtherSessions))
             {
                 LogRejected("Rejected request from " + user + ": '" + scriptName + "' is not a System action in the catalog.");
                 return "ERROR Action is not allowed";
@@ -669,6 +699,18 @@ namespace SelfX
             {
                 LogRejected("Rejected request from " + user + ": script '" + scriptName + "' not found.");
                 return "ERROR Script not found";
+            }
+
+            // Disruptive actions (restart, network, disk check, updates): a normal user may not start them while another
+            // user has an active session. Elevated administrators are not restricted. Fail closed if sessions cannot be read.
+            if (blockOtherSessions && !callerIsAdmin)
+            {
+                int others = CountOtherUserSessions(callerSid, callerSession);
+                if (others != 0)
+                {
+                    LogRejected("Request from " + user + " for '" + scriptName + "' refused: " + (others < 0 ? "sessions could not be checked" : "another user is signed in") + ".");
+                    return "ERROR OtherSessions";
+                }
             }
 
             // The same user cannot start the same action again right after it ended (the run slot is shared by all users).
@@ -698,9 +740,10 @@ namespace SelfX
         /// <summary>
         /// Check the installed System-action whitelist and resolve a bounded execution timeout.
         /// </summary>
-        bool TryGetSystemAction(string scriptName, out int timeoutSeconds)
+        bool TryGetSystemAction(string scriptName, out int timeoutSeconds, out bool blockOtherSessions)
         {
             timeoutSeconds = DefaultTimeoutSeconds;
+            blockOtherSessions = false;
             XmlReaderSettings settings = new XmlReaderSettings();
             // Catalog loading must not resolve external entities or fetch network resources.
             settings.DtdProcessing = DtdProcessing.Prohibit;
@@ -725,6 +768,8 @@ namespace SelfX
                 using (XmlReader reader = XmlReader.Create(healthConfig, settings)) { health.Load(reader); }
                 XmlNode remediation = health.SelectSingleNode("/HealthConfig/Remediations/Remediation[@Script='" + scriptName + "']");
                 if (remediation == null) return false;
+                XmlAttribute remediationSessions = remediation.Attributes["OtherSessions"];
+                blockOtherSessions = remediationSessions != null && remediationSessions.Value.Trim() == "Block";
                 // Optional TimeoutSeconds attribute (long repairs such as installing updates), bounded like catalog actions.
                 XmlAttribute remediationTimeout = remediation.Attributes["TimeoutSeconds"];
                 int remediationConfigured;
@@ -735,6 +780,10 @@ namespace SelfX
                 return true;
             }
 
+            // A script can have several catalog entries: Block applies when any System entry of the script says Block.
+            blockOtherSessions = catalog.SelectSingleNode(
+                "//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "' and normalize-space(OtherSessions)='Block']") != null;
+
             XmlNode timeoutNode = action.SelectSingleNode("TimeoutSeconds");
             int configured;
             if (timeoutNode != null && int.TryParse(timeoutNode.InnerText.Trim(), out configured) && configured > 0)
@@ -742,6 +791,42 @@ namespace SelfX
                 timeoutSeconds = Math.Min(configured, MaxTimeoutSeconds);
             }
             return true;
+        }
+
+        /// <summary>
+        /// Number of ACTIVE sessions of other users (not the caller's session, not session 0, not the caller's own SID).
+        /// Returns -1 when the sessions cannot be determined, so that the caller fails closed.
+        /// </summary>
+        static int CountOtherUserSessions(string callerSid, long callerSession)
+        {
+            if (callerSid == null || callerSession < 0) return -1;
+            IntPtr info = IntPtr.Zero;
+            int count;
+            if (!WTSEnumerateSessions(IntPtr.Zero, 0, 1, out info, out count)) return -1;
+            try
+            {
+                int others = 0;
+                int size = Marshal.SizeOf(typeof(WtsSessionInfo));
+                for (int i = 0; i < count; i++)
+                {
+                    WtsSessionInfo session = (WtsSessionInfo)Marshal.PtrToStructure(new IntPtr(info.ToInt64() + (long)i * size), typeof(WtsSessionInfo));
+                    if (session.State != WtsActive || session.SessionId == 0 || session.SessionId == callerSession) continue;
+                    IntPtr token;
+                    if (!WTSQueryUserToken(session.SessionId, out token)) return -1;
+                    try
+                    {
+                        using (WindowsIdentity identity = new WindowsIdentity(token))
+                        {
+                            if (identity.User == null || identity.User.Value != callerSid) others++;
+                        }
+                    }
+                    catch { return -1; }
+                    finally { CloseHandle(token); }
+                }
+                return others;
+            }
+            catch { return -1; }
+            finally { WTSFreeMemory(info); }
         }
 
         /// <summary>
