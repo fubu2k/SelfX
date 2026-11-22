@@ -112,13 +112,14 @@ function Test-StagedPackage {
         $bin = Join-Path $Stage 'Bin'
         if (-not (Test-Path -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -PathType Leaf)) { throw 'The folder Bin with SelfX.Binaries.json is missing. Run tools\Build-SelfXBinaries.ps1 first (docs\Installation.md).' }
         $manifest = Get-Content -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -Raw | ConvertFrom-Json
-        if ("$($manifest.ManifestVersion)" -ne '2') { throw 'Bin was built by an older Build-SelfXBinaries.ps1. Run tools\Build-SelfXBinaries.ps1 again.' }
-        foreach ($source in @('Service/SelfXService.cs', 'Service/SelfXLauncher.cs', 'Service/SelfXSessionStarter.cs')) {
+        if ("$($manifest.ManifestVersion)" -ne '3') { throw 'Bin was built by an older Build-SelfXBinaries.ps1. Run tools\Build-SelfXBinaries.ps1 again.' }
+        foreach ($source in @('Service/SelfXService.cs', 'Service/SelfXLauncher.cs', 'Service/SelfXSessionStarter.cs', 'Service/SelfXWinRT.cs')) {
             $hash = (Get-FileHash -LiteralPath (Join-Path $Stage ($source.Replace('/', '\'))) -Algorithm SHA256).Hash
             if ($hash -ne "$($manifest.Sources.$source)") { throw "Bin was not built from the current $source. Run tools\Build-SelfXBinaries.ps1 again." }
         }
-        foreach ($file in @('SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll')) {
-            $hash = (Get-FileHash -LiteralPath (Join-Path $bin $file) -Algorithm SHA256).Hash
+        # Every file that the manifest lists (the three programs and the DLLs in WinRT) must exist and match.
+        foreach ($file in @($manifest.Binaries.PSObject.Properties.Name) + @('SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll', 'WinRT/SelfXWinRT.dll') | Select-Object -Unique) {
+            $hash = (Get-FileHash -LiteralPath (Join-Path $bin $file.Replace('/', '\')) -Algorithm SHA256).Hash
             if ($hash -ne "$($manifest.Binaries.$file)") { throw "Bin\$file does not match the manifest. Run tools\Build-SelfXBinaries.ps1 again." }
         }
         Write-Host "Service: programs from Bin (.NET SDK $($manifest.SdkVersion), checked against the manifest)."

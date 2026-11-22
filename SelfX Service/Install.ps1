@@ -120,20 +120,30 @@ function Test-SelfXPrebuiltBinaries {
 		'SelfXService.exe'        = 'Service/SelfXService.cs'
 		'SelfX.exe'               = 'Service/SelfXLauncher.cs'
 		'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'
+		'WinRT/SelfXWinRT.dll'    = 'Service/SelfXWinRT.cs'
 	}
 	$ManifestPath = Join-Path $BinFolder 'SelfX.Binaries.json'
 	If(-not (Test-Path -LiteralPath $BinFolder -PathType Container)) { throw 'The folder Bin is missing in the package. Run tools\Build-SelfXBinaries.ps1 and build the package again (docs\Installation.md).' }
 	If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw 'Bin\SelfX.Binaries.json is missing.' }
 	Try { $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json }
 	Catch { throw "Bin\SelfX.Binaries.json is not valid JSON: $($_.Exception.Message)" }
-	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '2' -or -not $Manifest.Sources -or -not $Manifest.Binaries) { throw 'Bin\SelfX.Binaries.json has an unknown format.' }
+	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '3' -or -not $Manifest.Sources -or -not $Manifest.Binaries) { throw 'Bin\SelfX.Binaries.json has an unknown format.' }
 	ForEach($Name in $Expected.Keys)
 	{
 		$Source = $Expected[$Name]
 		$SourcePath = Join-Path $PackageFolder ($Source.Replace('/', '\'))
 		If(-not (Test-Path -LiteralPath $SourcePath -PathType Leaf)) { throw "Source $Source is missing in the package." }
 		If((Get-FileHash -LiteralPath $SourcePath -Algorithm SHA256).Hash -ne "$($Manifest.Sources.$Source)") { throw "Bin\$Name was not built from the $Source of this package (rebuild with tools\Build-SelfXBinaries.ps1)." }
-		$File = Join-Path $BinFolder $Name
+		$File = Join-Path $BinFolder $Name.Replace('/', '\')
+		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "Bin\$Name is missing." }
+		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
+	}
+	# The DLLs of the Windows SDK projection in WinRT: only plain file names, each one present and unchanged.
+	ForEach($Name in @($Manifest.Binaries.PSObject.Properties.Name))
+	{
+		If($Expected.Contains($Name)) { continue }
+		If($Name -notmatch '^WinRT/[A-Za-z0-9._-]+\.dll$') { throw "Bin\SelfX.Binaries.json lists an unexpected file '$Name'." }
+		$File = Join-Path $BinFolder $Name.Replace('/', '\')
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "Bin\$Name is missing." }
 		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
 	}
@@ -214,6 +224,14 @@ Try
 	Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfXService.exe') -Destination $ServiceExe -Force
 	Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfX.exe') -Destination $LauncherExe -Force
 	Write-Output 'Installed SelfXService.exe and SelfX.exe from Bin.'
+	# Library for PowerShell 7 (Windows Update orchestrator): the files checked above, into the protected install folder.
+	$WinRTFolder = Join-Path $InstallFolder 'WinRT'
+	New-Item -ItemType Directory -Path $WinRTFolder -Force | Out-Null
+	ForEach($Name in @((Get-Content -LiteralPath (Join-Path $BinFolder 'SelfX.Binaries.json') -Raw | ConvertFrom-Json).Binaries.PSObject.Properties.Name | Where-Object { $_ -like 'WinRT/*' }))
+	{
+		Copy-Item -LiteralPath (Join-Path $BinFolder $Name.Replace('/', '\')) -Destination $WinRTFolder -Force
+	}
+	Write-Output 'Installed the WinRT library from Bin.'
 	If(-not (Test-Path -LiteralPath $ServiceExe)) { throw 'SelfXService.exe is missing after the installation step.' }
 	If(-not (Test-Path -LiteralPath $LauncherExe)) { throw 'SelfX.exe is missing after the installation step.' }
 

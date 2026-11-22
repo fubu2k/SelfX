@@ -182,8 +182,6 @@ jobs:
           if (Test-Path -LiteralPath $bin) { Remove-Item -LiteralPath $bin -Recurse -Force }
           Copy-Item -LiteralPath $one -Destination $bin -Recurse
           Get-Content -LiteralPath (Join-Path $one 'SelfX.Binaries.json') -Raw
-          # TEMPORARY (WinRT library): the NuGet lock file created by the restore.
-          Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Service\Projects\SelfXWinRT') -Filter packages.lock.json | ForEach-Object { '--- ' + $_.Name; Get-Content -LiteralPath $_.FullName -Raw }
 
       - name: Install.ps1 check accepts the build; session starter loads in Windows PowerShell 5.1
         shell: powershell
@@ -199,6 +197,25 @@ jobs:
           # The same call as Install.ps1 uses to start the status icon: the netstandard2.0 library in .NET Framework.
           Add-Type -LiteralPath (Join-Path $package 'Bin\SelfXSessionStarter.dll')
           'Active sessions: ' + (([SelfXInstall.SessionStarter]::GetActiveSessionIds()) -join ', ')
+
+      - name: SelfXWinRT.dll loads in PowerShell 7 (with the Windows SDK projection)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $folder = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Bin\WinRT'
+          Get-ChildItem -LiteralPath $folder | Format-Table Name, Length
+          [void][Reflection.Assembly]::LoadFrom((Join-Path $folder 'SelfXWinRT.dll'))
+          # An invalid client id is refused before the API is touched; calling the method also loads the projection DLLs.
+          foreach ($bad in '', 'a b', 'x;y', ('a' * 65)) {
+            try { [void][SelfX.SelfXWinRT]::CreateUpdateManager($bad); throw "Client id '$bad' was accepted." }
+            catch [System.ArgumentException] { "Refused client id (length $($bad.Length))." }
+            catch { if ($_.Exception.InnerException -is [System.ArgumentException]) { "Refused client id (length $($bad.Length))." } else { throw } }
+          }
+          # The orchestrator exists on Windows 11 24H2 and newer only; the runner may not have it.
+          try {
+            $manager = [SelfX.SelfXWinRT]::CreateUpdateManager('SelfX.CI')
+            "Manager created: $($manager.GetType().FullName), IsScanning=$($manager.IsScanning)"
+          } catch { "Orchestrator not available on this runner: $($_.Exception.GetType().FullName): $($_.Exception.Message)" }
 
       - name: Start the service in console mode
         shell: pwsh

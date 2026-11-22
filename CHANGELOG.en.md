@@ -35,11 +35,15 @@ PowerShell 5.1. Shipped together with the replacement for the Windows Update int
 - `Test-ServicePipe.ps1` and `Test-HealthStatus.ps1` also compile the service in
   PowerShell 7; `Test-InstallBinaries.ps1` tests the new prerequisite.
 
-### Known limitation
-
-- PowerShell 7 does not have the orchestrator interface of Windows Update (WinRT,
-  Windows 11 24H2 and newer) yet. The scripts fall back to the Windows Update Agent.
-  The replacement follows in the next step.
+- New library `SelfXWinRT.dll` (.NET 10, Windows SDK projection) replaces the WinRT access
+  to the Windows Update orchestrator (Windows 11 24H2 and newer) in PowerShell 7, which
+  cannot load Windows Runtime types by name any more. It contains no logic of its own and
+  only returns the manager object. `Build-SelfXBinaries.ps1` builds it with the two
+  projection files into `Bin\WinRT`; `Install.ps1` checks every file by SHA256 and copies
+  it to `%ProgramFiles%\SelfX\WinRT`. On older Windows the scripts fall back to the Windows
+  Update Agent as before.
+- The manifest `SelfX.Binaries.json` now has format 3 (entries `WinRT/...`). The installer
+  refuses packages with format 2: build the package again.
 
 ## 2.7.0 - 2026-11-22 (SelfX Service)
 

@@ -91,8 +91,16 @@ function Get-SelfXUpdateName {
 # Windows Update orchestrator of Windows 11 24H2 and newer (WinRT); $null on older Windows (replaced in tests).
 function Get-SelfXUpdateManager {
 	try {
-		$null = [Windows.Management.Update.WindowsUpdateManager, Windows.Management.Update, ContentType = WindowsRuntime]
-		return (New-Object Windows.Management.Update.WindowsUpdateManager -ArgumentList 'SelfX')
+		if ($PSVersionTable.PSEdition -ne 'Core') {
+			# Windows PowerShell 5.1 loads the Windows Runtime type by name.
+			$null = [Windows.Management.Update.WindowsUpdateManager, Windows.Management.Update, ContentType = WindowsRuntime]
+			return (New-Object Windows.Management.Update.WindowsUpdateManager -ArgumentList 'SelfX')
+		}
+		# PowerShell 7 cannot: SelfXWinRT.dll in the folder WinRT of the install folder (checked by Install.ps1 against the manifest).
+		$library = Join-Path (Split-Path -Parent $PSScriptRoot) 'WinRT\SelfXWinRT.dll'
+		if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { return $null }
+		[void][Reflection.Assembly]::LoadFrom($library)
+		return [SelfX.SelfXWinRT]::CreateUpdateManager('SelfX')
 	} catch { return $null }
 }
 
