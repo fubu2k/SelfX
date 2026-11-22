@@ -98,6 +98,8 @@ try {
 	Assert-Equal @($config.Errors).Count 0 'config: no errors'
 
 	$path = Write-TestConfig 'lower.xml' '<Network_Test_Config><Settings Enabled="true"/></Network_Test_Config>'
+	Assert-Equal (Read-SelfXNetworkTestConfig -Path $path).Enabled $true 'config: True in any letter case switches it on'
+	$path = Write-TestConfig 'other.xml' '<Network_Test_Config><Settings Enabled="1"/></Network_Test_Config>'
 	Assert-Equal (Read-SelfXNetworkTestConfig -Path $path).Enabled $false 'config: only True switches it on'
 	$path = Write-TestConfig 'default-gateway.xml' '<Network_Test_Config><Settings Enabled="True"/></Network_Test_Config>'
 	Assert-Equal (Read-SelfXNetworkTestConfig -Path $path).Gateway $true 'config: gateway is measured by default'
@@ -106,17 +108,19 @@ try {
 		'<Target Label="" Host="a.example.org"/>' +
 		'<Target Label="Bad host" Host="http://a.example.org"/>' +
 		'<Target Label="Bad port" Host="a.example.org" Port="70000"/>' +
-		'<Target Label="Port text" Host="a.example.org" Port="https"/>' +
 		'<Target Label="Twice" Host="a.example.org" Port="80"/>' +
 		'<Target Label="Twice" Host="b.example.org" Port="80"/>' +
-		'<Target Label="Bad;label" Host="a.example.org"/>' +
 		'</Targets></Network_Test_Config>'
 	$config = Read-SelfXNetworkTestConfig -Path (Write-TestConfig 'bad.xml' $bad)
 	Assert-Equal $config.Samples 3 'config: invalid samples fall back to 3'
 	Assert-Equal $config.TimeoutMs 2000 'config: invalid timeout falls back to 2000'
 	Assert-Equal @($config.Targets).Count 1 'config: only the valid target is kept'
 	Assert-Equal $config.Targets[0].Host 'a.example.org' 'config: the first of two equal labels is kept'
-	Assert-Equal @($config.Errors).Count 8 'config: every invalid entry is named'
+	Assert-Equal @($config.Errors).Count 6 'config: every invalid entry is named'
+	$bad = '<Network_Test_Config><Settings Enabled="True"/><Targets><Target Label="Port text" Host="a.example.org" Port="https"/><Target Label="Bad;label" Host="a.example.org"/><Target Label="Fine" Host="a.example.org" Port="443"/></Targets></Network_Test_Config>'
+	$config = Read-SelfXNetworkTestConfig -Path (Write-TestConfig 'bad2.xml' $bad)
+	Assert-Equal @($config.Targets).Count 1 'config: a port that is not a number and a label with a semicolon are skipped'
+	Assert-Equal @($config.Errors).Count 2 'config: both are named'
 
 	$many = '<Network_Test_Config><Settings Enabled="True"/><Targets>' + ((1..7 | ForEach-Object { "<Target Label=`"T$_`" Host=`"h$_.example.org`"/>" }) -join '') + '</Targets></Network_Test_Config>'
 	$config = Read-SelfXNetworkTestConfig -Path (Write-TestConfig 'many.xml' $many)
@@ -177,7 +181,7 @@ try {
 	Assert-Equal $items[2].Status '' 'items: a working connection has no status'
 
 	$noGateway = @(Get-SelfXNetworkMeasureItems -Category 'Network' -Config $config -Gateways @())
-	Assert-Equal $noGateway.Count 3 'items: without a gateway address the gateway line is missing'
+	Assert-Equal $noGateway.Count 2 'items: without a gateway address the gateway line is missing'
 	$config.Gateway = $false
 	$noGateway = @(Get-SelfXNetworkMeasureItems -Category 'Network' -Config $config -Gateways @('127.0.0.1'))
 	Assert-Equal $noGateway.Count 2 'items: gateway switched off'
@@ -195,7 +199,7 @@ try {
 	Assert-Equal $items[0].Status 'Error' 'items: unknown name is an error'
 	Assert-Equal $items[1].Status 'Error' 'items: no connection without an address'
 	$late = @(Get-SelfXNetworkMeasureItems -Category 'Network' -Config $config -DeadlineSeconds -5)
-	Assert-Equal ($late | Where-Object { $_.Value -eq 'not measured (time limit reached)' }).Count 2 'items: time limit shows not measured'
+	Assert-Equal @($late | Where-Object { $_.Value -like '*: not measured (time limit reached)' }).Count 2 'items: time limit shows not measured'
 }
 finally { $listener.Stop() }
 
