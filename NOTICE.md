@@ -1,8 +1,8 @@
 # Hinweise zu Urheberschaft und Lizenzen
 
 Stand: 22.11.2026. Dieses Repository ist ein Fork von SelfX (nur das Paket SelfX Service). Die Lizenzdatei
-[LICENSE.md](LICENSE.md) ist die unveränderte Datei des ursprünglichen Projekts (MIT-Lizenz). Dieser Hinweis ergänzt sie,
-ersetzt sie aber nicht.
+[LICENSE.md](LICENSE.md) enthält den Text und die ursprüngliche Copyright-Zeile des ursprünglichen Projekts (MIT-Lizenz) unverändert,
+ergänzt um die Copyright-Zeile für die Änderungen in diesem Fork. Dieser Hinweis ergänzt sie, ersetzt sie aber nicht.
 
 ## Herkunft
 

@@ -161,6 +161,7 @@ the **entire package**. The update installs like every other update;
 
 ### Added
 
+- `LICENSE.md`: additional copyright line for the changes in this fork (text and original line unchanged).
 - `NOTICE.md` / `NOTICE.en.md`: authors and sources (Damien Van Robaeys, Wolfgang Baeck, Jannik Reinhard).
 - `Test-ServicePipe.ps1`: starts the pipe listener of the service under a test
   pipe name and checks the deadlines, slow senders, oversized requests and the
