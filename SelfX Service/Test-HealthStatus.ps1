@@ -44,8 +44,11 @@ function Add-SelfXServiceType {
 	$names = 'System.IO.Pipes', 'System.IO.Pipes.AccessControl', 'System.Security.AccessControl', 'System.Security.Principal.Windows',
 		'System.ServiceProcess.ServiceController', 'System.Diagnostics.Process', 'System.Diagnostics.EventLog', 'System.ComponentModel.Primitives',
 		'System.Private.Xml', 'System.Xml.ReaderWriter', 'System.Collections', 'System.Linq', 'System.Memory', 'System.Runtime.InteropServices',
-		'System.Threading', 'System.Threading.Thread', 'System.Text.Encoding.Extensions', 'System.Console', 'System.Runtime.Extensions'
-	$references = @(foreach ($name in $names) { $file = Join-Path $PSHOME "$name.dll"; if (Test-Path -LiteralPath $file) { $file } })
+		'System.Threading', 'System.Threading.Thread', 'System.Text.Encoding.Extensions', 'System.Console', 'System.Runtime.Extensions',
+		'System.Runtime', 'System.Collections.Concurrent', 'System.Collections.NonGeneric', 'System.Text.RegularExpressions', 'System.Threading.Tasks',
+		'System.IO.FileSystem', 'System.Security.Claims', 'System.ComponentModel', 'System.Diagnostics.TraceSource', 'System.Linq.Expressions'
+	# The implementation assemblies forward their types to System.Private.CoreLib, which must be referenced as well.
+	$references = @([object].Assembly.Location) + @(foreach ($name in $names) { $file = Join-Path $PSHOME "$name.dll"; if (Test-Path -LiteralPath $file) { $file } })
 	Add-Type -TypeDefinition ("#define NET`n" + $text) -ReferencedAssemblies $references
 }
 
