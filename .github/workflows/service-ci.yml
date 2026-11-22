@@ -98,3 +98,45 @@ jobs:
           foreach ($r in $results) { Write-Output "::error file=$($r.ScriptPath),line=$($r.Line)::$($r.RuleName): $($r.Message)" }
           if (@($results).Count -gt 0) { throw "$(@($results).Count) findings." }
           Write-Output 'No findings.'
+
+  # Preparation for the move to PowerShell 7 (see docs: migration plan). Information only: this job never fails
+  # the workflow (continue-on-error). It runs every test in PowerShell 7 and lists which ones pass or fail.
+  pwsh7-compatibility:
+    name: Information - tests in PowerShell 7 (not blocking)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Run all Test-*.ps1 in PowerShell 7
+        shell: pwsh
+        env:
+          SELFX_TEST_TRACE: '1'
+        run: |
+          Write-Output "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+          $pwsh = (Get-Command pwsh).Source
+          $rows = New-Object System.Collections.Generic.List[string]
+          $failed = 0
+          $tests = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Sort-Object Name
+          foreach ($test in $tests) {
+            Write-Output "::group::$($test.Name)"
+            $outFile = Join-Path $env:RUNNER_TEMP "pwsh7-$($test.BaseName).out.txt"
+            $errFile = Join-Path $env:RUNNER_TEMP "pwsh7-$($test.BaseName).err.txt"
+            $process = Start-Process -FilePath $pwsh -PassThru -NoNewWindow `
+              -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$($test.FullName)`"" `
+              -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+            $null = $process.Handle
+            if (-not $process.WaitForExit(300000)) {
+              & taskkill.exe /PID $process.Id /T /F | Out-Null
+              $code = 124
+            } else { $process.WaitForExit(); $code = $process.ExitCode }
+            Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue | Select-Object -First 60 | Write-Output
+            Write-Output '::endgroup::'
+            if ($code -eq 0) { $rows.Add("| $($test.Name) | passed |") } else { $failed++; $rows.Add("| $($test.Name) | FAILED (exit code $code) |") }
+          }
+          $summary = @("### Tests in PowerShell $($PSVersionTable.PSVersion) (information only)", '', '| Test | Result |', '| --- | --- |') + $rows
+          $summary | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+          Write-Output "$failed of $($tests.Count) test scripts failed in PowerShell 7 (not blocking)."
