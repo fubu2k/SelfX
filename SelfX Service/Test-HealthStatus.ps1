@@ -38,6 +38,8 @@ $rebootReader = (Get-Command Get-SelfXPendingRebootMarkers).ScriptBlock
 $script:assertions = 0
 function Assert-Equal($Actual, $Expected, $Message) {
     $script:assertions++
+    # CI sets SELFX_TEST_TRACE, so the output of a test that hangs shows where it stopped.
+    if ($env:SELFX_TEST_TRACE) { [Console]::Out.WriteLine("ok: $Message") }
     if ($Actual -ne $Expected) { throw "$Message : expected '$Expected', got '$Actual'." }
 }
 function Assert-Throws([scriptblock]$Action, $Message) {
@@ -639,25 +641,7 @@ try {
             $limitKey = $type.GetMethod('LimitKey',$static)
             Assert-Equal $limitKey.Invoke($null,@('DOM\bob','S-1-5-21-1-1-1-1001')) 'S-1-5-21-1-1-1-1001' 'Limit key: SID of the client token'
             Assert-Equal $limitKey.Invoke($null,@('DOM\bob',$null)) 'user:DOM\bob' 'Limit key: user name when the SID is unknown'
-            # Deadline: a client that sends nothing must not block the connection thread (real pipe in this process).
-            if (-not ('SelfXTest.DeadlineProbe' -as [type])) {
-                Add-Type -TypeDefinition 'using System; using System.IO.Pipes; using System.Reflection; namespace SelfXTest { public static class DeadlineProbe { public static bool ReadByteWithDeadline(MethodInfo method, NamedPipeServerStream pipe, int milliseconds) { Action operation = delegate { pipe.ReadByte(); }; return (bool)method.Invoke(null, new object[] { pipe, milliseconds, operation }); } } }' -ReferencedAssemblies 'System.Core.dll'
-            }
-            $deadline = $type.GetMethod('RunWithDeadline',$static)
-            $pipeName = 'SelfXTest-' + [guid]::NewGuid().ToString('N')
-            $server = New-Object System.IO.Pipes.NamedPipeServerStream($pipeName, [System.IO.Pipes.PipeDirection]::InOut, 1)
-            $client = New-Object System.IO.Pipes.NamedPipeClientStream('.', $pipeName, [System.IO.Pipes.PipeDirection]::InOut)
-            try {
-                $connecting = $server.WaitForConnectionAsync()
-                $client.Connect(3000)
-                [void]$connecting.Wait(3000)
-                $client.WriteByte(1); $client.Flush()
-                Assert-Equal ([SelfXTest.DeadlineProbe]::ReadByteWithDeadline($deadline, $server, 3000)) $true 'Deadline: a read that gets data finishes normally'
-                $watch = [Diagnostics.Stopwatch]::StartNew()
-                $finished = [SelfXTest.DeadlineProbe]::ReadByteWithDeadline($deadline, $server, 500)
-                $watch.Stop()
-                Assert-Equal "$finished/$($watch.ElapsedMilliseconds -ge 400 -and $watch.ElapsedMilliseconds -lt 5000)" 'False/True' 'Deadline: a read without data is cancelled after the deadline'
-            } finally { $client.Dispose(); $server.Dispose() }
+            # Pipe deadlines (A4) are tested with the real listener in Test-ServicePipe.ps1.
         } finally { $instance.Dispose() }
     }
     & {
@@ -721,12 +705,12 @@ try {
         function Get-SelfXPipeServerState { param($Pipe, $ServiceName) if ($script:pipeStateFails) { throw 'Mock failure' }; $script:pipeState }
         $script:pipeStateFails = $false
         $script:pipeState = 1
-        Test-SelfXPipeServer -Pipe $null
-        Assert-Throws { $script:pipeState = 0; Test-SelfXPipeServer -Pipe $null } 'Pipe server check: a process that is not the service is refused'
+        Test-SelfXPipeServer -Pipe 'pipe'
+        Assert-Throws { $script:pipeState = 0; Test-SelfXPipeServer -Pipe 'pipe' } 'Pipe server check: a process that is not the service is refused'
         $script:pipeState = -1
-        Test-SelfXPipeServer -Pipe $null
+        Test-SelfXPipeServer -Pipe 'pipe'
         $script:pipeState = 1; $script:pipeStateFails = $true
-        Test-SelfXPipeServer -Pipe $null
+        Test-SelfXPipeServer -Pipe 'pipe'
         $script:pipeStateFails = $false
         Assert-Equal $true $true 'Pipe server check: undetermined state and errors do not stop the request'
         $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
@@ -792,7 +776,7 @@ try {
             $answer = $statusMethod.Invoke($instance, @())
             Assert-Equal ($answer -match '^STATUS 2026-11-04T09:30:05Z 15 Active ([A-Za-z0-9+/=]+)$') $true 'STATUS with cache time and data'
             Assert-Equal ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Matches[1])).Contains('"IME"')) $true 'STATUS carries the cache content'
-            Assert-Equal ($type.GetMethod('ProcessRequest', $flags).Invoke($instance, @('STATUS', 'test', $null)) -like 'STATUS 2026-11-04T09:30:05Z*') $true 'STATUS request is answered without running a script'
+            Assert-Equal ($type.GetMethod('ProcessRequest', $flags).Invoke($instance, @('STATUS', 'test', $null, $false, [long]0)) -like 'STATUS 2026-11-04T09:30:05Z*') $true 'STATUS request is answered without running a script'
             [IO.Directory]::Delete((Split-Path $cacheFile), $true)
         } finally { $instance.Dispose() }
     }
