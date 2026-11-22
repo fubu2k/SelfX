@@ -133,7 +133,7 @@ jobs:
               & taskkill.exe /PID $process.Id /T /F | Out-Null
               $code = 124
             } else { $process.WaitForExit(); $code = $process.ExitCode }
-            Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue | Select-Object -First 60 | Write-Output
+            Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue | Select-Object -Last 60 | Write-Output
             Write-Output '::endgroup::'
             if ($code -eq 0) { $rows.Add("| $($test.Name) | passed |") } else { $failed++; $rows.Add("| $($test.Name) | FAILED (exit code $code) |") }
           }
