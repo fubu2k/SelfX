@@ -178,6 +178,8 @@ jobs:
             if ($a -ne $b) { $failed = $true }
           }
           if ($failed) { throw 'The two builds are not identical.' }
+          # NuGet lock file (package versions and hashes); committed to the repository, restore then runs in locked mode.
+          Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Service\Projects') -Filter packages.lock.json -Recurse | ForEach-Object { "::group::$($_.FullName)"; Get-Content -LiteralPath $_.FullName -Raw; '::endgroup::' }
 
       - name: Start the service in console mode
         shell: pwsh

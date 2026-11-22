@@ -3,7 +3,7 @@
        The source is the same file that Windows PowerShell 5.1 compiles (..\..\SelfXService.cs). -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <AssemblyName>SelfXService</AssemblyName>
     <RootNamespace>SelfX</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
@@ -20,6 +20,7 @@
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
   </PropertyGroup>
