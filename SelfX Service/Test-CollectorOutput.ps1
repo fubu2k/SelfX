@@ -68,14 +68,16 @@ try {
 	# 3. An existing file whose owner is not in the list (created in advance by a user) is removed and replaced.
 	$file3 = Join-Path $root 'foreign.log'
 	Set-Content -LiteralPath $file3 -Value 'planted'
-	# A second name for the planted file shows that it is replaced, not truncated (the creation time cannot be used: Windows
-	# restores it for a file that is recreated with the same name within seconds).
-	$alias3 = Join-Path $root 'foreign-alias.txt'
-	$null = & cmd.exe /c mklink /H "`"$alias3`"" "`"$file3`"" 2>&1
-	$aliased = ($LASTEXITCODE -eq 0)
-	Write-Report $file3 @('S-1-5-18-no-match')
-	Assert-Equal (Read-Text $file3) 'new report' 'file of an untrusted owner is replaced'
-	if ($aliased) { Assert-Equal (Read-Text $alias3) 'planted' 'file of an untrusted owner: the planted file itself is not written' }
+	# An open handle on the planted file shows that the name is replaced and the file itself is not truncated (the creation
+	# time cannot be used: Windows restores it for a file that is recreated with the same name within seconds).
+	$planted3 = New-Object System.IO.FileStream($file3, [IO.FileMode]::Open, [IO.FileAccess]::Read, ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+	try {
+		Write-Report $file3 @('S-1-5-18-no-match')
+		Assert-Equal (Read-Text $file3) 'new report' 'file of an untrusted owner is replaced'
+		$planted3.Position = 0
+		Assert-Equal ((New-Object System.IO.StreamReader($planted3)).ReadToEnd().Trim()) 'planted' 'file of an untrusted owner: the planted file itself is not written'
+	}
+	finally { $planted3.Dispose() }
 
 	# 4. A symbolic link at the report path: the link is removed, the target is not written.
 	$target4 = Join-Path $root 'target4.txt'
