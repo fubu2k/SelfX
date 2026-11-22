@@ -452,7 +452,7 @@ try {
         Assert-Equal (Test-Path -LiteralPath (Join-Path "$sources\Scripts_to_run" $action.Script)) $true "$($action.Id) script exists"
     }
     Assert-Equal (Test-Path -LiteralPath "$sources\Scripts_to_run\Collect-DeviceLogs.ps1") $true 'Collector is packaged'
-    Assert-Equal ($quick | Where-Object Id -eq 'Q_Device_SendLogs').Name 'Geräteprotokolle an den Support senden' 'German action name'
+    Assert-Equal ($quick | Where-Object Id -eq 'Q_Device_SendLogs').Name 'Protokolle Ihres Geräts an den Support senden' 'German action name'
     Assert-Equal (($quick | Where-Object Id -eq 'Q_Device_SendLogs').Alerte_MSG -like 'SelfX sammelt jetzt*') $true 'German confirmation text'
     Assert-Equal @($quick + $detailed | Where-Object { $_.Id -notlike '*_SendLogs' -and $_.Post_Action -ne '' }).Count 0 'Other actions have no Post_Action'
     Assert-Equal (Get-SelfXString 'Report_Mail_Subject' 'PC1') 'Geräteprotokolle von PC1' 'German subject'
@@ -512,9 +512,9 @@ try {
     $Global:SvcAction_PS.Dispose(); $Global:SvcAction_Runspace.Dispose(); $Global:SvcAction_Running = $false; $Global:SvcAction_Row = $null
 
     foreach ($case in @(
-        @('Outlook', 'SetSuccessAlert', 'Eine E-Mail mit den Geräteprotokollen im Anhang wurde geöffnet*'),
-        @('OutlookCommandLine', 'SetSuccessAlert', '*Empfänger ein (help@contoso.com)*'),
-        @('Manual', 'SetWarningAlert', 'Die Geräteprotokolle wurden unter C:\x.zip gespeichert*(Empfänger: help@contoso.com)*'),
+        @('Outlook', 'SetSuccessAlert', 'Eine neue E-Mail mit den Protokollen im Anhang ist geöffnet*'),
+        @('OutlookCommandLine', 'SetSuccessAlert', '*Empfänger „help@contoso.com“ ein*'),
+        @('Manual', 'SetWarningAlert', 'Die Protokolle sind unter C:\x.zip gespeichert*help@contoso.com*'),
         @('NotFound', 'SetDangerAlert', '*nicht vorbereitet werden: C:\r'),
         @('Error', 'SetDangerAlert', '*nicht vorbereitet werden: C:\r'))) {
         $script:alerts = @()
@@ -525,7 +525,7 @@ try {
     $Support_Mail = ''
     $script:alerts = @()
     Show-SelfXReportMailResult -Report ([pscustomobject]@{ Status = 'OutlookCommandLine' })
-    Assert-Equal ($script:alerts[0][1] -like '*(Ihr Support)*') $true 'Fallback recipient text without Support_Mail'
+    Assert-Equal ($script:alerts[0][1] -like '*Empfänger „Ihr Support“ ein*') $true 'Fallback recipient text without Support_Mail'
 } finally {
     if ($junction -and (Test-Path -LiteralPath $junction)) { [IO.Directory]::Delete($junction) }
     $env:SystemRoot = $originalRoot
