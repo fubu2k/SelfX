@@ -19,8 +19,9 @@ Windows-Geräten, insbesondere mit Microsoft Intune.
 ## SelfX Service
 
 SelfX Service wird für das ganze Gerät installiert und läuft vollständig offline.
-Führen Sie den Installer als Administrator aus, entweder manuell oder über
-Intune/SCCM im SYSTEM-Kontext:
+Sie brauchen zwei Dinge: das komplette Paketverzeichnis und Administratorrechte. Der
+Installer läuft entweder manuell mit erhöhten Rechten oder über Intune/SCCM im
+SYSTEM-Kontext:
 
 ```powershell
 Set-Location 'C:\Pfad\zu\SelfX Service'
@@ -76,15 +77,15 @@ Protokolldateien, die älter sind als `Log_Retention_Days` (Standard 90), werden
 automatisch gelöscht; siehe
 [Protokollierung](Configuration.md#protokollierung-und-aufbewahrung-selfx-service-260).
 
-Der Installer endet bei Erfolg mit Exitcode 0 und bei einem Fehler mit 1. Der Grund
-steht in der letzten Zeile von `Install.log` (`Installation failed: ...`). Bis
-Version 2.5.1 schlug ein Update mit Exitcode 1 fehl, während ein Nutzer SelfX oder
-das Statussymbol geöffnet hatte. Windows verweigert das Löschen eines Ordners, den
-ein laufendes Programm als Arbeitsverzeichnis nutzt, sodass der Installer anhielt,
-nachdem er Dienst und Dateien bereits entfernt hatte. Version 2.5.2 leert den
-Ordner, statt ihn zu löschen. Das Statussymbol nutzt den Installationsordner nicht
-mehr als Arbeitsverzeichnis. Um ein Gerät zu reparieren, auf dem ein älteres Update
-fehlgeschlagen ist, verteilen Sie 2.5.2. Eine Abmeldung ist nicht nötig.
+Der Installer endet bei Erfolg mit Exitcode 0 und bei einem Fehler mit 1. Den Grund
+finden Sie in der letzten Zeile von `Install.log` (`Installation failed: ...`).
+
+> **Hinweis zu alten Versionen:** Bis 2.5.1 schlug ein Update fehl, wenn ein Nutzer
+> SelfX oder das Statussymbol geöffnet hatte. Windows löscht keinen Ordner, den ein
+> laufendes Programm als Arbeitsverzeichnis nutzt. Der Installer hatte dann Dienst
+> und Dateien schon entfernt und brach ab. Seit 2.5.2 leert er den Ordner, statt ihn
+> zu löschen. Um ein solches Gerät zu reparieren, verteilen Sie 2.5.2 oder neuer. Eine
+> Abmeldung ist nicht nötig.
 
 Für Intune-Win32-Apps:
 
@@ -147,39 +148,36 @@ Mocks. `Test-ServicePipe.ps1` startet den Pipe-Listener des Dienstes im Testproz
 unter einem Test-Pipe-Namen; es wird nichts installiert und es sind keine
 Administratorrechte nötig.
 
-Für die Gesundheitsberichte der Version 2.3.0 verteilen Sie das **gesamte Paket**:
-Die Dienstdatei wird vom Installer neu gebaut und muss `HEALTH` unterstützen. Nur
-die neue Oberfläche auf eine Installation 2.2.0 zu kopieren, genügt nicht. Die
-Positivliste der Reparaturen von 2.3.1, die Einzelprüfung von 2.3.2
-(`HEALTH <Id> [Name]`) und die Check-Ids `PendingReboot`/`Updates` von 2.3.3
-erfordern ebenfalls die erneute Verteilung des Dienstes, nicht nur der Oberfläche.
-Version 2.3.4 (Status Ausstehend, Skript für das Defender-Signatur-Update
-`Scripts_to_run\SelfX_Defender_UpdateSignature.ps1` und Standardreparaturen)
-erfordert auch die Verteilung des gesamten Pakets. Version 2.4.0 (Geräteprotokolle
-für den Support) erfordert ebenfalls die Verteilung des gesamten Pakets: Der Dienst
-übergibt den anfragenden Nutzer an das Skript (`SELFX_CALLER_SID`); mit einem
-älteren Dienst schlägt die Aktion mit Exitcode 2 fehl. Setzen Sie `Support_Mail` in
-`Tool_Config.xml` auf die Helpdesk-Adresse, die die Geräteprotokolle erhält.
-Version 2.5.0 (moderne Oberfläche, Hintergrundprüfungen mit Status-Cache und die
-Anfrage `STATUS`, Statussymbol) erfordert ebenfalls die Verteilung des gesamten
-Pakets: SelfX 2.5.0 liest den Status mit `STATUS`, was ältere Dienste nicht kennen.
-Legen Sie vor dem Paketieren die Support-Kontakte des Hilfe-Dialogs fest
-(`Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`,
-`Support_Website`) und prüfen Sie das Element `Background` in `Health_Config.xml`;
-siehe [Benutzeroberfläche](Configuration.md#benutzeroberfläche-selfx-service-250)
-und [Hintergrundprüfungen](Configuration.md#hintergrundprüfungen-und-status-cache-selfx-service-250).
-SelfX Service braucht die MahApps.Metro-Assemblies nicht mehr. Version 2.6.0
-(Protokollierung, Reparaturen Neustart und App-Wiederholung, von SelfX installierte
-Updates) erfordert ebenfalls die Verteilung des gesamten Pakets: Der Installer legt
-`Logs\Users` an und der Dienst kompiliert die Protokollbereinigung. Konfigurieren
-Sie vor dem Paketieren `Sources\Health_Config.xml` und fügen Sie bei Bedarf geprüfte
-nur lesende Skripte unter `Sources\HealthChecks` hinzu; siehe
-[Gesundheitsstatus](Configuration.md#gesundheitsstatus-selfx-service-230).
-Die Versionen 2.6.10 und 2.6.11 (Sicherheitshärtung, siehe das
-[Änderungsprotokoll](../CHANGELOG.md)) ändern den Dienst und den Installer. Verteilen
-Sie das **gesamte Paket** und erhöhen Sie `Tool_Version` und `$ExpectedVersion`.
-Geben Sie Nutzern keinen Schreibzugriff auf den Installationsordner oder die
-Prüfskripte.
+### Update: immer das ganze Paket verteilen
+
+Verteilen Sie bei jedem Update das **gesamte Paket**, nie nur einzelne Dateien.
+Der Installer baut den Dienst neu, und Oberfläche und Dienst müssen zusammenpassen.
+Eine neue Oberfläche mit einem alten Dienst funktioniert nicht.
+
+Folgende Versionen haben den Dienst oder den Installer geändert. Für sie gilt die
+Regel besonders:
+
+| Version | Neu | Was bei einem alten Dienst passiert |
+|---|---|---|
+| 2.3.0 bis 2.3.4 | Gesundheitsbericht (`HEALTH`), Positivliste der Reparaturen, Einzelprüfung, Defender-Signatur-Update | Der Dienst muss `HEALTH` und die neuen Prüfungen unterstützen. Nur die neue Oberfläche auf eine ältere Installation zu kopieren, genügt nicht. |
+| 2.4.0 | Geräteprotokolle für den Support | Die Aktion endet mit Exitcode 2, weil der alte Dienst den anfragenden Nutzer nicht übergibt. Tragen Sie in `Tool_Config.xml` bei `Support_Mail` die Helpdesk-Adresse ein. |
+| 2.5.0 | Neue Oberfläche, Hintergrundprüfungen mit Status-Cache (`STATUS`), Statussymbol | SelfX liest den Status mit `STATUS`, das ältere Dienste nicht kennen. |
+| 2.6.0 | Protokollierung, Reparaturen Neustart und App-Wiederholung, Windows-Updates | Der Installer legt `Logs\Users` an, und der Dienst bereinigt die Protokolle. |
+| 2.6.10 und 2.6.11 | Sicherheitshärtung (siehe [Änderungsprotokoll](../CHANGELOG.md)) | Erhöhen Sie `Tool_Version` und `$ExpectedVersion`. |
+
+Prüfen Sie vor dem Paketieren:
+
+- die Support-Kontakte des Hilfe-Dialogs in `Tool_Config.xml` (`Support_Hours`,
+  `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website`),
+- das Element `Background` in `Health_Config.xml`; siehe
+  [Benutzeroberfläche](Configuration.md#benutzeroberfläche-selfx-service-250) und
+  [Hintergrundprüfungen](Configuration.md#hintergrundprüfungen-und-status-cache-selfx-service-250),
+- `Sources\Health_Config.xml` und, falls Sie eigene nur lesende Prüfskripte
+  verwenden, `Sources\HealthChecks`; siehe
+  [Gesundheitsstatus](Configuration.md#gesundheitsstatus-selfx-service-230).
+
+SelfX Service braucht die MahApps.Metro-Assemblies nicht mehr. Geben Sie Nutzern
+keinen Schreibzugriff auf den Installationsordner oder auf die Prüfskripte.
 
 Installation prüfen:
 
