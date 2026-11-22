@@ -77,6 +77,7 @@ installed locally and works without any network connection.
 | `Test-HealthStatus.ps1` | Isolated health tests; system data and extension execution are mocked. |
 | `Test-DeviceLogs.ps1` | Isolated tests of the device logs feature (wrapper, e-mail helper, catalogue, GUI step); collector, ACLs, Outlook and processes are mocked. |
 | `Test-Catalog.ps1` | Static security check of the action catalogue, `Health_Config.xml` and the scripts that run as SYSTEM (plain file names, one context per script, no mandatory parameters, header context, remediation timeouts). Nothing is executed; run it before every release (2.6.10). |
+| `Test-Uninstall.ps1` | Takes the delete function out of `Uninstall.ps1` and checks in a temporary folder that junctions are removed and never followed (2.6.10). `Uninstall.ps1` itself is not run. |
 | `Test-UI.ps1` | Isolated tests of the user interface (XAML, theme, texts), the tray icon notifications and the information cache; no window is shown. |
 | `Test-Scripts.ps1` | Runs every action and repair script in a temporary sandbox with mocked commands and checks result and log (2.6.0); nothing on the device is changed. |
 | `Sources\SelfXLog.ps1` | Shared logging of all scripts to `%ProgramData%\SelfX\Logs` and the user-side log housekeeping (2.6.0). |
