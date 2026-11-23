@@ -37,9 +37,10 @@
 	  2.4.3    2026-11-22  fubu2k               New action Q_Outlook (restart classic Outlook)
 	  2.4.4    2026-11-22  fubu2k               New action Q_Device_SyncTime (synchronize the clock, Context System)
 	  2.4.5    2026-11-23  fubu2k               New action D_Outlook_AutoComplete (clear the auto-complete list of classic Outlook)
+	  2.4.8    2026-11-23  fubu2k               New action D_Defender_QuickScan (Microsoft Defender quick scan, Context System)
 -->
 <Actions>
-	<XML_Version>2.4.5</XML_Version>
+	<XML_Version>2.4.8</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -710,6 +711,21 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_Chkdsk"/>
+		</Action>
+
+		<Action Id="D_Defender_QuickScan">
+			<Name>Check this PC for viruses (Microsoft Defender quick scan)</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>You suspect a virus, a suspicious file was opened or Windows Security shows a warning. The action runs a quick scan with Microsoft Defender and tells you at the end whether it found threats.</Explanation>
+			<Script>SelfX_Defender_QuickScan.ps1</Script>
+			<Context>System</Context>
+			<TimeoutSeconds>2400</TimeoutSeconds>
+			<Category>Device</Category>
+			<Alerte_MSG>A quick scan with Microsoft Defender starts. It checks the places where threats are found most often and usually takes 5 to 30 minutes. You can keep working, but the PC may be slower meanwhile. SelfX shows the result when the scan has finished.
+
+SelfX does not delete or change any files. If Defender finds a threat, it handles it as set by your company; you find the details in Windows Security.
+
+Do you want to continue?</Alerte_MSG>
 		</Action>
 
 		<Action Id="D_Device_SendLogs">

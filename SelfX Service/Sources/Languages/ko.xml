@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows 업데이트가 완료되었습니다. 디바이스 상태를 다시 확인하여 다시 시작이 필요한지 표시합니다.</Health_Updates_Done>
 		<Health_Apps_Button>다시 시도</Health_Apps_Button>
 		<Health_Apps_Started>실패한 앱의 설치를 다시 시작합니다. 몇 분 정도 걸릴 수 있으며 회사 포털에서 확인할 수 있습니다.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>빠른 검사가 완료되었습니다. Microsoft Defender가 위협을 찾지 못했습니다.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>빠른 검사가 완료되었습니다. Microsoft Defender가 위협을 찾았으며 회사의 설정에 따라 처리합니다. 자세한 내용은 Windows 보안에서 확인하세요.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>확인</Health_Check_Button>
 		<Health_Error_Button>오류</Health_Error_Button>
 		<Health_Pending_Button>보류 중</Health_Pending_Button>
@@ -602,6 +604,15 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 			</Action>
 			<Action Id="Q_Device_SendLogs">
 				<Name>장치 로그를 지원팀에 보내기</Name>
+			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>이 PC에서 바이러스 검사 (Microsoft Defender 빠른 검사)</Name>
+				<Explanation>바이러스가 의심되거나, 의심스러운 파일을 열었거나, Windows 보안에 경고가 표시됩니다. 이 작업은 Microsoft Defender로 빠른 검사를 실행하고 마지막에 위협이 발견되었는지 알려 줍니다.</Explanation>
+				<Alerte_MSG>Microsoft Defender로 빠른 검사를 시작합니다. 위협이 가장 자주 발견되는 위치를 검사하며 보통 5분에서 30분이 걸립니다. 계속 작업할 수 있지만 그동안 PC가 느려질 수 있습니다. 검사가 끝나면 SelfX가 결과를 표시합니다.
+
+SelfX는 파일을 삭제하거나 변경하지 않습니다. Defender가 위협을 발견하면 회사의 설정에 따라 처리하며, 자세한 내용은 Windows 보안에서 확인할 수 있습니다.
+
+계속하시겠습니까?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>장치 로그를 수집하여 전자 메일로 지원팀에 보내기</Name>
