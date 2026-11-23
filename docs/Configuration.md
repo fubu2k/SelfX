@@ -500,6 +500,10 @@ Text selbst in Copilot Chat ein.
 3. *Kopieren und Copilot öffnen* legt den Text in die Zwischenablage und öffnet die
    Adresse aus `Copilot_Url`. Der Nutzer fügt den Text ein (Strg+V) und sendet ihn
    selbst ab. SelfX sendet nichts.
+   SelfX bittet Windows dabei, den Text **nicht** in den Verlauf der Zwischenablage
+   (Win+V) und nicht in die Cloud-Zwischenablage aufzunehmen. Das ist eine Bitte, kein
+   Schutz: Programme, die die Zwischenablage lesen, sehen den Text weiterhin, und er
+   bleibt dort, bis der Nutzer etwas anderes kopiert. Es gibt keine Einstellung dafür.
 4. Copilot Chat soll in einfacher Sprache antworten. Mit `Copilot_Audience` = `Admin`
    antwortet es für IT-Personal mit technischen Schritten.
 
