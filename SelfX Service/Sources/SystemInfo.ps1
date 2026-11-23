@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.8.8
+    Version : 2.8.9
 
     History:
     Version  Date        Author               Change
@@ -32,6 +32,7 @@
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version: System information tab
     2.8.8    2026-11-22  fubu2k               Optional latency measurements (default gateway, DNS lookup and connection time to configured targets;
                                               Network_Test_Config.xml, off by default)
+    2.8.9    2026-11-23  fubu2k               CSV export: text cells starting with = + - @ tab CR LF get a leading apostrophe (CSV/formula injection, finding N7)
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -791,6 +792,28 @@ function ConvertTo-SelfXSystemInfoText {
 	return ($lines -join [Environment]::NewLine)
 }
 
+# Neutralizes CSV/formula injection (OWASP "CSV Injection"): a text cell that starts with = + - @ or a tab, CR or LF can be
+# run as a formula when the file is opened in Excel (values such as the Wi-Fi SSID come from outside). Such a value gets a
+# leading apostrophe; spreadsheet programs then show it as plain text. Only the CSV export uses this (HTML is encoded by
+# ConvertTo-Html, JSON and TXT are not evaluated). Non-text values and all other text stay unchanged.
+function ConvertTo-SelfXCsvSafeValue {
+	param($Value)
+	if ($Value -isnot [string]) { return $Value }
+	if ($Value.Length -gt 0 -and "=+-@`t`r`n".IndexOf($Value[0]) -ge 0) { return ("'" + $Value) }
+	return $Value
+}
+
+# Returns copies of the items with every text property made safe for CSV (see ConvertTo-SelfXCsvSafeValue).
+# The original items (shown in the window, used for copy and the other formats) are not changed.
+function ConvertTo-SelfXCsvSafeItems {
+	param([object[]]$Items)
+	foreach ($item in $Items) {
+		$copy = [ordered]@{}
+		foreach ($property in $item.PSObject.Properties) { $copy[$property.Name] = ConvertTo-SelfXCsvSafeValue $property.Value }
+		[pscustomobject]$copy
+	}
+}
+
 # Saves the items to Path. The format follows the file extension: .csv, .json, .html, anything else = text.
 function Export-SelfXSystemInfo {
 	param(
@@ -799,7 +822,7 @@ function Export-SelfXSystemInfo {
 		[string]$Title = 'System information'
 	)
 	switch ([IO.Path]::GetExtension($Path).ToLowerInvariant()) {
-		'.csv'  { $Items | Export-Csv -Path $Path -NoTypeInformation -Encoding UTF8 }
+		'.csv'  { ConvertTo-SelfXCsvSafeItems -Items $Items | Export-Csv -Path $Path -NoTypeInformation -Encoding UTF8 }
 		'.json' { $Items | ConvertTo-Json -Depth 3 | Set-Content -Path $Path -Encoding UTF8 }
 		'.html' {
 			$Items | ConvertTo-Html -Title "$Title - $env:COMPUTERNAME" -PreContent ("<h2>{0} - {1}</h2>" -f [System.Net.WebUtility]::HtmlEncode($Title), $env:COMPUTERNAME) |
