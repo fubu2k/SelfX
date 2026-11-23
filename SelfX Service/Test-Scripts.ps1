@@ -180,7 +180,7 @@ try {
 		$text = [IO.File]::ReadAllText($file.FullName)
 		$loads = @([regex]::Matches($text, '(?i)\.Load\((?!\$(XmlReader|reader)\))'))
 		Assert-Equal $loads.Count 0 "$($file.Name) loads XML only through the DTD-prohibiting reader"
-		If ($text -match '(?i)\$(XmlReader|reader)\)') { Assert-Equal ($text -match '(?i)DtdProcessing\s*=\s*\[System\.Xml\.DtdProcessing\]::Prohibit') $true "$($file.Name) prohibits DTDs" }
+		If ($text -match '(?i)\$(XmlReader|reader)\)') { Assert-Equal ($text -match '(?i)DtdProcessing\s*=\s*\[(System\.)?Xml\.DtdProcessing\]::Prohibit') $true "$($file.Name) prohibits DTDs" }
 	}
 	foreach ($action in $catalog.SelectNodes('//Action')) {
 		$text = [IO.File]::ReadAllText((Join-Path $scripts $action.Script.Trim()))
