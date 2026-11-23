@@ -31,7 +31,7 @@
     2.6.11   2026-11-22  fubu2k               Initial version.
     2.8.5    2026-11-23  fubu2k               The file list check covers .exe: changed and unlisted programs are refused.
     2.8.20   2026-11-23  fubu2k               N1: configuration and catalog are checked first, a cut-off is noted. N2: every file type in the install
-                                              folder must be listed. N3: rights check of PowerShell 7 for all identities, owner and parent folders.
+                                              folder must be listed. N3: rights check of PowerShell 7 for all identities and parent folders.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -77,8 +77,8 @@ $fakeExe = Join-Path $fakeFolder 'pwsh.exe'
 Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'System32\cmd.exe') -Destination $fakeExe
 & icacls.exe $fakeFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' "*$($currentSid):(OI)(CI)F" | Out-Null
 Assert-True (Test-ProtectionResult $fakeExe) 'Folder for administrators only: protected'
-# N3: every identity outside SYSTEM, Administrators and TrustedInstaller counts as normal users, also the account that owns the folder.
-Assert-True (-not (Test-ProtectionResult $fakeExe $defaultTrusted)) 'N3: an account outside the trusted identities with full control (and as owner) is refused'
+# N3: every identity outside SYSTEM, Administrators and TrustedInstaller counts as normal users.
+Assert-True (-not (Test-ProtectionResult $fakeExe $defaultTrusted)) 'N3: an account outside the trusted identities with full control is refused'
 & icacls.exe $fakeFolder /grant '*S-1-5-32-545:(OI)(CI)M' | Out-Null
 Assert-True (-not (Test-ProtectionResult $fakeExe)) 'Users can modify the folder: not protected (nothing is started)'
 & icacls.exe $fakeFolder /remove:g '*S-1-5-32-545' | Out-Null

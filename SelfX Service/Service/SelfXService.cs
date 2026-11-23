@@ -58,7 +58,7 @@ Notes:
     2.8.6    2026-11-23  fubu2k               N1: Tool_Config.xml and Issues_List.xml are checked first, a check cut off at 20 problems is noted
                                               (log, event 4005; Service_FileCheck=Audit is then ignored). N2: a file of any type without an entry
                                               in the list is refused. N3: the rights check of PowerShell 7 accepts only SYSTEM, Administrators and
-                                              TrustedInstaller as owner and writer, also for the folders above pwsh.exe up to the drive root
+                                              TrustedInstaller as writers, also for the folders above pwsh.exe up to the drive root
 */
 
 using System;
@@ -1178,8 +1178,8 @@ namespace SelfX
         /// (Autopilot installs apps in any order), so the service checks it again before every start: pwsh.exe and its folder
         /// may only be changed by SYSTEM, Administrators and TrustedInstaller (any other identity with write, delete,
         /// permission or ownership rights is refused), and so may the folders above it up to the drive root (nobody else may
-        /// delete or take over the folder that contains pwsh.exe). The owner of every item must be one of the three, because an
-        /// owner can always change the rights. A SYSTEM process must never run a program that normal users can replace.
+        /// delete or take over the folder that contains pwsh.exe). The owner is not compared (a device where another
+        /// account owns the folder must keep working); what counts is who may change it. A SYSTEM process must never run a program that normal users can replace.
         /// </summary>
         static bool IsPowerShellProtected(string executable, out string reason)
         {
@@ -1227,12 +1227,6 @@ namespace SelfX
         static bool IsProtectedAgainstChange(FileSystemSecurity security, string path, FileSystemRights dangerous, string[] trustedSids, out string reason)
         {
             reason = "";
-            SecurityIdentifier owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
-            if (owner == null || Array.IndexOf(trustedSids, owner.Value) < 0)
-            {
-                reason = "'" + path + "' is owned by " + (owner == null ? "an unknown owner" : owner.Value);
-                return false;
-            }
             foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
             {
                 if (rule.AccessControlType != AccessControlType.Allow) continue;
