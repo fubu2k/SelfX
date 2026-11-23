@@ -528,6 +528,38 @@ event 4005 and the details to the SelfX log; the installation itself is never af
 missing list in the installation folder also counts as a mismatch. For the first rollout `Service_FileCheck` can be set
 to `Audit` (log only). `Bin` keeps its own list `SelfX.Binaries.json`.
 
+## App Control for Business (WDAC), optional
+
+SelfX does not need WDAC and nothing of it is switched on in the package. Whoever uses App Control for Business
+(formerly WDAC) can use it in addition to the file list to prevent that anything other than the delivered SelfX
+programs and scripts runs on the devices. SelfX stays unsigned and is allowed by hash (no certificates of its own).
+
+1. **Base policy.** It belongs to your organization. It must allow supplemental policies (rule option 17, "Allow
+   Supplemental Policies") and allow the files signed by Microsoft, including PowerShell 7
+   (`%ProgramFiles%\PowerShell\7\pwsh.exe`) and the Intune agent.
+2. **Build the package** (programs, then `New-SelfXIntuneWin.ps1`), see above.
+3. **Create the supplemental policy** in Windows PowerShell 5.1 on an administrator PC (module ConfigCI):
+   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXWdacPolicy.ps1 -BasePolicyId {GUID of the base policy}`.
+   The script writes the XML file and the `.cip` file to `build\wdac`. It contains hash rules for all programs,
+   libraries and scripts of the package, including `Install.ps1`, `Detection.ps1` and `Uninstall.ps1`. It changes
+   nothing on the PC.
+4. **Distribute** with Intune (App Control for Business policy or the ApplicationControl CSP) to the same devices as the
+   SelfX package.
+5. **Audit mode first.** Whether the policies run in audit or in enforced mode is decided by the **base policy** (rule
+   option 3, "Audit Mode"); the supplemental policy does not set it. In audit mode everything keeps running and Windows
+   logs what the policy would block (log `Microsoft-Windows-CodeIntegrity/Operational`, event 3076). On a test device
+   check that nothing is logged for SelfX (installation by Autopilot and ESP, window, status icon, all actions as user
+   and as SYSTEM, update, uninstall). Only then does the organization remove option 3 from the base policy.
+6. **With every new version** create the supplemental policy again and distribute it with the package: every change to
+   a script changes its hash. With the fixed policy ID the new policy replaces the old one; devices that still have the
+   old SelfX version would then be blocked in enforced mode. For staged rollouts create the policy with
+   `-PolicyId {new GUID}` per version and remove the old policy when all devices are updated.
+
+Notes: the policy must be on the device before the package (Autopilot: same assignment, test in audit mode before you
+enforce). SelfX scripts use `Add-Type` for single P/Invoke calls; rule option 19 ("Dynamic Code Security") may only be
+switched on after a test in audit mode. A local administrator can replace an unsigned policy; whether it is signed is
+the organization's decision. The template has not been tried on a device yet.
+
 ## Service privileges
 
 The service runs as LocalSystem. `Install.ps1` limits its token with `sc.exe privs` to the privileges the actions
