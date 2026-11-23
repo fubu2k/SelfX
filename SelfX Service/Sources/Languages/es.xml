@@ -453,6 +453,15 @@ Si el problema persiste, póngase en contacto con el equipo de soporte.
 
 ¿Quiere continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office solicita la activación o indica que el producto no tiene licencia</Name>
+				<Explanation>Word, Excel, Outlook u otra aplicación de Office muestra «Producto sin licencia», solicita una y otra vez la activación o el inicio de sesión, o indica que su cuenta no tiene licencia aunque la tiene.</Explanation>
+				<Alerte_MSG>Se cerrarán todas las aplicaciones de Office abiertas (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype Empresarial). Se perderá el trabajo sin guardar. Después se eliminarán los datos de licencia guardados de su cuenta de usuario. Los documentos, la configuración, el buzón y los archivos de programa de Office no se modifican. Teams no se cierra.
+
+La próxima vez que inicie una aplicación de Office, se le pedirá que inicie sesión con su cuenta profesional. Office obtendrá entonces una nueva licencia.
+
+¿Quiere continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Iniciar el cliente de OneDrive</Name>
 				<Explanation>OneDrive no está en ejecución.</Explanation>

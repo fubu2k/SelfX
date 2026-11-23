@@ -453,6 +453,15 @@ Continuare?</Alerte_MSG>
 
 Continuare?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office richiede l’attivazione o segnala un prodotto senza licenza</Name>
+				<Explanation>Word, Excel, Outlook o un’altra app di Office mostra «Prodotto senza licenza», richiede continuamente l’attivazione o l’accesso, oppure segnala che il suo account non ha una licenza anche se ce l’ha.</Explanation>
+				<Alerte_MSG>Tutte le app di Office aperte (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) verranno chiuse. Il lavoro non salvato andrà perso. Poi i dati di licenza salvati del suo account utente vengono rimossi. Documenti, impostazioni, cassetta postale e file di programma di Office non vengono modificati. Teams non viene chiuso.
+
+Al prossimo avvio di un’app di Office le verrà chiesto di accedere con l’account di lavoro. Office otterrà quindi una nuova licenza.
+
+Continuare?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Avviare il client OneDrive</Name>
 				<Explanation>OneDrive non è in esecuzione.</Explanation>

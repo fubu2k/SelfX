@@ -453,6 +453,15 @@
 
 Продолжить?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office запрашивает активацию или сообщает о продукте без лицензии</Name>
+				<Explanation>Word, Excel, Outlook или другое приложение Office показывает «Нелицензированный продукт», снова и снова просит выполнить активацию или вход либо сообщает, что у вашей учётной записи нет лицензии, хотя она есть.</Explanation>
+				<Alerte_MSG>Все открытые приложения Office (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype для бизнеса) будут закрыты. Несохранённые данные будут потеряны. Затем сохранённые данные лицензии вашей учётной записи будут удалены. Документы, параметры, почтовый ящик и файлы программ Office не изменяются. Teams не закрывается.
+
+При следующем запуске приложения Office вам будет предложено войти с рабочей учётной записью. После этого Office получит новую лицензию.
+
+Продолжить?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Запустить клиент OneDrive</Name>
 				<Explanation>OneDrive не запущен.</Explanation>

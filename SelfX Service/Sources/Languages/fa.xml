@@ -453,6 +453,15 @@
 
 آیا می خواهید ادامه دهید؟</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office درخواست فعال‌سازی می‌کند یا محصول بدون مجوز گزارش می‌دهد</Name>
+				<Explanation>Word، Excel، Outlook یا برنامه دیگری از Office پیام «محصول بدون مجوز» را نشان می‌دهد، بارها درخواست فعال‌سازی یا ورود می‌کند یا اعلام می‌کند که حساب شما مجوز ندارد، در حالی که دارد.</Explanation>
+				<Alerte_MSG>همه برنامه‌های باز Office (Word، Excel، PowerPoint، Outlook، Access، OneNote، Publisher، Visio، Project، Skype for Business) بسته می‌شوند. کاری که ذخیره نکرده‌اید از بین می‌رود. سپس داده‌های مجوز ذخیره‌شده حساب کاربری شما حذف می‌شود. اسناد، تنظیمات، صندوق پستی و فایل‌های برنامه Office تغییر نمی‌کنند. Teams بسته نمی‌شود.
+
+دفعه بعد که یک برنامه Office را باز کنید، از شما خواسته می‌شود با حساب کاری خود وارد شوید. سپس Office مجوز جدیدی دریافت می‌کند.
+
+آیا می خواهید ادامه دهید؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>کلاینت OneDrive را راه اندازی کنید</Name>
 				<Explanation>OneDrive اجرا نمی شود.</Explanation>

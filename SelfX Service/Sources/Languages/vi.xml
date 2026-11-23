@@ -453,6 +453,15 @@ Bạn có muốn tiếp tục không?</Alerte_MSG>
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office yêu cầu kích hoạt hoặc báo sản phẩm chưa có giấy phép</Name>
+				<Explanation>Word, Excel, Outlook hoặc ứng dụng Office khác hiển thị “Sản phẩm chưa có giấy phép”, liên tục yêu cầu kích hoạt hoặc đăng nhập, hoặc báo rằng tài khoản của bạn không có giấy phép dù thực tế có.</Explanation>
+				<Alerte_MSG>Tất cả ứng dụng Office đang mở (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) sẽ đóng. Công việc chưa lưu sẽ bị mất. Sau đó, dữ liệu giấy phép đã lưu của tài khoản người dùng của bạn sẽ bị xóa. Tài liệu, cài đặt, hộp thư và tệp chương trình Office không bị thay đổi. Teams không bị đóng.
+
+Lần tới khi bạn mở một ứng dụng Office, bạn sẽ được yêu cầu đăng nhập bằng tài khoản cơ quan. Sau đó Office nhận được giấy phép mới.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Khởi động ứng dụng OneDrive</Name>
 				<Explanation>OneDrive hiện không chạy.</Explanation>

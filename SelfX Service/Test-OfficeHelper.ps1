@@ -10,6 +10,7 @@
         other folders, similar folder names, "..", UNC paths, relative paths, wrong names and folders are refused;
       - Get-SelfXOfficeAppPath: order of the sources (process, App Paths 64 bit and 32 bit view, Office InstallRoot of every
         version, newest first), refusal of untrusted values, no path when nothing valid is found, Word and Excel;
+      - Get-SelfXOfficeLicenseFolder: Licenses and <version>\Licensing of every version folder, only existing folders;
       - Get-SelfXOwnSessionProcess and Close-SelfXOwnSessionProcess: only processes of the own Windows session, the
         process is asked to close first and ended only when it does not close.
 
@@ -17,12 +18,13 @@
     Name    : Test-OfficeHelper.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.0
+    Version : 2.8.4
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.0    2026-11-23  fubu2k               Initial version.
+    2.8.4    2026-11-23  fubu2k               Tests for Get-SelfXOfficeLicenseFolder.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -44,7 +46,7 @@ function global:Get-ItemProperty {
 	Microsoft.PowerShell.Management\Get-ItemProperty @PSBoundParameters
 }
 function global:Get-ChildItem {
-	param($LiteralPath, $Path, $Filter, $Recurse, $File, $Force, $ErrorAction)
+	param($LiteralPath, $Path, $Filter, [switch]$Recurse, [switch]$File, [switch]$Directory, [switch]$Force, $ErrorAction)
 	if ("$LiteralPath" -like 'HKLM:*') { if ($global:FakeRegKeys.ContainsKey("$LiteralPath")) { return @($global:FakeRegKeys["$LiteralPath"] | ForEach-Object { [pscustomobject]@{ PSChildName = $_ } }) }; return @() }
 	Microsoft.PowerShell.Management\Get-ChildItem @PSBoundParameters
 }
@@ -154,6 +156,21 @@ try {
 	$failed = $false
 	try { Get-SelfXOfficeAppPath -Application Access | Out-Null } catch { $failed = $true }
 	Assert-Equal $failed $true 'app path: only Outlook, Word and Excel are accepted'
+
+	# --- License token folders ---------------------------------------------------------------------------
+	$localApp = Join-Path $sandbox 'LocalAppData'
+	Assert-Equal @(Get-SelfXOfficeLicenseFolder -LocalAppData $localApp).Count 0 'license folders: nothing exists, nothing returned'
+	Assert-Equal @(Get-SelfXOfficeLicenseFolder -LocalAppData '').Count 0 'license folders: empty base folder gives nothing'
+	Assert-Equal @(Get-SelfXOfficeLicenseFolder -LocalAppData 'Office').Count 0 'license folders: relative base folder gives nothing'
+	$officeBase = Join-Path $localApp 'Microsoft\Office'
+	foreach ($relative in 'Licenses', '16.0\Licensing', '15.0\Licensing', '14.0\Common', '16.0\Wef', 'Teams\Licensing', '16.0.1\Licensing', 'x16.0\Licensing') {
+		[void][IO.Directory]::CreateDirectory((Join-Path $officeBase $relative))
+	}
+	$licenseFolders = @(Get-SelfXOfficeLicenseFolder -LocalAppData $localApp | ForEach-Object { $_.Substring($officeBase.Length + 1) } | Sort-Object)
+	Assert-Equal ($licenseFolders -join ';') '15.0\Licensing;16.0\Licensing;Licenses' 'license folders: Licenses and the Licensing folder of every version folder that exists'
+	Assert-Equal ($licenseFolders -contains '14.0\Common') $false 'license folders: a version folder without Licensing is not returned'
+	[void][IO.File]::WriteAllText((Join-Path $officeBase '17.0'), 'x')
+	Assert-Equal @(Get-SelfXOfficeLicenseFolder -LocalAppData $localApp).Count 3 'license folders: a file with a version name is ignored'
 
 	# --- Processes of the own session -----------------------------------------------------------------
 	$global:FakeProcesses.Clear(); $global:SelfXTestCalls.Clear()

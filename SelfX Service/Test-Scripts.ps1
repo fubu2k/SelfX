@@ -340,6 +340,60 @@ try {
 		Remove-Item -LiteralPath Function:\Get-ItemProperty, Function:\Get-ChildItem -ErrorAction SilentlyContinue
 	}
 
+	# Office license reset (SelfX_Office_ResetLicence.ps1): only the contents of the token folders are removed, whatever the Office
+	# version; Office apps of the own session are closed, Teams is not; links are never followed.
+	$licenceScript = 'SelfX_Office_ResetLicence.ps1'
+	$officeBase = Join-Path $env:LOCALAPPDATA 'Microsoft\Office'
+	$outsideFolder = Join-Path $sandbox 'OutsideLicence'
+	New-SandboxFile (Join-Path $outsideFolder 'keep.txt')
+	foreach ($file in 'Licenses\token1.json', 'Licenses\Sub\token2.json', '16.0\Licensing\a.tok', '15.0\Licensing\b.tok', '16.0\Wef\keep.dat', 'Settings.dat') { New-SandboxFile (Join-Path $officeBase $file) }
+	New-FakeProcess 'WINWORD' 'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE'
+	New-FakeProcess 'EXCEL' 'C:\Program Files (x86)\Microsoft Office\root\Office16\EXCEL.EXE'
+	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'
+	$run = Invoke-TestScript $licenceScript
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Stop-Process WINWORD;Stop-Process EXCEL' 'Licence reset: Office apps closed, Teams is left running'
+	Assert-Equal @($global:FakeProcesses | Where-Object ProcessName -eq 'ms-teams').Count 1 'Licence reset: Teams keeps running'
+	$left = @(foreach ($folder in 'Licenses', '16.0\Licensing', '15.0\Licensing') { Get-ChildItem -LiteralPath (Join-Path $officeBase $folder) -Force })
+	Assert-Equal $left.Count 0 'Licence reset: contents of Licenses and of every Licensing folder removed'
+	Assert-Equal "$(Test-Path (Join-Path $officeBase 'Licenses'))/$(Test-Path (Join-Path $officeBase '16.0\Licensing'))" 'True/True' 'Licence reset: the folders themselves stay'
+	Assert-Equal "$(Test-Path (Join-Path $officeBase '16.0\Wef\keep.dat'))/$(Test-Path (Join-Path $officeBase 'Settings.dat'))" 'True/True' 'Licence reset: nothing outside the token folders is removed'
+	Assert-Equal ((Get-SandboxLog 'SelfX_Office_ResetLicence') -match 'Finished: 4 item\(s\) removed, 0 item\(s\) not removed') $true 'Licence reset: logged'
+	$global:FakeProcesses.Clear()
+
+	# No token folder at all: nothing to do, exit 0.
+	Remove-Item -LiteralPath $officeBase -Recurse -Force
+	$run = Invoke-TestScript $licenceScript
+	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Licence reset: no token folder, exit 0 and nothing done'
+
+	# A link inside a token folder is not followed and not deleted; the rest is removed; exit 1.
+	New-SandboxFile (Join-Path $officeBase 'Licenses\token.json')
+	New-SandboxFile (Join-Path $officeBase 'Licenses\Real\x.json')
+	$linkType = if ($PSVersionTable.PSEdition -eq 'Desktop' -or $IsWindows) { 'Junction' } else { 'SymbolicLink' }
+	Microsoft.PowerShell.Management\New-Item -ItemType $linkType -Path (Join-Path $officeBase 'Licenses\Link') -Value $outsideFolder | Out-Null
+	$run = Invoke-TestScript $licenceScript
+	Assert-Equal "$($run.ExitCode)|$(Test-Path (Join-Path $outsideFolder 'keep.txt'))|$(Test-Path (Join-Path $officeBase 'Licenses\Link'))|$(Test-Path (Join-Path $officeBase 'Licenses\token.json'))" '1|True|True|False' 'Licence reset: a link is not followed or removed, the other items are removed'
+	Assert-Equal ((Get-SandboxLog 'SelfX_Office_ResetLicence') -match 'Skipped .*Licenses\\Link') $true 'Licence reset: the skipped link is logged'
+	[IO.Directory]::Delete((Join-Path $officeBase 'Licenses\Link'))
+
+	# A Licensing folder that is a link (below a version folder): the folder is skipped, nothing outside is touched.
+	Remove-Item -LiteralPath $officeBase -Recurse -Force
+	[void][IO.Directory]::CreateDirectory((Join-Path $officeBase '16.0'))
+	Microsoft.PowerShell.Management\New-Item -ItemType $linkType -Path (Join-Path $officeBase '16.0\Licensing') -Value $outsideFolder | Out-Null
+	$run = Invoke-TestScript $licenceScript
+	Assert-Equal "$($run.ExitCode)|$(Test-Path (Join-Path $outsideFolder 'keep.txt'))" '1|True' 'Licence reset: a Licensing folder that is a link is skipped, nothing outside is removed'
+	[IO.Directory]::Delete((Join-Path $officeBase '16.0\Licensing'))
+	Remove-Item -LiteralPath $officeBase -Recurse -Force
+
+	# An Office app that does not close: nothing is deleted.
+	New-SandboxFile (Join-Path $officeBase 'Licenses\token.json')
+	New-FakeProcess 'WINWORD' 'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE'
+	$global:StopIgnored = $true
+	$run = Invoke-TestScript $licenceScript
+	$global:StopIgnored = $false
+	Assert-Equal "$($run.ExitCode)|$(Test-Path (Join-Path $officeBase 'Licenses\token.json'))" '1|True' 'Licence reset: an app that does not close, nothing is removed'
+	$global:FakeProcesses.Clear()
+	Remove-Item -LiteralPath $officeBase -Recurse -Force
+
 	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'
 	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'
 	New-FakeProcess 'TeamViewer' 'C:\Apps\TeamViewer.exe'

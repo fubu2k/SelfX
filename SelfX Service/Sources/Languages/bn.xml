@@ -453,6 +453,15 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 
 আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office অ্যাক্টিভেশন চায় বা লাইসেন্সবিহীন পণ্য দেখায়</Name>
+				<Explanation>Word, Excel, Outlook বা Office-এর অন্য কোনো অ্যাপ «লাইসেন্সবিহীন পণ্য» দেখায়, বারবার অ্যাক্টিভেশন বা সাইন-ইন চায়, অথবা আপনার অ্যাকাউন্টে লাইসেন্স থাকা সত্ত্বেও নেই বলে জানায়।</Explanation>
+				<Alerte_MSG>খোলা সব Office অ্যাপ (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) বন্ধ হয়ে যাবে। সংরক্ষণ না করা কাজ হারিয়ে যাবে। এরপর আপনার ব্যবহারকারী অ্যাকাউন্টের সংরক্ষিত লাইসেন্স ডেটা মুছে ফেলা হবে। আপনার নথি, সেটিংস, মেইলবক্স এবং Office প্রোগ্রাম ফাইল পরিবর্তন করা হয় না। Teams বন্ধ করা হয় না।
+
+পরের বার কোনো Office অ্যাপ চালু করলে আপনাকে আপনার কর্মস্থলের অ্যাকাউন্ট দিয়ে সাইন ইন করতে বলা হবে। তখন Office একটি নতুন লাইসেন্স পায়।
+
+আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive ক্লায়েন্ট শুরু করুন</Name>
 				<Explanation>OneDrive চলছে না।</Explanation>

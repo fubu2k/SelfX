@@ -453,6 +453,15 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 
 계속하시겠습니까?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office에서 정품 인증을 요구하거나 라이선스가 없는 제품으로 표시됨</Name>
+				<Explanation>Word, Excel, Outlook 등 Office 앱에 '라이선스가 없는 제품'이 표시되거나, 정품 인증 또는 로그인을 계속 요구하거나, 라이선스가 있는데도 계정에 라이선스가 없다고 표시됩니다.</Explanation>
+				<Alerte_MSG>열려 있는 모든 Office 앱(Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business)이 닫힙니다. 저장하지 않은 작업은 손실됩니다. 그런 다음 사용자 계정에 저장된 라이선스 데이터가 제거됩니다. 문서, 설정, 사서함 및 Office 프로그램 파일은 변경되지 않습니다. Teams는 닫히지 않습니다.
+
+다음에 Office 앱을 시작하면 회사 계정으로 로그인하라는 메시지가 표시됩니다. 그러면 Office가 새 라이선스를 받습니다.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive 클라이언트 시작</Name>
 				<Explanation>OneDrive가 실행되고 있지 않습니다.</Explanation>

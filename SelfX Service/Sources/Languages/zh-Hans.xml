@@ -453,6 +453,15 @@
 
 是否要继续？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office 要求激活或提示产品未授权</Name>
+				<Explanation>Word、Excel、Outlook 或其他 Office 应用显示“未授权产品”，反复要求激活或登录，或提示您的帐户没有许可证（实际上有）。</Explanation>
+				<Alerte_MSG>所有已打开的 Office 应用（Word、Excel、PowerPoint、Outlook、Access、OneNote、Publisher、Visio、Project、Skype for Business）都将关闭。未保存的工作将丢失。然后将删除您的用户帐户中保存的许可证数据。您的文档、设置、邮箱和 Office 程序文件不会更改。Teams 不会关闭。
+
+下次启动 Office 应用时，系统会要求您使用工作帐户登录。随后 Office 会获得新的许可证。
+
+是否要继续？</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>启动 OneDrive 客户端</Name>
 				<Explanation>OneDrive 当前未运行。</Explanation>
