@@ -444,6 +444,13 @@ Continuare?</Alerte_MSG>
 
 Continuare?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook suggerisce indirizzi e-mail errati o obsoleti</Name>
+				<Explanation>Quando digita un nome in un nuovo messaggio, Outlook suggerisce indirizzi errati, non più esistenti o appartenenti a un’altra persona.</Explanation>
+				<Alerte_MSG>L’elenco degli indirizzi e-mail suggeriti (elenco di completamento automatico) di Outlook verrà svuotato. Outlook verrà chiuso e riavviato. I messaggi in corso di stesura non salvati come bozza potrebbero andare persi. Outlook ricrea l’elenco man mano che invia nuovi messaggi. Cassetta postale, contatti e profilo non vengono modificati. Il nuovo Outlook non è interessato.
+
+Continuare?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Avviare il client OneDrive</Name>
 				<Explanation>OneDrive non è in esecuzione.</Explanation>

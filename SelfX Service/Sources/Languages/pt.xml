@@ -444,6 +444,13 @@ Pretende continuar?</Alerte_MSG>
 
 Pretende continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>O Outlook sugere endereços de e-mail incorretos ou desatualizados</Name>
+				<Explanation>Ao escrever um nome num novo e-mail, o Outlook sugere endereços incorretos, que já não existem ou que pertencem a outra pessoa.</Explanation>
+				<Alerte_MSG>A lista de endereços de e-mail sugeridos (lista de preenchimento automático) do Outlook será limpa. O Outlook será fechado e iniciado novamente. Os e-mails que está a escrever e que não foram guardados como rascunho poderão perder-se. O Outlook volta a criar a lista à medida que envia novos e-mails. A caixa de correio, os contactos e o perfil não são alterados. O novo Outlook não é afetado.
+
+Pretende continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Iniciar o cliente do OneDrive</Name>
 				<Explanation>O OneDrive não está em execução.</Explanation>

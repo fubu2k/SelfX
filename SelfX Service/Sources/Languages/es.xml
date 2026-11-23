@@ -444,6 +444,13 @@ Si el problema persiste, póngase en contacto con el equipo de soporte.
 
 ¿Quiere continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook sugiere direcciones de correo incorrectas u obsoletas</Name>
+				<Explanation>Al escribir un nombre en un correo nuevo, Outlook sugiere direcciones incorrectas, que ya no existen o que pertenecen a otra persona.</Explanation>
+				<Alerte_MSG>Se borrará la lista de direcciones de correo sugeridas (lista de autocompletar) de Outlook. Outlook se cerrará y se volverá a iniciar. Es posible que se pierdan los correos que esté escribiendo y no haya guardado como borrador. Outlook vuelve a crear la lista a medida que envía correos nuevos. El buzón, los contactos y el perfil no se modifican. El nuevo Outlook no se ve afectado.
+
+¿Quiere continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Iniciar el cliente de OneDrive</Name>
 				<Explanation>OneDrive no está en ejecución.</Explanation>

@@ -83,6 +83,7 @@ Netzwerkverbindung. Aktuelle Version: **2.8.0** (siehe das
 | `Uninstall.ps1` | Schließt offene SelfX-Fenster und Statussymbole und entfernt dann den Dienst, die Dateien, die Verknüpfungen und den Eintrag unter Apps & Features. |
 | `Detection.ps1` | Erkennungsskript für Intune oder SCCM. `$ExpectedVersion` bei jedem Release anpassen. |
 | `Test-CollectorOutput.ps1` | Löst die sichere Erstellung der Berichtsdatei aus `Collect-DeviceLogs.ps1` heraus und testet sie in einem temporären Ordner (vorab angelegte Datei, Verknüpfung, Hardlink, fremder Besitzer, Rechte des Standardberichts). Es wird nichts gesammelt (2.8.0). |
+| `Test-OfficeHelper.ps1` | Prüft den Office-Helfer (`Sources\SelfXOffice.ps1`): Programmpfad von Outlook, Word und Excel unabhängig von Version, Bitness und Installationsart (nur Dateien unterhalb von Program Files), nur Prozesse der eigenen Sitzung. Registry und Prozesse simuliert (2.8.0). |
 | `Test-SupportLinks.ps1` | Prüft die Links des Hilfe-Dialogs (`Sources\SupportLinks.ps1`): nur https, mailto mit einer Adresse, Teams-Chat-Link; alles andere wird abgelehnt. Reine Funktionen (2.8.0). |
 | `Test-InstallBinaries.ps1` | Löst die Prüfung der vorgebauten Programme aus `Install.ps1` heraus und testet sie gegen ein gefälschtes Paket (fehlender `Bin`-Ordner, fehlende oder geänderte Dateien, geänderte Quellen, defektes oder altes Manifest). Es wird nichts gebaut oder installiert (2.6.11, ab 2.7.0 Manifestformat 2). |
 | `Test-LanguageFiles.ps1` | Prüft die Sprachdateien gegen `en.xml` und den Katalog. Vor dem Bau des Pakets ausführen. |

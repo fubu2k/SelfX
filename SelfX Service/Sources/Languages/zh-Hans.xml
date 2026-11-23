@@ -444,6 +444,13 @@
 
 是否要继续？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook 建议了错误或过时的电子邮件地址</Name>
+				<Explanation>在新邮件中输入姓名时，Outlook 建议的地址有误、已不存在或属于其他人。</Explanation>
+				<Alerte_MSG>将清除 Outlook 的建议电子邮件地址列表（自动完成列表）。Outlook 将关闭并重新启动。正在撰写但尚未保存为草稿的邮件可能会丢失。发送新邮件时，Outlook 会重新生成该列表。您的邮箱、联系人和配置文件不会更改。新版 Outlook 不受影响。
+
+是否要继续？</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>启动 OneDrive 客户端</Name>
 				<Explanation>OneDrive 当前未运行。</Explanation>
