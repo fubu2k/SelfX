@@ -530,6 +530,17 @@ Verwenden Sie das Paket in Intune wie folgt:
 |---|---|---|
 | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, benutzerdefiniertes Skript `Detection.ps1` (siehe [SelfX Service](#selfx-service)) |
 
+## Dateiliste (SelfX.Files.json)
+
+`tools\New-SelfXIntuneWin.ps1` schreibt beim Paketbau die Datei `SelfX.Files.json` in das Paket. Sie enthält den
+SHA256 jeder Datei, die `Install.ps1` in den Installationsordner kopiert (alles unter `Sources` und `Uninstall.ps1`).
+Die Liste wird bei jedem Paketbau neu erzeugt: Wer ein Skript oder eine Konfiguration ändert, muss nichts von Hand
+nachpflegen, sondern das Paket neu bauen. `Install.ps1` prüft vor der Installation, dass jede Datei zur Liste passt
+und keine Datei ohne Eintrag im Paket liegt; sonst bricht die Installation ab, bevor etwas geändert wird (die
+bestehende Installation bleibt unberührt). Fehlt die Liste (älteres Paket), gibt es nur eine Warnung. Die Liste wird
+auch im Installationsordner abgelegt; spätere Versionen prüfen damit Skripte vor dem Start. `Bin` hat weiterhin die
+eigene Liste `SelfX.Binaries.json`.
+
 ## Rechte des Dienstes
 
 Der Dienst läuft als LocalSystem. `Install.ps1` begrenzt sein Token mit `sc.exe privs` auf die Rechte, die die

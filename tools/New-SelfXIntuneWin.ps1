@@ -43,7 +43,7 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.4.0
+    Version : 1.5.0
 
     History:
     Version  Date        Author               Change
@@ -54,6 +54,7 @@
     1.2.0    2026-11-20  Wolfgang Baeck       Use only the Microsoft tool; remove the module dependency and verify its signature
     1.3.0    2026-11-22  fubu2k               Only SelfX Service (SelfX Admin and SelfX Standard are no longer part of this repository)
     1.4.0    2026-11-22  fubu2k               Bin (.NET 10 programs) is required and fully checked; the .NET project files are not packaged
+    1.5.0    2026-11-23  fubu2k               Writes SelfX.Files.json (SHA256 of all installed files) into the package (finding N4)
 #>
 
 [CmdletBinding()]
@@ -126,6 +127,32 @@ function Test-StagedPackage {
     }
 }
 
+# Writes SelfX.Files.json into the staged package (security review finding N4): the SHA256 of every file that Install.ps1
+# copies to the installation folder (everything below Sources, plus Uninstall.ps1). Install.ps1 checks the package against
+# it before anything is installed and keeps the file in the installation folder; the service uses it before it starts a script.
+function New-SelfXFileManifest {
+    param([string]$Stage, [string]$Version)
+    $sources = Join-Path $Stage 'Sources'
+    if (-not (Test-Path -LiteralPath $sources -PathType Container)) { throw 'The folder Sources is missing in the package.' }
+    $files = [ordered]@{}
+    $items = @(Get-ChildItem -LiteralPath $sources -Recurse -File -Force) + @(Get-Item -LiteralPath (Join-Path $Stage 'Uninstall.ps1') -Force)
+    foreach ($item in ($items | Sort-Object FullName)) {
+        $relative = if ($item.FullName.StartsWith($sources + '\', [StringComparison]::OrdinalIgnoreCase)) { $item.FullName.Substring($sources.Length + 1) } else { $item.Name }
+        $relative = $relative.Replace('\', '/')
+        if ($relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $relative -match '(^|/)\.\.?(/|$)') { throw "Unsupported file name in the package: $relative" }
+        $files[$relative] = (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash
+    }
+    $manifest = [ordered]@{
+        ManifestVersion = 1
+        ToolVersion     = $Version
+        BuiltUtc        = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+        Files           = $files
+    }
+    $path = Join-Path $Stage 'SelfX.Files.json'
+    [IO.File]::WriteAllText($path, ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+    return $files.Count
+}
+
 # Creates <OutputDir>\<setup file name>.intunewin, like IntuneWinAppUtil.exe.
 function New-PackageFile {
     param([string]$Stage, [string]$SetupFile, [string]$OutputDir)
@@ -170,6 +197,7 @@ try {
             $projectsInStage = Join-Path $stage 'Service\Projects'
             if (Test-Path -LiteralPath $projectsInStage) { Remove-Item -LiteralPath $projectsInStage -Recurse -Force }
             Test-StagedPackage -Stage $stage -Name $name -Definition $definition -Version $version
+            if ($name -eq 'Service') { Write-Host ('Service: SelfX.Files.json lists {0} files.' -f (New-SelfXFileManifest -Stage $stage -Version $version)) }
 
             $created = New-PackageFile -Stage $stage -SetupFile $definition.Setup -OutputDir $toolOutput
 

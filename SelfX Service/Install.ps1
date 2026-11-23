@@ -65,6 +65,8 @@
                                               owner and rights set again (F12)
     2.8.1    2026-11-23  fubu2k               The service token is limited to the privileges the actions need (sc.exe privs,
                                               Tool_Config Service_Privileges = Restricted | Default, finding N5)
+    2.8.1    2026-11-23  fubu2k               The package is checked against SelfX.Files.json (SHA256 of every installed file) before
+                                              anything is installed; the file is kept in the installation folder (finding N4)
 #>
 
 [CmdletBinding()]
@@ -176,6 +178,36 @@ function Test-SelfXPrebuiltBinaries {
 	}
 }
 
+function Test-SelfXFileManifest {
+	# Checks the package against SelfX.Files.json (finding N4): every file below Sources and Uninstall.ps1 must be listed
+	# and unchanged, and nothing may be in the package that is not listed. Returns the number of checked files, or $null
+	# when the package has no such file (older package: warning only). A mismatch throws before anything is installed.
+	param([Parameter(Mandatory = $true)][string]$PackageFolder)
+	$ManifestPath = Join-Path $PackageFolder 'SelfX.Files.json'
+	If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { return $null }
+	Try { $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json }
+	Catch { throw "SelfX.Files.json is not valid JSON: $($_.Exception.Message)" }
+	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '1' -or -not $Manifest.Files) { throw 'SelfX.Files.json has an unknown format.' }
+	$Sources = Join-Path $PackageFolder 'Sources'
+	$Listed = @{}
+	ForEach($Property in @($Manifest.Files.PSObject.Properties))
+	{
+		$Relative = "$($Property.Name)"
+		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "SelfX.Files.json lists an unsupported name '$Relative'." }
+		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } Else { Join-Path $Sources $Relative.Replace('/', '\') }
+		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in SelfX.Files.json but missing in the package." }
+		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Property.Value)") { throw "$Relative does not match its SHA256 in SelfX.Files.json." }
+		$Listed[$Relative.ToLowerInvariant()] = $true
+	}
+	ForEach($Item in @(Get-ChildItem -LiteralPath $Sources -Recurse -File -Force))
+	{
+		$Relative = $Item.FullName.Substring($Sources.Length + 1).Replace('\', '/')
+		If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
+	}
+	If(-not $Listed.ContainsKey('uninstall.ps1')) { throw 'Uninstall.ps1 is not listed in SelfX.Files.json.' }
+	Return $Listed.Count
+}
+
 function Get-SelfXServicePrivileges {
 	# Privileges the service (LocalSystem) keeps (finding N5). Everything else of the LocalSystem token is removed, so the
 	# service and every script it starts cannot use SeTcb, SeDebug, SeCreateToken, SeLoadDriver, SeSecurity and the like.
@@ -285,6 +317,9 @@ Try
 	# installation stays untouched and still works.
 	Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
 	Write-Output 'Programs in Bin checked against the manifest.'
+	$CheckedFiles = Test-SelfXFileManifest -PackageFolder $PackageFolder
+	If($null -eq $CheckedFiles) { Write-Warning 'SelfX.Files.json is missing in the package: the files are not checked against a hash list. The installation continues.' }
+	Else { Write-Output "Package files checked against SelfX.Files.json ($CheckedFiles files)." }
 	$PowerShell7 = Test-SelfXPowerShell7
 	If($PowerShell7.Ready) { Write-Output "PowerShell $($PowerShell7.Version) found (machine-wide)." }
 	Else { Write-Warning "$($PowerShell7.Reason) The installation continues." }
@@ -323,6 +358,7 @@ Try
 	If($Locked.Count -gt 0) { throw "Files in '$InstallFolder' are in use and cannot be replaced: $($Locked -join ', ')" }
 	Copy-Item -Path (Join-Path $SourcesFolder '*') -Destination $InstallFolder -Recurse -Force
 	Copy-Item -LiteralPath (Join-Path $PackageFolder 'Uninstall.ps1') -Destination $InstallFolder -Force
+	If($null -ne $CheckedFiles) { Copy-Item -LiteralPath (Join-Path $PackageFolder 'SelfX.Files.json') -Destination $InstallFolder -Force }
 	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM.
 	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$InstallFolder' (exit code $LASTEXITCODE)." }
