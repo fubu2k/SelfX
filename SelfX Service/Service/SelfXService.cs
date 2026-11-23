@@ -46,7 +46,7 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.19
+    Version : 2.8.20
 
     History:
     Version  Date        Author               Change
@@ -57,6 +57,10 @@ Notes:
                                               an unlisted .exe below the install folder is refused
     2.8.19   2026-11-23  fubu2k               Installer helper SafeTree (/removetree:, /cleandata:): deletes folder trees through handles opened
                                               with FILE_FLAG_OPEN_REPARSE_POINT, without a time window between check and delete (M1)
+    2.8.20   2026-11-23  fubu2k               N1: Tool_Config.xml and Issues_List.xml are checked first, a check cut off at 20 problems is noted
+                                              (log, event 4005; Service_FileCheck=Audit is then ignored). N2: a file of any type without an entry
+                                              in the list is refused. N3: the rights check of PowerShell 7 accepts only SYSTEM, Administrators and
+                                              TrustedInstaller as writers, also for the folders above pwsh.exe up to the drive root
 */
 
 using System;
@@ -973,21 +977,28 @@ namespace SelfX
         // Same rule as the generator (tools\New-SelfXIntuneWin.ps1): plain relative names with forward slashes.
         static readonly Regex ListedNamePattern = new Regex(@"^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*\z", RegexOptions.CultureInvariant);
         static readonly Regex Sha256Pattern = new Regex(@"^[0-9A-Fa-f]{64}\z", RegexOptions.CultureInvariant);
-        // Files that PowerShell or the service load as code or configuration; none of them may exist without an entry in the list.
-        // .dll: the WinRT libraries that PowerShell 7 loads (WinRT\*.dll); an unlisted DLL would be code in a SYSTEM process.
-        // .exe: SelfXService.exe and SelfX.exe are listed; an unlisted program in the install folder is refused. A replaced
-        // SelfXService.exe skips its own check: this detects accidents (broken update); the protection against an attacker is the folder ACL and App Control.
-        static readonly string[] CheckedExtensions = { ".ps1", ".psm1", ".psd1", ".ps1xml", ".xml", ".dll", ".exe" };
+        // The generator lists every file of the installation (scripts, configuration, images, WinRT and Audio libraries, both
+        // programs), so no file of any type may exist in the install folder without an entry in the list (a stray .config,
+        // .json, .cmd, .manifest or .dll.config next to a checked program would otherwise go unnoticed). Only the list itself
+        // is exempt. A replaced SelfXService.exe skips its own check: this detects accidents (broken update); the protection
+        // against an attacker is the folder ACL and App Control.
+        // Checked first, so that a long list of other problems cannot hide them: the configuration read by CheckInstalledFiles
+        // (Service_FileCheck) and the action catalog.
+        static readonly string[] PriorityFiles = { "Tool_Config.xml", "Issues_List.xml" };
+        // Last entry of the problem list when the check stopped at MaxFileProblems (the list is then incomplete).
+        const string TruncatedProblem = "check stopped: more problems may exist";
 
         /// <summary>
         /// Compare the installed scripts and configuration with SelfX.Files.json (written at package build, copied
-        /// by Install.ps1). Every listed file must exist with the listed SHA256; no script or XML file below the root may be
+        /// by Install.ps1). Every listed file must exist with the listed SHA256; no file below the root may be
         /// missing from the list; no link (junction, symbolic link) may be in the way. Returns false and the problems (at most
-        /// 20, "kind: name") when anything differs, when the list is missing, too large or invalid (fail closed).
+        /// 20, "kind: name", plus the entry TruncatedProblem when the check stopped there; Tool_Config.xml and Issues_List.xml
+        /// are checked first) when anything differs, when the list is missing, too large or invalid (fail closed).
         /// </summary>
         static bool VerifyInstalledFiles(string root, out List<string> problems)
         {
             problems = new List<string>();
+            bool truncated = false;
             try
             {
                 root = root.TrimEnd('\\');
@@ -1021,13 +1032,22 @@ namespace SelfX
                 }
                 if (expected.Count == 0) { problems.Add("file list: empty"); return false; }
 
+                // Configuration and catalog first, then the rest.
+                List<KeyValuePair<string, string>> ordered = new List<KeyValuePair<string, string>>();
                 foreach (KeyValuePair<string, string> entry in expected)
                 {
-                    if (problems.Count >= MaxFileProblems) break;
+                    if (IsPriorityFile(entry.Key)) ordered.Add(entry);
+                }
+                foreach (KeyValuePair<string, string> entry in expected)
+                {
+                    if (!IsPriorityFile(entry.Key)) ordered.Add(entry);
+                }
+                foreach (KeyValuePair<string, string> entry in ordered)
+                {
                     string full = Path.GetFullPath(Path.Combine(root, entry.Key.Replace('/', '\\')));
-                    if (!full.StartsWith(root + "\\", StringComparison.OrdinalIgnoreCase)) { problems.Add("path: " + entry.Key); continue; }
-                    if (!File.Exists(full)) { problems.Add("missing: " + entry.Key); continue; }
-                    if (IsLinkBelow(root, full)) { problems.Add("link: " + entry.Key); continue; }
+                    if (!full.StartsWith(root + "\\", StringComparison.OrdinalIgnoreCase)) { AddProblem(problems, "path: " + entry.Key, ref truncated); continue; }
+                    if (!File.Exists(full)) { AddProblem(problems, "missing: " + entry.Key, ref truncated); continue; }
+                    if (IsLinkBelow(root, full)) { AddProblem(problems, "link: " + entry.Key, ref truncated); continue; }
                     string actual;
                     try
                     {
@@ -1037,10 +1057,11 @@ namespace SelfX
                             actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
                         }
                     }
-                    catch (IOException) { problems.Add("not readable: " + entry.Key); continue; }
-                    if (!string.Equals(actual, entry.Value, StringComparison.OrdinalIgnoreCase)) problems.Add("changed: " + entry.Key);
+                    catch (IOException) { AddProblem(problems, "not readable: " + entry.Key, ref truncated); continue; }
+                    if (!string.Equals(actual, entry.Value, StringComparison.OrdinalIgnoreCase)) AddProblem(problems, "changed: " + entry.Key, ref truncated);
                 }
-                FindUnlistedFiles(new DirectoryInfo(root), root, expected, problems);
+                FindUnlistedFiles(new DirectoryInfo(root), root, expected, problems, ref truncated);
+                if (truncated) problems.Add(TruncatedProblem);
                 return problems.Count == 0;
             }
             catch (JsonException)
@@ -1068,36 +1089,58 @@ namespace SelfX
             return false;
         }
 
-        static void FindUnlistedFiles(DirectoryInfo folder, string root, Dictionary<string, string> listed, List<string> problems)
+        /// <summary>True for the files that are checked first (name relative to the root, case-insensitive).</summary>
+        static bool IsPriorityFile(string relative)
+        {
+            foreach (string name in PriorityFiles)
+            {
+                if (string.Equals(relative, name, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Adds a problem up to MaxFileProblems; a further problem only sets truncated (the check continues, so the flag means that more problems really exist).</summary>
+        static void AddProblem(List<string> problems, string problem, ref bool truncated)
+        {
+            if (problems.Count >= MaxFileProblems) truncated = true;
+            else problems.Add(problem);
+        }
+
+        static void FindUnlistedFiles(DirectoryInfo folder, string root, Dictionary<string, string> listed, List<string> problems, ref bool truncated)
         {
             foreach (FileSystemInfo entry in folder.EnumerateFileSystemInfos())
             {
-                if (problems.Count >= MaxFileProblems) return;
                 string relative = entry.FullName.Substring(root.Length + 1).Replace('\\', '/');
-                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("link: " + relative); continue; }
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { AddProblem(problems, "link: " + relative, ref truncated); continue; }
                 DirectoryInfo sub = entry as DirectoryInfo;
-                if (sub != null) { FindUnlistedFiles(sub, root, listed, problems); continue; }
-                if (Array.IndexOf(CheckedExtensions, entry.Extension.ToLowerInvariant()) < 0) continue;
-                if (!listed.ContainsKey(relative)) problems.Add("not listed: " + relative);
+                if (sub != null) { FindUnlistedFiles(sub, root, listed, problems, ref truncated); continue; }
+                // Any file type: the list is the complete content of the install folder (see the comment at PriorityFiles).
+                if (string.Equals(relative, FileListName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!listed.ContainsKey(relative)) AddProblem(problems, "not listed: " + relative, ref truncated);
             }
         }
 
         /// <summary>
         /// Called before every start of a script. Returns true when the installed files match SelfX.Files.json. Otherwise
         /// nothing is started (Enforce, default); with Service_FileCheck=Audit in Tool_Config.xml the problem is only logged.
-        /// The setting counts only when the file list is intact and Tool_Config.xml itself is not among the problems.
+        /// The setting counts only when the file list is intact, Tool_Config.xml itself is not among the problems and the check
+        /// was not cut off at the problem limit (Tool_Config.xml is checked first, but a cut-off list cannot prove it).
+        /// Event 4005 notes a cut-off check.
         /// </summary>
         bool CheckInstalledFiles(string scriptName)
         {
             List<string> problems;
             if (VerifyInstalledFiles(installRoot, out problems)) return true;
             bool audit = false;
-            bool settingTrusted = !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.StartsWith("check failed:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
+            bool truncated = problems.Contains(TruncatedProblem);
+            bool settingTrusted = !truncated && !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.StartsWith("check failed:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
             if (settingTrusted) audit = string.Equals(ReadToolConfigValue("Service_FileCheck"), "Audit", StringComparison.OrdinalIgnoreCase);
-            Log("Installed files do not match " + FileListName + " (" + string.Join("; ", problems.GetRange(0, Math.Min(5, problems.Count))) + "); '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
+            string shown = string.Join("; ", problems.GetRange(0, Math.Min(5, problems.Count)));
+            string cutOff = truncated ? " The check stopped after " + MaxFileProblems + " problems; the list is incomplete." : "";
+            Log("Installed files do not match " + FileListName + " (" + shown + ")." + cutOff + " '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
             SecurityEvent(EventFilesChanged, audit ? EventLogEntryType.Warning : EventLogEntryType.Error,
-                audit ? "Installed SelfX files do not match SelfX.Files.json (Audit: actions as SYSTEM are still started). See the SelfX log."
-                      : "Installed SelfX files do not match SelfX.Files.json; SelfX actions as SYSTEM are not started. See the SelfX log.");
+                (audit ? "Installed SelfX files do not match SelfX.Files.json (Audit: actions as SYSTEM are still started). See the SelfX log."
+                       : "Installed SelfX files do not match SelfX.Files.json; SelfX actions as SYSTEM are not started. See the SelfX log.") + cutOff);
             return audit;
         }
 
@@ -1124,34 +1167,54 @@ namespace SelfX
             get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"PowerShell\7\pwsh.exe"); }
         }
 
+        // The only identities that may change PowerShell 7 or the folders above it: SYSTEM, Administrators and TrustedInstaller
+        // (NT SERVICE\TrustedInstaller). Everything else (Everyone, Users, Authenticated Users, Interactive, CREATOR OWNER,
+        // a domain or local group, a single account) counts as "normal users".
+        static readonly string[] TrustedWriterSids =
+        {
+            "S-1-5-18", "S-1-5-32-544", "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"
+        };
+
         /// <summary>
         /// The installer checks the rights of PowerShell 7 only when SelfX is installed. PowerShell 7 can arrive later
-        /// (Autopilot installs apps in any order), so the service checks it again before every start: neither the folder
-        /// nor pwsh.exe may allow Everyone, Authenticated Users, Interactive or Users to change files or permissions.
-        /// A SYSTEM process must never run a program that normal users can replace.
+        /// (Autopilot installs apps in any order), so the service checks it again before every start: pwsh.exe and its folder
+        /// may only be changed by SYSTEM, Administrators and TrustedInstaller (any other identity with write, delete,
+        /// permission or ownership rights is refused), and so may the folders above it up to the drive root (nobody else may
+        /// delete or take over the folder that contains pwsh.exe). The owner is not compared (a device where another
+        /// account owns the folder must keep working); what counts is who may change it. A SYSTEM process must never run a program that normal users can replace.
         /// </summary>
         static bool IsPowerShellProtected(string executable, out string reason)
         {
+            return IsPathChainProtected(executable, null, null, out reason);
+        }
+
+        /// <summary>
+        /// The check behind IsPowerShellProtected. Tests only: stopBefore (null = whole chain) is the first folder above the
+        /// file that is no longer checked, so a test folder below %TEMP% is not judged by the rights of the user profile;
+        /// trustedSids (null = TrustedWriterSids) lets a test that runs as a normal user trust its own account.
+        /// </summary>
+        static bool IsPathChainProtected(string executable, string stopBefore, string[] trustedSids, out string reason)
+        {
             reason = "";
-            string[] userSids = { "S-1-1-0", "S-1-5-11", "S-1-5-4", "S-1-5-32-545" };
-            FileSystemRights dangerous = FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete |
+            if (trustedSids == null) trustedSids = TrustedWriterSids;
+            // pwsh.exe and its own folder: any right that changes, replaces or adds code.
+            FileSystemRights direct = FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete |
                 FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+            // Folders above it: rights that remove or take over the folder below them. Creating new entries (drive root: normal
+            // users may create folders) does not replace an existing folder; rules that only apply to children are skipped.
+            FileSystemRights above = FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
             try
             {
-                foreach (string path in new string[] { Path.GetDirectoryName(executable), executable })
+                FileInfo file = new FileInfo(executable);
+                if (!IsProtectedAgainstChange(file.GetAccessControl(), executable, direct, trustedSids, out reason)) return false;
+                DirectoryInfo folder = file.Directory;
+                if (folder == null) { reason = "'" + executable + "' has no folder"; return false; }
+                if (!IsProtectedAgainstChange(folder.GetAccessControl(), folder.FullName, direct, trustedSids, out reason)) return false;
+                string limit = stopBefore == null ? null : Path.GetFullPath(stopBefore).TrimEnd('\\');
+                for (DirectoryInfo parent = folder.Parent; parent != null; parent = parent.Parent)
                 {
-                    FileSystemSecurity security = path == executable
-                        ? (FileSystemSecurity)new FileInfo(path).GetAccessControl()
-                        : (FileSystemSecurity)new DirectoryInfo(path).GetAccessControl();
-                    foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
-                    {
-                        if (rule.AccessControlType != AccessControlType.Allow) continue;
-                        if (Array.IndexOf(userSids, rule.IdentityReference.Value) >= 0 && (rule.FileSystemRights & dangerous) != 0)
-                        {
-                            reason = "'" + path + "' can be changed by normal users (" + rule.IdentityReference.Value + ")";
-                            return false;
-                        }
-                    }
+                    if (limit != null && string.Equals(parent.FullName.TrimEnd('\\'), limit, StringComparison.OrdinalIgnoreCase)) break;
+                    if (!IsProtectedAgainstChange(parent.GetAccessControl(), parent.FullName, above, trustedSids, out reason)) return false;
                 }
                 return true;
             }
@@ -1161,6 +1224,23 @@ namespace SelfX
                 reason = "the rights could not be read (" + ex.GetType().Name + ")";
                 return false;
             }
+        }
+
+        static bool IsProtectedAgainstChange(FileSystemSecurity security, string path, FileSystemRights dangerous, string[] trustedSids, out string reason)
+        {
+            reason = "";
+            foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+            {
+                if (rule.AccessControlType != AccessControlType.Allow) continue;
+                // A rule that only applies to child items (for example CREATOR OWNER in Program Files) says nothing about this item;
+                // the children are checked with their own rights.
+                if ((rule.PropagationFlags & PropagationFlags.InheritOnly) != 0) continue;
+                if ((rule.FileSystemRights & dangerous) == 0) continue;
+                if (Array.IndexOf(trustedSids, rule.IdentityReference.Value) >= 0) continue;
+                reason = "'" + path + "' can be changed by normal users (" + rule.IdentityReference.Value + ")";
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
