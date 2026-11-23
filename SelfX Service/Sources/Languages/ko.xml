@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>규정 준수 확인</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>회사 포털</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>빠른 지원</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>MDM 로그 수집</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>지원팀에 로그 보내기</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>{0} 장치 로그</Report_Mail_Subject>
@@ -147,6 +148,7 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Tooltip_SyncCompliance>장치가 회사 규칙을 충족하는지 지금 확인하도록 Intune에 요청합니다.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>회사 앱을 설치할 수 있는 회사 포털을 엽니다.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>지원 담당자가 화면을 보고 도울 수 있도록 빠른 지원을 엽니다(동의한 경우에만).</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>지원 담당자가 화면을 보고 도울 수 있도록 Remote Help을 엽니다(동의한 경우에만).</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>장치 관리 로그를 지원팀용 폴더에 수집합니다.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>장치의 모든 로그를 수집하고 보고서가 첨부된 지원팀 앞 전자 메일을 엽니다.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>설정(언어, 모양 및 상태 아이콘)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Copilot_Target_Text>SelfX가 텍스트를 복사하고 {0}을(를) 엽니다. 텍스트를 그곳에 붙여넣고 직접 보내세요. SelfX는 아무것도 보내지 않습니다.</Copilot_Target_Text>
 		<Copilot_Open_Button>복사하고 Copilot 열기</Copilot_Open_Button>
 		<Copilot_Opened_Text>텍스트가 클립보드에 있고 Copilot Chat이 열렸습니다. 그곳에 붙여넣고(Ctrl+V) 보내세요.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>그때까지 다른 내용을 복사하지 않으면 클립보드가 {0}초 후에 비워집니다. 그 전에 텍스트를 붙여 넣으세요.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>클립보드를 비웠습니다. 텍스트를 다시 복사하려면 “복사하고 Copilot 열기”을(를) 선택하세요.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>텍스트를 준비할 수 없습니다: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>설명에 이름, 비밀번호, 고객 데이터를 쓰지 마세요. Copilot은 틀릴 수 있습니다. 이해하지 못하는 명령은 실행하지 마세요.</Copilot_Warning_Text>
 		<Version_Text>버전 {0}</Version_Text>
@@ -635,6 +639,27 @@ SelfX는 파일을 삭제하거나 변경하지 않습니다. Defender가 위협
 				<Name>이 PC에서 소리가 나지 않음</Name>
 				<Explanation>이전에는 문제가 없었는데 스피커나 헤드폰에서 소리가 나지 않습니다. 소리가 꺼져(음소거) 있거나 매우 작게 설정되어 있을 수 있습니다.</Explanation>
 				<Alerte_MSG>SelfX는 현재 재생 장치(스피커 또는 헤드폰)의 소리를 다시 켭니다. 음소거 상태이면 소리를 켜고, 볼륨이 30 % 미만이면 30 %로 올립니다. 그보다 큰 볼륨은 그대로 유지됩니다. 다른 장치, 마이크, 드라이버는 변경되지 않습니다.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Outlook 문제 해결</Name>
+				<Explanation>Outlook에서 작업 중인데 응답하지 않거나, 메일을 보내거나 받지 못하거나, 사서함이 올바르게 표시되지 않습니다.</Explanation>
+				<Alerte_MSG>Outlook이 닫힌 후 다시 시작됩니다. 임시 보관 메일로 저장하지 않은 작성 중인 메일은 사라집니다. 시작한 후 Outlook이 데이터를 확인하는 데 시간이 걸릴 수 있습니다. 프로필과 사서함은 변경되지 않습니다. 새 Outlook은 영향을 받지 않습니다.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>장치의 시간이 올바르지 않음</Name>
+				<Explanation>로그인 또는 인증서 오류가 발생하거나 장치의 시계가 잘못된 시간을 표시합니다. 이 작업은 로컬 SelfX 서비스를 통해 관리자 권한으로 실행됩니다.</Explanation>
+				<Alerte_MSG>장치의 시계가 조직의 시간 원본과 동기화됩니다. 표준 시간대는 변경되지 않습니다. 그 후 다시 시도하세요.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: 캐시 지우기</Name>
+				<Explanation>Microsoft Edge에서 웹 사이트가 로드되지 않거나 올바르게 표시되지 않습니다. 이 작업은 기본 프로필의 캐시만 지웁니다.</Explanation>
+				<Alerte_MSG>Microsoft Edge가 즉시 닫히며 웹 사이트에서 저장하지 않은 입력은 사라집니다. 그런 다음 기본 프로필의 캐시를 지웁니다. 쿠키, 기록, 저장된 암호, 즐겨찾기, 다른 프로필은 영향을 받지 않으므로 웹 사이트에 계속 로그인된 상태로 유지됩니다.
 
 계속하시겠습니까?</Alerte_MSG>
 			</Action>

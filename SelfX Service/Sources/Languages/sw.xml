@@ -105,6 +105,7 @@ Tunapendekeza mwonekano wa kina ikiwa mwonekano rahisi hautatui au hauna tatizo 
 		<SystemInfo_SyncCompliance_Text>Angalia utiifu</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Quick Assist</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Kusanya kumbukumbu za MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Tuma kumbukumbu kwa usaidizi</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Kumbukumbu za kifaa {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Huomba Intune ikague sasa kama kifaa chako kinatimiza sheria za kampuni.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Hufungua Tovuti ya Kampuni, ambapo unaweza kusakinisha programu za kampuni.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Hufungua Usaidizi wa Haraka ili mtu wa usaidizi aone skrini yako na akusaidie – kwa idhini yako tu.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Hufungua Remote Help ili mtu wa usaidizi aone skrini yako na akusaidie – kwa idhini yako tu.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Hukusanya kumbukumbu za usimamizi wa kifaa kwenye folda kwa ajili ya timu ya usaidizi.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Hukusanya kumbukumbu zote za kifaa chako na kufungua barua pepe kwa timu ya usaidizi ikiwa na ripoti iliyoambatishwa.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Mipangilio (lugha, mwonekano na ikoni ya hali)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX hunakili maandishi na kufungua {0}. Unabandika maandishi hapo na kuyatuma mwenyewe. SelfX haitumi chochote.</Copilot_Target_Text>
 		<Copilot_Open_Button>Nakili na ufungue Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Maandishi yako kwenye ubao wa kunakili na Copilot Chat imefunguliwa. Yabandike hapo (Ctrl+V) kisha uyatume.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Ubao wa kunakili utafutwa baada ya sekunde {0} ikiwa hutanakili kitu kingine hadi wakati huo. Bandika maandishi kabla ya hapo.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Ubao wa kunakili umefutwa. Ili kunakili maandishi tena, chagua “Nakili na ufungue Copilot”.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Maandishi hayakuweza kuandaliwa: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Usiandike majina, nywila au data za wateja kwenye maelezo. Copilot inaweza kukosea: usitekeleze amri ambazo huzielewi.</Copilot_Warning_Text>
 		<Version_Text>Toleo {0}</Version_Text>
@@ -637,6 +641,27 @@ Je, ungependa kuendelea?</Alerte_MSG>
 				<Alerte_MSG>SelfX inawasha tena sauti ya kifaa chako cha sasa cha kucheza (spika au vipokea sauti). Ikiwa imenyamazishwa, sauti inawashwa; ikiwa sauti iko chini ya 30 %, inapandishwa hadi 30 %. Sauti ya juu zaidi inabaki kama ilivyo. Vifaa vingine, maikrofoni na viendeshi havibadilishwi.
 
 Je, ungependa kuendelea?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Tatua tatizo la Outlook</Name>
+				<Explanation>Unafanya kazi katika Outlook, lakini haijibu, haitumi wala kupokea barua pepe, au haionyeshi kisanduku chako cha barua ipasavyo.</Explanation>
+				<Alerte_MSG>Outlook itafungwa kisha kuanza tena. Barua pepe unazoandika ambazo hazijahifadhiwa kama rasimu zitapotea. Baada ya kuanza, Outlook inaweza kuhitaji muda kukagua data yake. Wasifu wako na kisanduku cha barua havibadilishwi. Outlook mpya haiathiriwi.
+
+Je, unataka kuendelea?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Saa ya kifaa chako si sahihi</Name>
+				<Explanation>Hitilafu za kuingia au vyeti zinatokea, au saa ya kifaa chako inaonyesha muda usio sahihi. Kitendo hiki kinaendeshwa kwa haki za msimamizi kupitia huduma ya SelfX ya ndani.</Explanation>
+				<Alerte_MSG>Saa ya kifaa chako itasawazishwa na chanzo cha muda cha shirika lako. Saa za eneo hazibadilishwi. Jaribu tena baada ya hapo.
+
+Je, unataka kuendelea?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: futa akiba</Name>
+				<Explanation>Tovuti hazipakiwi au hazionyeshwi ipasavyo katika Microsoft Edge. Kitendo hiki hufuta akiba ya wasifu chaguomsingi pekee.</Explanation>
+				<Alerte_MSG>Microsoft Edge itafungwa mara moja; maingizo yasiyohifadhiwa kwenye tovuti yatapotea. Kisha akiba ya wasifu chaguomsingi inafutwa. Vidakuzi, historia, nenosiri zilizohifadhiwa, alamisho na wasifu mwingine havigusiwi, kwa hivyo unabaki umeingia kwenye tovuti.
+
+Je, unataka kuendelea?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Kusanya kumbukumbu za kifaa na uzitume kwa timu ya usaidizi kwa barua pepe</Name>

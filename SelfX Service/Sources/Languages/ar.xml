@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>التحقق من الامتثال</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Quick Assist</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>جمع سجلات MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>إرسال السجلات إلى الدعم</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>سجلات الجهاز {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@
 		<Tooltip_SyncCompliance>يطلب من Intune التحقق الآن مما إذا كان جهازك يفي بقواعد الشركة.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>يفتح مدخل الشركة حيث يمكنك تثبيت تطبيقات الشركة.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>يفتح المساعدة السريعة حتى يتمكن موظف الدعم من رؤية شاشتك ومساعدتك – بموافقتك فقط.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>يفتح Remote Help حتى يتمكن موظف الدعم من رؤية شاشتك ومساعدتك – بموافقتك فقط.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>يجمع سجلات إدارة الجهاز في مجلد لفريق الدعم.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>يجمع جميع سجلات جهازك ويفتح رسالة بريد إلكتروني إلى فريق الدعم مرفق بها التقرير.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>الإعدادات (اللغة والمظهر وأيقونة الحالة)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@
 		<Copilot_Target_Text>ينسخ SelfX النص ويفتح {0}. تلصق النص هناك وترسله بنفسك. لا يرسل SelfX أي شيء.</Copilot_Target_Text>
 		<Copilot_Open_Button>نسخ وفتح Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>النص موجود في الحافظة وتم فتح Copilot Chat. الصقه هناك (Ctrl+V) ثم أرسله.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>سيتم إفراغ الحافظة بعد {0} ثانية إذا لم تنسخ أي شيء آخر حتى ذلك الحين. الصق النص قبل ذلك.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>تم إفراغ الحافظة. لنسخ النص مرة أخرى، اختر «نسخ وفتح Copilot».</Copilot_Cleared_Text>
 		<Copilot_Error_Text>تعذر إعداد النص: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>لا تكتب أسماء أو كلمات مرور أو بيانات عملاء في الوصف. قد يخطئ Copilot: لا تنفذ أوامر لا تفهمها.</Copilot_Warning_Text>
 		<Version_Text>الإصدار {0}</Version_Text>
@@ -635,6 +639,27 @@
 				<Name>لا يوجد صوت على هذا الكمبيوتر</Name>
 				<Explanation>لا يصدر صوت من مكبرات الصوت أو سماعات الرأس رغم أن كل شيء كان يعمل سابقًا. قد يكون الصوت مكتومًا أو منخفضًا جدًا.</Explanation>
 				<Alerte_MSG>يعيد SelfX تشغيل صوت جهاز التشغيل الحالي (مكبرات الصوت أو سماعات الرأس). إذا كان مكتومًا يتم تشغيل الصوت، وإذا كان مستوى الصوت أقل من 30 % يتم رفعه إلى 30 %. يبقى مستوى الصوت الأعلى كما هو. لا يتم تغيير الأجهزة الأخرى والميكروفون وبرامج التشغيل.
+
+هل تريد المتابعة؟</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>حل مشكلة في Outlook</Name>
+				<Explanation>أنت تعمل في Outlook لكنه توقف عن الاستجابة، أو لا يرسل البريد ولا يستقبله، أو لا يعرض صندوق بريدك بشكل صحيح.</Explanation>
+				<Alerte_MSG>سيتم إغلاق Outlook ثم تشغيله من جديد. ستضيع الرسائل التي تكتبها ولم تُحفظ كمسودة. بعد التشغيل قد يحتاج Outlook إلى بعض الوقت لفحص بياناته. لا يتم تغيير ملفك الشخصي ولا صندوق بريدك. لا يتأثر Outlook الجديد.
+
+هل تريد المتابعة؟</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>وقت جهازك غير صحيح</Name>
+				<Explanation>تظهر أخطاء في تسجيل الدخول أو الشهادات، أو تعرض ساعة جهازك وقتًا خاطئًا. يعمل هذا الإجراء بصلاحيات المسؤول عبر خدمة SelfX المحلية.</Explanation>
+				<Alerte_MSG>ستتم مزامنة ساعة جهازك مع مصدر الوقت الخاص بمؤسستك. لا يتم تغيير المنطقة الزمنية. حاول مرة أخرى بعد ذلك.
+
+هل تريد المتابعة؟</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: مسح ذاكرة التخزين المؤقت</Name>
+				<Explanation>لا يتم تحميل مواقع الويب أو لا تُعرض بشكل صحيح في Microsoft Edge. يمسح الإجراء ذاكرة التخزين المؤقت للملف الشخصي الافتراضي فقط.</Explanation>
+				<Alerte_MSG>سيتم إغلاق Microsoft Edge فورًا، وستضيع المدخلات غير المحفوظة في مواقع الويب. بعد ذلك تُمسح ذاكرة التخزين المؤقت للملف الشخصي الافتراضي. لا تتأثر ملفات تعريف الارتباط والسجل وكلمات المرور المحفوظة والإشارات المرجعية والملفات الشخصية الأخرى، لذا تبقى مسجّل الدخول إلى مواقع الويب.
 
 هل تريد المتابعة؟</Alerte_MSG>
 			</Action>

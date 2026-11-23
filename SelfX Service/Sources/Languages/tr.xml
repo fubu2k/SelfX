@@ -105,6 +105,7 @@ Basit görünüm sorununuzu çözmezse veya içermiyorsa ayrıntılı görünüm
 		<SystemInfo_SyncCompliance_Text>Uyumluluğu denetle</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Şirket Portalı</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Hızlı Yardım</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>MDM günlüklerini topla</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Günlükleri desteğe gönder</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>{0} cihaz günlükleri</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Intune’dan cihazınızın şirket kurallarına uyup uymadığını şimdi denetlemesini ister.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Şirket uygulamalarını yükleyebileceğiniz Şirket Portalı’nı açar.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Bir destek personelinin ekranınızı görüp size yardım edebilmesi için Hızlı Yardım’ı açar – yalnızca onayınızla.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Bir destek personelinin ekranınızı görüp size yardım edebilmesi için Remote Help’ı açar – yalnızca onayınızla.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Cihaz yönetimi günlüklerini destek ekibi için bir klasörde toplar.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Cihazınızın tüm günlüklerini toplar ve raporun eklendiği bir e-postayı destek ekibine açar.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Ayarlar (dil, görünüm ve durum simgesi)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX metni kopyalar ve {0} adresini açar. Metni orada siz yapıştırır ve kendiniz gönderirsiniz. SelfX hiçbir şey göndermez.</Copilot_Target_Text>
 		<Copilot_Open_Button>Kopyala ve Copilot’u aç</Copilot_Open_Button>
 		<Copilot_Opened_Text>Metin panoda ve Copilot Chat açıldı. Metni oraya yapıştırın (Ctrl+V) ve gönderin.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Bu süre içinde başka bir şey kopyalamazsanız pano {0} saniye sonra boşaltılır. Metni önceden yapıştırın.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Pano boşaltıldı. Metni yeniden kopyalamak için “Kopyala ve Copilot’u aç” seçeneğini seçin.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Metin hazırlanamadı: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Açıklamaya ad, parola veya müşteri verisi yazmayın. Copilot yanılabilir: anlamadığınız komutları çalıştırmayın.</Copilot_Warning_Text>
 		<Version_Text>Sürüm {0}</Version_Text>
@@ -635,6 +639,27 @@ Devam etmek istiyor musunuz?</Alerte_MSG>
 				<Name>Bu bilgisayarda ses yok</Name>
 				<Explanation>Daha önce her şey yolundayken hoparlörlerden veya kulaklıktan ses gelmiyor. Ses kapalı (sessize alınmış) veya çok kısık olabilir.</Explanation>
 				<Alerte_MSG>SelfX, geçerli oynatma aygıtınızın (hoparlör veya kulaklık) sesini yeniden açar. Sessize alınmışsa ses açılır; ses düzeyi %30'un altındaysa %30'a yükseltilir. Daha yüksek bir ses düzeyi olduğu gibi kalır. Diğer aygıtlar, mikrofon ve sürücüler değiştirilmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Outlook ile ilgili bir sorunu çözün</Name>
+				<Explanation>Outlook'ta çalışıyorsunuz ancak yanıt vermiyor, e-posta göndermiyor veya almıyor ya da posta kutunuzu doğru göstermiyor.</Explanation>
+				<Alerte_MSG>Outlook kapatılacak ve yeniden başlatılacak. Yazdığınız ve taslak olarak kaydedilmemiş e-postalar kaybolur. Başlatıldıktan sonra Outlook verilerini denetlemek için biraz zaman gerektirebilir. Profiliniz ve posta kutunuz değiştirilmez. Yeni Outlook etkilenmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Cihazınızın saati yanlış</Name>
+				<Explanation>Oturum açma veya sertifika hataları oluşuyor ya da cihazınızın saati yanlış zamanı gösteriyor. Bu eylem, yerel SelfX hizmeti aracılığıyla yönetici haklarıyla çalışır.</Explanation>
+				<Alerte_MSG>Cihazınızın saati kuruluşunuzun zaman kaynağıyla eşitlenecek. Saat dilimi değiştirilmez. Ardından yeniden deneyin.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: önbelleği temizle</Name>
+				<Explanation>Web siteleri Microsoft Edge'de yüklenmiyor veya doğru görüntülenmiyor. Eylem yalnızca varsayılan profilin önbelleğini temizler.</Explanation>
+				<Alerte_MSG>Microsoft Edge hemen kapatılacak; web sitelerinde kaydedilmemiş girdiler kaybolur. Ardından varsayılan profilin önbelleği temizlenir. Çerezler, geçmiş, kayıtlı parolalar, yer işaretleri ve diğer profiller etkilenmez; web sitelerinde oturumunuz açık kalır.
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>

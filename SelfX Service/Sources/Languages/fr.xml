@@ -105,6 +105,7 @@ Nous recommandons la vue détaillée si la vue simplifiée ne résout pas votre 
 		<SystemInfo_SyncCompliance_Text>Vérifier la conformité</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Portail d’entreprise</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Assistance rapide</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Collecter les journaux MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Envoyer les journaux au support</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Journaux de l’appareil {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Description du problème :</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Demande à Intune de vérifier maintenant si votre appareil respecte les règles de l’entreprise.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Ouvre le Portail d’entreprise, où vous pouvez installer les applications de l’entreprise.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Ouvre l’Assistance rapide afin qu’une personne du support puisse voir votre écran et vous aider – uniquement avec votre accord.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Ouvre l’Remote Help afin qu’une personne du support puisse voir votre écran et vous aider – uniquement avec votre accord.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Collecte les journaux de gestion de l’appareil dans un dossier pour le support.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Collecte tous les journaux de votre appareil et ouvre un e-mail au support avec le rapport en pièce jointe.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Paramètres (langue, apparence et icône d’état)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Description du problème :</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX copie le texte et ouvre {0}. Vous collez le texte à cet endroit et l’envoyez vous-même. SelfX n’envoie rien.</Copilot_Target_Text>
 		<Copilot_Open_Button>Copier et ouvrir Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Le texte est dans le presse-papiers et Copilot Chat est ouvert. Collez-le (Ctrl+V) et envoyez-le.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Le presse-papiers est vidé dans {0} secondes si vous ne copiez rien d’autre d’ici là. Collez le texte avant.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Le presse-papiers a été vidé. Pour copier à nouveau le texte, choisissez « Copier et ouvrir Copilot ».</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Le texte n’a pas pu être préparé : {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>N’écrivez pas de noms, de mots de passe ni de données clients dans la description. Copilot peut se tromper : n’exécutez pas de commandes que vous ne comprenez pas.</Copilot_Warning_Text>
 		<Version_Text>Version {0}</Version_Text>
@@ -635,6 +639,27 @@ Voulez-vous continuer ?</Alerte_MSG>
 				<Name>Pas de son sur ce PC</Name>
 				<Explanation>Aucun son ne sort des haut-parleurs ou du casque, alors que tout fonctionnait avant. Le son est peut-être coupé (muet) ou réglé très bas.</Explanation>
 				<Alerte_MSG>SelfX réactive le son de votre périphérique de lecture actuel (haut-parleurs ou casque). S’il est en sourdine, le son est activé ; si le volume est inférieur à 30 %, il est relevé à 30 %. Un volume plus élevé reste inchangé. Les autres périphériques, le microphone et les pilotes ne sont pas modifiés.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Résoudre un problème avec Outlook</Name>
+				<Explanation>Vous travaillez dans Outlook, mais il ne répond plus, n’envoie ni ne reçoit d’e-mails ou n’affiche pas correctement votre boîte aux lettres.</Explanation>
+				<Alerte_MSG>Outlook va se fermer puis redémarrer. Les e-mails en cours de rédaction qui ne sont pas enregistrés comme brouillon seront perdus. Après le démarrage, Outlook peut avoir besoin de temps pour vérifier ses données. Votre profil et votre boîte aux lettres ne sont pas modifiés. Le nouvel Outlook n’est pas concerné.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>L’heure de votre appareil est incorrecte</Name>
+				<Explanation>Des erreurs de connexion ou de certificat apparaissent, ou l’horloge de votre appareil affiche une heure incorrecte. Cette action s’exécute avec des droits d’administrateur via le service SelfX local.</Explanation>
+				<Alerte_MSG>L’horloge de votre appareil va être synchronisée avec la source de temps de votre organisation. Le fuseau horaire n’est pas modifié. Réessayez ensuite.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge : vider le cache</Name>
+				<Explanation>Les sites web ne se chargent pas ou s’affichent mal dans Microsoft Edge. L’action vide uniquement le cache du profil par défaut.</Explanation>
+				<Alerte_MSG>Microsoft Edge va se fermer immédiatement ; les saisies non enregistrées sur les sites web seront perdues. Ensuite, le cache du profil par défaut est vidé. Les cookies, l’historique, les mots de passe enregistrés, les favoris et les autres profils ne sont pas concernés : vous restez connecté aux sites web.
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>

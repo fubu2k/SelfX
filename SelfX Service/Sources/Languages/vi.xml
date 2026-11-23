@@ -105,6 +105,7 @@ Chúng tôi khuyên bạn nên dùng giao diện chi tiết nếu giao diện đ
 		<SystemInfo_SyncCompliance_Text>Kiểm tra tuân thủ</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Cổng thông tin công ty</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Hỗ trợ nhanh</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Thu thập nhật ký MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Gửi nhật ký cho bộ phận hỗ trợ</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Nhật ký thiết bị {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Yêu cầu Intune kiểm tra ngay xem thiết bị của bạn có đáp ứng quy định của công ty không.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Mở Cổng thông tin công ty, nơi bạn có thể cài đặt ứng dụng của công ty.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Mở Hỗ trợ nhanh để nhân viên hỗ trợ có thể xem màn hình và giúp bạn – chỉ khi bạn đồng ý.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Mở Remote Help để nhân viên hỗ trợ có thể xem màn hình và giúp bạn – chỉ khi bạn đồng ý.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Thu thập nhật ký quản lý thiết bị vào một thư mục cho bộ phận hỗ trợ.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Thu thập toàn bộ nhật ký của thiết bị và mở email gửi bộ phận hỗ trợ có đính kèm báo cáo.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Cài đặt (ngôn ngữ, giao diện và biểu tượng trạng thái)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX sao chép văn bản và mở {0}. Bạn dán văn bản vào đó và tự gửi. SelfX không gửi gì cả.</Copilot_Target_Text>
 		<Copilot_Open_Button>Sao chép và mở Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Văn bản đã nằm trong bộ nhớ tạm và Copilot Chat đã được mở. Hãy dán vào đó (Ctrl+V) rồi gửi.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Bảng nhớ tạm sẽ được xóa sau {0} giây nếu bạn không sao chép gì khác trong thời gian đó. Hãy dán văn bản trước.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Bảng nhớ tạm đã được xóa. Để sao chép lại văn bản, hãy chọn “Sao chép và mở Copilot”.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Không thể chuẩn bị văn bản: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Không ghi tên, mật khẩu hoặc dữ liệu khách hàng vào phần mô tả. Copilot có thể sai: đừng chạy những lệnh mà bạn không hiểu.</Copilot_Warning_Text>
 		<Version_Text>Phiên bản {0}</Version_Text>
@@ -635,6 +639,27 @@ Bạn có muốn tiếp tục không?</Alerte_MSG>
 				<Name>Không có âm thanh trên PC này</Name>
 				<Explanation>Không có âm thanh từ loa hoặc tai nghe, dù trước đó mọi thứ vẫn bình thường. Âm thanh có thể bị tắt (tắt tiếng) hoặc đặt rất nhỏ.</Explanation>
 				<Alerte_MSG>SelfX bật lại âm thanh của thiết bị phát hiện tại (loa hoặc tai nghe). Nếu đang tắt tiếng, âm thanh được bật; nếu âm lượng dưới 30 %, âm lượng được tăng lên 30 %. Âm lượng cao hơn được giữ nguyên. Thiết bị khác, micrô và trình điều khiển không bị thay đổi.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Khắc phục sự cố với Outlook</Name>
+				<Explanation>Bạn đang làm việc trong Outlook nhưng nó không phản hồi, không gửi hoặc nhận được thư, hoặc hiển thị hộp thư không đúng.</Explanation>
+				<Alerte_MSG>Outlook sẽ đóng rồi khởi động lại. Thư bạn đang soạn và chưa lưu thành bản nháp sẽ bị mất. Sau khi khởi động, Outlook có thể cần một lúc để kiểm tra dữ liệu. Hồ sơ và hộp thư của bạn không bị thay đổi. Outlook mới không bị ảnh hưởng.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Giờ trên thiết bị của bạn bị sai</Name>
+				<Explanation>Xảy ra lỗi đăng nhập hoặc chứng chỉ, hoặc đồng hồ thiết bị hiển thị sai giờ. Thao tác này chạy với quyền quản trị thông qua dịch vụ SelfX cục bộ.</Explanation>
+				<Alerte_MSG>Đồng hồ thiết bị của bạn sẽ được đồng bộ với nguồn thời gian của tổ chức. Múi giờ không bị thay đổi. Hãy thử lại sau đó.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: xóa bộ nhớ đệm</Name>
+				<Explanation>Trang web không tải hoặc hiển thị không đúng trong Microsoft Edge. Thao tác chỉ xóa bộ nhớ đệm của hồ sơ mặc định.</Explanation>
+				<Alerte_MSG>Microsoft Edge sẽ đóng ngay; nội dung chưa lưu trên trang web sẽ bị mất. Sau đó bộ nhớ đệm của hồ sơ mặc định được xóa. Cookie, lịch sử, mật khẩu đã lưu, dấu trang và các hồ sơ khác không bị ảnh hưởng, nên bạn vẫn đăng nhập trên các trang web.
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>

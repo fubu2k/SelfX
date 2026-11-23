@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>コンプライアンスを確認</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>ポータル サイト</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>クイック アシスト</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>MDM ログを収集</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>ログをサポートに送信</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>{0} のデバイス ログ</Report_Mail_Subject>
@@ -147,6 +148,7 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Tooltip_SyncCompliance>デバイスが会社の規則を満たしているか今すぐ確認するよう Intune に要求します。</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>会社のアプリをインストールできるポータル サイトを開きます。</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>クイック アシストを開き、サポート担当者が画面を見て支援できるようにします (同意した場合のみ)。</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Remote Helpを開き、サポート担当者が画面を見て支援できるようにします (同意した場合のみ)。</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>デバイス管理のログをサポート用のフォルダーに収集します。</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>デバイスのすべてのログを収集し、レポートを添付したサポート宛てのメールを開きます。</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>設定 (言語、外観、状態アイコン)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Copilot_Target_Text>SelfX はテキストをコピーして {0} を開きます。テキストはそこに貼り付け、ご自身で送信してください。SelfX は何も送信しません。</Copilot_Target_Text>
 		<Copilot_Open_Button>コピーして Copilot を開く</Copilot_Open_Button>
 		<Copilot_Opened_Text>テキストはクリップボードにあり、Copilot Chat が開きました。そこに貼り付け（Ctrl+V）、送信してください。</Copilot_Opened_Text>
+		<Copilot_Clear_Text>それまでに他の内容をコピーしない場合、クリップボードは {0} 秒後に空になります。その前にテキストを貼り付けてください。</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>クリップボードを空にしました。テキストをもう一度コピーするには、「コピーして Copilot を開く」を選んでください。</Copilot_Cleared_Text>
 		<Copilot_Error_Text>テキストを準備できませんでした: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>説明に氏名、パスワード、顧客データを書かないでください。Copilot は間違えることがあります。理解できないコマンドは実行しないでください。</Copilot_Warning_Text>
 		<Version_Text>バージョン {0}</Version_Text>
@@ -635,6 +639,27 @@ SelfX がファイルを削除したり変更したりすることはありま�
 				<Name>この PC で音が出ない</Name>
 				<Explanation>以前は問題なかったのに、スピーカーやヘッドホンから音が出ません。音がオフ (ミュート) になっているか、とても小さくなっている可能性があります。</Explanation>
 				<Alerte_MSG>SelfX は現在の再生デバイス (スピーカーまたはヘッドホン) の音を再びオンにします。ミュートの場合は音をオンにし、音量が 30 % 未満の場合は 30 % に引き上げます。それより大きい音量はそのままです。他のデバイス、マイク、ドライバーは変更されません。
+
+続行しますか?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Outlook の問題を解決する</Name>
+				<Explanation>Outlook で作業中に応答しなくなった、メールを送受信できない、またはメールボックスが正しく表示されません。</Explanation>
+				<Alerte_MSG>Outlook を閉じて、もう一度起動します。下書きとして保存していない作成中のメールは失われます。起動後、Outlook がデータを確認するのに時間がかかることがあります。プロファイルとメールボックスは変更されません。新しい Outlook は対象外です。
+
+続行しますか?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>デバイスの時刻が正しくない</Name>
+				<Explanation>サインインや証明書のエラーが発生している、またはデバイスの時計が間違った時刻を表示しています。この操作は、ローカルの SelfX サービスを通じて管理者権限で実行されます。</Explanation>
+				<Alerte_MSG>デバイスの時計を組織の時刻ソースと同期します。タイム ゾーンは変更されません。その後、もう一度お試しください。
+
+続行しますか?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: キャッシュを消去する</Name>
+				<Explanation>Microsoft Edge で Web サイトが読み込まれない、または正しく表示されません。この操作は、既定のプロファイルのキャッシュだけを消去します。</Explanation>
+				<Alerte_MSG>Microsoft Edge はすぐに閉じられ、Web サイトで保存していない入力内容は失われます。その後、既定のプロファイルのキャッシュを消去します。Cookie、履歴、保存済みのパスワード、ブックマーク、他のプロファイルには影響しないため、Web サイトへのサインインは維持されます。
 
 続行しますか?</Alerte_MSG>
 			</Action>

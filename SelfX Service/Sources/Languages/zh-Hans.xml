@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>检查合规性</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>公司门户</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>快速助手</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>收集 MDM 日志</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>将日志发送给支持人员</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>{0} 的设备日志</Report_Mail_Subject>
@@ -147,6 +148,7 @@
 		<Tooltip_SyncCompliance>请求 Intune 立即检查您的设备是否符合公司规则。</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>打开公司门户，您可以在其中安装公司应用。</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>打开快速助手，以便支持人员查看您的屏幕并提供帮助 – 仅在您同意时。</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>打开Remote Help，以便支持人员查看您的屏幕并提供帮助 – 仅在您同意时。</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>将设备管理日志收集到一个文件夹中，供支持人员使用。</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>收集设备的所有日志，并打开一封附有报告的发给支持人员的电子邮件。</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>设置(语言、外观和状态图标)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@
 		<Copilot_Target_Text>SelfX 会复制文字并打开 {0}。请您在那里粘贴文字并自行发送。SelfX 不会发送任何内容。</Copilot_Target_Text>
 		<Copilot_Open_Button>复制并打开 Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>文字已在剪贴板中，Copilot Chat 已打开。请在那里粘贴（Ctrl+V）并发送。</Copilot_Opened_Text>
+		<Copilot_Clear_Text>如果在此之前您没有复制其他内容，剪贴板将在 {0} 秒后清空。请先粘贴文本。</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>剪贴板已清空。要再次复制文本，请选择“复制并打开 Copilot”。</Copilot_Cleared_Text>
 		<Copilot_Error_Text>无法准备文字：{0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>请勿在描述中写入姓名、密码或客户数据。Copilot 可能出错：请勿执行您不理解的命令。</Copilot_Warning_Text>
 		<Version_Text>版本 {0}</Version_Text>
@@ -637,6 +641,27 @@ SelfX 不会删除或更改任何文件。如果 Defender 发现威胁，会按�
 				<Alerte_MSG>SelfX 会重新打开当前播放设备（扬声器或耳机）的声音。如果已静音，则打开声音；如果音量低于 30 %，则提高到 30 %。更高的音量保持不变。其他设备、麦克风和驱动程序不会被更改。
 
 是否要继续？</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>解决 Outlook 的问题</Name>
+				<Explanation>您正在使用 Outlook，但它没有响应、无法发送或接收邮件，或者邮箱显示不正确。</Explanation>
+				<Alerte_MSG>Outlook 将关闭并重新启动。您正在撰写且未保存为草稿的邮件将会丢失。启动后，Outlook 可能需要一些时间来检查其数据。您的配置文件和邮箱不会被更改。新版 Outlook 不受影响。
+
+是否继续？</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>设备的时间不正确</Name>
+				<Explanation>出现登录或证书错误，或设备的时钟显示错误的时间。此操作通过本地 SelfX 服务以管理员权限运行。</Explanation>
+				<Alerte_MSG>设备的时钟将与您所在组织的时间源同步。时区不会更改。之后请重试。
+
+是否继续？</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge：清除缓存</Name>
+				<Explanation>网站在 Microsoft Edge 中无法加载或显示不正确。此操作仅清除默认配置文件的缓存。</Explanation>
+				<Alerte_MSG>Microsoft Edge 将立即关闭，网站上未保存的输入内容将会丢失。然后清除默认配置文件的缓存。Cookie、历史记录、已保存的密码、书签和其他配置文件不受影响，因此您仍保持登录网站的状态。
+
+是否继续？</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>收集设备日志并通过电子邮件发送给支持人员</Name>
