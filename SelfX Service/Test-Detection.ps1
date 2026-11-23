@@ -37,7 +37,7 @@ function Import-Function([string]$Script, [string[]]$Names) {
 		Assert-Equal ($null -ne $definition) $true "$(Split-Path -Leaf $Script) defines $name"
 		if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
 		# Defined in the global scope under a prefix, so Detection.ps1 and the tool can both have a Get-SelfXFilesDigest.
-		$text = $definition.Extent.Text -replace "^function\s+$([regex]::Escape($name))", ('function global:' + $Prefix + $name)
+		$text = $definition.Extent.Text -replace "^function\s+$([regex]::Escape($name))", ('function global:' + $(if ($name -eq 'Get-SelfXFilesDigest') { $Prefix } else { '' }) + $name)
 		. ([scriptblock]::Create($text))
 	}
 }
