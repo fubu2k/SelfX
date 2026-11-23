@@ -534,7 +534,8 @@ Verwenden Sie das Paket in Intune wie folgt:
 ## Dateiliste (SelfX.Files.json)
 
 `tools\New-SelfXIntuneWin.ps1` schreibt beim Paketbau die Datei `SelfX.Files.json` in das Paket. Sie enthält den
-SHA256 jeder Datei, die `Install.ps1` in den Installationsordner kopiert (alles unter `Sources` und `Uninstall.ps1`).
+SHA256 jeder Datei, die `Install.ps1` in den Installationsordner kopiert (alles unter `Sources`, `Uninstall.ps1` und die
+DLLs aus `Bin\WinRT`, die als `WinRT\...` installiert werden).
 Die Liste wird bei jedem Paketbau neu erzeugt: Wer ein Skript oder eine Konfiguration ändert, muss nichts von Hand
 nachpflegen, sondern das Paket neu bauen. `Install.ps1` prüft vor der Installation, dass jede Datei zur Liste passt
 und keine Datei ohne Eintrag im Paket liegt; sonst bricht die Installation ab, bevor etwas geändert wird (die
@@ -546,6 +547,17 @@ Ereignis 4005 und die Einzelheiten ins SelfX-Protokoll; die Installation selbst 
 unverändert). Fehlt die Liste im Installationsordner, gilt das ebenfalls als Abweichung. Für den ersten Rollout kann
 `Service_FileCheck` auf `Audit` gestellt werden (nur protokollieren). `Bin` hat weiterhin die eigene Liste
 `SelfX.Binaries.json`.
+
+Die DLLs im Ordner `WinRT` (Schnittstelle zum Windows-Update-Orchestrator unter PowerShell 7) werden zusätzlich beim
+**Laden** geprüft: `HealthStatus.ps1` und `SelfX_Updates_Install.ps1` laden sie nur über `Sources\SelfXWinRT.ps1`. Das
+Skript vergleicht jede DLL mit dem Eintrag `WinRT/<Name>` in `SelfX.Files.json` und hält die Dateien geöffnet (nur
+Lesen erlaubt), solange der Prozess läuft; so kann die geprüfte Datei nicht zwischen Prüfung und Laden ersetzt werden. Eine
+veränderte, fehlende oder zusätzliche DLL, ein Unterordner oder eine Verknüpfung im Ordner `WinRT` und eine fehlende oder
+ungültige Liste führen dazu, dass nichts geladen wird (keine Neustart-Information, die Update-Aktion meldet die Schnittstelle als
+nicht verfügbar; Grund im SelfX-Protokoll). Der Dienst zählt `.dll` zu den Dateien, die ohne Eintrag in der Liste abgelehnt
+werden. Die Prüfung ersetzt keine Signatur: Wer Administratorrechte hat, kann DLL und Liste gemeinsam ändern.
+Während ein SelfX-Prozess läuft, sind die DLLs gesperrt (wie bisher die geladene Bibliothek); `Install.ps1` beendet das
+Statussymbol vor dem Update.
 
 ## App Control for Business (WDAC), optional
 
