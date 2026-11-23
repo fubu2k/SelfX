@@ -130,6 +130,20 @@ function Invoke-TestRequest([string]$Request, [int]$TimeoutMs = 5000) {
 	finally { if ($client) { $client.Dispose() } }
 }
 
+# --- N5: the OtherSessions check needs no SeTcbPrivilege (no WTSQueryUserToken); it fails closed on bad input ---
+$sourceText = [IO.File]::ReadAllText($source)
+Assert-True ($sourceText -notmatch 'static\s+extern\s+bool\s+WTSQueryUserToken') 'N5: the service does not import WTSQueryUserToken (no SeTcbPrivilege needed)'
+$countMethod = [SelfX.SelfXService].GetMethod('CountOtherUserSessions', [Reflection.BindingFlags]'NonPublic,Static')
+Assert-True ($null -ne $countMethod) 'N5: the service has the session check'
+if ($countMethod) {
+	Assert-True ($countMethod.Invoke($null, @($null, [long]1)) -eq -1) 'N5: no caller SID fails closed'
+	Assert-True ($countMethod.Invoke($null, @('S-1-5-21-1-2-3-1001', [long]-1)) -eq -1) 'N5: unknown caller session fails closed'
+	Assert-True ($countMethod.Invoke($null, @('S-1-5-21-1-2-3-1001', [long]99999)) -eq -1) 'N5: a session without a user fails closed'
+	$own = [long][Diagnostics.Process]::GetCurrentProcess().SessionId
+	$result = $countMethod.Invoke($null, @('S-1-5-21-1-2-3-1001', $own))
+	Assert-True ($result -ge -1) "N5: the check for the own session returns a number (got $result)"
+}
+
 $service = New-Object SelfX.SelfXService($pipeName, $logDirectory)
 $silent = New-Object System.Collections.Generic.List[object]
 try {

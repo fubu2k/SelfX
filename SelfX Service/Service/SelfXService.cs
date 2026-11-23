@@ -46,7 +46,7 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.0
+    Version : 2.8.1
 
     History:
     Version  Date        Author               Change
@@ -79,6 +79,8 @@ Notes:
                                               applied when the connection is accepted (owner of the client process), before any data
                                               is read
     2.8.0    2026-11-23  fubu2k               Header comments: build with the .NET 10 SDK (no .NET Framework compiler); version line
+    2.8.1    2026-11-23  fubu2k               The OtherSessions check reads the sessions by name (WTSQuerySessionInformation) instead of WTSQueryUserToken:
+                                              the service no longer needs SeTcbPrivilege (finding N5)
 */
 
 using System;
@@ -151,7 +153,7 @@ namespace SelfX
         static extern IntPtr OpenProcess(uint access, bool inheritHandle, uint processId);
         [DllImport("advapi32.dll", SetLastError = true)]
         static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
-        // CloseHandle is declared below (also used by the session check of F5).
+        // CloseHandle is declared below (used by the client check of F4).
         const uint ProcessQueryLimitedInformation = 0x1000;
         const uint TokenQuery = 0x0008;
 
@@ -175,8 +177,13 @@ namespace SelfX
         [DllImport("wtsapi32.dll")]
         static extern void WTSFreeMemory(IntPtr memory);
 
-        [DllImport("wtsapi32.dll", SetLastError = true)]
-        static extern bool WTSQueryUserToken(int sessionId, out IntPtr token);
+        // User and domain of a session by name. Unlike WTSQueryUserToken this needs no SeTcbPrivilege (security review
+        // finding N5: the service must not depend on one of the strongest privileges of LocalSystem).
+        [DllImport("wtsapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        static extern bool WTSQuerySessionInformationW(IntPtr server, int sessionId, int infoClass, out IntPtr buffer, out int bytesReturned);
+
+        const int WtsUserName = 5;
+        const int WtsDomainName = 7;
 
         const int WtsActive = 0;
 
@@ -928,12 +935,36 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Number of ACTIVE sessions of other users (not the caller's session, not session 0, not the caller's own SID).
-        /// Returns -1 when the sessions cannot be determined, so that the caller fails closed.
+        /// DOMAIN\user of a session, or null when it cannot be read or the session has no user.
+        /// </summary>
+        static string GetSessionAccount(int sessionId)
+        {
+            string user = QuerySessionString(sessionId, WtsUserName);
+            string domain = QuerySessionString(sessionId, WtsDomainName);
+            if (string.IsNullOrEmpty(user)) return null;
+            return (domain ?? "") + "\\" + user;
+        }
+
+        static string QuerySessionString(int sessionId, int infoClass)
+        {
+            IntPtr buffer = IntPtr.Zero;
+            int bytes;
+            if (!WTSQuerySessionInformationW(IntPtr.Zero, sessionId, infoClass, out buffer, out bytes)) return null;
+            try { return Marshal.PtrToStringUni(buffer); }
+            finally { WTSFreeMemory(buffer); }
+        }
+
+        /// <summary>
+        /// Number of ACTIVE sessions of other users (not the caller's session, not session 0, not another session of the
+        /// caller's own account). The accounts are compared by DOMAIN\user as Windows reports it for the sessions, so no
+        /// account lookup and no privilege beyond the service's normal rights is needed (works for local, domain and
+        /// Entra ID accounts alike). Returns -1 when the sessions cannot be determined, so that the caller fails closed.
         /// </summary>
         static int CountOtherUserSessions(string callerSid, long callerSession)
         {
-            if (callerSid == null || callerSession < 0) return -1;
+            if (callerSid == null || callerSession < 0 || callerSession > int.MaxValue) return -1;
+            string callerAccount = GetSessionAccount((int)callerSession);
+            if (callerAccount == null) return -1;
             IntPtr info = IntPtr.Zero;
             int count;
             if (!WTSEnumerateSessions(IntPtr.Zero, 0, 1, out info, out count)) return -1;
@@ -945,17 +976,9 @@ namespace SelfX
                 {
                     WtsSessionInfo session = (WtsSessionInfo)Marshal.PtrToStructure(new IntPtr(info.ToInt64() + (long)i * size), typeof(WtsSessionInfo));
                     if (session.State != WtsActive || session.SessionId == 0 || session.SessionId == callerSession) continue;
-                    IntPtr token;
-                    if (!WTSQueryUserToken(session.SessionId, out token)) return -1;
-                    try
-                    {
-                        using (WindowsIdentity identity = new WindowsIdentity(token))
-                        {
-                            if (identity.User == null || identity.User.Value != callerSid) others++;
-                        }
-                    }
-                    catch { return -1; }
-                    finally { CloseHandle(token); }
+                    string account = GetSessionAccount(session.SessionId);
+                    if (account == null) return -1;
+                    if (!string.Equals(account, callerAccount, StringComparison.OrdinalIgnoreCase)) others++;
                 }
                 return others;
             }
