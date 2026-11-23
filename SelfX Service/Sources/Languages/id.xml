@@ -451,6 +451,15 @@ Apakah Anda ingin melanjutkan?</Alerte_MSG>
 
 Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office meminta aktivasi atau melaporkan produk tanpa lisensi</Name>
+				<Explanation>Word, Excel, Outlook, atau aplikasi Office lainnya menampilkan “Produk Tanpa Lisensi”, berulang kali meminta aktivasi atau masuk, atau menyatakan bahwa akun Anda tidak memiliki lisensi padahal ada.</Explanation>
+				<Alerte_MSG>Semua aplikasi Office yang terbuka (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) akan ditutup. Pekerjaan yang belum disimpan akan hilang. Setelah itu, data lisensi tersimpan dari akun pengguna Anda dihapus. Dokumen, pengaturan, kotak surat, dan file program Office tidak diubah. Teams tidak ditutup.
+
+Saat Anda memulai aplikasi Office berikutnya, Anda akan diminta masuk dengan akun kerja Anda. Office kemudian mendapatkan lisensi baru.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Jalankan klien OneDrive</Name>
 				<Explanation>OneDrive tidak berjalan.</Explanation>

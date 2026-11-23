@@ -451,6 +451,15 @@ Je, ungependa kuendelea?</Alerte_MSG>
 
 Je, ungependa kuendelea?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office inaomba uwezeshaji au inaripoti bidhaa isiyo na leseni</Name>
+				<Explanation>Word, Excel, Outlook au programu nyingine ya Office inaonyesha “Bidhaa Isiyo na Leseni”, inaomba uwezeshaji au kuingia mara kwa mara, au inasema akaunti yako haina leseni ingawa ina.</Explanation>
+				<Alerte_MSG>Programu zote za Office zilizofunguliwa (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) zitafungwa. Kazi ambayo haijahifadhiwa itapotea. Kisha data ya leseni iliyohifadhiwa ya akaunti yako ya mtumiaji itaondolewa. Nyaraka, mipangilio, kisanduku cha barua na faili za programu za Office havibadilishwi. Teams haifungwi.
+
+Utakapoanzisha programu ya Office wakati ujao, utaombwa uingie kwa akaunti yako ya kazi. Kisha Office hupata leseni mpya.
+
+Je, ungependa kuendelea?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Anzisha programu ya OneDrive</Name>
 				<Explanation>OneDrive haiendeshwi.</Explanation>

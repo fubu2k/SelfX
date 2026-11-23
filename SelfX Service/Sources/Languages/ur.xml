@@ -437,6 +437,15 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 
 کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office ایکٹیویشن مانگتا ہے یا بغیر لائسنس پروڈکٹ بتاتا ہے</Name>
+				<Explanation>Word، Excel، Outlook یا Office کی کوئی اور ایپ «بغیر لائسنس پروڈکٹ» دکھاتی ہے، بار بار ایکٹیویشن یا سائن اِن مانگتی ہے، یا بتاتی ہے کہ آپ کے اکاؤنٹ کے پاس لائسنس نہیں ہے حالانکہ موجود ہے۔</Explanation>
+				<Alerte_MSG>Office کی تمام کھلی ایپس (Word، Excel، PowerPoint، Outlook، Access، OneNote، Publisher، Visio، Project، Skype for Business) بند ہو جائیں گی۔ محفوظ نہ کیا گیا کام ضائع ہو جائے گا۔ اس کے بعد آپ کے صارف اکاؤنٹ کا محفوظ شدہ لائسنس ڈیٹا ہٹا دیا جائے گا۔ آپ کی دستاویزات، سیٹنگز، میل باکس اور Office کی پروگرام فائلیں تبدیل نہیں کی جاتیں۔ Teams بند نہیں ہوتا۔
+
+اگلی بار Office کی کوئی ایپ شروع کرنے پر آپ سے اپنے ورک اکاؤنٹ سے سائن اِن کرنے کو کہا جائے گا۔ پھر Office کو نیا لائسنس مل جاتا ہے۔
+
+کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive کلائنٹ شروع کریں۔</Name>
 				<Explanation>OneDrive نہیں چل رہا ہے۔</Explanation>

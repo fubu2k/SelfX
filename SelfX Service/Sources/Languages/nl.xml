@@ -451,6 +451,15 @@ Wilt u doorgaan?</Alerte_MSG>
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office vraagt om activering of meldt een product zonder licentie</Name>
+				<Explanation>Word, Excel, Outlook of een andere Office-app toont ‘Product zonder licentie’, vraagt steeds opnieuw om activering of aanmelding, of meldt dat uw account geen licentie heeft terwijl dat wel zo is.</Explanation>
+				<Alerte_MSG>Alle geopende Office-apps (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype voor Bedrijven) worden gesloten. Niet-opgeslagen werk gaat verloren. Daarna worden de opgeslagen licentiegegevens van uw gebruikersaccount verwijderd. Uw documenten, instellingen, postvak en de programmabestanden van Office worden niet gewijzigd. Teams wordt niet gesloten.
+
+Bij de volgende keer dat u een Office-app start, wordt u gevraagd u aan te melden met uw werkaccount. Office krijgt dan een nieuwe licentie.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>De OneDrive-client starten</Name>
 				<Explanation>OneDrive wordt niet uitgevoerd.</Explanation>

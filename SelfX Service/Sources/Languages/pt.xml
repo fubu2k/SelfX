@@ -451,6 +451,15 @@ Pretende continuar?</Alerte_MSG>
 
 Pretende continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>O Office pede a ativação ou indica um produto sem licença</Name>
+				<Explanation>O Word, o Excel, o Outlook ou outra aplicação do Office mostra «Produto sem licença», pede repetidamente a ativação ou o início de sessão, ou indica que a sua conta não tem licença, embora tenha.</Explanation>
+				<Alerte_MSG>Todas as aplicações do Office abertas (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype para Empresas) serão fechadas. O trabalho não guardado perde-se. Depois, os dados de licença guardados da sua conta de utilizador são removidos. Os documentos, as definições, a caixa de correio e os ficheiros de programa do Office não são alterados. O Teams não é fechado.
+
+Na próxima vez que iniciar uma aplicação do Office, ser-lhe-á pedido que inicie sessão com a sua conta profissional. O Office obtém então uma nova licença.
+
+Pretende continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Iniciar o cliente do OneDrive</Name>
 				<Explanation>O OneDrive não está em execução.</Explanation>
