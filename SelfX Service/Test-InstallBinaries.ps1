@@ -278,7 +278,7 @@ else {
 	# 4. With a list that does not contain the owner of the test files, all of them count as foreign (also Logs, with the user
 	#    area below it) and are deleted; the data folder itself is kept.
 	$ownerFile = Get-TestOwner (Join-Path $data3 'Cache\Health.json')
-	Initialize-SelfXDataFolder -Path $data3 -SafeDeleteExe $safeExe -TrustedOwnerSids @('S-1-5-18-test-no-match')
+	Initialize-SelfXDataFolder -Path $data3 -SafeDeleteExe $safeExe -TrustedOwnerSids @('S-1-5-99-1')
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data3 'Cache')) $false "foreign-owned folder (owner $ownerFile): deleted"
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data3 'Reports')) $false 'foreign-owned folder with content: deleted'
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data3 'Logs')) $false 'foreign-owned Logs folder: deleted'
