@@ -88,6 +88,8 @@
                                        removed and replaced; the default reports are readable only by SYSTEM and administrators.
     1.3.2    fubu2k                    Removed the Swisscom specific sections (deployment markers, tasks and files, Swisscom logs)
                                        and the parameter -MaxLinesPerLog; sections renumbered 1 to 10.
+    1.3.3    fubu2k                    Section 8 starts with a summary of the warnings and errors of the main event logs, counted per
+                                       provider and event id (no messages, provider names cleaned); Get-EventCountSummary
 #>
 
 [CmdletBinding()]
@@ -116,7 +118,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.3.2'
+$ScriptVersion = '1.3.3'
 if ($UserView) {
     try { $null = [Security.Principal.SecurityIdentifier]::new("$CallerSid") } catch { Write-Error 'The user view needs a valid -CallerSid.'; exit 2 }
 }
@@ -304,6 +306,25 @@ function Get-EventSummary {
         $message = ("$($event.Message)" -replace '\s+', ' ').Trim()
         if ($message.Length -gt 450) { $message = $message.Substring(0, 450) + '...' }
         '    {0} id={1} lvl={2} {3}: {4}' -f $event.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'), $event.Id, $event.LevelDisplayName, $event.ProviderName, $message
+    }
+}
+# Counts of warnings and errors per provider and event id, no message text (data protection: messages can contain names, paths and
+# addresses). Provider names are limited to harmless characters. Levels: 1 = critical, 2 = error, 3 = warning.
+function Get-EventCountSummary {
+    param([string]$LogName, [int[]]$Level = @(1, 2, 3), [int]$Days = 7, [int]$Top = 15, [int]$MaxEvents = 5000)
+    $events = @(Get-WinEvent -FilterHashtable @{ LogName = $LogName; Level = $Level; StartTime = (Get-Date).AddDays(-$Days) } -MaxEvents $MaxEvents -ErrorAction SilentlyContinue)
+    $cap = if ($events.Count -ge $MaxEvents) { "; only the newest $MaxEvents events counted" } else { '' }
+    "--- $LogName (levels $($Level -join ','), counted per provider and event id, no messages; $($events.Count) events, last $Days days$cap)"
+    if (-not $events.Count) { '    (none)'; return }
+    $levelNames = @{ 1 = 'Critical'; 2 = 'Error'; 3 = 'Warning' }
+    $groups = @($events | Group-Object { '{0}|{1}|{2}' -f $_.ProviderName, $_.Id, $_.Level } |
+        Sort-Object @{ Expression = 'Count'; Descending = $true }, @{ Expression = 'Name' } | Select-Object -First $Top)
+    foreach ($group in $groups) {
+        $first = $group.Group[0]
+        $times = @($group.Group | ForEach-Object { $_.TimeCreated } | Sort-Object)
+        $provider = ("$($first.ProviderName)" -replace '[^\w .\-/]', '?')
+        if ($provider.Length -gt 80) { $provider = $provider.Substring(0, 80) }
+        '    {0,5}x  id={1} lvl={2} {3}  (first {4}, last {5})' -f $group.Count, $first.Id, $(if ($levelNames.ContainsKey([int]$first.Level)) { $levelNames[[int]$first.Level] } else { "$($first.Level)" }), $provider, $times[0].ToString('yyyy-MM-dd HH:mm'), $times[-1].ToString('yyyy-MM-dd HH:mm')
     }
 }
 function Test-Port {
@@ -844,6 +865,11 @@ Add-Line "Other servicing logs present: $((@(Get-ChildItem -LiteralPath "$env:Sy
 
 # ------------------------------------------------------------------------------------------------
 Add-Section "8. Event logs (last $Days days)"
+foreach ($summaryLog in @('System', 'Application', 'Microsoft-Windows-WindowsUpdateClient/Operational', 'Microsoft-Windows-DeviceManagement-Enterprise-Diagnostics-Provider/Admin')) {
+    Invoke-Safe "Event log summary $summaryLog" { Get-EventCountSummary -LogName $summaryLog -Days $Days }
+}
+Add-Line ''
+Add-Line 'Details of single events:'
 foreach ($spec in @(
         @{ Log = 'Setup'; Level = $null; Max = 80 },
         @{ Log = 'Microsoft-Windows-MUI/Admin'; Level = $null; Max = 40 },
