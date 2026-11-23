@@ -64,6 +64,7 @@ $ErrorActionPreference = 'Stop'
 # policy. For a staged rollout give each version its own ID: both policies are then active side by side until you
 # remove the old one.
 $SupplementalPolicyId = $PolicyId.ToString('B').ToUpperInvariant()
+$AllowedSupplementalOption = 'Enabled:Unsigned System Integrity Policy'
 
 $RepositoryRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 if (-not $PackageFolder) { $PackageFolder = Join-Path $RepositoryRoot 'SelfX Service' }
@@ -117,10 +118,15 @@ try {
     $namespaces = New-Object Xml.XmlNamespaceManager($document.NameTable)
     $namespaces.AddNamespace('ci', 'urn:schemas-microsoft-com:sipolicy')
     $document.SelectSingleNode('/ci:SiPolicy/ci:PolicyID', $namespaces).InnerText = $SupplementalPolicyId
-    # New-CIPolicy adds rule options of a base policy (for example "Enabled:Audit Mode"). A supplemental policy sets none
-    # of them: the mode and the other options come from the base policy.
+    # New-CIPolicy adds rule options of a base policy (for example "Enabled:Audit Mode"). A supplemental policy may only
+    # set a few of them (option 6, "Unsigned System Integrity Policy", is the default one): the mode and the other
+    # options come from the base policy.
     $rules = $document.SelectSingleNode('/ci:SiPolicy/ci:Rules', $namespaces)
-    if ($rules) { foreach ($rule in @($rules.SelectNodes('ci:Rule', $namespaces))) { [void]$rules.RemoveChild($rule) } }
+    if ($rules) {
+        foreach ($rule in @($rules.SelectNodes('ci:Rule', $namespaces))) {
+            if ($rule.SelectSingleNode('ci:Option', $namespaces).InnerText -ne $AllowedSupplementalOption) { [void]$rules.RemoveChild($rule) }
+        }
+    }
     $document.Save($xmlPath)
 
     # Checks of the result: a supplemental policy, for the given base policy, with hash rules only, no mode option.
@@ -134,7 +140,9 @@ try {
     $otherRules = @($check.SelectNodes('/ci:SiPolicy/ci:FileRules/*[not(self::ci:Allow[@Hash])]', $namespaces))
     if ($hashRules.Count -eq 0) { throw 'The policy has no hash rules.' }
     if ($otherRules.Count -gt 0) { Write-Warning "The policy has $($otherRules.Count) rule(s) that are not plain hash rules. Check '$xmlPath' before you deploy it." }
-    if ($check.SelectNodes('/ci:SiPolicy/ci:Rules/ci:Rule', $namespaces).Count -gt 0) { throw 'The supplemental policy must not set rule options (the base policy decides, for example the audit mode).' }
+    foreach ($option in @($check.SelectNodes('/ci:SiPolicy/ci:Rules/ci:Rule/ci:Option', $namespaces))) {
+        if ($option.InnerText -ne $AllowedSupplementalOption) { throw "The supplemental policy must not set the rule option '$($option.InnerText)' (the base policy decides, for example the audit mode)." }
+    }
 
     ConvertFrom-CIPolicy -XmlFilePath $xmlPath -BinaryFilePath $binaryPath | Out-Null
     Write-Output "Supplemental policy for base policy $($BasePolicyId.ToString('B')), SelfX $toolVersion, $($hashRules.Count) hash rules:"

@@ -69,7 +69,7 @@ else {
 			$text = Get-Content -LiteralPath $xmlFile[0].FullName -Raw
 			Assert-True ($text -match '1377A178-96F8-49DD-B277-80F0F10BB383') 'the XML has the fixed policy ID'
 			Assert-True ($text -match [regex]::Escape($base.ToString('B')) -or $text -match [regex]::Escape($base.ToString('B').ToUpperInvariant())) 'the XML supplements the given base policy'
-			Assert-True ($text -notmatch '<Option>') 'the supplemental policy sets no rule options (no audit mode)'
+			Assert-True (@([regex]::Matches($text, '<Option>([^<]*)</Option>') | Where-Object { $_.Groups[1].Value -ne 'Enabled:Unsigned System Integrity Policy' }).Count -eq 0) 'the supplemental policy sets no rule option except the unsigned policy option (no audit mode)'
 			Assert-True ([regex]::Matches($text, '<Allow ID=[^>]*Hash=').Count -ge 8) 'the XML has hash rules'
 		}
 	}
