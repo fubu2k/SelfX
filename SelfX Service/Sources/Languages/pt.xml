@@ -624,6 +624,13 @@ O SelfX não elimina nem altera ficheiros. Se o Defender encontrar uma ameaça, 
 
 Pretende continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_GpUpdate">
+				<Name>Atualizar as definições da empresa (políticas de grupo) deste PC</Name>
+				<Explanation>As definições da sua empresa, como unidades de rede, impressoras ou regras de segurança, não chegam ou estão desatualizadas. A ação pede ao Windows que aplique novamente as políticas de grupo. Só funciona em dispositivos associados a um domínio (também dispositivos com associação híbrida).</Explanation>
+				<Alerte_MSG>O Windows verifica e aplica novamente as políticas de grupo da sua empresa. Isto pode demorar alguns minutos. A sua sessão não é terminada e o Windows não reinicia; uma definição que precise de reinício ou de nova sessão só entra em vigor depois. Se o dispositivo não estiver associado a um domínio, a ação termina com o código de saída 3 e não altera nada.
+
+Pretende continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Recolher os registos do dispositivo e enviá-los ao suporte por e-mail</Name>
 			</Action>

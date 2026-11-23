@@ -36,6 +36,8 @@
                                        for all users. The placeholder result "Collection" is never stored.
     2.8.1  2026-11-22  fubu2k          Pending restart: the detail also names the last restart and, when it is newer, the
                                        time the last Windows update was installed (read-only, no new state).
+    2.8.2  2026-11-23  fubu2k          Security: the WinRT libraries are checked against SelfX.Files.json when they are loaded
+                                       (SelfXWinRT.ps1); a difference = no orchestrator information (finding N4).
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -127,6 +129,9 @@ function Get-SelfXBitLockerHealth {
     } catch { New-SelfXHealthResult BitLocker Unknown $_.Exception.Message }
 }
 
+# Check and load of the WinRT libraries for the orchestrator (SelfXWinRT.ps1).
+. (Join-Path $PSScriptRoot 'SelfXWinRT.ps1')
+
 # Windows Update Agent: ISystemInformation.RebootRequired (documented, readable without administrator rights).
 function Get-SelfXWuaRebootRequired {
     return [bool](New-Object -ComObject Microsoft.Update.SystemInfo).RebootRequired
@@ -136,11 +141,10 @@ function Get-SelfXWuaRebootRequired {
 # that are installed and wait for the restart (AttentionRequiredReason ReadyToReboot).
 function New-SelfXOrchestratorManager {
     # PowerShell 7 cannot load the Windows Runtime type by name: it uses SelfXWinRT.dll from the folder WinRT of the
-    # install folder (Install.ps1 checked it against the manifest). Throws when the API is not available.
+    # install folder. Import-SelfXWinRT (SelfXWinRT.ps1) checks the DLLs against SelfX.Files.json and keeps them open
+    # while it loads them; any difference throws and nothing is loaded. Throws when the API is not available.
     param([string]$ClientId)
-    $library = Join-Path $PSScriptRoot 'WinRT\SelfXWinRT.dll'
-    if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { throw 'WinRT\SelfXWinRT.dll is missing.' }
-    [void][Reflection.Assembly]::LoadFrom($library)
+    Import-SelfXWinRT -InstallFolder $PSScriptRoot
     return [SelfX.SelfXWinRT]::CreateUpdateManager($ClientId)
 }
 

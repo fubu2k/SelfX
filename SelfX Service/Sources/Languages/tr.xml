@@ -624,6 +624,13 @@ SelfX hiçbir dosyayı silmez veya değiştirmez. Defender bir tehdit bulursa bu
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_GpUpdate">
+				<Name>Bu bilgisayarın şirket ayarlarını (Grup İlkesi) yenile</Name>
+				<Explanation>Şirketinizin ağ sürücüleri, yazıcılar veya güvenlik kuralları gibi ayarları gelmiyor veya güncel değil. Eylem, Windows'tan grup ilkelerini yeniden uygulamasını ister. Yalnızca bir etki alanına katılmış cihazlarda (hibrit katılmış cihazlar dahil) çalışır.</Explanation>
+				<Alerte_MSG>Windows, şirketinizin grup ilkelerini yeniden denetler ve uygular. Bu birkaç dakika sürebilir. Oturumunuz kapatılmaz ve Windows yeniden başlamaz; yeniden başlatma veya yeniden oturum açma gerektiren bir ayar ancak bundan sonra etkili olur. Cihazınız bir etki alanına katılmamışsa eylem 3 çıkış koduyla biter ve hiçbir şey değiştirmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Cihaz günlüklerini topla ve e-postayla destek ekibine gönder</Name>
 			</Action>

@@ -67,6 +67,8 @@
                                               Tool_Config Service_Privileges = Restricted | Default, finding N5)
     2.8.1    2026-11-23  fubu2k               The package is checked against SelfX.Files.json (SHA256 of every installed file) before
                                               anything is installed; the file is kept in the installation folder (finding N4)
+    2.8.2    2026-11-23  fubu2k               SelfX.Files.json also lists the DLLs of Bin\WinRT (installed into WinRT); the package check
+                                              covers them (WinRT load check)
 #>
 
 [CmdletBinding()]
@@ -179,8 +181,8 @@ function Test-SelfXPrebuiltBinaries {
 }
 
 function Test-SelfXFileManifest {
-	# Checks the package against SelfX.Files.json (finding N4): every file below Sources and Uninstall.ps1 must be listed
-	# and unchanged, and nothing may be in the package that is not listed. Returns the number of checked files, or $null
+	# Checks the package against SelfX.Files.json (finding N4): every file below Sources, Uninstall.ps1 and the DLLs of
+	# Bin\WinRT (listed as WinRT/<name>) must be listed and unchanged, and nothing may be in the package that is not listed. Returns the number of checked files, or $null
 	# when the package has no such file (older package: warning only). A mismatch throws before anything is installed.
 	param([Parameter(Mandatory = $true)][string]$PackageFolder)
 	$ManifestPath = Join-Path $PackageFolder 'SelfX.Files.json'
@@ -194,7 +196,7 @@ function Test-SelfXFileManifest {
 	{
 		$Relative = "$($Property.Name)"
 		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "SelfX.Files.json lists an unsupported name '$Relative'." }
-		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } Else { Join-Path $Sources $Relative.Replace('/', '\') }
+		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf($Relative -like 'WinRT/*') { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in SelfX.Files.json but missing in the package." }
 		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Property.Value)") { throw "$Relative does not match its SHA256 in SelfX.Files.json." }
 		$Listed[$Relative.ToLowerInvariant()] = $true
@@ -203,6 +205,16 @@ function Test-SelfXFileManifest {
 	{
 		$Relative = $Item.FullName.Substring($Sources.Length + 1).Replace('\', '/')
 		If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
+	}
+	# The WinRT libraries of the package (installed into WinRT) must all be listed too.
+	$WinRTSource = Join-Path (Join-Path $PackageFolder 'Bin') 'WinRT'
+	If(Test-Path -LiteralPath $WinRTSource -PathType Container)
+	{
+		ForEach($Item in @(Get-ChildItem -LiteralPath $WinRTSource -Recurse -File -Force))
+		{
+			$Relative = 'WinRT/' + $Item.FullName.Substring($WinRTSource.Length + 1).Replace('\', '/')
+			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
+		}
 	}
 	If(-not $Listed.ContainsKey('uninstall.ps1')) { throw 'Uninstall.ps1 is not listed in SelfX.Files.json.' }
 	Return $Listed.Count
