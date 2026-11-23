@@ -342,6 +342,7 @@ Die Daten stammen vom Diagnose-Werkzeug SelfX. Namen und Adressen sind absichtli
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Konto</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Gerät</Category>
 			<Category Id="Intune">Intune</Category>
@@ -696,6 +697,20 @@ Das Zurücksetzen baut die lokalen Synchronisierungsdaten neu auf. Es gehen kein
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Protokolle Ihres Geräts sammeln und per E-Mail an den Support senden</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Passwort vergessen oder abgelaufen: selbst zurücksetzen</Name>
+				<Explanation>Sie haben Ihr Passwort vergessen, es ist abgelaufen oder Ihr Konto ist gesperrt. Auf der Anmeldeseite Ihres Firmenkontos können Sie selbst ein neues Passwort festlegen, ohne den Support anzurufen.</Explanation>
+				<Alerte_MSG>Die Seite zum Zurücksetzen Ihres Passworts wird in Ihrem Webbrowser geöffnet. Melden Sie sich mit Ihrer geschäftlichen E-Mail-Adresse an und folgen Sie den Schritten. Eventuell müssen Sie Ihre Identität bestätigen, zum Beispiel mit Ihrem Telefon oder der Authenticator-App. SelfX sieht oder speichert Ihr Passwort nicht.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Anmeldemethoden Ihres Kontos verwalten (Sicherheitsinfos)</Name>
+				<Explanation>Sie haben ein neues Telefon, Ihre Authenticator-App verloren oder möchten die Telefonnummer oder Anmeldemethode Ihres Firmenkontos ändern.</Explanation>
+				<Alerte_MSG>Die Seite mit den Sicherheitsinfos Ihres Kontos wird in Ihrem Webbrowser geöffnet. Melden Sie sich mit Ihrem Geschäftskonto an, um Anmeldemethoden wie die Authenticator-App oder Ihre Telefonnummer hinzuzufügen, zu ändern oder zu entfernen. SelfX sieht oder speichert Ihre Daten nicht.
+
+Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

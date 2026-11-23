@@ -299,6 +299,7 @@ Maelezo ya tatizo:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Akaunti</Category>
 			<Category Id="Browser">Kivinjari</Category>
 			<Category Id="Device">Kifaa</Category>
 			<Category Id="Intune">Intune</Category>
@@ -614,6 +615,20 @@ Hatua hii inaweka upya programu yako ya OneDrive. Kuweka upya programu ya OneDri
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Kusanya kumbukumbu za kifaa na uzitume kwa timu ya usaidizi kwa barua pepe</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Umesahau nenosiri au limeisha muda: libadilishe mwenyewe</Name>
+				<Explanation>Umesahau nenosiri lako, limeisha muda au akaunti yako imefungwa. Kwenye ukurasa wa kuingia wa akaunti ya kampuni yako unaweza kuweka nenosiri jipya mwenyewe bila kupiga simu kwa msaada.</Explanation>
+				<Alerte_MSG>Ukurasa wa kuweka upya nenosiri utafunguka kwenye kivinjari chako cha wavuti. Ingia kwa anwani yako ya barua pepe ya kazi na ufuate hatua. Huenda ukaombwa uthibitishe utambulisho wako, kwa mfano kwa simu yako au programu ya Authenticator. SelfX haioni wala kuhifadhi nenosiri lako.
+
+Je, ungependa kuendelea?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Dhibiti njia za kuingia za akaunti yako (taarifa za usalama)</Name>
+				<Explanation>Una simu mpya, umepoteza programu ya Authenticator au unataka kubadilisha nambari ya simu au njia ya kuingia ya akaunti ya kampuni yako.</Explanation>
+				<Alerte_MSG>Ukurasa wa taarifa za usalama za akaunti yako utafunguka kwenye kivinjari chako cha wavuti. Ingia kwa akaunti yako ya kazi ili kuongeza, kubadilisha au kuondoa njia za kuingia kama programu ya Authenticator au nambari yako ya simu. SelfX haioni wala kuhifadhi data yako.
+
+Je, ungependa kuendelea?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

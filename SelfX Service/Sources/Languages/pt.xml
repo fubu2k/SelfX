@@ -299,6 +299,7 @@ Descrição do problema:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Conta</Category>
 			<Category Id="Browser">Navegador</Category>
 			<Category Id="Device">Dispositivo</Category>
 			<Category Id="Intune">Intune</Category>
@@ -614,6 +615,20 @@ Este passo repõe o cliente do OneDrive. A reposição do cliente do OneDrive n�
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Recolher os registos do dispositivo e enviá-los ao suporte por e-mail</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Palavra-passe esquecida ou expirada: repô-la você mesmo</Name>
+				<Explanation>Esqueceu-se da palavra-passe, esta expirou ou a sua conta está bloqueada. Na página de início de sessão da sua conta profissional pode definir você mesmo uma nova palavra-passe, sem ligar para o suporte.</Explanation>
+				<Alerte_MSG>A página para repor a palavra-passe abre-se no seu navegador. Inicie sessão com o seu endereço de e-mail profissional e siga os passos. Pode ser-lhe pedido que confirme a sua identidade, por exemplo com o telemóvel ou a aplicação Authenticator. O SelfX não vê nem guarda a sua palavra-passe.
+
+Pretende continuar?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Gerir os métodos de início de sessão da sua conta (informações de segurança)</Name>
+				<Explanation>Tem um telemóvel novo, perdeu a aplicação Authenticator ou quer alterar o número de telefone ou o método de início de sessão da sua conta profissional.</Explanation>
+				<Alerte_MSG>A página de informações de segurança da sua conta abre-se no seu navegador. Inicie sessão com a sua conta profissional para adicionar, alterar ou remover métodos de início de sessão, como a aplicação Authenticator ou o número de telefone. O SelfX não vê nem guarda os seus dados.
+
+Pretende continuar?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

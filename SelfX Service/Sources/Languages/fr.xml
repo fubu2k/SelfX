@@ -299,6 +299,7 @@ Description du problème :</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Compte</Category>
 			<Category Id="Browser">Navigateur</Category>
 			<Category Id="Device">Appareil</Category>
 			<Category Id="Intune">Intune</Category>
@@ -614,6 +615,20 @@ Cette étape réinitialise votre client OneDrive. La réinitialisation du client
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Collecter les journaux de l’appareil et les envoyer au support par e-mail</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Mot de passe oublié ou expiré : le réinitialiser vous-même</Name>
+				<Explanation>Vous avez oublié votre mot de passe, il a expiré ou votre compte est verrouillé. Sur la page de connexion de votre compte professionnel, vous pouvez définir vous-même un nouveau mot de passe, sans appeler le support.</Explanation>
+				<Alerte_MSG>La page de réinitialisation de votre mot de passe s’ouvre dans votre navigateur web. Connectez-vous avec votre adresse e-mail professionnelle et suivez les étapes. Il peut vous être demandé de confirmer votre identité, par exemple avec votre téléphone ou l’application Authenticator. SelfX ne voit ni n’enregistre votre mot de passe.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Gérer les méthodes de connexion de votre compte (infos de sécurité)</Name>
+				<Explanation>Vous avez un nouveau téléphone, vous avez perdu votre application Authenticator ou vous souhaitez modifier le numéro de téléphone ou la méthode de connexion de votre compte professionnel.</Explanation>
+				<Alerte_MSG>La page des infos de sécurité de votre compte s’ouvre dans votre navigateur web. Connectez-vous avec votre compte professionnel pour ajouter, modifier ou supprimer des méthodes de connexion, comme l’application Authenticator ou votre numéro de téléphone. SelfX ne voit ni n’enregistre vos données.
+
+Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

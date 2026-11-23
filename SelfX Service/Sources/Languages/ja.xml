@@ -299,6 +299,7 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">アカウント</Category>
 			<Category Id="Browser">ブラウザー</Category>
 			<Category Id="Device">デバイス</Category>
 			<Category Id="Intune">Intune</Category>
@@ -614,6 +615,20 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>デバイス ログを収集してメールでサポートに送信</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>パスワードを忘れた、または有効期限が切れた: 自分でリセットする</Name>
+				<Explanation>パスワードを忘れた、有効期限が切れた、またはアカウントがロックされています。会社アカウントのサインイン ページで、サポートに連絡せずに自分で新しいパスワードを設定できます。</Explanation>
+				<Alerte_MSG>パスワードをリセットするページが Web ブラウザーで開きます。職場のメール アドレスでサインインし、手順に従ってください。電話や Authenticator アプリなどで本人確認が求められる場合があります。SelfX がパスワードを見たり保存したりすることはありません。
+
+続行しますか?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>アカウントのサインイン方法を管理する (セキュリティ情報)</Name>
+				<Explanation>新しい電話を使い始めた、Authenticator アプリをなくした、または会社アカウントの電話番号やサインイン方法を変更したい場合に使います。</Explanation>
+				<Alerte_MSG>アカウントのセキュリティ情報のページが Web ブラウザーで開きます。職場のアカウントでサインインして、Authenticator アプリや電話番号などのサインイン方法を追加、変更、削除してください。SelfX がデータを見たり保存したりすることはありません。
+
+続行しますか?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>
