@@ -365,7 +365,7 @@ try {
 	Microsoft.PowerShell.Management\New-Item -ItemType $linkType -Path (Join-Path $officeBase 'Licenses\Link') -Value $outsideFolder | Out-Null
 	$run = Invoke-TestScript $licenceScript
 	Assert-Equal "$($run.ExitCode)|$(Test-Path (Join-Path $outsideFolder 'keep.txt'))|$(Test-Path (Join-Path $officeBase 'Licenses\Link'))|$(Test-Path (Join-Path $officeBase 'Licenses\token.json'))" '1|True|True|False' 'Licence reset: a link is not followed or removed, the other items are removed'
-	Assert-Equal ((Get-SandboxLog 'SelfX_Office_ResetLicence') -match 'Skipped Licenses\\Link') $true 'Licence reset: the skipped link is logged'
+	Assert-Equal ((Get-SandboxLog 'SelfX_Office_ResetLicence') -match 'Skipped .*Licenses\\Link') $true 'Licence reset: the skipped link is logged'
 	[IO.Directory]::Delete((Join-Path $officeBase 'Licenses\Link'))
 
 	# A Licensing folder that is a link (below a version folder): the folder is skipped, nothing outside is touched.
