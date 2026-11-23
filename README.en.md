@@ -26,7 +26,7 @@ deployment of SelfX Service: see
 
 ## Screenshots
 
-The screenshots were taken with SelfX Service 2.6.8 and show sample data (fictional device
+The screenshots were taken with SelfX Service 2.8 and show sample data (fictional device
 *Contoso*) and the placeholder logo of the delivered configuration.
 
 **Troubleshooting:** actions in plain language, with search, categories and an

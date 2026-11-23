@@ -32,7 +32,7 @@ mit der Endung `.en.md` und der Ordner `docs/en`).
 
 ## Bildschirmfotos
 
-Die Bildschirmfotos stammen von SelfX Service 2.6.8 (englische Oberfläche) und
+Die Bildschirmfotos stammen von SelfX Service 2.8 (englische Oberfläche) und
 zeigen Beispieldaten (fiktives Gerät *Contoso*) sowie das Platzhalter-Logo der
 mitgelieferten Konfiguration.
 
