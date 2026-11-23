@@ -103,6 +103,7 @@ foreach ($action in @($catalog.SelectNodes('//Action'))) {
 	$scriptName = "$($action.Script)".Trim()
 	$context = "$($action.Context)".Trim()
 	Assert-True ($id -ne '') 'Every action has an Id'
+	Assert-True ("$($action.Requires)".Trim() -in '', 'DomainJoined') "Action $id has no Requires or Requires=DomainJoined (found '$($action.Requires)')"
 	Assert-True (-not $seenIds.ContainsKey($id)) "Action Id is unique: $id"
 	$seenIds[$id] = $true
 	Assert-True ($context -ceq 'User' -or $context -ceq 'System' -or $context -ceq 'Link') "Action $id has Context User, System or Link (found '$context')"

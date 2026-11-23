@@ -383,7 +383,7 @@ Function Get-SelfXLocalizedActions
 		Converts the actions of one catalogue section into objects with localized texts.
 	.DESCRIPTION
 		Category contains the localized display name (used in the list and the filter), CategoryId the
-		original Id. Script, Link, Context, Post_Action and Buttons are taken unchanged from the catalogue.
+		original Id. Script, Link, Context, Requires, Post_Action and Buttons are taken unchanged from the catalogue.
 	.PARAMETER Section
 		Quick_Solution (simplified view) or Detailed_Solution (detailed view).
 	#>
@@ -405,6 +405,7 @@ Function Get-SelfXLocalizedActions
 				Link        = ([string]$Action.Link).Trim()
 				Alerte_MSG  = Get-SelfXCatalogField -Action $Action -Field 'Alerte_MSG' -Catalog $Catalog
 				Context     = ([string]$Action.Context).Trim()
+				Requires    = ([string]$Action.Requires).Trim()
 				Post_Action = ([string]$Action.Post_Action).Trim()
 				CategoryId  = $Category_Id
 				Id          = $Action.GetAttribute('Id')

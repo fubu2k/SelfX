@@ -478,6 +478,17 @@ try {
     Assert-Equal ((@(Select-SelfXLinkActions $linkRows) | ForEach-Object Id) -join ',') 'B,C' 'Link actions: Off hides the action'
     $script:linkConfig = @{}
     Assert-Equal ((@(Select-SelfXLinkActions $linkRows) | ForEach-Object Id) -join ',') 'C' 'Link actions: missing setting hides the action'
+    # Requires=DomainJoined (Select-SelfXRequirementActions of Self_X.ps1): hidden only when the device is clearly not joined.
+    $reqDef = ([System.Management.Automation.Language.Parser]::ParseFile("$sources\Self_X.ps1", [ref]$null, [ref]$null)).Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Select-SelfXRequirementActions' }, $true)
+    Assert-Equal ($reqDef -ne $null) $true 'Select-SelfXRequirementActions found in Self_X.ps1'
+    . ([scriptblock]::Create($reqDef.Extent.Text))
+    $reqRows = @([pscustomobject]@{ Id = 'G'; Requires = 'DomainJoined' }, [pscustomobject]@{ Id = 'H'; Requires = '' })
+    Assert-Equal ((@(Select-SelfXRequirementActions $reqRows $false) | ForEach-Object Id) -join ',') 'H' 'Requires: a device that is not joined hides the action'
+    Assert-Equal ((@(Select-SelfXRequirementActions $reqRows $true) | ForEach-Object Id) -join ',') 'G,H' 'Requires: a joined device shows the action'
+    Assert-Equal ((@(Select-SelfXRequirementActions $reqRows $null) | ForEach-Object Id) -join ',') 'G,H' 'Requires: an unknown state keeps the action visible (the script checks again)'
+    $gp = ([xml][IO.File]::ReadAllText("$sources\Issues_List.xml")).SelectSingleNode("//Action[@Id='D_Device_GpUpdate']")
+    Assert-Equal "$($gp.Requires)" 'DomainJoined' 'GPUpdate action requires a domain joined device'
+    Remove-Item -LiteralPath Function:\Select-SelfXRequirementActions
     # Write-SelfXLog stays as a stub: Start-SelfXSystemAction (tested below) logs the request.
     Remove-Item -LiteralPath Function:\Get-SelfXText, Function:\Select-SelfXLinkActions
     Assert-Equal (Get-SelfXString 'Report_Mail_Subject' 'PC1') 'Geräteprotokolle von PC1' 'German subject'
