@@ -547,6 +547,40 @@ unverändert). Fehlt die Liste im Installationsordner, gilt das ebenfalls als Ab
 `Service_FileCheck` auf `Audit` gestellt werden (nur protokollieren). `Bin` hat weiterhin die eigene Liste
 `SelfX.Binaries.json`.
 
+## App Control for Business (WDAC), optional
+
+SelfX braucht WDAC nicht und im Paket ist nichts davon eingeschaltet. Wer App Control for Business (früher WDAC)
+einsetzt, kann damit zusätzlich zur Dateiliste verhindern, dass auf den Geräten andere als die ausgelieferten
+SelfX-Programme und -Skripte laufen. SelfX bleibt unsigniert und wird per Hash zugelassen (keine eigenen Zertifikate).
+
+1. **Basisrichtlinie.** Sie gehört Ihrer Organisation. Sie muss ergänzende Richtlinien erlauben (Regeloption 17,
+   „Allow Supplemental Policies“) und die von Microsoft signierten Dateien zulassen, darunter PowerShell 7
+   (`%ProgramFiles%\PowerShell\7\pwsh.exe`) und den Intune-Agenten.
+2. **Paket bauen** (Programme, dann `New-SelfXIntuneWin.ps1`), siehe oben.
+3. **Ergänzende Richtlinie erzeugen** in Windows PowerShell 5.1 auf einem Administrator-PC (Modul ConfigCI):
+   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXWdacPolicy.ps1 -BasePolicyId {GUID der Basisrichtlinie}`.
+   Das Skript legt in `build\wdac` die XML-Datei und die `.cip`-Datei ab. Sie enthält Hashregeln für alle Programme,
+   Bibliotheken und Skripte des Pakets, auch für `Install.ps1`, `Detection.ps1` und `Uninstall.ps1`. Sie ändert nichts
+   auf dem PC.
+4. **Verteilen** mit Intune (Richtlinie für App Control for Business bzw. ApplicationControl-CSP) an dieselben Geräte
+   wie das SelfX-Paket.
+5. **Erst im Überwachungsmodus.** Ob die Richtlinien im Überwachungs- oder im Erzwingungsmodus laufen, bestimmt die
+   **Basisrichtlinie** (Regeloption 3, „Audit Mode“); die ergänzende Richtlinie legt das nicht fest. Im
+   Überwachungsmodus läuft alles weiter, und Windows protokolliert, was die Richtlinie blockieren würde (Protokoll
+   `Microsoft-Windows-CodeIntegrity/Operational`, Ereignis 3076). Prüfen Sie auf einem Testgerät, dass für SelfX
+   (Installation per Autopilot und ESP, Oberfläche, Statussymbol, alle Aktionen als Nutzer und als SYSTEM, Update,
+   Deinstallation) kein Ereignis entsteht. Erst dann nimmt die Organisation die Option 3 aus der Basisrichtlinie.
+6. **Bei jeder neuen Version** die ergänzende Richtlinie neu erzeugen und mit dem Paket verteilen: Jede Änderung an
+   einem Skript ändert seinen Hash. Mit der festen Richtlinien-ID ersetzt die neue die alte; Geräte mit der alten
+   SelfX-Version würden im Erzwingungsmodus dann blockiert. Für gestaffelte Rollouts erzeugen Sie die Richtlinie mit
+   `-PolicyId {neue GUID}` pro Version und entfernen die alte Richtlinie, wenn alle Geräte aktualisiert sind.
+
+Hinweise: Die Richtlinie muss vor dem Paket auf dem Gerät sein (Autopilot: dieselbe Zuweisung, im Überwachungsmodus
+testen, bevor erzwungen wird). SelfX-Skripte verwenden `Add-Type` für einzelne P/Invoke-Aufrufe; die Regeloption 19
+(„Dynamic Code Security“) darf nur nach einem Test im Überwachungsmodus eingeschaltet werden. Eine unsignierte
+Richtlinie kann ein lokaler Administrator ersetzen; ob sie signiert wird, entscheidet die Organisation. Die Vorlage ist
+noch nicht auf einem Gerät erprobt.
+
 ## Rechte des Dienstes
 
 Der Dienst läuft als LocalSystem. `Install.ps1` begrenzt sein Token mit `sc.exe privs` auf die Rechte, die die
