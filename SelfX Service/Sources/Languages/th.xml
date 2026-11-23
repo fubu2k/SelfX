@@ -301,6 +301,7 @@
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">บัญชี</Category>
 			<Category Id="Browser">เบราว์เซอร์</Category>
 			<Category Id="Device">อุปกรณ์</Category>
 			<Category Id="Intune">Intune</Category>
@@ -625,6 +626,20 @@ SelfX ไม่ลบหรือเปลี่ยนแปลงไฟล์�
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>รวบรวมบันทึกอุปกรณ์และส่งไปยังฝ่ายสนับสนุนทางอีเมล</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>ลืมรหัสผ่านหรือหมดอายุ: รีเซ็ตด้วยตนเอง</Name>
+				<Explanation>คุณลืมรหัสผ่าน รหัสผ่านหมดอายุ หรือบัญชีของคุณถูกล็อก คุณสามารถตั้งรหัสผ่านใหม่ด้วยตนเองได้ที่หน้าลงชื่อเข้าใช้บัญชีบริษัทโดยไม่ต้องโทรหาฝ่ายสนับสนุน</Explanation>
+				<Alerte_MSG>หน้าสำหรับรีเซ็ตรหัสผ่านจะเปิดในเว็บเบราว์เซอร์ของคุณ ลงชื่อเข้าใช้ด้วยที่อยู่อีเมลที่ทำงานและทำตามขั้นตอน คุณอาจถูกขอให้ยืนยันตัวตน เช่น ด้วยโทรศัพท์หรือแอป Authenticator SelfX ไม่เห็นและไม่บันทึกรหัสผ่านของคุณ
+
+คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>จัดการวิธีลงชื่อเข้าใช้ของบัญชี (ข้อมูลความปลอดภัย)</Name>
+				<Explanation>คุณมีโทรศัพท์เครื่องใหม่ แอป Authenticator หาย หรือต้องการเปลี่ยนหมายเลขโทรศัพท์หรือวิธีลงชื่อเข้าใช้ของบัญชีบริษัท</Explanation>
+				<Alerte_MSG>หน้าข้อมูลความปลอดภัยของบัญชีจะเปิดในเว็บเบราว์เซอร์ของคุณ ลงชื่อเข้าใช้ด้วยบัญชีที่ทำงานเพื่อเพิ่ม เปลี่ยน หรือลบวิธีลงชื่อเข้าใช้ เช่น แอป Authenticator หรือหมายเลขโทรศัพท์ SelfX ไม่เห็นและไม่บันทึกข้อมูลของคุณ
+
+คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

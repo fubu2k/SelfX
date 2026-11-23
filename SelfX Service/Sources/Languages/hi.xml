@@ -301,6 +301,7 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">खाता</Category>
 			<Category Id="Browser">ब्राउज़र</Category>
 			<Category Id="Device">उपकरण</Category>
 			<Category Id="Intune">Intune</Category>
@@ -625,6 +626,20 @@ SelfX कोई फ़ाइल नहीं हटाता या बदलत
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>डिवाइस लॉग एकत्र करें और ईमेल द्वारा सहायता टीम को भेजें</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>पासवर्ड भूल गए या समाप्त हो गया: खुद रीसेट करें</Name>
+				<Explanation>आप अपना पासवर्ड भूल गए हैं, वह समाप्त हो गया है या आपका खाता लॉक है। अपने कंपनी खाते के साइन-इन पेज पर आप सहायता को कॉल किए बिना खुद नया पासवर्ड सेट कर सकते हैं।</Explanation>
+				<Alerte_MSG>पासवर्ड रीसेट करने का पेज आपके वेब ब्राउज़र में खुलेगा। अपने कार्य ईमेल पते से साइन इन करें और चरणों का पालन करें। आपसे अपनी पहचान की पुष्टि करने को कहा जा सकता है, जैसे फ़ोन या Authenticator ऐप से। SelfX आपका पासवर्ड न देखता है और न सहेजता है।
+
+क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>अपने खाते के साइन-इन तरीके प्रबंधित करें (सुरक्षा जानकारी)</Name>
+				<Explanation>आपके पास नया फ़ोन है, आपका Authenticator ऐप खो गया है या आप अपने कंपनी खाते का फ़ोन नंबर या साइन-इन तरीका बदलना चाहते हैं।</Explanation>
+				<Alerte_MSG>आपके खाते की सुरक्षा जानकारी का पेज वेब ब्राउज़र में खुलेगा। Authenticator ऐप या फ़ोन नंबर जैसे साइन-इन तरीके जोड़ने, बदलने या हटाने के लिए अपने कार्य खाते से साइन इन करें। SelfX आपका डेटा न देखता है और न सहेजता है।
+
+क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

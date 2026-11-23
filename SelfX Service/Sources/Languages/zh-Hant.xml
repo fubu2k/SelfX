@@ -301,6 +301,7 @@
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">帳戶</Category>
 			<Category Id="Browser">瀏覽器</Category>
 			<Category Id="Device">裝置</Category>
 			<Category Id="Intune">Intune</Category>
@@ -625,6 +626,20 @@ SelfX 不會刪除或變更任何檔案。如果 Defender 發現威脅，會依�
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>收集裝置記錄並透過電子郵件傳送給支援人員</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>忘記密碼或密碼已過期：自行重設</Name>
+				<Explanation>您忘記了密碼、密碼已過期或帳戶遭到鎖定。您可以在公司帳戶的登入頁面自行設定新密碼，無需聯絡支援人員。</Explanation>
+				<Alerte_MSG>重設密碼的頁面將在您的網頁瀏覽器中開啟。請使用工作電子郵件地址登入並依步驟操作。系統可能要求您驗證身分，例如透過手機或 Authenticator 應用程式。SelfX 不會看到或儲存您的密碼。
+
+是否要繼續？</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>管理帳戶的登入方式（安全性資訊）</Name>
+				<Explanation>您換了新手機、遺失了 Authenticator 應用程式，或想變更公司帳戶的電話號碼或登入方式。</Explanation>
+				<Alerte_MSG>帳戶的安全性資訊頁面將在您的網頁瀏覽器中開啟。請使用工作帳戶登入，以新增、變更或移除 Authenticator 應用程式或電話號碼等登入方式。SelfX 不會看到或儲存您的資料。
+
+是否要繼續？</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

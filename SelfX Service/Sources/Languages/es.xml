@@ -301,6 +301,7 @@ Descripción del problema:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Cuenta</Category>
 			<Category Id="Browser">Navegador</Category>
 			<Category Id="Device">Dispositivo</Category>
 			<Category Id="Intune">Intune</Category>
@@ -625,6 +626,20 @@ SelfX no elimina ni modifica ningún archivo. Si Defender encuentra una amenaza,
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Recopilar los registros del dispositivo y enviarlos al soporte por correo electrónico</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Contraseña olvidada o caducada: restablézcala usted mismo</Name>
+				<Explanation>Ha olvidado la contraseña, ha caducado o su cuenta está bloqueada. En la página de inicio de sesión de su cuenta de empresa puede establecer usted mismo una contraseña nueva, sin llamar al soporte.</Explanation>
+				<Alerte_MSG>La página para restablecer la contraseña se abre en su navegador web. Inicie sesión con su dirección de correo profesional y siga los pasos. Es posible que se le pida confirmar su identidad, por ejemplo con el teléfono o la aplicación Authenticator. SelfX no ve ni guarda su contraseña.
+
+¿Quiere continuar?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Administrar los métodos de inicio de sesión de su cuenta (información de seguridad)</Name>
+				<Explanation>Tiene un teléfono nuevo, ha perdido la aplicación Authenticator o quiere cambiar el número de teléfono o el método de inicio de sesión de su cuenta de empresa.</Explanation>
+				<Alerte_MSG>La página de información de seguridad de su cuenta se abre en su navegador web. Inicie sesión con su cuenta profesional para agregar, cambiar o quitar métodos de inicio de sesión, como la aplicación Authenticator o el número de teléfono. SelfX no ve ni guarda sus datos.
+
+¿Quiere continuar?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

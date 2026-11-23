@@ -190,6 +190,7 @@ try {
 		If ($text -match '(?i)\$(XmlReader|reader)\)') { Assert-Equal ($text -match '(?i)DtdProcessing\s*=\s*\[(System\.)?Xml\.DtdProcessing\]::Prohibit') $true "$($file.Name) prohibits DTDs" }
 	}
 	foreach ($action in $catalog.SelectNodes('//Action')) {
+		if ($action.Context.Trim() -eq 'Link') { continue }   # Link actions open an address and have no script
 		$text = [IO.File]::ReadAllText((Join-Path $scripts $action.Script.Trim()))
 		Assert-Equal ($text -match "Context\s*:\s*$($action.Context.Trim())") $true "$($action.Script) header context matches the catalog ($($action.GetAttribute('Id')))"
 	}

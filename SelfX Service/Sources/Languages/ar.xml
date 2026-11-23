@@ -301,6 +301,7 @@
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">الحساب</Category>
 			<Category Id="Browser">المتصفح</Category>
 			<Category Id="Device">جهاز</Category>
 			<Category Id="Intune">Intune</Category>
@@ -625,6 +626,20 @@
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>جمع سجلات الجهاز وإرسالها إلى فريق الدعم عبر البريد الإلكتروني</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>نسيت كلمة المرور أو انتهت صلاحيتها: أعد تعيينها بنفسك</Name>
+				<Explanation>نسيت كلمة المرور أو انتهت صلاحيتها أو تم قفل حسابك. يمكنك من صفحة تسجيل الدخول إلى حساب شركتك تعيين كلمة مرور جديدة بنفسك دون الاتصال بالدعم.</Explanation>
+				<Alerte_MSG>ستُفتح صفحة إعادة تعيين كلمة المرور في متصفح الويب. سجّل الدخول باستخدام عنوان بريدك الإلكتروني للعمل واتبع الخطوات. قد يُطلب منك تأكيد هويتك، مثلاً باستخدام هاتفك أو تطبيق Authenticator. لا يرى SelfX كلمة مرورك ولا يحفظها.
+
+هل تريد المتابعة؟</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>إدارة طرق تسجيل الدخول إلى حسابك (معلومات الأمان)</Name>
+				<Explanation>لديك هاتف جديد أو فقدت تطبيق Authenticator أو تريد تغيير رقم الهاتف أو طريقة تسجيل الدخول لحساب شركتك.</Explanation>
+				<Alerte_MSG>ستُفتح صفحة معلومات الأمان الخاصة بحسابك في متصفح الويب. سجّل الدخول بحساب العمل لإضافة طرق تسجيل الدخول مثل تطبيق Authenticator أو رقم هاتفك أو تغييرها أو إزالتها. لا يرى SelfX بياناتك ولا يحفظها.
+
+هل تريد المتابعة؟</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

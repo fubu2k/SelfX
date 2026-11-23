@@ -301,6 +301,7 @@ Deskripsi masalah:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Akun</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Perangkat</Category>
 			<Category Id="Intune">Intune</Category>
@@ -625,6 +626,20 @@ Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Kumpulkan log perangkat dan kirim ke tim dukungan melalui email</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Lupa kata sandi atau kedaluwarsa: atur ulang sendiri</Name>
+				<Explanation>Anda lupa kata sandi, kata sandi kedaluwarsa, atau akun Anda terkunci. Di halaman masuk akun perusahaan Anda, Anda dapat menetapkan kata sandi baru sendiri tanpa menghubungi dukungan.</Explanation>
+				<Alerte_MSG>Halaman untuk mengatur ulang kata sandi akan terbuka di browser web Anda. Masuk dengan alamat email kerja Anda dan ikuti langkah-langkahnya. Anda mungkin diminta mengonfirmasi identitas, misalnya dengan ponsel atau aplikasi Authenticator. SelfX tidak melihat atau menyimpan kata sandi Anda.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Kelola metode masuk akun Anda (info keamanan)</Name>
+				<Explanation>Anda punya ponsel baru, kehilangan aplikasi Authenticator, atau ingin mengubah nomor telepon atau metode masuk akun perusahaan Anda.</Explanation>
+				<Alerte_MSG>Halaman info keamanan akun Anda akan terbuka di browser web Anda. Masuk dengan akun kerja Anda untuk menambah, mengubah, atau menghapus metode masuk seperti aplikasi Authenticator atau nomor telepon. SelfX tidak melihat atau menyimpan data Anda.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

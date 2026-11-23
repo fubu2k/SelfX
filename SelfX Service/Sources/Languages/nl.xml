@@ -301,6 +301,7 @@ Beschrijving van het probleem:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Account</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Apparaat</Category>
 			<Category Id="Intune">Intune</Category>
@@ -625,6 +626,20 @@ Wilt u doorgaan?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Apparaatlogboeken verzamelen en per e-mail naar de support sturen</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Wachtwoord vergeten of verlopen: zelf opnieuw instellen</Name>
+				<Explanation>U bent uw wachtwoord vergeten, het is verlopen of uw account is geblokkeerd. Op de aanmeldpagina van uw bedrijfsaccount kunt u zelf een nieuw wachtwoord instellen, zonder de helpdesk te bellen.</Explanation>
+				<Alerte_MSG>De pagina voor het opnieuw instellen van uw wachtwoord wordt geopend in uw webbrowser. Meld u aan met uw zakelijke e-mailadres en volg de stappen. Mogelijk moet u uw identiteit bevestigen, bijvoorbeeld met uw telefoon of de Authenticator-app. SelfX ziet of bewaart uw wachtwoord niet.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Aanmeldmethoden van uw account beheren (beveiligingsgegevens)</Name>
+				<Explanation>U hebt een nieuwe telefoon, uw Authenticator-app kwijt of wilt het telefoonnummer of de aanmeldmethode van uw bedrijfsaccount wijzigen.</Explanation>
+				<Alerte_MSG>De pagina met de beveiligingsgegevens van uw account wordt geopend in uw webbrowser. Meld u aan met uw werkaccount om aanmeldmethoden zoals de Authenticator-app of uw telefoonnummer toe te voegen, te wijzigen of te verwijderen. SelfX ziet of bewaart uw gegevens niet.
+
+Wilt u doorgaan?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>
