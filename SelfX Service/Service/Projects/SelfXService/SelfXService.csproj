@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- SelfX Service: the Windows service (runs as LocalSystem). .NET 10 (LTS), self-contained, one file.
-       The source is the same file that Windows PowerShell 5.1 compiles (..\..\SelfXService.cs). -->
+       The source is ..\..\SelfXService.cs. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>

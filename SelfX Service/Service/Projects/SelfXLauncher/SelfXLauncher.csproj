@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- SelfX.exe: starts the SelfX window or the status icon without a console window. .NET 10, self-contained, one file.
-       The source is the same file that Windows PowerShell 5.1 compiles (..\..\SelfXLauncher.cs). -->
+       The source is ..\..\SelfXLauncher.cs. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>

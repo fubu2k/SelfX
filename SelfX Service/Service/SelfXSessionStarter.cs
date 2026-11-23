@@ -18,7 +18,7 @@ Description:
     WTSQueryUserToken needs the SeTcbPrivilege, which only LocalSystem has. In any other
     context (e.g. a manual installation as administrator) no process is started and the
     result says so; the icon then starts at the next sign-in.
-    Compiled locally using the .NET Framework compiler (C# 5); no remote API is used.
+    Built with the .NET 10 SDK as a netstandard2.0 library (Projects\SelfXSessionStarter\SelfXSessionStarter.csproj); no remote API is used.
 
 Notes:
     Name    : SelfXSessionStarter.cs
