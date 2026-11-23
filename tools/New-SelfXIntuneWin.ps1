@@ -19,6 +19,9 @@
     for SelfX Service, that $ExpectedVersion in Detection.ps1 matches Tool_Version in
     Sources\Tool_Config.xml (otherwise the Intune detection would fail after installation).
     The version in the file name comes from Tool_Version.
+    Next to the .intunewin it writes build\SelfX-Service-<version>.Detection.ps1: Detection.ps1 with the digest of the
+    package file list (SelfX.Files.json) filled in. Upload that file as the detection script to Intune (not the
+    repository copy): then the detection also finds an update whose files changed without a new Tool_Version.
 
     The script only reads the product folders, writes the staging folder (deleted at the end)
     and the build folder. It uploads nothing to Intune.
@@ -43,13 +46,15 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.6.1
+    Version : 1.7.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-04  Wolfgang Baeck       Initial version
     1.6.1    2026-11-23  fubu2k               SelfX.Files.json also lists SelfXService.exe and SelfX.exe from Bin
+    1.7.0    2026-11-23  fubu2k               Security (M2): also writes build\SelfX-Service-<version>.Detection.ps1 with the digest of
+                                              SelfX.Files.json (changed files are detected without a version change)
 #>
 
 [CmdletBinding()]
@@ -120,6 +125,39 @@ function Test-StagedPackage {
         }
         Write-Host "Service: programs from Bin (.NET SDK $($manifest.SdkVersion), checked against the manifest)."
     }
+}
+
+# Digest of the file list: SHA256 over the lines "<name>=<SHA256>", sorted by name (ordinal), joined by LF, UTF-8.
+# Detection.ps1 has the same function (Test-Detection.ps1 checks that both give the same value for the same list).
+function Get-SelfXFilesDigest {
+    param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$Files)
+    $names = [string[]]@($Files.Keys)
+    [Array]::Sort($names, [StringComparer]::Ordinal)
+    $text = [string]::Join("`n", @($names | ForEach-Object { '{0}={1}' -f $_, "$($Files[$_])".ToUpperInvariant() }))
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))) -replace '-', '') }
+    finally { $sha.Dispose() }
+}
+
+# Writes the Detection.ps1 for Intune: the copy of the package with the digest of SelfX.Files.json instead of the placeholder.
+# The detection script is uploaded to Intune separately from the .intunewin, so it must come from the same build. The digest is
+# read back from the SelfX.Files.json of the staged package, so it is exactly what Install.ps1 installs.
+function New-SelfXDetectionScript {
+    param([string]$Stage, [string]$Target)
+    $list = Get-Content -LiteralPath (Join-Path $Stage 'SelfX.Files.json') -Raw | ConvertFrom-Json
+    $files = [ordered]@{}
+    foreach ($property in @($list.Files.PSObject.Properties)) { $files[$property.Name] = "$($property.Value)" }
+    if ($files.Count -eq 0) { throw 'SelfX.Files.json lists no files.' }
+    $digest = Get-SelfXFilesDigest -Files $files
+    $path = Join-Path $Stage 'Detection.ps1'
+    $bytes = [IO.File]::ReadAllBytes($path)
+    $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+    $text = [IO.File]::ReadAllText($path)
+    $pattern = "(\`$ExpectedFilesHash\s*=\s*')__SELFX_FILES_HASH__(')"
+    if (@([regex]::Matches($text, $pattern)).Count -ne 1) { throw 'Detection.ps1 must contain the placeholder for $ExpectedFilesHash exactly once.' }
+    $text = [regex]::Replace($text, $pattern, ('${1}' + $digest + '${2}'))
+    [IO.File]::WriteAllText($Target, $text, (New-Object System.Text.UTF8Encoding($hasBom)))
+    return $digest
 }
 
 # Writes SelfX.Files.json into the staged package: the SHA256 of every file that Install.ps1
@@ -224,6 +262,11 @@ try {
 
             $target = Join-Path $OutputFolder ('SelfX-{0}-{1}.intunewin' -f $name, $version)
             Move-Item -LiteralPath $created -Destination $target -Force
+            if ($name -eq 'Service') {
+                $detectionTarget = Join-Path $OutputFolder ('SelfX-{0}-{1}.Detection.ps1' -f $name, $version)
+                $digest = New-SelfXDetectionScript -Stage $stage -Target $detectionTarget
+                Write-Host "Service: $detectionTarget contains the file list digest $digest. Upload this file as the detection script to Intune."
+            }
             $file = Get-Item -LiteralPath $target
             $results.Add([pscustomobject]@{
                 Product   = $name
