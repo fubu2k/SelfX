@@ -145,7 +145,7 @@ läuft nur ein Fenster. Ein zweiter Start holt das offene Fenster nach vorn.
   Die letzten Werte erscheinen sofort aus `%LOCALAPPDATA%\SelfX\SystemInfo.json` und
   werden im Hintergrund aktualisiert. Kopieren und Export (TXT, HTML, CSV, JSON)
   enthalten auch den Gerätestatus. Darunter stehen Werkzeuge: Intune-Synchronisierung,
-  Compliance-Prüfung, Unternehmensportal, Quick Assist, MDM-Protokolle und Protokolle
+  Compliance-Prüfung, Unternehmensportal, Remote Help oder Quick Assist, MDM-Protokolle und Protokolle
   senden.
 - **Titelleiste:** Hilfe (?), Einstellungen (Sprache, Design, Statussymbol) und Info (i).
 - **Hilfe-Dialog:** Zeigt nur die Kontakte, die Sie eingetragen haben:
@@ -156,6 +156,23 @@ läuft nur ein Fenster. Ein zweiter Start holt das offene Fenster nach vorn.
   `Support_Mail` muss eine einzelne E-Mail-Adresse sein (keine Liste, keine Zusätze
   wie `?cc=`), sonst zeigt der Dialog sie ohne Schaltfläche. Ohne Kontakt bittet der Dialog, die IT-Abteilung
   zu kontaktieren.
+
+### Fernwartung: Remote Help oder Quick Assist
+
+Die Kachel in den Werkzeugen startet **Remote Help**, wenn es installiert ist, sonst
+Quick Assist. Mit Remote Help bietet SelfX Quick Assist nicht an: ein einheitlicher
+Standard im Unternehmen.
+
+- **Erkennung:** `%ProgramFiles%\Remote Help\RemoteHelp.exe` muss eine normale Datei
+  (kein Link) mit gültiger Signatur von „Microsoft Corporation“ sein. Eine Datei ohne
+  gültige Signatur zählt als nicht installiert. Das Fenster liest das beim Start.
+- **Verteilung:** Remote Help ist ein Intune-Add-on mit eigener Lizenz für Nutzer und
+  Helfer. Die App verteilen Sie per Intune (Win32-App, Installationsbefehl
+  `remotehelpinstaller.exe /quiet acceptTerms=1`). Ob ein Nutzer lizenziert ist, kann
+  SelfX nicht prüfen; dafür gilt: App installiert = Remote Help.
+- **Grenze:** SelfX steuert nur die eigene Kachel. Quick Assist selbst sperren Sie über
+  Ihre Richtlinien (zum Beispiel Intune, AppLocker oder App Control).
+- Eine Einstellung dafür gibt es nicht: ohne Remote Help bleibt es bei Quick Assist.
 
 ### Hintergrundprüfungen
 

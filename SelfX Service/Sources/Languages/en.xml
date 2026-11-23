@@ -103,6 +103,7 @@ We recommend the detailed view if the simplified view does not solve or include 
 		<SystemInfo_SyncCompliance_Text>Check compliance</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Quick Assist</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Collect MDM logs</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Send logs to support</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Device logs from {0}</Report_Mail_Subject>
@@ -145,6 +146,7 @@ Description of the issue:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Asks Intune to check now whether your device meets the company rules.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Opens the Company Portal, where you can install company apps.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Opens Quick Assist so that a support person can see your screen and help you – only with your consent.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Opens Remote Help so that a support person can see your screen and help you – only with your consent.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Collects the device management logs into a folder for the support team.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Collects all logs of your device and opens an e-mail to the support team with the report attached.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Settings (language, appearance and status icon)</Settings_Button_ToolTip>

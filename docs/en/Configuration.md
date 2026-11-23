@@ -141,7 +141,7 @@ start brings the open window to the front.
   Network, Report). A double click on a row copies the value. The last values appear
   immediately from `%LOCALAPPDATA%\SelfX\SystemInfo.json` and are refreshed in the
   background. Copy and export (TXT, HTML, CSV, JSON) also contain the device status.
-  Tools below: Intune sync, compliance check, Company Portal, Quick Assist, MDM logs
+  Tools below: Intune sync, compliance check, Company Portal, Remote Help or Quick Assist, MDM logs
   and send logs.
 - **Title bar:** Help (?), Settings (language, design, tray icon) and About (i).
 - **Help dialog:** shows only the contacts you have entered: `Support_Hours`,
@@ -149,6 +149,23 @@ start brings the open window to the front.
   mailbox address opens a Teams chat, a full `https://` link opens unchanged) and
   `Support_Website` (only `https://`; `http://` is ignored and noted in the log). The address in `Support_Mail` must be one plain e-mail address (no list, no additions such as `?cc=`), otherwise the dialog shows it without a button. Without any contact, the dialog
   asks the user to contact the IT department.
+
+### Remote support: Remote Help or Quick Assist
+
+The tile in the tools starts **Remote Help** when it is installed, otherwise Quick
+Assist. With Remote Help installed, SelfX does not offer Quick Assist: one standard
+in the company.
+
+- **Detection:** `%ProgramFiles%\Remote Help\RemoteHelp.exe` must be a plain file (no
+  link) with a valid signature of "Microsoft Corporation". A file without a valid
+  signature counts as not installed. The window reads this at start.
+- **Deployment:** Remote Help is an Intune add-on with its own license for users and
+  helpers. Deploy the app with Intune (Win32 app, install command
+  `remotehelpinstaller.exe /quiet acceptTerms=1`). SelfX cannot check whether a user is
+  licensed; the rule is: app installed = Remote Help.
+- **Limit:** SelfX controls only its own tile. Block Quick Assist itself with your
+  policies (for example Intune, AppLocker or App Control).
+- There is no setting for this: without Remote Help it stays Quick Assist.
 
 ### Background checks
 
