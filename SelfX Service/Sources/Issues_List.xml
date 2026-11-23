@@ -33,10 +33,10 @@
 	History:
 	  Version  Date        Author               Change
 	  1.0.0    2022-10-04  Damien Van Robaeys   Initial version
-	  2.4.9    2026-11-23  fubu2k               New action D_Device_GpUpdate (gpupdate /force, domain / hybrid joined devices, Context User)
+	  2.4.10   2026-11-23  fubu2k               New action D_Device_NoSound (unmute the default playback device, minimum volume 30 %, SelfXAudio.dll, Context User)
 -->
 <Actions>
-	<XML_Version>2.4.9</XML_Version>
+	<XML_Version>2.4.10</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -746,6 +746,18 @@ Do you want to continue?</Alerte_MSG>
 			<Context>User</Context>
 			<Category>Device</Category>
 			<Alerte_MSG>Windows checks and applies the group policies of your company again. This can take a few minutes. You are not signed out and Windows does not restart; a setting that needs a restart or a new sign-in takes effect after the next one. If your device is not joined to a domain, the action ends with the exit code 3 and changes nothing.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="D_Device_NoSound">
+			<Name>No sound on this PC</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>There is no sound from the speakers or headphones, although everything was fine before. The sound may be switched off (muted) or turned down very low.</Explanation>
+			<Script>SelfX_Audio_Restore.ps1</Script>
+			<Context>User</Context>
+			<Category>Device</Category>
+			<Alerte_MSG>SelfX switches the sound of your current playback device (speakers or headphones) on again. If it is muted, the sound is switched on; if the volume is below 30 %, it is raised to 30 %. A higher volume stays as it is. Other devices, the microphone and drivers are not changed.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>

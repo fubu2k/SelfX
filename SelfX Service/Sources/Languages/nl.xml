@@ -631,6 +631,13 @@ Wilt u doorgaan?</Alerte_MSG>
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Geen geluid op deze pc</Name>
+				<Explanation>Er komt geen geluid uit de luidsprekers of koptelefoon, terwijl alles eerst werkte. Het geluid staat mogelijk uit (gedempt) of heel zacht.</Explanation>
+				<Alerte_MSG>SelfX zet het geluid van uw huidige afspeelapparaat (luidsprekers of koptelefoon) weer aan. Is het gedempt, dan wordt het geluid ingeschakeld; staat het volume onder 30 %, dan wordt het verhoogd tot 30 %. Een hoger volume blijft zoals het is. Andere apparaten, de microfoon en stuurprogramma's worden niet gewijzigd.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Apparaatlogboeken verzamelen en per e-mail naar de support sturen</Name>
 			</Action>

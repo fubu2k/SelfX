@@ -631,6 +631,13 @@ Apakah Anda ingin melanjutkan?</Alerte_MSG>
 
 Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Tidak ada suara di PC ini</Name>
+				<Explanation>Tidak ada suara dari speaker atau headphone, padahal sebelumnya baik-baik saja. Suara mungkin dimatikan (bisu) atau diatur sangat pelan.</Explanation>
+				<Alerte_MSG>SelfX menyalakan kembali suara perangkat pemutaran Anda saat ini (speaker atau headphone). Jika dibisukan, suara dinyalakan; jika volume di bawah 30 %, volume dinaikkan menjadi 30 %. Volume yang lebih tinggi tidak diubah. Perangkat lain, mikrofon, dan driver tidak diubah.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Kumpulkan log perangkat dan kirim ke tim dukungan melalui email</Name>
 			</Action>

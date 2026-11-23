@@ -631,6 +631,13 @@ SelfX no elimina ni modifica ningún archivo. Si Defender encuentra una amenaza,
 
 ¿Quiere continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>No hay sonido en este PC</Name>
+				<Explanation>No sale sonido de los altavoces o los auriculares, aunque antes todo funcionaba. Puede que el sonido esté desactivado (silenciado) o muy bajo.</Explanation>
+				<Alerte_MSG>SelfX vuelve a activar el sonido de su dispositivo de reproducción actual (altavoces o auriculares). Si está silenciado, se activa el sonido; si el volumen es inferior al 30 %, se sube al 30 %. Un volumen más alto no se modifica. No se cambian otros dispositivos, el micrófono ni los controladores.
+
+¿Quiere continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Recopilar los registros del dispositivo y enviarlos al soporte por correo electrónico</Name>
 			</Action>

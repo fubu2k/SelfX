@@ -128,6 +128,7 @@ function Test-SelfXPrebuiltBinaries {
 		'SelfX.exe'               = 'Service/SelfXLauncher.cs'
 		'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'
 		'WinRT/SelfXWinRT.dll'    = 'Service/SelfXWinRT.cs'
+		'Audio/SelfXAudio.dll'    = 'Service/SelfXAudio.cs'
 	}
 	$ManifestPath = Join-Path $BinFolder 'SelfX.Binaries.json'
 	If(-not (Test-Path -LiteralPath $BinFolder -PathType Container)) { throw 'The folder Bin is missing in the package. Run tools\Build-SelfXBinaries.ps1 and build the package again (docs\Installation.md).' }
@@ -172,7 +173,7 @@ function Test-SelfXFileManifest {
 	{
 		$Relative = "$($Property.Name)"
 		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "SelfX.Files.json lists an unsupported name '$Relative'." }
-		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf($Relative -like 'WinRT/*') { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
+		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf($Relative -like 'WinRT/*' -or $Relative -like 'Audio/*') { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in SelfX.Files.json but missing in the package." }
 		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Property.Value)") { throw "$Relative does not match its SHA256 in SelfX.Files.json." }
 		$Listed[$Relative.ToLowerInvariant()] = $true
@@ -189,6 +190,16 @@ function Test-SelfXFileManifest {
 		ForEach($Item in @(Get-ChildItem -LiteralPath $WinRTSource -Recurse -File -Force))
 		{
 			$Relative = 'WinRT/' + $Item.FullName.Substring($WinRTSource.Length + 1).Replace('\', '/')
+			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
+		}
+	}
+	# The audio library of the package (installed into Audio) must be listed too.
+	$AudioSource = Join-Path (Join-Path $PackageFolder 'Bin') 'Audio'
+	If(Test-Path -LiteralPath $AudioSource -PathType Container)
+	{
+		ForEach($Item in @(Get-ChildItem -LiteralPath $AudioSource -Recurse -File -Force))
+		{
+			$Relative = 'Audio/' + $Item.FullName.Substring($AudioSource.Length + 1).Replace('\', '/')
 			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
 		}
 	}
@@ -366,6 +377,11 @@ Try
 		Copy-Item -LiteralPath (Join-Path $BinFolder $Name.Replace('/', '\')) -Destination $WinRTFolder -Force
 	}
 	Write-Output 'Installed the WinRT library from Bin.'
+	# Library for PowerShell 7 (Core Audio, action "No sound"): the file checked above, into the protected install folder.
+	$AudioFolder = Join-Path $InstallFolder 'Audio'
+	New-Item -ItemType Directory -Path $AudioFolder -Force | Out-Null
+	Copy-Item -LiteralPath (Join-Path (Join-Path $BinFolder 'Audio') 'SelfXAudio.dll') -Destination $AudioFolder -Force
+	Write-Output 'Installed the audio library from Bin.'
 	If(-not (Test-Path -LiteralPath $ServiceExe)) { throw 'SelfXService.exe is missing after the installation step.' }
 	If(-not (Test-Path -LiteralPath $LauncherExe)) { throw 'SelfX.exe is missing after the installation step.' }
 

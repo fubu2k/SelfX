@@ -535,7 +535,7 @@ Verwenden Sie das Paket in Intune wie folgt:
 
 `tools\New-SelfXIntuneWin.ps1` schreibt beim Paketbau die Datei `SelfX.Files.json` in das Paket. Sie enthält den
 SHA256 jeder Datei, die `Install.ps1` in den Installationsordner kopiert (alles unter `Sources`, `Uninstall.ps1` und die
-DLLs aus `Bin\WinRT`, die als `WinRT\...` installiert werden).
+DLLs aus `Bin\WinRT` und `Bin\Audio`, die als `WinRT\...` bzw. `Audio\...` installiert werden).
 Die Liste wird bei jedem Paketbau neu erzeugt: Wer ein Skript oder eine Konfiguration ändert, muss nichts von Hand
 nachpflegen, sondern das Paket neu bauen. `Install.ps1` prüft vor der Installation, dass jede Datei zur Liste passt
 und keine Datei ohne Eintrag im Paket liegt; sonst bricht die Installation ab, bevor etwas geändert wird (die
@@ -558,6 +558,14 @@ nicht verfügbar; Grund im SelfX-Protokoll). Der Dienst zählt `.dll` zu den Dat
 werden. Die Prüfung ersetzt keine Signatur: Wer Administratorrechte hat, kann DLL und Liste gemeinsam ändern.
 Während ein SelfX-Prozess läuft, sind die DLLs gesperrt (wie bisher die geladene Bibliothek); `Install.ps1` beendet das
 Statussymbol vor dem Update.
+
+Die Bibliothek `Audio\SelfXAudio.dll` (Aktion „Kein Ton an diesem PC“, Nutzerkontext, Core Audio) wird auf dieselbe Weise
+geprüft: `Sources\SelfXAudio.ps1` vergleicht sie vor dem Laden mit dem Eintrag `Audio/SelfXAudio.dll` in `SelfX.Files.json`,
+hält die Datei geöffnet und lädt nichts, wenn die Datei, der Ordner `Audio` (genau eine Datei, keine Verknüpfung, kein
+Unterordner) oder die Liste abweichen. `tools\Build-SelfXBinaries.ps1` baut sie nach `Bin\Audio` und nimmt sie in
+`SelfX.Binaries.json` und in die AppLocker-Hashregeln auf; `Install.ps1` prüft und installiert sie wie die WinRT-Bibliothek.
+Die Aktion braucht keine Administrator- oder SYSTEM-Rechte und ändert nur Stummschaltung und Lautstärke des
+Standard-Wiedergabegeräts des angemeldeten Nutzers.
 
 ## App Control for Business (WDAC), optional
 

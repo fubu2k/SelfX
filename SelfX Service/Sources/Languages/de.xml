@@ -715,6 +715,13 @@ Möchten Sie fortfahren?</Alerte_MSG>
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Kein Ton an diesem PC</Name>
+				<Explanation>Aus den Lautsprechern oder Kopfhörern kommt kein Ton, obwohl vorher alles in Ordnung war. Der Ton ist möglicherweise ausgeschaltet (stummgeschaltet) oder sehr leise gestellt.</Explanation>
+				<Alerte_MSG>SelfX schaltet den Ton Ihres aktuellen Wiedergabegeräts (Lautsprecher oder Kopfhörer) wieder ein. Ist es stummgeschaltet, wird der Ton eingeschaltet; liegt die Lautstärke unter 30 %, wird sie auf 30 % angehoben. Eine höhere Lautstärke bleibt unverändert. Andere Geräte, das Mikrofon und Treiber werden nicht verändert.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Protokolle Ihres Geräts sammeln und per E-Mail an den Support senden</Name>
 			</Action>

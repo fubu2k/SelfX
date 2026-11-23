@@ -631,6 +631,13 @@ Je, ungependa kuendelea?</Alerte_MSG>
 
 Je, ungependa kuendelea?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Hakuna sauti kwenye PC hii</Name>
+				<Explanation>Hakuna sauti kutoka kwenye spika au vipokea sauti, ingawa hapo awali kila kitu kilikuwa sawa. Sauti inaweza kuwa imezimwa (imenyamazishwa) au iko chini sana.</Explanation>
+				<Alerte_MSG>SelfX inawasha tena sauti ya kifaa chako cha sasa cha kucheza (spika au vipokea sauti). Ikiwa imenyamazishwa, sauti inawashwa; ikiwa sauti iko chini ya 30 %, inapandishwa hadi 30 %. Sauti ya juu zaidi inabaki kama ilivyo. Vifaa vingine, maikrofoni na viendeshi havibadilishwi.
+
+Je, ungependa kuendelea?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Kusanya kumbukumbu za kifaa na uzitume kwa timu ya usaidizi kwa barua pepe</Name>
 			</Action>

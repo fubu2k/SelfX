@@ -109,12 +109,12 @@ function Test-StagedPackage {
         if (-not (Test-Path -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -PathType Leaf)) { throw 'The folder Bin with SelfX.Binaries.json is missing. Run tools\Build-SelfXBinaries.ps1 first (docs\Installation.md).' }
         $manifest = Get-Content -LiteralPath (Join-Path $bin 'SelfX.Binaries.json') -Raw | ConvertFrom-Json
         if ("$($manifest.ManifestVersion)" -ne '3') { throw 'Bin was built by an older Build-SelfXBinaries.ps1. Run tools\Build-SelfXBinaries.ps1 again.' }
-        foreach ($source in @('Service/SelfXService.cs', 'Service/SelfXLauncher.cs', 'Service/SelfXSessionStarter.cs', 'Service/SelfXWinRT.cs')) {
+        foreach ($source in @('Service/SelfXService.cs', 'Service/SelfXLauncher.cs', 'Service/SelfXSessionStarter.cs', 'Service/SelfXWinRT.cs', 'Service/SelfXAudio.cs')) {
             $hash = (Get-FileHash -LiteralPath (Join-Path $Stage ($source.Replace('/', '\'))) -Algorithm SHA256).Hash
             if ($hash -ne "$($manifest.Sources.$source)") { throw "Bin was not built from the current $source. Run tools\Build-SelfXBinaries.ps1 again." }
         }
         # Every file that the manifest lists (the three programs and the DLLs in WinRT) must exist and match.
-        foreach ($file in @($manifest.Binaries.PSObject.Properties.Name) + @('SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll', 'WinRT/SelfXWinRT.dll') | Select-Object -Unique) {
+        foreach ($file in @($manifest.Binaries.PSObject.Properties.Name) + @('SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll', 'WinRT/SelfXWinRT.dll', 'Audio/SelfXAudio.dll') | Select-Object -Unique) {
             $hash = (Get-FileHash -LiteralPath (Join-Path $bin $file.Replace('/', '\')) -Algorithm SHA256).Hash
             if ($hash -ne "$($manifest.Binaries.$file)") { throw "Bin\$file does not match the manifest. Run tools\Build-SelfXBinaries.ps1 again." }
         }
@@ -141,6 +141,14 @@ function New-SelfXFileManifest {
         foreach ($item in @(Get-ChildItem -LiteralPath $winRT -Recurse -File -Force)) {
             if ($item.DirectoryName -ne (Get-Item -LiteralPath $winRT).FullName) { throw "Unexpected sub folder in Bin\WinRT: $($item.DirectoryName)" }
             $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'WinRT/' + $item.Name })
+        }
+    }
+    # The audio library comes from Bin too and is installed into the folder Audio.
+    $audio = Join-Path $Stage 'Bin\Audio'
+    if (Test-Path -LiteralPath $audio -PathType Container) {
+        foreach ($item in @(Get-ChildItem -LiteralPath $audio -Recurse -File -Force)) {
+            if ($item.DirectoryName -ne (Get-Item -LiteralPath $audio).FullName) { throw "Unexpected sub folder in Bin\Audio: $($item.DirectoryName)" }
+            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'Audio/' + $item.Name })
         }
     }
     $files = [ordered]@{}
