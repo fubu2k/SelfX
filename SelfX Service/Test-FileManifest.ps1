@@ -36,17 +36,18 @@ function Assert-Throws([scriptblock]$Action, [string]$Pattern, [string]$Message)
 }
 
 # Load only the two functions, never the rest of the scripts.
-function Import-Function($Path, $Name) {
+function Get-FunctionText($Path, $Name) {
 	$parseErrors = $null
 	$ast = [Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$parseErrors)
 	Assert-Equal @($parseErrors).Count 0 "$([IO.Path]::GetFileName($Path)) parses"
 	$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $Name }.GetNewClosure(), $true)
 	Assert-Equal ($null -ne $definition) $true "$([IO.Path]::GetFileName($Path)) defines $Name"
 	if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
-	. ([scriptblock]::Create($definition.Extent.Text))
+	return $definition.Extent.Text
 }
-Import-Function (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\New-SelfXIntuneWin.ps1') 'New-SelfXFileManifest'
-Import-Function (Join-Path $PSScriptRoot 'Install.ps1') 'Test-SelfXFileManifest'
+# Dot-sourced here (script scope), not inside a function, so the functions stay visible.
+. ([scriptblock]::Create((Get-FunctionText (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\New-SelfXIntuneWin.ps1') 'New-SelfXFileManifest')))
+. ([scriptblock]::Create((Get-FunctionText (Join-Path $PSScriptRoot 'Install.ps1') 'Test-SelfXFileManifest')))
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFileManifestTest_' + [guid]::NewGuid().ToString('N'))
 $pristine = Join-Path $root 'pristine'
