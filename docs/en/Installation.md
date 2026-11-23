@@ -560,6 +560,17 @@ enforce). SelfX scripts use `Add-Type` for single P/Invoke calls; rule option 19
 switched on after a test in audit mode. A local administrator can replace an unsigned policy; whether it is signed is
 the organization's decision. The template has not been tried on a device yet.
 
+## Execution policy (`-ExecutionPolicy Bypass`)
+
+The service, the starter, the window, the status icon and the health check start PowerShell with `-ExecutionPolicy
+Bypass`. This is intended and acceptable because the scripts are in the protected installation folder (only
+administrators and SYSTEM can write there, checked by `Install.ps1`, the file list and the service). The execution
+policy is not a security boundary anyway: every user can bypass it with `-ExecutionPolicy Bypass`. Additional
+protection comes only from the file list (`SelfX.Files.json`, the service starts nothing that differs) and App Control
+for Business (see above). If your organization enforces `AllSigned` by group policy, the note about signing in the
+section [SelfX Service](#selfx-service) applies. There is no signing concept of its own: SelfX stays unsigned and is
+allowed by hash.
+
 ## Service privileges
 
 The service runs as LocalSystem. `Install.ps1` limits its token with `sc.exe privs` to the privileges the actions
