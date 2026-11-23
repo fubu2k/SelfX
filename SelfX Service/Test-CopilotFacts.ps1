@@ -111,7 +111,7 @@ Assert-Equal ($prompt.Length -le 6000) $true 'prompt: length limit'
 # --- Configuration -------------------------------------------------------------------------------------------
 [xml]$config = [IO.File]::ReadAllText((Join-Path $sources 'Tool_Config.xml'))
 Assert-Equal "$($config.GUI_Config.Copilot_Enabled)" 'False' 'config: Copilot_Enabled is off by default'
-Assert-Equal "$($config.GUI_Config.Copilot_Url)" 'https://m365.cloud.microsoft/chat' 'config: default address'
+Assert-Equal "$($config.GUI_Config.Copilot_Url)" 'https://copilot.cloud.microsoft' 'config: default address'
 Assert-Equal (Test-SelfXCopilotUrl "$($config.GUI_Config.Copilot_Url)") $true 'config: default address passes the address check'
 Assert-Equal "$($config.GUI_Config.Copilot_Audience)" 'User' 'config: audience User by default'
 Assert-Equal "$($config.GUI_Config.Copilot_Include_AppNames)" 'True' 'config: app names are included by default'

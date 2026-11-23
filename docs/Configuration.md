@@ -534,7 +534,7 @@ Text ist auf 6000 Zeichen begrenzt.
 | Einstellung | Bedeutung |
 |---|---|
 | `Copilot_Enabled` | `False` (Standard) oder `True`. |
-| `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://m365.cloud.microsoft/chat`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
+| `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://copilot.cloud.microsoft`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
 | `Copilot_Audience` | `User` (Standard): einfache Antworten für Nutzer. `Admin`: technische Antworten für IT-Personal. |
 | `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: Die Zeile der Firmen-Apps im Gerätestatus bleibt, aber ohne Einzelheiten, also ohne App-Namen und ohne Fehlercodes. |
 
