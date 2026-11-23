@@ -90,6 +90,11 @@
                                        and the parameter -MaxLinesPerLog; sections renumbered 1 to 10.
     1.3.3    fubu2k                    Section 8 starts with a summary of the warnings and errors of the main event logs, counted per
                                        provider and event id (no messages, provider names cleaned); Get-EventCountSummary
+    1.3.4    fubu2k                    User view (-UserView) completed: no enrollment account (UPN), no Autopilot / ESP tracking /
+                                       policy cache registry dumps, no process command lines, no contents of Intune Management
+                                       Extension, CBS / DISM / setup / Windows Update, Teams installer and crash report files, no event message texts; ESP apps and
+                                       Win32Apps keys of other users are skipped; all report text is also scrubbed of e-mail
+                                       addresses (UPN) and SIDs of other users (Protect-UserViewText).
 #>
 
 [CmdletBinding()]
@@ -118,7 +123,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.3.3'
+$ScriptVersion = '1.3.4'
 if ($UserView) {
     try { $null = [Security.Principal.SecurityIdentifier]::new("$CallerSid") } catch { Write-Error 'The user view needs a valid -CallerSid.'; exit 2 }
 }
@@ -215,10 +220,27 @@ function Initialize-UserView {
     $parts = @($tokens | Where-Object { $_ -and $_.Length -ge 2 } | Sort-Object Length -Descending | ForEach-Object { [regex]::Escape($_) })
     if ($parts.Count) { $script:OtherUserPattern = [regex]::new('(?<![\w-])(' + ($parts -join '|') + ')(?![\w-])', 'IgnoreCase') }
 }
+# Defense in depth for the user view: whatever a section prints, e-mail addresses / UPNs and SIDs of other users (also of
+# profiles that are not in the profile list) never reach the report. The own SID stays.
+$script:UserViewMailPattern = [regex]::new("[A-Za-z0-9._%+'\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+", 'IgnoreCase')
+$script:UserViewSidPattern = [regex]::new('S-1-(?:5-21|12-1)-\d+(?:-\d+)+', 'IgnoreCase')
+function Protect-UserViewText {
+    param([string]$Text)
+    if (-not $Text) { return $Text }
+    $Text = $script:UserViewMailPattern.Replace($Text, '<hidden>')
+    return $script:UserViewSidPattern.Replace($Text, { param($match) if ("$script:CallerSid" -and $match.Value -ieq "$script:CallerSid") { $match.Value } else { '<other user>' } })
+}
 function Hide-OtherUsers {
     param([string]$Text)
-    if ($script:OtherUserPattern -and $Text) { return $script:OtherUserPattern.Replace($Text, '<other user>') }
+    if ($script:OtherUserPattern -and $Text) { $Text = $script:OtherUserPattern.Replace($Text, '<other user>') }
+    if ($UserView) { $Text = Protect-UserViewText $Text }
     return $Text
+}
+# True for a registry path or name that belongs to the profile (SID) of ANOTHER user.
+function Test-ForeignUserSid {
+    param([string]$Text)
+    foreach ($match in $script:UserViewSidPattern.Matches("$Text")) { if ("$script:CallerSid" -ine $match.Value) { return $true } }
+    return $false
 }
 function Add-Line { param([string]$Text) $writer.WriteLine((Hide-OtherUsers $Text)) }
 if ($UserView) { Initialize-UserView -Sid $CallerSid }
@@ -273,11 +295,14 @@ function Get-FileText {
 function Add-FileTail {
     param([string]$Path, [int]$Tail = 200)
     Add-Line ''
+    # User view: log file contents (IME, CBS, DISM, setup, Windows Update) are for administrators; fail closed for every caller.
+    if ($UserView) { Add-Line "--- $Path : (user view: file contents are not part of this report)"; return }
     try { foreach ($line in @(Get-FileText -Path $Path -Tail $Tail)) { Add-Line $line } }
     catch { Add-Line "--- $Path : not readable: $($_.Exception.Message)" }
 }
 function Add-FilteredLines {
     param([string]$Path, [string]$Pattern, [int]$Last = 150, [string]$Title)
+    if ($UserView) { Add-Line ''; Add-Line "--- $Title (user view: file contents are not part of this report; file $Path)"; return }
     try {
         $matches = @(Select-String -LiteralPath $Path -Pattern $Pattern -ErrorAction Stop | Select-Object -Last $Last)
         Add-Line ''
@@ -305,6 +330,8 @@ function Get-EventSummary {
     foreach ($event in $events) {
         $message = ("$($event.Message)" -replace '\s+', ' ').Trim()
         if ($message.Length -gt 450) { $message = $message.Substring(0, 450) + '...' }
+        # User view: event texts can contain names, paths, account names and other users' data.
+        if ($UserView) { $message = '(message text: administrators only)' }
         '    {0} id={1} lvl={2} {3}: {4}' -f $event.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss'), $event.Id, $event.LevelDisplayName, $event.ProviderName, $message
     }
 }
@@ -418,6 +445,9 @@ if (-not $isAdmin) { Write-Host 'WARNING: not elevated. Machine logs may not be 
 try {
 Add-Line "Collect-DeviceLogs $ScriptVersion (read-only device log collector: Autopilot / ESP, apps, language deployment)"
 Add-Line "Started: $($startedAt.ToString('yyyy-MM-dd HH:mm:ss')); parameters: Days=$Days; Deep=$($Deep.IsPresent)"
+if ($UserView) {
+    Add-Line 'User view: this report holds only the data of the requesting user and of the device. Not included (administrators only): enrollment account, tenant and Autopilot / ESP registry values, process command lines, contents of Intune Management Extension, Windows servicing (CBS, DISM, setup, Windows Update), Teams installer and crash report files, event message texts, data of other users.'
+}
 
 # ------------------------------------------------------------------------------------------------
 Add-Section '1. Context'
@@ -505,17 +535,34 @@ Invoke-Safe 'Setup processes' {
     'Setup/ESP processes: ' + $(if ($found.Count) { ($found | ForEach-Object { "$($_.Name)($($_.Id))" }) -join ', ' } else { '(none)' })
 }
 Invoke-Safe 'Autopilot registry' {
+    if ($UserView) {
+        # Tenant name and ID, correlation and device IDs, the user of the Autopilot profile: administrators only (fail closed: nothing is printed).
+        '(user view: the Autopilot registry values contain tenant and account data and are not part of this report)'
+        return
+    }
     Get-RegistryTree -Path 'HKLM:\SOFTWARE\Microsoft\Provisioning\Diagnostics\Autopilot' -MaxLines 150
     Get-RegistryTree -Path 'HKLM:\SOFTWARE\Microsoft\Provisioning\AutopilotSettings' -MaxLines 80
     Get-RegistryTree -Path 'HKLM:\SOFTWARE\Microsoft\Provisioning\AutopilotPolicyCache' -MaxLines 80
 }
 Invoke-Safe 'ESP tracking' {
+    if ($UserView) {
+        # The raw tree holds the SIDs and the diagnostics of every user; the per-app results below show the own phases.
+        '(user view: the raw ESP tracking registry tree is not part of this report; see the ESP app results below)'
+        return
+    }
     Get-RegistryTree -Path 'HKLM:\SOFTWARE\Microsoft\Windows\Autopilot\EnrollmentStatusTracking' -MaxLines 400 -MaxValueLength 300
 }
 Invoke-Safe 'Enrollments' {
+    $enrollmentNumber = 0
     foreach ($key in @(Get-ChildItem -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Enrollments' -ErrorAction SilentlyContinue)) {
         $values = Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue
         if ($values.ProviderID -eq 'MS DM Server' -or $values.EnrollmentType) {
+            if ($UserView) {
+                # No enrollment ID, no account (UPN) and no FirstSync tree: only whether and how the device is enrolled.
+                $enrollmentNumber++
+                'Enrollment {0}: ProviderID={1}; EnrollmentType={2}; EnrollmentState={3}; UPN=(administrators only)' -f $enrollmentNumber, $values.ProviderID, $values.EnrollmentType, $values.EnrollmentState
+                continue
+            }
             'Enrollment {0}: ProviderID={1}; EnrollmentType={2}; EnrollmentState={3}; UPN={4}' -f $key.PSChildName, $values.ProviderID, $values.EnrollmentType, $values.EnrollmentState, $values.UPN
             Get-RegistryTree -Path "$($key.PSPath)\FirstSync" -MaxLines 20
         }
@@ -546,7 +593,7 @@ Invoke-Safe 'ESP app results' {
     $guidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
     $espRoot = 'HKLM:\SOFTWARE\Microsoft\Windows\Autopilot\EnrollmentStatusTracking'
     $count = 0
-    foreach ($phase in @(Get-ChildItem -LiteralPath $espRoot -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -ne 'ESPTrackingInfo' })) {
+    foreach ($phase in @(Get-ChildItem -LiteralPath $espRoot -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -ne 'ESPTrackingInfo' -and (-not $UserView -or -not (Test-ForeignUserSid $_.PSChildName)) })) {
         $phaseName = if ($phase.PSChildName -eq 'Device') { 'device setup' } else { "account setup ($($phase.PSChildName))" }
         foreach ($provider in @(Get-ChildItem -LiteralPath "$($phase.PSPath)\Setup\Apps\Tracking" -ErrorAction SilentlyContinue)) {
             foreach ($app in @(Get-ChildItem -LiteralPath $provider.PSPath -ErrorAction SilentlyContinue)) {
@@ -580,7 +627,8 @@ Invoke-Safe 'Profile language vs image' {
     }
     $imageLanguages = @((Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop).MUILanguages)
     ''
-    "Autopilot profile '$profileName': language '$profileLanguage'; language packs in the image (MUILanguages): $($imageLanguages -join ', ')"
+    $shownProfileName = if ($UserView) { '(administrators only)' } else { $profileName }
+    "Autopilot profile '$shownProfileName': language '$profileLanguage'; language packs in the image (MUILanguages): $($imageLanguages -join ', ')"
     if (-not $profileName) {
         Add-Finding -Level WARN -Text 'No Autopilot profile downloaded (DeploymentProfileName missing): check the profile assignment / group tag and the network during OOBE.'
     }
@@ -600,6 +648,8 @@ Invoke-Safe 'Processes' {
     foreach ($process in $processes) {
         $cmd = "$($process.CommandLine)"
         if ($cmd.Length -gt 300) { $cmd = $cmd.Substring(0, 300) + '...' }
+        # User view: command lines of other sessions hold paths, account names and arguments.
+        if ($UserView) { $cmd = '(administrators only)' }
         $started = if ($process.CreationDate) { $process.CreationDate.ToString('HH:mm:ss') } else { '' }
         '{0} pid={1} started={2} ws={3}MB cmd={4}' -f $process.Name, $process.ProcessId, $started, [int]($process.WorkingSetSize / 1MB), $cmd
     }
@@ -766,6 +816,7 @@ Invoke-Safe 'Failed app context' {
         ''
         "--- Failed ESP app $($app.Name) ($($app.Id)), $($app.Phase), error $($app.Error)"
         if (-not $app.Id) { continue }
+        if ($UserView) { '    (user view: the IME log lines about this app are not part of this report)'; continue }
         $hit = $null
         # Prefer the ESP failure lines (closest to the installer run); later reporting lines also contain the app ID.
         foreach ($pattern in @("(Setting ErrorHresult .* for application $($app.Id))|(to Error for application $($app.Id))", "(EnforcementErrorCode.*$($app.Id))|($($app.Id).*EnforcementErrorCode)")) {
@@ -794,6 +845,11 @@ Invoke-Safe 'Failed app context' {
     if (-not $script:FailedEspApps.Count) { '(no app failed in the ESP)' }
 }
 Invoke-Safe 'IME filtered' {
+    if ($UserView) {
+        # The IME logs contain accounts (UPN), user SIDs, tenant and device IDs and the app runs of every user.
+        '(user view: the contents of the Intune Management Extension logs are not part of this report)'
+        return
+    }
     $files = @(Get-ChildItem -LiteralPath $imeFolder -Filter 'IntuneManagementExtension*.log' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime)
     $idPattern = if ($languageAppIds.Count) { ($languageAppIds -join '|') + '|' } else { '' }
     foreach ($file in $files) {
@@ -817,6 +873,7 @@ Invoke-Safe 'Win32Apps registry' {
     'Win32Apps state of the analyzed apps (ComplianceStateMessage / EnforcementStateMessage contain the error code):'
     $dumped = 0
     foreach ($key in @(Get-ChildItem -LiteralPath $root -Recurse -ErrorAction SilentlyContinue)) {
+        if ($UserView -and (Test-ForeignUserSid $key.Name)) { continue }
         $isLanguageApp = $false
         foreach ($id in $languageAppIds) { if ($key.PSChildName -like "*$id*" -or $key.Name -like "*$id*") { $isLanguageApp = $true } }
         if ($isLanguageApp) {
@@ -904,6 +961,7 @@ Invoke-Safe 'WER' {
     foreach ($report in @($reports | Sort-Object LastWriteTime -Descending | Select-Object -First 25)) { '    {0}  {1}' -f $report.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'), $report.Name }
     foreach ($report in @($reports | Where-Object { $_.Name -match 'dism|TiWorker|powershell|TrustedInstaller|LanguagePack|CloudExperienceHost|AppCrash' } | Sort-Object LastWriteTime -Descending | Select-Object -First 4)) {
         $wer = Join-Path $report.FullName 'Report.wer'
+        if ($UserView) { '    (user view: the contents of the crash reports are not part of this report)'; break }
         if (Test-Path -LiteralPath $wer) {
             ''
             "--- $wer"
@@ -990,7 +1048,9 @@ Invoke-Safe 'Teams bootstrapper logs' {
     $logs = @(foreach ($folder in $folders) { Get-ChildItem -LiteralPath $folder -Recurse -Depth 2 -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'teams' -and $_.Extension -in '.log', '.txt', '.json' -and $_.FullName -ne $outFile } }) | Sort-Object LastWriteTime -Descending
     if (-not $logs.Count) { '    (no Teams installer log found in ' + ($folders -join ', ') + ')' }
     foreach ($log in @($logs | Select-Object -First 15)) { '    {0}  {1} bytes  {2}' -f $log.FullName, $log.Length, $log.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss') }
+    if ($UserView -and $logs.Count) { '    (user view: the contents of the Teams installer logs are not part of this report)' }
     foreach ($log in @($logs | Select-Object -First 2)) {
+        if ($UserView) { break }
         ''
         try { Get-FileText -Path $log.FullName -Tail 120 } catch { "--- $($log.FullName) : not readable: $($_.Exception.Message)" }
     }
@@ -1072,7 +1132,7 @@ if ($script:Findings.Count) {
     Write-Host 'Automatic findings:' -ForegroundColor Cyan
     foreach ($finding in $script:Findings) {
         $color = if ($finding -like '`[ERROR`]*') { 'Red' } elseif ($finding -like '`[WARN`]*') { 'Yellow' } else { 'Gray' }
-        Write-Host "  $finding" -ForegroundColor $color
+        Write-Host "  $(Hide-OtherUsers $finding)" -ForegroundColor $color
     }
 }
 Write-Host "Done. Send this file for analysis: $outFile ($([math]::Round((Get-Item -LiteralPath $outFile).Length / 1KB)) KB)" -ForegroundColor Green
