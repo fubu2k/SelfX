@@ -36,9 +36,10 @@
 	  2.4.2    2026-11-22  fubu2k               New action D_Edge_Cache (Microsoft Edge: clear the cache)
 	  2.4.3    2026-11-22  fubu2k               New action Q_Outlook (restart classic Outlook)
 	  2.4.4    2026-11-22  fubu2k               New action Q_Device_SyncTime (synchronize the clock, Context System)
+	  2.4.5    2026-11-23  fubu2k               New action D_Outlook_AutoComplete (clear the auto-complete list of classic Outlook)
 -->
 <Actions>
-	<XML_Version>2.4.4</XML_Version>
+	<XML_Version>2.4.5</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -317,6 +318,18 @@ Do you want to continue?</Alerte_MSG>
 			<Context>User</Context>
 			<Category>Outlook</Category>
 			<Alerte_MSG>Outlook will close and then open again automatically. Unsaved work may be lost.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="D_Outlook_AutoComplete">
+			<Name>Outlook suggests wrong or outdated e-mail addresses</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>When you type a name in a new e-mail, Outlook suggests addresses that are wrong, no longer exist or belong to another person.</Explanation>
+			<Script>SelfX_Outlook_CleanAutoComplete.ps1</Script>
+			<Context>User</Context>
+			<Category>Outlook</Category>
+			<Alerte_MSG>The list of suggested e-mail addresses (auto-complete list) of Outlook will be cleared. Outlook will close and start again. Mails you are writing that are not saved as a draft may be lost. Outlook builds the list again while you send new mails. Your mailbox, contacts and profile are not changed. The new Outlook is not affected.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>

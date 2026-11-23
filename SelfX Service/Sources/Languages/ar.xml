@@ -444,6 +444,13 @@
 
 هل تريد المتابعة؟</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>يقترح Outlook عناوين بريد إلكتروني خاطئة أو قديمة</Name>
+				<Explanation>عند كتابة اسم في رسالة جديدة، يقترح Outlook عناوين خاطئة أو لم تعد موجودة أو تخص شخصًا آخر.</Explanation>
+				<Alerte_MSG>سيتم مسح قائمة عناوين البريد الإلكتروني المقترحة (قائمة الإكمال التلقائي) في Outlook. سيتم إغلاق Outlook ثم تشغيله مرة أخرى. قد تُفقد الرسائل التي تكتبها ولم تحفظها كمسودة. يعيد Outlook بناء القائمة أثناء إرسالك رسائل جديدة. لا يتم تغيير صندوق البريد وجهات الاتصال والملف الشخصي. لا يتأثر Outlook الجديد.
+
+هل تريد المتابعة؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>بدء تشغيل العميل OneDrive</Name>
 				<Explanation>OneDrive لا يعمل.</Explanation>

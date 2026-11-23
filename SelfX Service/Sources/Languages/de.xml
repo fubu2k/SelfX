@@ -526,6 +526,13 @@ Möchten Sie fortfahren?</Alerte_MSG>
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook schlägt falsche oder veraltete E-Mail-Adressen vor</Name>
+				<Explanation>Wenn Sie in einer neuen E-Mail einen Namen eintippen, schlägt Outlook Adressen vor, die falsch sind, nicht mehr existieren oder zu einer anderen Person gehören.</Explanation>
+				<Alerte_MSG>Die Liste der vorgeschlagenen E-Mail-Adressen (AutoVervollständigen-Liste) von Outlook wird geleert. Outlook wird beendet und danach neu gestartet. E-Mails, die Sie gerade schreiben und nicht als Entwurf gespeichert haben, können verloren gehen. Outlook baut die Liste neu auf, während Sie neue E-Mails senden. Ihr Postfach, Ihre Kontakte und Ihr Profil werden nicht verändert. Das neue Outlook ist nicht betroffen.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive starten</Name>
 				<Explanation>OneDrive läuft nicht.</Explanation>

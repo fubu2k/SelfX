@@ -444,6 +444,13 @@ Wilt u doorgaan?</Alerte_MSG>
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook stelt onjuiste of verouderde e-mailadressen voor</Name>
+				<Explanation>Wanneer u een naam typt in een nieuwe e-mail, stelt Outlook adressen voor die onjuist zijn, niet meer bestaan of van iemand anders zijn.</Explanation>
+				<Alerte_MSG>De lijst met voorgestelde e-mailadressen (lijst voor automatisch aanvullen) van Outlook wordt gewist. Outlook wordt gesloten en opnieuw gestart. E-mails die u aan het schrijven bent en niet als concept hebt opgeslagen, kunnen verloren gaan. Outlook bouwt de lijst opnieuw op terwijl u nieuwe e-mails verzendt. Uw postvak, contactpersonen en profiel worden niet gewijzigd. De nieuwe Outlook wordt niet beïnvloed.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>De OneDrive-client starten</Name>
 				<Explanation>OneDrive wordt niet uitgevoerd.</Explanation>

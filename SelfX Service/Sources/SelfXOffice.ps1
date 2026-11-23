@@ -1,0 +1,121 @@
+<#
+.SYNOPSIS
+    Helper functions for the Office actions: find the program of an Office app and close it in the own session.
+
+.DESCRIPTION
+    Dot-sourced by scripts in Scripts_to_run that run in the user context. Nothing is read from or changed on the
+    device when the file is loaded; the functions only read the registry and the process list and close processes of
+    the own Windows session.
+
+    Get-SelfXOfficeAppPath finds the program file of classic Outlook, Word or Excel independent of the Office
+    version, the bitness (32 or 64 bit) and the installation type (Click-to-Run or MSI). Sources, in this order:
+      1. the path of the running process (given by the caller),
+      2. the App Paths registration of the program (64 bit and 32 bit view of the registry),
+      3. InstallRoot\Path of the app under HKLM\SOFTWARE\Microsoft\Office\<version> (every version found, newest first,
+         64 bit and 32 bit view).
+    A program is never searched for in PATH or in the current directory. Every candidate is checked
+    (Test-SelfXOfficeProgramPath): rooted local path, expected file name, below Program Files (64 bit, 32 bit),
+    an existing file that is not a link. The first candidate that passes is returned; otherwise $null.
+
+    Get-SelfXOwnSessionProcess and Close-SelfXOwnSessionProcess only touch processes of the Windows session of the
+    caller, so other users on a multi-user device are not affected.
+
+.NOTES
+    Name    : SelfXOffice.ps1
+    Package : SelfX Service
+    Context : Dot-sourced by scripts in Scripts_to_run (user context); also loaded by tests
+    Version : 2.8.0
+
+    History:
+    Version  Date        Author               Change
+    -------  ----------  -------------------  ------------------------------------------------------------
+    2.8.0    2026-11-23  fubu2k               Initial version (program path independent of version and bitness, own-session processes).
+#>
+
+$Script:SelfXOfficeApps = @{
+	Outlook = @{ Exe = 'OUTLOOK.EXE'; Key = 'Outlook' }
+	Word    = @{ Exe = 'WINWORD.EXE'; Key = 'Word' }
+	Excel   = @{ Exe = 'EXCEL.EXE'; Key = 'Excel' }
+}
+
+function Get-SelfXTrustedProgramFolder {
+	# Program Files folders of this device (64 bit, 32 bit); only administrators can write there.
+	$folders = foreach ($value in $env:ProgramW6432, $env:ProgramFiles, ${env:ProgramFiles(x86)}) {
+		if ($value) { "$value".TrimEnd('\') }
+	}
+	@($folders | Select-Object -Unique)
+}
+
+function Test-SelfXOfficeProgramPath {
+	# $true when the path is a usable program file of the given name below a Program Files folder.
+	param([string]$Path, [Parameter(Mandatory = $true)][string]$ExeName)
+	$text = "$Path".Trim().Trim('"')
+	if (-not $text -or $text.Length -gt 520) { return $false }
+	if ($text -match '[\x00-\x1F"<>|*?]') { return $false }
+	if (-not [IO.Path]::IsPathRooted($text) -or $text.StartsWith('\\')) { return $false }
+	try { $full = [IO.Path]::GetFullPath($text) } catch { return $false }
+	if ([IO.Path]::GetFileName($full) -ine $ExeName) { return $false }
+	$inside = $false
+	foreach ($folder in (Get-SelfXTrustedProgramFolder)) {
+		if ($full.StartsWith($folder + '\', [StringComparison]::OrdinalIgnoreCase)) { $inside = $true }
+	}
+	if (-not $inside) { return $false }
+	$item = Get-Item -LiteralPath $full -Force -ErrorAction SilentlyContinue
+	if (-not $item -or $item.PSIsContainer) { return $false }
+	if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
+	return $true
+}
+
+function Get-SelfXOfficeAppPath {
+	# Full path of the program of the Office app, or $null when no valid one is found.
+	param(
+		[Parameter(Mandatory = $true)][ValidateSet('Outlook', 'Word', 'Excel')][string]$Application,
+		[string]$ProcessPath
+	)
+	$app = $Script:SelfXOfficeApps[$Application]
+	$candidates = New-Object System.Collections.Generic.List[string]
+	if ($ProcessPath) { $candidates.Add($ProcessPath) }
+	foreach ($root in 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths') {
+		$value = (Get-ItemProperty -LiteralPath "$root\$($app.Exe)" -ErrorAction SilentlyContinue).'(default)'
+		if ($value) { $candidates.Add("$value") }
+	}
+	foreach ($officeRoot in 'HKLM:\SOFTWARE\Microsoft\Office', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Office') {
+		$versions = @(Get-ChildItem -LiteralPath $officeRoot -ErrorAction SilentlyContinue |
+			ForEach-Object { $_.PSChildName } |
+			Where-Object { $_ -match '^\d{1,3}\.\d{1,3}$' } |
+			Sort-Object { [version]$_ } -Descending)
+		foreach ($version in $versions) {
+			$installRoot = (Get-ItemProperty -LiteralPath "$officeRoot\$version\$($app.Key)\InstallRoot" -ErrorAction SilentlyContinue).Path
+			if ($installRoot) { $candidates.Add((Join-Path "$installRoot".Trim().Trim('"') $app.Exe)) }
+		}
+	}
+	foreach ($candidate in $candidates) {
+		if (Test-SelfXOfficeProgramPath -Path $candidate -ExeName $app.Exe) { return [IO.Path]::GetFullPath($candidate.Trim().Trim('"')) }
+	}
+	return $null
+}
+
+function Get-SelfXOwnSessionProcess {
+	# Processes with the given name(s) in the Windows session of the caller.
+	param([Parameter(Mandatory = $true)][string[]]$Name)
+	$session = (Get-Process -Id $PID).SessionId
+	@(Get-Process -Name $Name -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session })
+}
+
+function Close-SelfXOwnSessionProcess {
+	# Asks the process(es) to close, waits GraceSeconds, then ends what is left and waits up to TimeoutSeconds.
+	# Returns $true when no such process of the own session is running any more.
+	param(
+		[Parameter(Mandatory = $true)][string[]]$Name,
+		[int]$GraceSeconds = 10,
+		[int]$TimeoutSeconds = 30
+	)
+	$running = @(Get-SelfXOwnSessionProcess -Name $Name)
+	if (-not $running.Count) { return $true }
+	foreach ($process in $running) { try { [void]$process.CloseMainWindow() } catch { } }
+	for ($i = 0; $i -lt $GraceSeconds -and (Get-SelfXOwnSessionProcess -Name $Name).Count; $i++) { Start-Sleep -Seconds 1 }
+	$left = @(Get-SelfXOwnSessionProcess -Name $Name)
+	if ($left.Count) { $left | Stop-Process -Force -ErrorAction Stop }
+	for ($i = 0; $i -lt $TimeoutSeconds -and (Get-SelfXOwnSessionProcess -Name $Name).Count; $i++) { Start-Sleep -Seconds 1 }
+	return (-not (Get-SelfXOwnSessionProcess -Name $Name).Count)
+}

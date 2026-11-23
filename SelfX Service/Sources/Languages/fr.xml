@@ -444,6 +444,13 @@ Voulez-vous continuer ?</Alerte_MSG>
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook suggère des adresses e-mail erronées ou obsolètes</Name>
+				<Explanation>Lorsque vous saisissez un nom dans un nouveau message, Outlook suggère des adresses incorrectes, qui n’existent plus ou qui appartiennent à une autre personne.</Explanation>
+				<Alerte_MSG>La liste des adresses e-mail suggérées (liste de saisie semi-automatique) d’Outlook va être vidée. Outlook va se fermer puis redémarrer. Les messages en cours de rédaction qui ne sont pas enregistrés comme brouillon risquent d’être perdus. Outlook reconstruit la liste au fur et à mesure que vous envoyez de nouveaux messages. Votre boîte aux lettres, vos contacts et votre profil ne sont pas modifiés. Le nouvel Outlook n’est pas concerné.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Démarrer le client OneDrive</Name>
 				<Explanation>OneDrive n’est pas en cours d’exécution.</Explanation>

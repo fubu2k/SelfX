@@ -50,7 +50,7 @@ function global:Get-Process {
 }
 function global:Stop-Process {
 	param([Parameter(ValueFromPipeline = $true)]$InputObject, [switch]$Force)
-	process { foreach ($item in @($InputObject)) { if ($item) { $global:SelfXTestCalls.Add("Stop-Process $($item.ProcessName)"); [void]$global:FakeProcesses.Remove($item) } } }
+	process { foreach ($item in @($InputObject)) { if ($item) { $global:SelfXTestCalls.Add("Stop-Process $($item.ProcessName)"); if (-not $global:StopIgnored) { [void]$global:FakeProcesses.Remove($item) } } } }
 }
 function global:Start-Process {
 	param([Parameter(Position = 0)][string]$FilePath, [Parameter(Position = 1)]$ArgumentList, [switch]$PassThru, [switch]$Wait, $WindowStyle)
@@ -263,6 +263,75 @@ try {
 	Remove-Item -LiteralPath Function:\Get-ItemProperty
 	Assert-Equal "$($run.ExitCode)|$($script:calls -contains 'Stop-Process OUTLOOK')|$(@($script:calls | Where-Object { $_ -like 'Start-Process*' }).Count)" '1|False|0' 'Outlook: unknown program path, nothing closed and no start by name'
 	$global:FakeProcesses.Clear()
+
+	# Outlook auto-complete list (SelfXOffice.ps1): program path independent of the Office version, bitness and installation type;
+	# only a file below Program Files is used; registry reads are simulated, nothing outside the sandbox is read.
+	$savedProgramFiles = @{ PF = $env:ProgramFiles; PF6432 = $env:ProgramW6432; PF86 = ${env:ProgramFiles(x86)} }
+	$global:FakeRegValues = @{}; $global:FakeRegKeys = @{}
+	function global:Get-ItemProperty {
+		param($LiteralPath, $Path, $Name, $ErrorAction)
+		if ("$LiteralPath" -like 'HKLM:*') { if ($global:FakeRegValues.ContainsKey("$LiteralPath")) { return $global:FakeRegValues["$LiteralPath"] }; return $null }
+		Microsoft.PowerShell.Management\Get-ItemProperty @PSBoundParameters
+	}
+	function global:Get-ChildItem {
+		param($LiteralPath, $Path, $Filter, [switch]$Recurse, [switch]$File, [switch]$Force, $ErrorAction)
+		if ("$LiteralPath" -like 'HKLM:*') { if ($global:FakeRegKeys.ContainsKey("$LiteralPath")) { return @($global:FakeRegKeys["$LiteralPath"] | ForEach-Object { [pscustomobject]@{ PSChildName = $_ } }) }; return @() }
+		Microsoft.PowerShell.Management\Get-ChildItem @PSBoundParameters
+	}
+	try {
+		$pf64 = Join-Path $sandbox 'PF64'; $pf86 = Join-Path $sandbox 'PF86'
+		$env:ProgramFiles = $pf64; $env:ProgramW6432 = $pf64; ${env:ProgramFiles(x86)} = $pf86
+		$out64 = Join-Path $pf64 'Microsoft Office\root\Office16\OUTLOOK.EXE'
+		$out86 = Join-Path $pf86 'Microsoft Office\root\Office16\OUTLOOK.EXE'
+		$outMsi = Join-Path $pf64 'Microsoft Office\Office15\OUTLOOK.EXE'
+		foreach ($file in $out64, $out86, $outMsi) { New-SandboxFile $file }
+		$actionScript = 'SelfX_Outlook_CleanAutoComplete.ps1'
+
+		New-FakeProcess 'OUTLOOK' $out64
+		New-FakeProcess 'olk' 'C:\Program Files\WindowsApps\Microsoft.OutlookForWindows_1_x64__8wekyb3d8bbwe\olk.exe'
+		$run = Invoke-TestScript $actionScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Stop-Process OUTLOOK;Start-Process $out64 /cleanautocompletecache" 'Auto-complete: running Outlook is closed and started with the switch'
+		Assert-Equal @($global:FakeProcesses | Where-Object ProcessName -eq 'olk').Count 1 'Auto-complete: new Outlook keeps running'
+		Assert-Equal ((Get-SandboxLog 'SelfX_Outlook_CleanAutoComplete') -match 'started with /cleanautocompletecache') $true 'Auto-complete: logged'
+		$global:FakeProcesses.Clear()
+
+		# Outlook not running, 32-bit Click-to-Run on 64-bit Windows: only the App Paths entry of the 32 bit view exists.
+		$global:FakeRegValues['HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\OUTLOOK.EXE'] = [pscustomobject]@{ '(default)' = $out86 }
+		$run = Invoke-TestScript $actionScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $out86 /cleanautocompletecache" 'Auto-complete: Outlook not running, 32-bit path from App Paths, started with the switch'
+		$global:FakeRegValues.Clear()
+
+		# MSI Office 2013 style layout: no App Paths, only InstallRoot of the version key.
+		$global:FakeRegKeys['HKLM:\SOFTWARE\Microsoft\Office'] = @('15.0', 'Common')
+		$global:FakeRegValues['HKLM:\SOFTWARE\Microsoft\Office\15.0\Outlook\InstallRoot'] = [pscustomobject]@{ Path = (Split-Path -Parent $outMsi) + '\' }
+		$run = Invoke-TestScript $actionScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $outMsi /cleanautocompletecache" 'Auto-complete: path from the Office InstallRoot of any version'
+		$global:FakeRegValues.Clear(); $global:FakeRegKeys.Clear()
+
+		# No classic Outlook found: nothing is started.
+		New-FakeProcess 'olk' 'C:\Program Files\WindowsApps\Microsoft.OutlookForWindows_1_x64__8wekyb3d8bbwe\olk.exe'
+		$run = Invoke-TestScript $actionScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '1|0' 'Auto-complete: only the new Outlook, nothing closed and nothing started'
+		Assert-Equal ((Get-SandboxLog 'SelfX_Outlook_CleanAutoComplete') -match 'Error.*Classic Outlook \(OUTLOOK\.EXE\) was not found') $true 'Auto-complete: missing classic Outlook is logged'
+		$global:FakeProcesses.Clear()
+
+		# Outlook runs from a folder outside Program Files and no valid path is registered: nothing is closed, nothing is started.
+		New-FakeProcess 'OUTLOOK' 'C:\Users\Public\OUTLOOK.EXE'
+		$run = Invoke-TestScript $actionScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '1|0' 'Auto-complete: untrusted program path, nothing closed and no start'
+		$global:FakeProcesses.Clear()
+
+		# Outlook that cannot be closed: error, no start.
+		New-FakeProcess 'OUTLOOK' $out64
+		$global:StopIgnored = $true
+		$run = Invoke-TestScript $actionScript
+		$global:StopIgnored = $false
+		Assert-Equal "$($run.ExitCode)|$(@($script:calls | Where-Object { $_ -like 'Start-Process*' }).Count)" '1|0' 'Auto-complete: Outlook that does not close, no start'
+		$global:FakeProcesses.Clear()
+	} finally {
+		$env:ProgramFiles = $savedProgramFiles.PF; $env:ProgramW6432 = $savedProgramFiles.PF6432; ${env:ProgramFiles(x86)} = $savedProgramFiles.PF86
+		Remove-Item -LiteralPath Function:\Get-ItemProperty, Function:\Get-ChildItem -ErrorAction SilentlyContinue
+	}
 
 	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'
 	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams_1_x64__8wekyb3d8bbwe\ms-teams.exe'

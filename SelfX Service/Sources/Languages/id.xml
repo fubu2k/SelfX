@@ -444,6 +444,13 @@ Apakah Anda ingin melanjutkan?</Alerte_MSG>
 
 Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook menyarankan alamat email yang salah atau usang</Name>
+				<Explanation>Saat Anda mengetik nama di email baru, Outlook menyarankan alamat yang salah, sudah tidak ada, atau milik orang lain.</Explanation>
+				<Alerte_MSG>Daftar alamat email yang disarankan (daftar pelengkapan otomatis) di Outlook akan dihapus. Outlook akan ditutup dan dimulai kembali. Email yang sedang Anda tulis dan belum disimpan sebagai draf dapat hilang. Outlook membangun kembali daftar saat Anda mengirim email baru. Kotak surat, kontak, dan profil Anda tidak diubah. Outlook baru tidak terpengaruh.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Jalankan klien OneDrive</Name>
 				<Explanation>OneDrive tidak berjalan.</Explanation>
