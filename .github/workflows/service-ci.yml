@@ -200,6 +200,23 @@ jobs:
           Add-Type -LiteralPath (Join-Path $package 'Bin\SelfXSessionStarter.dll')
           'Active sessions: ' + (([SelfXInstall.SessionStarter]::GetActiveSessionIds()) -join ', ')
 
+      - name: Delete helper of SelfXService.exe (M1) - Install.ps1 data folder tests and Test-SafeDelete.ps1 with the built Bin
+        shell: powershell
+        env:
+          SELFX_REQUIRE_BIN: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service'
+          foreach ($shell in 'powershell.exe', (Get-Command pwsh).Source) {
+            foreach ($test in 'Test-InstallBinaries.ps1', 'Test-SafeDelete.ps1') {
+              "::group::$test in $shell"
+              & $shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $package $test)
+              $code = $LASTEXITCODE
+              '::endgroup::'
+              if ($code -ne 0) { throw "$test failed in $shell (exit code $code)." }
+            }
+          }
+
       - name: SelfXWinRT.dll loads in PowerShell 7 (with the Windows SDK projection)
         shell: pwsh
         run: |
