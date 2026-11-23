@@ -170,7 +170,8 @@ try {
 		Assert-Equal ($text -match 'SelfXWinRT\.dll''') $false "$caller does not build the DLL path itself"
 	}
 	$service = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -Raw
-	Assert-Equal ($service -match 'CheckedExtensions = \{[^}]*"\.dll"') $true 'the service checks .dll files against SelfX.Files.json'
+	# Since the file check has no extension filter, an unlisted .dll is refused like any other file (Test-ServicePipe.ps1 tests the behaviour).
+	Assert-Equal (($service -match '"not listed: "') -and ($service -notmatch 'CheckedExtensions')) $true 'the service checks .dll files against SelfX.Files.json'
 }
 finally {
 	Close-Handles

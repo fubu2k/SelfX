@@ -202,9 +202,11 @@ try {
 		Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'unsupported name' "installed: the name '$bad' is refused"
 	}
 
-	# The service file check covers .exe (an unlisted program in the install folder is refused).
+	# The service file check covers every file type (an unlisted .exe, .dll, .json or .config in the install folder is refused):
+	# there is no list of checked extensions any more (behaviour tested in Test-ServicePipe.ps1).
 	$serviceSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -Raw
-	Assert-Equal ($serviceSource -match 'CheckedExtensions\s*=\s*\{[^}]*"\.exe"[^}]*\}') $true 'service: the file check covers .exe'
+	Assert-Equal ($serviceSource -match 'CheckedExtensions') $false 'service: the file check has no extension filter'
+	Assert-Equal ($serviceSource -match '"not listed: "') $true 'service: the file check reports unlisted files'
 }
 finally { if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue } }
 

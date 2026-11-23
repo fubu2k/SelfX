@@ -242,37 +242,6 @@ try {
 	Assert-Equal @(Get-ChildItem -LiteralPath $env:TEMP -Force | Where-Object { $_.Name -ne 'SelfX' }).Count 0 'Device slow: TEMP emptied'
 	Assert-Equal ((Get-SandboxLog 'SelfX_Device_DeviceSlow') -match 'TEMP: 2 item\(s\) removed') $true 'Device slow: logged'
 
-	New-FakeProcess 'EXCEL' 'C:\Office\EXCEL.EXE'
-	$run = Invoke-TestScript 'SelfX_Excel_Reboot.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Stop-Process EXCEL;Start-Process C:\Office\EXCEL.EXE' 'Excel: closed and started again'
-	$run = Invoke-TestScript 'SelfX_Excel_Reboot.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Excel: nothing to do when not running'
-
-	New-FakeProcess 'WINWORD' 'C:\Office\WINWORD.EXE'
-	New-FakeProcess '1Password' 'C:\Apps\1Password.exe'
-	New-FakeProcess 'wordpad' 'C:\Windows\wordpad.exe'
-	$run = Invoke-TestScript 'SelfX_Word_Reboot.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Stop-Process WINWORD;Start-Process C:\Office\WINWORD.EXE' 'Word: only WINWORD is closed and started again'
-	Assert-Equal @($global:FakeProcesses | Where-Object { $_.ProcessName -in '1Password', 'wordpad' }).Count 2 'Word: 1Password and WordPad keep running'
-	$global:FakeProcesses.Clear()
-
-	New-FakeProcess 'OUTLOOK' 'C:\Office\OUTLOOK.EXE'
-	New-FakeProcess 'olk' 'C:\Program Files\WindowsApps\Microsoft.OutlookForWindows_1_x64__8wekyb3d8bbwe\olk.exe'
-	$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Stop-Process OUTLOOK;Start-Process C:\Office\OUTLOOK.EXE' 'Outlook: only classic Outlook is closed and started again'
-	Assert-Equal @($global:FakeProcesses | Where-Object ProcessName -eq 'olk').Count 1 'Outlook: new Outlook keeps running'
-	$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Outlook: nothing to do when not running'
-	$global:FakeProcesses.Clear()
-
-	# Program path unknown (no path of the process, no App Paths entry): nothing is closed and nothing is started by name.
-	New-FakeProcess 'OUTLOOK' ''
-	function global:Get-ItemProperty { param($LiteralPath, $Path, $Name, $ErrorAction) $null }
-	$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
-	Remove-Item -LiteralPath Function:\Get-ItemProperty
-	Assert-Equal "$($run.ExitCode)|$($script:calls -contains 'Stop-Process OUTLOOK')|$(@($script:calls | Where-Object { $_ -like 'Start-Process*' }).Count)" '1|False|0' 'Outlook: unknown program path, nothing closed and no start by name'
-	$global:FakeProcesses.Clear()
-
 	# Outlook auto-complete list (SelfXOffice.ps1): program path independent of the Office version, bitness and installation type;
 	# only a file below Program Files is used; registry reads are simulated, nothing outside the sandbox is read.
 	$savedProgramFiles = @{ PF = $env:ProgramFiles; PF6432 = $env:ProgramW6432; PF86 = ${env:ProgramFiles(x86)} }
@@ -337,6 +306,71 @@ try {
 		$global:StopIgnored = $false
 		Assert-Equal "$($run.ExitCode)|$(@($script:calls | Where-Object { $_ -like 'Start-Process*' }).Count)" '1|0' 'Auto-complete: Outlook that does not close, no start'
 		$global:FakeProcesses.Clear()
+
+		# Restart actions (SelfX_Excel_Reboot, SelfX_Word_Reboot, SelfX_Outlook_Reboot, SelfX_Outlook_TeamsAddIn): closed and started again through
+		# Stop-SelfXOfficeApp; the program path must pass the check (below Program Files, no link).
+		$word64 = Join-Path $pf64 'Microsoft Office\root\Office16\WINWORD.EXE'
+		$excel86 = Join-Path $pf86 'Microsoft Office\root\Office16\EXCEL.EXE'
+		foreach ($file in $word64, $excel86) { New-SandboxFile $file }
+
+		New-FakeProcess 'EXCEL' $excel86
+		$run = Invoke-TestScript 'SelfX_Excel_Reboot.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Stop-Process EXCEL;Start-Process $excel86" 'Excel: closed and started again (32-bit path accepted)'
+		$run = Invoke-TestScript 'SelfX_Excel_Reboot.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Excel: nothing to do when not running'
+		$global:FakeProcesses.Clear()
+
+		New-FakeProcess 'WINWORD' $word64
+		New-FakeProcess '1Password' 'C:\Apps\1Password.exe'
+		New-FakeProcess 'wordpad' 'C:\Windows\wordpad.exe'
+		$run = Invoke-TestScript 'SelfX_Word_Reboot.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Stop-Process WINWORD;Start-Process $word64" 'Word: only WINWORD is closed and started again'
+		Assert-Equal @($global:FakeProcesses | Where-Object { $_.ProcessName -in '1Password', 'wordpad' }).Count 2 'Word: 1Password and WordPad keep running'
+		$global:FakeProcesses.Clear()
+
+		New-FakeProcess 'OUTLOOK' $out64
+		New-FakeProcess 'olk' 'C:\Program Files\WindowsApps\Microsoft.OutlookForWindows_1_x64__8wekyb3d8bbwe\olk.exe'
+		$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Stop-Process OUTLOOK;Start-Process $out64" 'Outlook: only classic Outlook is closed and started again'
+		Assert-Equal @($global:FakeProcesses | Where-Object ProcessName -eq 'olk').Count 1 'Outlook: new Outlook keeps running'
+		$run = Invoke-TestScript 'SelfX_Outlook_Reboot.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Outlook: nothing to do when not running'
+		$global:FakeProcesses.Clear()
+
+		# Process path without a usable value: the path comes from App Paths (any bitness).
+		New-FakeProcess 'WINWORD' ''
+		$global:FakeRegValues['HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\WINWORD.EXE'] = [pscustomobject]@{ '(default)' = $word64 }
+		$run = Invoke-TestScript 'SelfX_Word_Reboot.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Stop-Process WINWORD;Start-Process $word64" 'Word: path from App Paths when the process has none'
+		$global:FakeRegValues.Clear(); $global:FakeProcesses.Clear()
+
+		# Program path unknown or untrusted (outside Program Files, no registration): nothing is closed and nothing is started.
+		foreach ($case in @(@('Outlook_Reboot', 'OUTLOOK', ''), @('Outlook_Reboot', 'OUTLOOK', 'C:\Users\Public\OUTLOOK.EXE'), @('Word_Reboot', 'WINWORD', 'C:\Office\WINWORD.EXE'), @('Excel_Reboot', 'EXCEL', 'C:\Office\EXCEL.EXE'))) {
+			New-FakeProcess $case[1] $case[2]
+			$run = Invoke-TestScript "SelfX_$($case[0]).ps1"
+			Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '1|0' "$($case[0]): untrusted or unknown program path '$($case[2])', nothing closed and no start"
+			$global:FakeProcesses.Clear()
+		}
+
+		# An app that does not close: error, no start.
+		New-FakeProcess 'EXCEL' $excel86
+		$global:StopIgnored = $true
+		$run = Invoke-TestScript 'SelfX_Excel_Reboot.ps1'
+		$global:StopIgnored = $false
+		Assert-Equal "$($run.ExitCode)|$(@($script:calls | Where-Object { $_ -like 'Start-Process*' }).Count)" '1|0' 'Excel: app that does not close, no start'
+		Assert-Equal ((Get-SandboxLog 'SelfX_Excel_Reboot') -match 'Error.*Excel is still running after 15 seconds') $true 'Excel: failure logged'
+		$global:FakeProcesses.Clear()
+
+		# Teams meeting add-in: registry values are set, Outlook is restarted only if it runs.
+		New-FakeProcess 'OUTLOOK' $out64
+		$run = Invoke-TestScript 'SelfX_Outlook_TeamsAddIn.ps1'
+		Assert-Equal $run.ExitCode 0 'Outlook add-in: exit code'
+		Assert-Equal (@($script:calls | Where-Object { $_ -like 'Set-ItemProperty HKCU:*TeamsAddin.FastConnect LoadBehavior=3' }).Count) 1 'Outlook add-in: LoadBehavior 3'
+		Assert-Equal (@($script:calls | Where-Object { $_ -like 'Set-ItemProperty HKCU:*DoNotDisableAddinList TeamsAddin.FastConnect=1' }).Count) 1 'Outlook add-in: not disabled again'
+		Assert-Equal "$($script:calls[-2])|$($script:calls[-1])" "Stop-Process OUTLOOK|Start-Process $out64" 'Outlook add-in: Outlook restarted'
+		$global:FakeProcesses.Clear()
+		$run = Invoke-TestScript 'SelfX_Outlook_TeamsAddIn.ps1'
+		Assert-Equal "$($run.ExitCode)|$(@($script:calls | Where-Object { $_ -like 'Set-ItemProperty*' }).Count)|$(@($script:calls | Where-Object { $_ -like 'Stop-Process*' -or $_ -like 'Start-Process*' }).Count)" '0|2|0' 'Outlook add-in: Outlook not running, values set, no restart'
 	} finally {
 		$env:ProgramFiles = $savedProgramFiles.PF; $env:ProgramW6432 = $savedProgramFiles.PF6432; ${env:ProgramFiles(x86)} = $savedProgramFiles.PF86
 		Remove-Item -LiteralPath Function:\Get-ItemProperty, Function:\Get-ChildItem -ErrorAction SilentlyContinue
@@ -428,13 +462,6 @@ try {
 	$run = Invoke-TestScript 'SelfX_OneDrive_Run.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'OneDrive start: no second start when running'
 	$global:FakeProcesses.Clear()
-
-	New-FakeProcess 'OUTLOOK' 'C:\Office\OUTLOOK.EXE'
-	$run = Invoke-TestScript 'SelfX_Outlook_TeamsAddIn.ps1'
-	Assert-Equal $run.ExitCode 0 'Outlook add-in: exit code'
-	Assert-Equal (@($script:calls | Where-Object { $_ -like 'Set-ItemProperty HKCU:*TeamsAddin.FastConnect LoadBehavior=3' }).Count) 1 'Outlook add-in: LoadBehavior 3'
-	Assert-Equal (@($script:calls | Where-Object { $_ -like 'Set-ItemProperty HKCU:*DoNotDisableAddinList TeamsAddin.FastConnect=1' }).Count) 1 'Outlook add-in: not disabled again'
-	Assert-Equal "$($script:calls[-2])|$($script:calls[-1])" 'Stop-Process OUTLOOK|Start-Process C:\Office\OUTLOOK.EXE' 'Outlook add-in: Outlook restarted'
 
 	$run = Invoke-TestScript 'SelfX_Poste_WSReset.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls[0])" "0|Start-Process $(Join-Path $env:SystemRoot 'System32\wsreset.exe')" 'Store reset: wsreset started'

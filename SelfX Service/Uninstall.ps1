@@ -11,7 +11,8 @@
     ProgramData\SelfX are deleted without following junctions or symbolic links (a link is removed,
     never the folder it points to), because users can create links in their own Logs\Users folder.
     Device logs reports (ProgramData\SelfX\Reports) and the status cache (ProgramData\SelfX\Cache)
-    are always deleted. The HKLM Run entry of the status icon is removed. Open SelfX windows
+    are always deleted (with Logs\Users on -RemoveLogs) by the helper of SelfXService.exe, which opens every entry
+    without following links and deletes through that handle; without the helper nothing is deleted by path. The HKLM Run entry of the status icon is removed. Open SelfX windows
     and status icons of all signed-in users (powershell.exe or pwsh.exe running Self_X.ps1 or
     SelfX_Tray.ps1 from InstallFolder) are closed first, because they keep the install
     folder in use. Per-user settings and caches (HKCU\Software\SelfX,
@@ -29,7 +30,7 @@
     Name    : Uninstall.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.6.10
+    Version : 2.6.11
 
     History:
     Version  Date        Author               Change
@@ -38,6 +39,8 @@
     2.6.10   2026-11-22  fubu2k               Security: the data folders are deleted without following junctions or symbolic
                                               links (users own subfolders of Logs\Users and can create links there); a
                                               link is removed itself, never its target
+    2.6.11   2026-11-23  fubu2k               Security (M1): Reports, Cache and Logs\Users are deleted by the handle-based helper of
+                                              SelfXService.exe (no time window between link check and delete)
 #>
 
 [CmdletBinding()]
@@ -69,6 +72,19 @@ function Remove-SelfXTree
 		ForEach($child in $children) { Remove-SelfXTree -Path $child }
 	}
 	Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+}
+
+# Deletes folders as SYSTEM with the helper of SelfXService.exe (/removetree:, class SafeTree): every entry is opened once
+# without following links and deleted through that handle, so a user cannot redirect the delete with a junction between check
+# and delete. Returns $true only for exit code 0 with the marker line; there is no fallback to a delete by path.
+function Remove-SelfXTreeSafe
+{
+	param([Parameter(Mandatory = $true)][string]$Exe, [Parameter(Mandatory = $true)][string]$Path)
+	If(-not (Test-Path -LiteralPath $Exe -PathType Leaf)) { Write-Output "Not deleted (delete helper missing): $Path"; return $false }
+	$output = @(& $Exe "/removetree:$Path" 2>&1 | ForEach-Object { "$_" })
+	If(($LASTEXITCODE -eq 0) -and (@($output | Where-Object { $_ -eq 'SELFX-SAFEDELETE-OK' }).Count -eq 1)) { return $true }
+	Write-Output "Not deleted completely: $Path ($($output -join ' | '))"
+	return $false
 }
 
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -122,6 +138,17 @@ ForEach($Process in $SelfXProcesses)
 }
 If($SelfXProcesses.Count -gt 0) { Start-Sleep -Seconds 2 }
 
+# Data of the users: Reports, Cache and (with -RemoveLogs) Logs\Users are deleted by the handle-based helper while it still exists in
+# the install folder. Users can create links in their own folders there; the helper never follows them (M1).
+$SafeDeleteExe = Join-Path $InstallFolder 'SelfXService.exe'
+$DataFoldersSafe = $true
+$DataFolders = @((Join-Path $DataFolder 'Reports'), (Join-Path $DataFolder 'Cache'))
+If($RemoveLogs) { $DataFolders += (Join-Path $DataFolder 'Logs\Users') }
+ForEach($Folder in $DataFolders)
+{
+	If(-not (Remove-SelfXTreeSafe -Exe $SafeDeleteExe -Path $Folder)) { $DataFoldersSafe = $false }
+}
+
 # Other programs (e.g. an Explorer window) can still lock the folder or single files, so removal is retried
 # for up to 90 seconds.
 For($Attempt = 1; ($Attempt -le 45) -and (Test-Path -LiteralPath $InstallFolder); $Attempt++)
@@ -135,9 +162,6 @@ If((Test-Path -LiteralPath $InstallFolder) -and ($RemainingFiles.Count -eq 0))
 	# Only empty folders are left (still in use by another program): nothing of SelfX remains.
 	Write-Output "The empty folder '$InstallFolder' is still in use and remains until the next sign-out or restart."
 }
-# Reports contain user and device data; they are never kept after uninstall.
-Remove-SelfXTree -Path (Join-Path $DataFolder 'Reports')
-Remove-SelfXTree -Path (Join-Path $DataFolder 'Cache')
 
 # A service that another program still has open (e.g. the Services console) is only marked for deletion. It
 # can no longer start (its file is gone) and disappears when that program closes it, so this is no failure.
@@ -158,5 +182,11 @@ If(($RemainingFiles.Count -gt 0) -or $ServiceLeft)
 }
 Else { Write-Output 'SelfX removed.' }
 If($Transcript) { Stop-Transcript | Out-Null }
-If($RemoveLogs) { Remove-SelfXTree -Path $DataFolder }
+# What is left in ProgramData\SelfX belongs to SYSTEM and administrators only (the user folders were deleted above); the
+# link-safe delete by path is enough for it. If the helper could not delete the user data, nothing is deleted by path.
+If($RemoveLogs)
+{
+	If($DataFoldersSafe) { Remove-SelfXTree -Path $DataFolder }
+	Else { Write-Output "ProgramData\SelfX was not deleted because the user data could not be removed safely." }
+}
 exit $ExitCode

@@ -7,6 +7,8 @@
     session, retains the executable path, waits until Word has closed (at most 15 seconds) and
     starts Word again. Documents are not explicitly reopened (Word offers its document recovery);
     unsaved changes can be lost. Does not restart Windows.
+    The program path is independent of the Office version, the bitness and the installation type and is checked (SelfXOffice.ps1,
+    Stop-SelfXOfficeApp): below Program Files, no link; if no valid path is known, nothing is closed.
     Logs to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1).
     Exit 0 = Word restarted or not running; exit 1 = Word could not be closed.
 
@@ -14,13 +16,14 @@
     Name    : SelfX_Word_Reboot.ps1
     Package : SelfX Service
     Context : User
-    Version : 2.8.0
+    Version : 2.8.19
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
     2.8.0    2026-11-23  fubu2k               Program path from the closed process or from App Paths; nothing is closed when it is unknown
+    2.8.19   2026-11-23  fubu2k               Program path and restart through Stop-SelfXOfficeApp (SelfXOffice.ps1); path is checked (Program Files, no link)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -29,26 +32,17 @@ if (Test-Path -LiteralPath $SelfXLogScript) { . $SelfXLogScript; Initialize-Self
 else { function Write-SelfXLog { param($Message, $Level) } }
 trap { Write-SelfXLog "Failed: $($_.Exception.Message)" Error; break }
 
-$session = (Get-Process -Id $PID).SessionId
-$word = @(Get-Process -Name WINWORD -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session })
-if (-not $word.Count) {
+# The helper finds the program independent of the Office version and bitness and checks the path (SelfXOffice.ps1).
+$officeHelper = Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXOffice.ps1'
+if (-not (Test-Path -LiteralPath $officeHelper -PathType Leaf)) { throw 'SelfXOffice.ps1 is missing in the installation folder.' }
+. $officeHelper
+
+$result = Stop-SelfXOfficeApp -Application Word -TimeoutSeconds 15
+if (-not $result.WasRunning) {
 	Write-SelfXLog 'Word is not running; nothing to restart.'
 	exit 0
 }
-# Capture the executable path before termination removes its process metadata.
-$wordPath = $word | Where-Object { $_.Path } | Select-Object -First 1 -ExpandProperty Path
-if (-not $wordPath) {
-	# No search through the program path: the path comes from the machine-wide App Paths registration (administrators only).
-	$appPath = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\WINWORD.EXE' -ErrorAction SilentlyContinue).'(default)'
-	if ($appPath -and (Test-Path -LiteralPath $appPath.Trim('"') -PathType Leaf)) { $wordPath = $appPath.Trim('"') }
-}
-if (-not $wordPath) { throw 'The program path of Word could not be determined; Word was not closed.' }
-Write-SelfXLog "Closing $($word.Count) Word process(es) ($wordPath)."
-$word | Stop-Process -Force -ErrorAction Stop
-for ($i = 0; $i -lt 15 -and (Get-Process -Name WINWORD -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }); $i++) { Start-Sleep -Seconds 1 }
-if (Get-Process -Name WINWORD -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }) {
-	throw 'Word is still running after 15 seconds; it was not restarted.'
-}
-Start-Process -FilePath $wordPath
+Write-SelfXLog "Closed $($result.ProcessCount) Word process(es) ($($result.Path))."
+Start-Process -FilePath $result.Path
 Write-SelfXLog 'Word started again.'
 exit 0

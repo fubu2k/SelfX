@@ -5,10 +5,11 @@
     All system data and external process calls are mocked. No service is installed, no task
     is registered and no extension script is executed. Module autoloading is disabled.
 .NOTES
-    Version: 2.6.10
+    Version: 2.6.12
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial isolated health-check tests.
         2.6.10 2026-11-22  fubu2k          Test the pipe limits (connections per user, pause after an action) and the read deadline.
+        2.6.12 2026-11-23  fubu2k          Test the CSV export against formula injection (finding N7).
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -470,6 +471,27 @@ try {
     Export-SelfXSystemInfo -Items $info -Path "$temp\report.json"
     $exported = ConvertFrom-Json ([IO.File]::ReadAllText("$temp\report.json"))
     Assert-Equal $exported.Status Error 'JSON export preserves state'
+    # N7: CSV export must not hand formulas to Excel (the Wi-Fi SSID comes from outside).
+    foreach ($start in '=', '+', '-', '@', "`t", "`r", "`n") {
+        Assert-Equal (ConvertTo-SelfXCsvSafeValue ($start + 'HYPERLINK("http://x.example","a")')) ("'" + $start + 'HYPERLINK("http://x.example","a")') "CSV safe: value starting with '$([int][char]$start)' gets an apostrophe"
+    }
+    Assert-Equal (ConvertTo-SelfXCsvSafeValue 'Office-WLAN') 'Office-WLAN' 'CSV safe: normal text unchanged (dash inside is fine)'
+    Assert-Equal (ConvertTo-SelfXCsvSafeValue "'=1+1") "'=1+1" 'CSV safe: value that already starts with an apostrophe is not doubled'
+    Assert-Equal (ConvertTo-SelfXCsvSafeValue '') '' 'CSV safe: empty text unchanged'
+    Assert-Equal ($null -eq (ConvertTo-SelfXCsvSafeValue $null)) $true 'CSV safe: null stays null'
+    Assert-Equal (ConvertTo-SelfXCsvSafeValue 42) 42 'CSV safe: non-text values are not touched'
+    $csvItems = @(
+        [pscustomobject]@{ Category = '=cmd|calc'; Property = (Get-SelfXInfoText 'WiFi_SSID'); Value = '=HYPERLINK("http://x.example","Click")'; Status = '' },
+        [pscustomobject]@{ Category = 'Network'; Property = 'Gateway'; Value = '192.168.0.1'; Status = 'OK' }
+    )
+    Export-SelfXSystemInfo -Items $csvItems -Path "$temp\report.csv"
+    $csvRows = @(Import-Csv -Path "$temp\report.csv" -Encoding UTF8)
+    Assert-Equal $csvRows.Count 2 'CSV export: row count'
+    Assert-Equal $csvRows[0].Value "'=HYPERLINK(`"http://x.example`",`"Click`")" 'CSV export: formula in value is neutralized'
+    Assert-Equal $csvRows[0].Category "'=cmd|calc" 'CSV export: formula in category is neutralized'
+    Assert-Equal $csvRows[1].Value '192.168.0.1' 'CSV export: normal value unchanged'
+    Assert-Equal $csvItems[0].Value '=HYPERLINK("http://x.example","Click")' 'CSV export: original items are not modified'
+    Assert-Equal ((Get-Content -Raw -Path "$temp\report.csv") -match '(?m)^"?[=+@-]') $false 'CSV export: no line starts with a formula character'
     & {
         function Invoke-SelfXSafe { param([scriptblock]$ScriptBlock) $null }
         function Get-SelfXDsregStatus { @{} }

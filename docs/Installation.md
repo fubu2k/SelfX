@@ -198,7 +198,7 @@ Für Intune-Win32-Apps:
 | Installationsbefehl | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` |
 | Deinstallationsbefehl | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` |
 | Installationsverhalten | System |
-| Erkennung | Benutzerdefiniertes Skript `Detection.ps1`. Setzen Sie `$ExpectedVersion` auf die `Tool_Version` des Releases. |
+| Erkennung | Benutzerdefiniertes Skript: die von `tools\New-SelfXIntuneWin.ps1` erzeugte Datei `build\SelfX-Service-<Version>.Detection.ps1` (nicht die Kopie im Repository). Setzen Sie `$ExpectedVersion` im Repository auf die `Tool_Version` des Releases, bevor Sie bauen. |
 | Voraussetzung (Requirement) | Windows 11 25H2 (Build 26200) oder neuer, siehe [Windows-Version und PowerShell 7](#windows-version-und-powershell-7-ab-280). |
 | Abhängigkeit | App „PowerShell 7“ (Automatisch installieren: Ja), siehe denselben Abschnitt. |
 
@@ -207,6 +207,11 @@ Erhöhen Sie bei jedem Release `Tool_Version` (`Sources\Tool_Config.xml`) und
 findet Intune die alte Version, hält das Gerät für aktuell und installiert das neue
 Paket nicht. `tools\New-SelfXIntuneWin.ps1` bricht ab, wenn die beiden Werte
 voneinander abweichen.
+
+Das Paketierungsskript schreibt neben das `.intunewin` die Datei `SelfX-Service-<Version>.Detection.ps1`: `Detection.ps1` mit dem Digest der
+Dateiliste `SelfX.Files.json` des Pakets. Laden Sie **diese** Datei als Erkennungsskript hoch. Sie erkennt SelfX nur, wenn
+Version **und** Dateiliste passen; ein Zwischenstand mit geänderten Dateien, aber unveränderter `Tool_Version`, wird so
+ebenfalls als Update verteilt (Befund M2). Die Kopie im Repository enthält nur einen Platzhalter und prüft nur die Version.
 
 **Release über GitHub (Tag, nur Entwurf).** Statt das Paket von Hand zu bauen, kann der Workflow
 `.github/workflows/release.yml` es erzeugen: `Tool_Version` und `Detection.ps1` anpassen, mergen, dann den Tag
@@ -323,8 +328,8 @@ Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Install.log`.
   ```
 
   Ältere Geräte erhalten die App dann nicht (statt eines Installationsfehlers).
-- **Erkennung.** `Detection.ps1` bleibt wie bisher: Es erkennt SelfX nur bei exakt
-  passender `Tool_Version` und registriertem Dienst. Für PowerShell 7 gilt die
+- **Erkennung.** `Detection.ps1` erkennt SelfX nur bei exakt
+  passender `Tool_Version`, registriertem Dienst und passender Dateiliste (siehe oben). Für PowerShell 7 gilt die
   Erkennungsregel der PowerShell-App, nicht `Detection.ps1`.
 
 ### Ticket-Zuordnung: Werte per Intune setzen (ab 2.8.6)
@@ -541,7 +546,7 @@ nachpflegen, sondern das Paket neu bauen. `Install.ps1` prüft vor der Installat
 und keine Datei ohne Eintrag im Paket liegt; sonst bricht die Installation ab, bevor etwas geändert wird (die
 bestehende Installation bleibt unberührt). Fehlt die Liste (älteres Paket), gibt es nur eine Warnung. Die Liste wird
 auch im Installationsordner abgelegt: Der Dienst prüft vor **jedem** Start (Aktion, Health-Check, Hintergrundprüfung),
-dass alle gelisteten Dateien unverändert sind, dass kein Skript und keine XML-Datei ohne Eintrag im Installationsordner
+dass alle gelisteten Dateien unverändert sind, dass keine Datei (gleich welchen Typs) ohne Eintrag im Installationsordner
 liegt und dass keine Verknüpfung (Junction, Symlink) im Weg ist. Bei einer Abweichung startet er nichts, schreibt
 Ereignis 4005 und die Einzelheiten ins SelfX-Protokoll; die Installation selbst ist nie betroffen (Autopilot läuft
 unverändert). Fehlt die Liste im Installationsordner, gilt das ebenfalls als Abweichung. Für den ersten Rollout kann
