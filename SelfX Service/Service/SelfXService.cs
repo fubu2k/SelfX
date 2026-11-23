@@ -46,14 +46,15 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.4
+    Version : 2.8.5
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
     2.8.4    2026-11-23  fubu2k               The file check also covers .dll files: a DLL below the install folder (WinRT) must be listed in
-                                              SelfX.Files.json too (WinRT load check)
+    2.8.5    2026-11-23  fubu2k               The file check also covers .exe files: SelfXService.exe and SelfX.exe are compared by SHA256,
+                                              an unlisted .exe below the install folder is refused
 */
 
 using System;
@@ -972,7 +973,9 @@ namespace SelfX
         static readonly Regex Sha256Pattern = new Regex(@"^[0-9A-Fa-f]{64}\z", RegexOptions.CultureInvariant);
         // Files that PowerShell or the service load as code or configuration; none of them may exist without an entry in the list.
         // .dll: the WinRT libraries that PowerShell 7 loads (WinRT\*.dll); an unlisted DLL would be code in a SYSTEM process.
-        static readonly string[] CheckedExtensions = { ".ps1", ".psm1", ".psd1", ".ps1xml", ".xml", ".dll" };
+        // .exe: SelfXService.exe and SelfX.exe are listed; an unlisted program in the install folder is refused. A replaced
+        // SelfXService.exe skips its own check: this detects accidents (broken update); the protection against an attacker is the folder ACL and App Control.
+        static readonly string[] CheckedExtensions = { ".ps1", ".psm1", ".psd1", ".ps1xml", ".xml", ".dll", ".exe" };
 
         /// <summary>
         /// Compare the installed scripts and configuration with SelfX.Files.json (written at package build, copied

@@ -517,7 +517,7 @@ Use the package in Intune as follows:
 
 `tools\New-SelfXIntuneWin.ps1` writes the file `SelfX.Files.json` into the package when it is built. It contains the
 SHA256 of every file that `Install.ps1` copies to the installation folder (everything below `Sources`, `Uninstall.ps1`
-and the DLLs of `Bin\WinRT` and `Bin\Audio`, which are installed as `WinRT\...` and `Audio\...`). The list is created again at every package build: if you change a script or a configuration you do
+the DLLs of `Bin\WinRT` and `Bin\Audio`, which are installed as `WinRT\...` and `Audio\...`, and `SelfXService.exe` and `SelfX.exe` from `Bin`). The list is created again at every package build: if you change a script or a configuration you do
 not maintain anything by hand, you build the package again. Before the installation `Install.ps1` checks that every
 file matches the list and that no file without an entry is in the package; otherwise the installation stops before
 anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
@@ -539,6 +539,15 @@ administrator rights can change the DLL and the list together. While a SelfX pro
 loaded library was before); `Install.ps1` closes the status icon before the update.
 
 The library `Audio\SelfXAudio.dll` (action "No sound on this PC", user context, Core Audio) is checked the same way: `Sources\SelfXAudio.ps1` compares it with the entry `Audio/SelfXAudio.dll` in `SelfX.Files.json` before loading, keeps the file open and loads nothing if the file, the folder `Audio` (exactly one file, no link, no sub folder) or the list differ. `tools\Build-SelfXBinaries.ps1` builds it into `Bin\Audio` and includes it in `SelfX.Binaries.json` and in the AppLocker hash rules; `Install.ps1` checks and installs it like the WinRT library. The action needs no administrator or SYSTEM rights and only changes mute state and volume of the signed-in user's default playback device.
+
+The list also contains the two programs `SelfXService.exe` and `SelfX.exe`. The package build fails when one is missing. After
+copying, `Install.ps1` compares the **installed folder** with the list once more (every file, both programs); a difference
+stops the installation before the service is created. The service checks both programs by SHA256 before every start and
+refuses every `.exe` in the installation folder that is not in the list. Limit: a replaced `SelfXService.exe` skips its own
+check. The check therefore detects accidents (a broken or half update, file errors) and a replaced `SelfX.exe` (it starts at
+every sign-in of all users), not an attacker with administrator rights. The protection against that comes from the folder
+rights (users: read and execute only) and App Control (see below). The check hashes the two programs (about 37 MB each) at
+every start of a SYSTEM action.
 
 ## App Control for Business (WDAC), optional
 

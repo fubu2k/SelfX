@@ -43,13 +43,13 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.5.0
+    Version : 1.6.1
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-04  Wolfgang Baeck       Initial version
-    1.6.0    2026-11-23  fubu2k               SelfX.Files.json also lists the DLLs of Bin\WinRT (installed into WinRT) for the load check
+    1.6.1    2026-11-23  fubu2k               SelfX.Files.json also lists SelfXService.exe and SelfX.exe from Bin
 #>
 
 [CmdletBinding()]
@@ -150,6 +150,12 @@ function New-SelfXFileManifest {
             if ($item.DirectoryName -ne (Get-Item -LiteralPath $audio).FullName) { throw "Unexpected sub folder in Bin\Audio: $($item.DirectoryName)" }
             $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'Audio/' + $item.Name })
         }
+    }
+    # The two programs (service and starter) come from Bin and are installed next to the scripts; a missing one is an error.
+    foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
+        $programPath = Join-Path $Stage "Bin\$program"
+        if (-not (Test-Path -LiteralPath $programPath -PathType Leaf)) { throw "Bin\$program is missing in the package." }
+        $entries.Add([pscustomobject]@{ Path = $programPath; Name = $program })
     }
     $files = [ordered]@{}
     foreach ($entry in ($entries | Sort-Object Name)) {

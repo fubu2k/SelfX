@@ -37,14 +37,14 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.8.0
+    Version : 2.8.3
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
-    2.8.2    2026-11-23  fubu2k               SelfX.Files.json also lists the DLLs of Bin\WinRT (installed into WinRT); the package check
-                                              covers them (WinRT load check)
+    2.8.3    2026-11-23  fubu2k               SelfX.Files.json also lists SelfXService.exe and SelfX.exe; after copying, the installed
+                                              folder is checked against the list again
 #>
 
 [CmdletBinding()]
@@ -158,8 +158,9 @@ function Test-SelfXPrebuiltBinaries {
 }
 
 function Test-SelfXFileManifest {
-	# Checks the package against SelfX.Files.json: every file below Sources, Uninstall.ps1 and the DLLs of
-	# Bin\WinRT (listed as WinRT/<name>) must be listed and unchanged, and nothing may be in the package that is not listed. Returns the number of checked files, or $null
+	# Checks the package against SelfX.Files.json: every file below Sources, Uninstall.ps1, the DLLs of Bin\WinRT and
+	# Bin\Audio (listed as WinRT/<name> and Audio/<name>) and the programs SelfXService.exe and SelfX.exe (from Bin) must be
+	# listed and unchanged, and nothing may be in the package that is not listed. Returns the number of checked files, or $null
 	# when the package has no such file (older package: warning only). A mismatch throws before anything is installed.
 	param([Parameter(Mandatory = $true)][string]$PackageFolder)
 	$ManifestPath = Join-Path $PackageFolder 'SelfX.Files.json'
@@ -168,12 +169,13 @@ function Test-SelfXFileManifest {
 	Catch { throw "SelfX.Files.json is not valid JSON: $($_.Exception.Message)" }
 	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '1' -or -not $Manifest.Files) { throw 'SelfX.Files.json has an unknown format.' }
 	$Sources = Join-Path $PackageFolder 'Sources'
+	$ProgramNames = @('SelfXService.exe', 'SelfX.exe')
 	$Listed = @{}
 	ForEach($Property in @($Manifest.Files.PSObject.Properties))
 	{
 		$Relative = "$($Property.Name)"
 		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "SelfX.Files.json lists an unsupported name '$Relative'." }
-		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf($Relative -like 'WinRT/*' -or $Relative -like 'Audio/*') { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
+		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf(($Relative -like 'WinRT/*') -or ($Relative -like 'Audio/*') -or ($ProgramNames -contains $Relative)) { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in SelfX.Files.json but missing in the package." }
 		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Property.Value)") { throw "$Relative does not match its SHA256 in SelfX.Files.json." }
 		$Listed[$Relative.ToLowerInvariant()] = $true
@@ -204,7 +206,34 @@ function Test-SelfXFileManifest {
 		}
 	}
 	If(-not $Listed.ContainsKey('uninstall.ps1')) { throw 'Uninstall.ps1 is not listed in SelfX.Files.json.' }
+	ForEach($Program in $ProgramNames) { If(-not $Listed.ContainsKey($Program.ToLowerInvariant())) { throw "$Program is not listed in SelfX.Files.json." } }
 	Return $Listed.Count
+}
+
+function Test-SelfXInstalledFiles {
+	# After copying: compares the installed folder with the SelfX.Files.json copied into it. This closes
+	# the gap between the check of the package and the copy: every listed file (scripts, configuration, WinRT libraries,
+	# SelfXService.exe, SelfX.exe) must exist in the install folder with the listed SHA256. Throws at the first difference.
+	# Returns the number of checked files.
+	param([Parameter(Mandatory = $true)][string]$InstallFolder)
+	$Root = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
+	$ManifestPath = Join-Path $Root 'SelfX.Files.json'
+	If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw 'SelfX.Files.json is missing in the installation folder.' }
+	Try { $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json }
+	Catch { throw "SelfX.Files.json in the installation folder is not valid JSON: $($_.Exception.Message)" }
+	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '1' -or -not $Manifest.Files) { throw 'SelfX.Files.json in the installation folder has an unknown format.' }
+	$Count = 0
+	ForEach($Property in @($Manifest.Files.PSObject.Properties))
+	{
+		$Relative = "$($Property.Name)"
+		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "SelfX.Files.json lists an unsupported name '$Relative'." }
+		$File = [IO.Path]::GetFullPath((Join-Path $Root $Relative.Replace('/', '\')))
+		If(-not $File.StartsWith($Root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "$Relative points outside the installation folder." }
+		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is missing in the installation folder." }
+		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Property.Value)") { throw "$Relative in the installation folder does not match its SHA256 in SelfX.Files.json." }
+		$Count++
+	}
+	Return $Count
 }
 
 function Get-SelfXServicePrivileges {
@@ -384,6 +413,12 @@ Try
 	Write-Output 'Installed the audio library from Bin.'
 	If(-not (Test-Path -LiteralPath $ServiceExe)) { throw 'SelfXService.exe is missing after the installation step.' }
 	If(-not (Test-Path -LiteralPath $LauncherExe)) { throw 'SelfX.exe is missing after the installation step.' }
+	# The installed folder must equal the checked package (scripts, configuration, WinRT libraries, both programs).
+	If($null -ne $CheckedFiles)
+	{
+		$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder
+		Write-Output "Installed files checked against SelfX.Files.json ($InstalledFiles files)."
+	}
 
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null
 	& sc.exe description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null
