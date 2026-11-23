@@ -88,6 +88,7 @@
     2.8.14   2026-11-23  fubu2k               Link actions (Context Link): confirmation, then an https address from Tool_Config.xml (Link_<Name>) is opened; not shown when the setting is empty, Off or invalid
     2.8.15   2026-11-23  fubu2k               Quick scan action: own result texts (no threats / Defender found threats, exit code 2)
     2.8.16   2026-11-23  fubu2k               Copilot Chat: the copied text is kept out of the clipboard history and the cloud clipboard (CopilotClipboard.ps1)
+    2.8.17   2026-11-23  fubu2k               Copilot Chat: optional clearing of the clipboard after a time (Copilot_Clear_Clipboard, Copilot_Clear_Clipboard_Seconds)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -319,6 +320,11 @@ $Copilot_Available = ((Get-SelfXText "Copilot_Enabled" "False") -eq 'True') -and
 If(((Get-SelfXText "Copilot_Enabled" "False") -eq 'True') -and -not $Copilot_Available) { Write-SelfXLog 'Copilot_Url is not a valid https address: the Copilot Chat button is not shown.' 'Warning' }
 $Copilot_Audience = If((Get-SelfXText "Copilot_Audience" "User") -eq 'Admin') { 'Admin' } Else { 'User' }
 $Copilot_AppNames = (Get-SelfXText "Copilot_Include_AppNames" "True") -eq 'True'
+# Optional: empty the clipboard after a time, if the text of this copy is still on it (off by default)
+$Copilot_ClearClipboard = (Get-SelfXText "Copilot_Clear_Clipboard" "False") -eq 'True'
+$Copilot_ClearSetting = ConvertTo-SelfXClipboardClearSeconds (Get-SelfXText "Copilot_Clear_Clipboard_Seconds" "180")
+$Copilot_ClearSeconds = $Copilot_ClearSetting.Seconds
+If($Copilot_ClearClipboard -and -not $Copilot_ClearSetting.Valid) { Write-SelfXLog 'Copilot_Clear_Clipboard_Seconds is not a whole number from 30 to 600: 180 seconds are used.' 'Warning' }
 $Run_Solution_Text = Get-SelfXString 'Warning_Click_Run_Solution_Text'
 $Run_Explanation_Text = Get-SelfXString 'Warning_Click_Run_Explanation_Text'
 $Service_Running_Text = Get-SelfXString 'Service_Running_Text'
@@ -2205,12 +2211,29 @@ Function Show-SelfXCopilotDialog
 			Try
 				{
 					# The text is kept out of the clipboard history (Win+V) and the cloud clipboard (CopilotClipboard.ps1).
-					$KeptOut = Set-SelfXClipboardPrivate -Text $Text
+					# With Copilot_Clear_Clipboard the copy carries a marker so that only this copy is emptied later.
+					$Marker = If($Copilot_ClearClipboard) { [guid]::NewGuid().ToString('N') } Else { '' }
+					$KeptOut = Set-SelfXClipboardPrivate -Text $Text -Marker $Marker
 					# Only the address from the configuration (checked when SelfX started) is opened.
 					If(-not (Test-SelfXCopilotUrl $Copilot_Url)) { Throw 'Copilot_Url' }
 					Start-Process $Copilot_Url
 					Write-SelfXLog "Copilot Chat opened (host $(Get-SelfXCopilotUrlHost $Copilot_Url)), prompt copied to the clipboard (kept out of the clipboard history: $KeptOut)"
 					$Result.Text = Get-SelfXString 'Copilot_Opened_Text'
+					If($Copilot_ClearClipboard)
+						{
+							If($KeptOut)
+								{
+									# The timer runs in the window process: it also fires when this dialog has been closed.
+									$Script:SelfXCopilotResult = $Result
+									Start-SelfXClipboardClearTimer -Marker $Marker -Seconds $Copilot_ClearSeconds -OnDone {
+										param($ClearResult)
+										If($ClearResult -eq 'Cleared' -and $Script:SelfXCopilotResult -and $Script:SelfXCopilotResult.Dispatcher.CheckAccess() -and $Script:SelfXCopilotResult.IsVisible)
+											{ $Script:SelfXCopilotResult.Text = Get-SelfXString 'Copilot_Cleared_Text' }
+									}
+									$Result.Text = (Get-SelfXString 'Copilot_Opened_Text') + ' ' + (Get-SelfXString 'Copilot_Clear_Text' $Copilot_ClearSeconds)
+								}
+							Else { Write-SelfXLog 'Clipboard: the text was copied without the marker (plain text), it is not emptied automatically.' 'Warning' }
+						}
 				}
 			Catch { $Result.Text = Get-SelfXString 'Copilot_Error_Text' $_.Exception.Message }
 			$Result.Visibility = 'Visible'

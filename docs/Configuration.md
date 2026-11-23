@@ -537,6 +537,33 @@ Text ist auf 6000 Zeichen begrenzt.
 | `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://copilot.cloud.microsoft`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
 | `Copilot_Audience` | `User` (Standard): einfache Antworten für Nutzer. `Admin`: technische Antworten für IT-Personal. |
 | `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: Die Zeile der Firmen-Apps im Gerätestatus bleibt, aber ohne Einzelheiten, also ohne App-Namen und ohne Fehlercodes. |
+| `Copilot_Clear_Clipboard` | `False` (Standard) oder `True`: SelfX leert die Zwischenablage nach `Copilot_Clear_Clipboard_Seconds`, aber nur, wenn der kopierte Text noch darin steht. Siehe [Zwischenablage leeren](#zwischenablage-leeren). |
+| `Copilot_Clear_Clipboard_Seconds` | Ganze Zahl von 30 bis 600, Standard `180`. Ein anderer Wert wird durch 180 ersetzt, das Protokoll nennt den Grund. |
+
+**Zwischenablage leeren (optional, `Copilot_Clear_Clipboard`):** Ist die Einstellung
+`True`, startet SelfX beim Kopieren einen Zeitgeber (Standard 180 Sekunden, 30 bis 600).
+Der Dialog nennt die Zeit. Nach Ablauf leert SelfX die Zwischenablage, aber nur, wenn
+der Text dieses Kopiervorgangs noch darin steht. Dazu trägt der Text eine zufällige
+Kennung (eigenes Format, nur dafür); SelfX liest weder den Text noch anderen Inhalt der
+Zwischenablage. Hat der Nutzer in der Zwischenzeit etwas anderes kopiert, ändert SelfX
+nichts. Ist die Zwischenablage kurz von einem anderen Programm belegt, versucht SelfX es
+noch bis zu viermal. Danach steht eine Warnung im Protokoll. Das Protokoll nennt nur das
+Ergebnis (`Cleared`, `Changed`, `Error`), nie den Text.
+
+Grenzen, die man kennen sollte:
+- Es gibt keine Möglichkeit zu erkennen, ob der Nutzer den Text eingefügt hat. Die Zeit
+  muss für Anmeldung und MFA bei Copilot Chat reichen; deshalb 180 Sekunden.
+- Der Zeitgeber läuft im SelfX-Fenster. Schließt der Nutzer SelfX früher, bleibt der Text
+  in der Zwischenablage. SelfX leert beim Schließen nicht, weil der Nutzer ihn dann
+  vielleicht noch nicht eingefügt hat.
+- Nach dem Leeren zeigt der Dialog (wenn noch offen) einen Hinweis. *Kopieren und
+  Copilot öffnen* kopiert den Text erneut (und öffnet Copilot Chat noch einmal).
+- Der Verlauf der Zwischenablage (Win+V) wird nicht geleert; der Text kommt dort gar nicht
+  erst hinein (siehe oben). Das ersetzt keine DLP-Lösung.
+- Ist der Text nur als einfacher Text kopiert worden (Rückfall, Warnung im Protokoll),
+  leert SelfX ihn nicht.
+- Die neuen Texte (`Copilot_Clear_Text`, `Copilot_Cleared_Text`) gibt es in Deutsch und
+  Englisch; andere Sprachen zeigen Englisch.
 
 **Anweisungstexte anpassen:** Die Anweisung an Copilot (so soll geantwortet werden) steht
 in den Sprachdateien unter `Copilot_Prompt_User` (für Nutzer) und `Copilot_Prompt_Admin`

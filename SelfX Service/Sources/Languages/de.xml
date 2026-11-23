@@ -199,6 +199,8 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX kopiert den Text und öffnet {0}. Sie fügen den Text dort ein und senden ihn selbst ab. SelfX sendet nichts.</Copilot_Target_Text>
 		<Copilot_Open_Button>Kopieren und Copilot öffnen</Copilot_Open_Button>
 		<Copilot_Opened_Text>Der Text liegt in der Zwischenablage und Copilot Chat wurde geöffnet. Fügen Sie ihn dort ein (Strg+V) und senden Sie ihn ab.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Die Zwischenablage wird in {0} Sekunden geleert, wenn Sie bis dahin nichts anderes kopieren. Fügen Sie den Text vorher ein.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Die Zwischenablage wurde geleert. Um den Text erneut zu kopieren, wählen Sie „Kopieren und Copilot öffnen“.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Der Text konnte nicht vorbereitet werden: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Schreiben Sie keine Namen, Passwörter oder Kundendaten in die Beschreibung. Copilot kann sich irren: Führen Sie keine Befehle aus, die Sie nicht verstehen.</Copilot_Warning_Text>
 		<Copilot_Prompt_User><![CDATA[
