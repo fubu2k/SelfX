@@ -1065,6 +1065,11 @@ namespace SelfX
                 FindUnlistedFiles(new DirectoryInfo(root), root, expected, problems);
                 return problems.Count == 0;
             }
+            catch (JsonException)
+            {
+                problems.Add("file list: invalid JSON");
+                return false;
+            }
             catch (Exception ex)
             {
                 // Fail closed: when the list or the files cannot be read, nothing is started.
@@ -1109,7 +1114,7 @@ namespace SelfX
             List<string> problems;
             if (VerifyInstalledFiles(installRoot, out problems)) return true;
             bool audit = false;
-            bool settingTrusted = !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
+            bool settingTrusted = !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.StartsWith("check failed:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
             if (settingTrusted) audit = string.Equals(ReadToolConfigValue("Service_FileCheck"), "Audit", StringComparison.OrdinalIgnoreCase);
             Log("Installed files do not match " + FileListName + " (" + string.Join("; ", problems.GetRange(0, Math.Min(5, problems.Count))) + "); '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
             SecurityEvent(EventFilesChanged, audit ? EventLogEntryType.Warning : EventLogEntryType.Error,
