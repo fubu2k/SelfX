@@ -14,7 +14,7 @@
     Name    : Test-FileManifest.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.1
+    Version : 2.8.18
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -22,6 +22,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.1    2026-11-23  fubu2k               Initial version (security review finding N4).
     2.8.2    2026-11-23  fubu2k               Also the DLLs of Bin\WinRT (WinRT load check).
+    2.8.18   2026-11-23  fubu2k               Also Bin\Audio\SelfXAudio.dll (audio library).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -65,6 +66,9 @@ try {
 	New-Item -ItemType Directory -Path (Join-Path $pristine 'Bin\WinRT') -Force | Out-Null
 	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\WinRT\SelfXWinRT.dll'), [byte[]](1, 2, 3, 4))
 	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\WinRT\Microsoft.Windows.SDK.NET.dll'), [byte[]](5, 6, 7, 8))
+	# Stand-in for Bin\Audio\SelfXAudio.dll (audio library of the action "No sound").
+	New-Item -ItemType Directory -Path (Join-Path $pristine 'Bin\Audio') -Force | Out-Null
+	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\Audio\SelfXAudio.dll'), [byte[]](9, 10, 11, 12))
 	$expectedCount = @(Get-ChildItem -LiteralPath $pristine -Recurse -File).Count
 
 	# The generator lists every installed file and the check accepts the result.
@@ -81,6 +85,8 @@ try {
 		Assert-Equal ($null -ne $manifest.Files.$name) $true "manifest lists $name"
 	}
 	Assert-Equal $manifest.Files.'WinRT/SelfXWinRT.dll' (Get-FileHash -LiteralPath (Join-Path $pristine 'Bin\WinRT\SelfXWinRT.dll') -Algorithm SHA256).Hash 'manifest: SHA256 of the WinRT library'
+	Assert-Equal ($null -ne $manifest.Files.'Audio/SelfXAudio.dll') $true 'manifest lists Audio/SelfXAudio.dll'
+	Assert-Equal $manifest.Files.'Audio/SelfXAudio.dll' (Get-FileHash -LiteralPath (Join-Path $pristine 'Bin\Audio\SelfXAudio.dll') -Algorithm SHA256).Hash 'manifest: SHA256 of the audio library'
 	# SelfX.Files.json is in the package folder, not in Sources: it must not count as an extra file.
 	Assert-Equal (Test-SelfXFileManifest -PackageFolder $pristine) ($count) 'check: the unchanged package is accepted'
 
@@ -98,6 +104,12 @@ try {
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' 'check: a missing file is refused'
 	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Bin\WinRT\SelfXWinRT.dll') -Value 'x'
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'WinRT/SelfXWinRT.dll does not match its SHA256' 'check: a changed WinRT library is refused'
+	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Bin\Audio\SelfXAudio.dll') -Value 'x'
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'Audio/SelfXAudio.dll does not match its SHA256' 'check: a changed audio library is refused'
+	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'Bin\Audio\Extra.dll') -Value 'x'
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'Audio/Extra.dll is in the package but not listed' 'check: an extra audio file is refused'
+	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Bin\Audio\SelfXAudio.dll')
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' 'check: a missing audio library is refused'
 	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'Bin\WinRT\Extra.dll') -Value 'x'
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'WinRT/Extra.dll is in the package but not listed' 'check: an extra WinRT library is refused'
 	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Bin\WinRT\Microsoft.Windows.SDK.NET.dll')

@@ -631,6 +631,13 @@ Continuare?</Alerte_MSG>
 
 Continuare?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Nessun audio su questo PC</Name>
+				<Explanation>Dagli altoparlanti o dalle cuffie non esce audio, anche se prima funzionava tutto. L’audio potrebbe essere disattivato (muto) o impostato molto basso.</Explanation>
+				<Alerte_MSG>SelfX riattiva l’audio del dispositivo di riproduzione attuale (altoparlanti o cuffie). Se è disattivato, l’audio viene attivato; se il volume è inferiore al 30 %, viene portato al 30 %. Un volume più alto resta invariato. Altri dispositivi, il microfono e i driver non vengono modificati.
+
+Continuare?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Raccogli i log del dispositivo e inviali al supporto via e-mail</Name>
 			</Action>

@@ -631,6 +631,13 @@ SelfX 不会删除或更改任何文件。如果 Defender 发现威胁，会按�
 
 是否要继续？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>此电脑没有声音</Name>
+				<Explanation>扬声器或耳机没有声音，但之前一切正常。声音可能已关闭（静音）或调得很低。</Explanation>
+				<Alerte_MSG>SelfX 会重新打开当前播放设备（扬声器或耳机）的声音。如果已静音，则打开声音；如果音量低于 30 %，则提高到 30 %。更高的音量保持不变。其他设备、麦克风和驱动程序不会被更改。
+
+是否要继续？</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>收集设备日志并通过电子邮件发送给支持人员</Name>
 			</Action>

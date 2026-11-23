@@ -517,7 +517,7 @@ Use the package in Intune as follows:
 
 `tools\New-SelfXIntuneWin.ps1` writes the file `SelfX.Files.json` into the package when it is built. It contains the
 SHA256 of every file that `Install.ps1` copies to the installation folder (everything below `Sources`, `Uninstall.ps1`
-and the DLLs of `Bin\WinRT`, which are installed as `WinRT\...`). The list is created again at every package build: if you change a script or a configuration you do
+and the DLLs of `Bin\WinRT` and `Bin\Audio`, which are installed as `WinRT\...` and `Audio\...`). The list is created again at every package build: if you change a script or a configuration you do
 not maintain anything by hand, you build the package again. Before the installation `Install.ps1` checks that every
 file matches the list and that no file without an entry is in the package; otherwise the installation stops before
 anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
@@ -537,6 +537,8 @@ the update action reports the interface as not available; the reason is in the S
 among the files that are refused without an entry in the list. The check is no replacement for a signature: whoever has
 administrator rights can change the DLL and the list together. While a SelfX process runs the DLLs are locked (as the
 loaded library was before); `Install.ps1` closes the status icon before the update.
+
+The library `Audio\SelfXAudio.dll` (action "No sound on this PC", user context, Core Audio) is checked the same way: `Sources\SelfXAudio.ps1` compares it with the entry `Audio/SelfXAudio.dll` in `SelfX.Files.json` before loading, keeps the file open and loads nothing if the file, the folder `Audio` (exactly one file, no link, no sub folder) or the list differ. `tools\Build-SelfXBinaries.ps1` builds it into `Bin\Audio` and includes it in `SelfX.Binaries.json` and in the AppLocker hash rules; `Install.ps1` checks and installs it like the WinRT library. The action needs no administrator or SYSTEM rights and only changes mute state and volume of the signed-in user's default playback device.
 
 ## App Control for Business (WDAC), optional
 

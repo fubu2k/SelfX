@@ -31,7 +31,7 @@
     Name    : Build-SelfXBinaries.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 2.7.0
+    Version : 2.8.18
     Exit code: 0 = built, an exception otherwise
 
     History:
@@ -40,6 +40,7 @@
     2.6.11   2026-11-22  fubu2k               Initial version (security review finding F9).
     2.7.0    2026-11-22  fubu2k               Builds with the .NET SDK 10 (dotnet publish, self-contained); manifest
                                               format 2.
+    2.8.18   2026-11-23  fubu2k               Also builds Bin\Audio\SelfXAudio.dll (Service\SelfXAudio.cs)
 #>
 
 [CmdletBinding()]
@@ -62,6 +63,8 @@ $Programs = [ordered]@{
     'Service/SelfXSessionStarter.cs' = @{ Project = 'SelfXSessionStarter'; Output = 'SelfXSessionStarter.dll' }
     # Library for PowerShell 7 (WinRT projection). All its DLLs go into Bin\WinRT and are listed one by one in the manifest.
     'Service/SelfXWinRT.cs'          = @{ Project = 'SelfXWinRT';          Folder = 'WinRT'; Output = 'SelfXWinRT.dll' }
+    # Library for PowerShell 7 (Core Audio, action "No sound"). No dependencies: Bin\Audio holds only SelfXAudio.dll.
+    'Service/SelfXAudio.cs'          = @{ Project = 'SelfXAudio';          Folder = 'Audio'; Output = 'SelfXAudio.dll' }
 }
 
 # The .NET SDK 10 is required: another major version would build other files than the ones that were tested.

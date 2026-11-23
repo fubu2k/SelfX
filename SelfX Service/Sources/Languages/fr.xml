@@ -631,6 +631,13 @@ Voulez-vous continuer ?</Alerte_MSG>
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Pas de son sur ce PC</Name>
+				<Explanation>Aucun son ne sort des haut-parleurs ou du casque, alors que tout fonctionnait avant. Le son est peut-être coupé (muet) ou réglé très bas.</Explanation>
+				<Alerte_MSG>SelfX réactive le son de votre périphérique de lecture actuel (haut-parleurs ou casque). S’il est en sourdine, le son est activé ; si le volume est inférieur à 30 %, il est relevé à 30 %. Un volume plus élevé reste inchangé. Les autres périphériques, le microphone et les pilotes ne sont pas modifiés.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Collecter les journaux de l’appareil et les envoyer au support par e-mail</Name>
 			</Action>
