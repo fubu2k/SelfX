@@ -24,6 +24,9 @@
 	  OtherSessions  Only for Context System. Block = a normal user cannot start the action while another user has an
 	                 active session on the device (restart, network, disk check, ...). Elevated administrators are not
 	                 restricted. Default: no restriction. Set it on every entry of the same script (Test-Catalog.ps1 checks this).
+	  Requires       Optional. DomainJoined = the action is shown only on a domain or hybrid joined device (hidden when the device is
+	                 clearly not joined; if the state cannot be read it stays visible). Only a User action should use it; the script
+	                 must check the requirement itself (Test-Catalog.ps1 allows only this value).
 	  Post_Action    Optional. MailReport = after a successful System action the GUI attaches the newest report of the user
 	                 (ProgramData\SelfX\Reports\<user SID>) to a new e-mail to Support_Mail (Outlook, otherwise mail app + Explorer).
 	                 The first System action with MailReport is also offered as "Send logs to support" in System information.
@@ -34,9 +37,10 @@
 	  Version  Date        Author               Change
 	  1.0.0    2022-10-04  Damien Van Robaeys   Initial version
 	  2.4.10   2026-11-23  fubu2k               New action D_Device_NoSound (unmute the default playback device, minimum volume 30 %, SelfXAudio.dll, Context User)
+	  2.4.11   2026-11-23  fubu2k               New optional field Requires (DomainJoined); D_Device_GpUpdate is hidden on devices that are not domain / hybrid joined
 -->
 <Actions>
-	<XML_Version>2.4.10</XML_Version>
+	<XML_Version>2.4.11</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -744,6 +748,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Settings of your company, such as network drives, printers or security rules, do not arrive or are out of date. The action asks Windows to apply the group policies again. It only works on devices that are joined to a domain (also hybrid joined devices).</Explanation>
 			<Script>SelfX_Device_GpUpdate.ps1</Script>
 			<Context>User</Context>
+			<Requires>DomainJoined</Requires>
 			<Category>Device</Category>
 			<Alerte_MSG>Windows checks and applies the group policies of your company again. This can take a few minutes. You are not signed out and Windows does not restart; a setting that needs a restart or a new sign-in takes effect after the next one. If your device is not joined to a domain, the action ends with the exit code 3 and changes nothing.
 
