@@ -541,7 +541,7 @@ nachpflegen, sondern das Paket neu bauen. `Install.ps1` prüft vor der Installat
 und keine Datei ohne Eintrag im Paket liegt; sonst bricht die Installation ab, bevor etwas geändert wird (die
 bestehende Installation bleibt unberührt). Fehlt die Liste (älteres Paket), gibt es nur eine Warnung. Die Liste wird
 auch im Installationsordner abgelegt: Der Dienst prüft vor **jedem** Start (Aktion, Health-Check, Hintergrundprüfung),
-dass alle gelisteten Dateien unverändert sind, dass kein Skript und keine XML-Datei ohne Eintrag im Installationsordner
+dass alle gelisteten Dateien unverändert sind, dass keine Datei (gleich welchen Typs) ohne Eintrag im Installationsordner
 liegt und dass keine Verknüpfung (Junction, Symlink) im Weg ist. Bei einer Abweichung startet er nichts, schreibt
 Ereignis 4005 und die Einzelheiten ins SelfX-Protokoll; die Installation selbst ist nie betroffen (Autopilot läuft
 unverändert). Fehlt die Liste im Installationsordner, gilt das ebenfalls als Abweichung. Für den ersten Rollout kann

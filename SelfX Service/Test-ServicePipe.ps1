@@ -22,7 +22,7 @@
     Name    : Test-ServicePipe.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.5
+    Version : 2.8.20
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -30,6 +30,8 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.11   2026-11-22  fubu2k               Initial version.
     2.8.5    2026-11-23  fubu2k               The file list check covers .exe: changed and unlisted programs are refused.
+    2.8.20   2026-11-23  fubu2k               N1: configuration and catalog are checked first, a cut-off is noted. N2: every file type in the install
+                                              folder must be listed. N3: rights check of PowerShell 7 for all identities, owner and parent folders.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -56,19 +58,27 @@ $source = Join-Path $PSScriptRoot 'Service\SelfXService.cs'
 Add-SelfXServiceType -Path $source
 
 # --- PowerShell 7 must not be replaceable by normal users: the service checks the rights before every start ---
-$protectionMethod = [SelfX.SelfXService].GetMethod('IsPowerShellProtected', [Reflection.BindingFlags]'NonPublic,Static')
+# The test calls the check behind IsPowerShellProtected with a stop folder (so the rights of %TEMP% and the user profile
+# do not count) and with its own account added to the trusted identities (so that it runs without administrator rights).
+$protectionMethod = [SelfX.SelfXService].GetMethod('IsPathChainProtected', [Reflection.BindingFlags]'NonPublic,Static')
 Assert-True ($null -ne $protectionMethod) 'The service has the rights check for PowerShell 7'
+Assert-True ($null -ne [SelfX.SelfXService].GetMethod('IsPowerShellProtected', [Reflection.BindingFlags]'NonPublic,Static')) 'The service still has IsPowerShellProtected (used before every start)'
+$currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$defaultTrusted = [string[]]@('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')
+$testTrusted = [string[]]($defaultTrusted + $currentSid)
+$tempFolder = [IO.Path]::GetTempPath().TrimEnd('\')
+function Test-ProtectionResult([string]$Path, [string[]]$Trusted = $testTrusted) {
+	$arguments = [object[]]@($Path, $tempFolder, $Trusted, $null)
+	return [bool]$protectionMethod.Invoke($null, $arguments)
+}
 $fakeFolder = Join-Path ([IO.Path]::GetTempPath()) ('SelfXPwshTest_' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fakeFolder -Force | Out-Null
 $fakeExe = Join-Path $fakeFolder 'pwsh.exe'
 Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'System32\cmd.exe') -Destination $fakeExe
-$currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-function Test-ProtectionResult([string]$Path) {
-	$arguments = [object[]]@($Path, $null)
-	return [bool]$protectionMethod.Invoke($null, $arguments)
-}
 & icacls.exe $fakeFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' "*$($currentSid):(OI)(CI)F" | Out-Null
 Assert-True (Test-ProtectionResult $fakeExe) 'Folder for administrators only: protected'
+# N3: every identity outside SYSTEM, Administrators and TrustedInstaller counts as normal users, also the account that owns the folder.
+Assert-True (-not (Test-ProtectionResult $fakeExe $defaultTrusted)) 'N3: an account outside the trusted identities with full control (and as owner) is refused'
 & icacls.exe $fakeFolder /grant '*S-1-5-32-545:(OI)(CI)M' | Out-Null
 Assert-True (-not (Test-ProtectionResult $fakeExe)) 'Users can modify the folder: not protected (nothing is started)'
 & icacls.exe $fakeFolder /remove:g '*S-1-5-32-545' | Out-Null
@@ -77,8 +87,26 @@ Assert-True (-not (Test-ProtectionResult $fakeExe)) 'Everyone can write: not pro
 & icacls.exe $fakeFolder /remove:g '*S-1-1-0' | Out-Null
 & icacls.exe $fakeFolder /grant '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 Assert-True (Test-ProtectionResult $fakeExe) 'Users can read and run: protected'
+# CREATOR OWNER rules that only apply to child items (inherit only, as in Program Files) say nothing about the folder itself.
+& icacls.exe $fakeFolder /grant '*S-1-3-0:(OI)(CI)(IO)F' | Out-Null
+Assert-True (Test-ProtectionResult $fakeExe) 'N3: CREATOR OWNER rule for child items only (inherit only): protected'
+& icacls.exe $fakeFolder /remove:g '*S-1-3-0' | Out-Null
 Assert-True (-not (Test-ProtectionResult (Join-Path $fakeFolder 'missing.exe'))) 'Rights cannot be read: not protected (fail closed)'
-Remove-Item -LiteralPath $fakeFolder -Recurse -Force -ErrorAction SilentlyContinue
+# N3: the folders above pwsh.exe count too: a normal user who may delete items in a parent folder could replace the folder below it.
+$fakeParent = Join-Path ([IO.Path]::GetTempPath()) ('SelfXPwshParent_' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $fakeParent -Force | Out-Null
+& icacls.exe $fakeParent /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' "*$($currentSid):(OI)(CI)F" | Out-Null
+$fakeInner = Join-Path $fakeParent 'Inner'
+New-Item -ItemType Directory -Path $fakeInner -Force | Out-Null
+$fakeInnerExe = Join-Path $fakeInner 'pwsh.exe'
+Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'System32\cmd.exe') -Destination $fakeInnerExe
+Assert-True (Test-ProtectionResult $fakeInnerExe) 'N3: parent folder for administrators only: protected'
+& icacls.exe $fakeParent /grant '*S-1-5-32-545:(DC)' | Out-Null
+Assert-True (-not (Test-ProtectionResult $fakeInnerExe)) 'N3: Users may delete items in the parent folder: not protected'
+& icacls.exe $fakeParent /remove:g '*S-1-5-32-545' | Out-Null
+& icacls.exe $fakeParent /grant '*S-1-5-32-545:(RX)' '*S-1-5-11:(AD)' | Out-Null
+Assert-True (Test-ProtectionResult $fakeInnerExe) 'N3: Users may only read and create folders in the parent folder: protected'
+Remove-Item -LiteralPath $fakeFolder, $fakeParent -Recurse -Force -ErrorAction SilentlyContinue
 
 # --- N4: the service checks the installed files against SelfX.Files.json before every start ---
 $verifyMethod = [SelfX.SelfXService].GetMethod('VerifyInstalledFiles', [Reflection.BindingFlags]'NonPublic,Static')
@@ -161,6 +189,58 @@ if ($verifyMethod) {
 	Assert-True ((-not $result.Ok) -and $result.Problems -match 'link: ') "N4: a junction is refused ($($result.Problems))"
 	(Get-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run')).Delete()
 	Remove-Item -LiteralPath $elsewhere, $fileRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# --- N1/N2: Tool_Config.xml and the catalog are checked first; every file type in the install folder must be listed ---
+if ($verifyMethod) {
+	$checkRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFilesTest2_' + [guid]::NewGuid().ToString('N'))
+	New-Item -ItemType Directory -Path (Join-Path $checkRoot 'Scripts_to_run') -Force | Out-Null
+	function Write-CheckList([string]$Root) {
+		$files = [ordered]@{}
+		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Name -ne 'SelfX.Files.json' }) {
+			$files[$file.FullName.Substring($Root.Length + 1).Replace('\', '/')] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+		}
+		$json = [ordered]@{ ManifestVersion = 1; ToolVersion = '9.9.9'; Files = $files } | ConvertTo-Json -Depth 4
+		[IO.File]::WriteAllText((Join-Path $Root 'SelfX.Files.json'), $json, (New-Object Text.UTF8Encoding($false)))
+	}
+	function Test-CheckList([string]$Root) {
+		$arguments = [object[]]@($Root, $null)
+		$ok = [bool]$verifyMethod.Invoke($null, $arguments)
+		return [pscustomobject]@{ Ok = $ok; Problems = @($arguments[1]) }
+	}
+	Set-Content -LiteralPath (Join-Path $checkRoot 'Tool_Config.xml') -Value '<GUI_Config />'
+	Set-Content -LiteralPath (Join-Path $checkRoot 'Issues_List.xml') -Value '<Issues />'
+	Set-Content -LiteralPath (Join-Path $checkRoot 'Logo.png') -Value 'image'
+	Write-CheckList $checkRoot
+	$result = Test-CheckList $checkRoot
+	Assert-True $result.Ok "N2: a list of all files (also images) is accepted ($($result.Problems -join '; '))"
+	# N2: any file type next to the checked ones is reported, also in a sub folder and in the folder of the libraries.
+	foreach ($name in 'Extra.config', 'Extra.json', 'Extra.cmd', 'Extra.bat', 'Extra.vbs', 'Extra.psc1', 'Extra.dll.config', 'Extra.exe.manifest', 'Scripts_to_run\Extra.json') {
+		Set-Content -LiteralPath (Join-Path $checkRoot $name) -Value 'planted'
+		$result = Test-CheckList $checkRoot
+		$expected = 'not listed: ' + $name.Replace('\', '/')
+		Assert-True ((-not $result.Ok) -and ($result.Problems -contains $expected)) "N2: an unlisted file '$name' is refused ($($result.Problems -join '; '))"
+		Remove-Item -LiteralPath (Join-Path $checkRoot $name)
+	}
+	Assert-True (Test-CheckList $checkRoot).Ok 'N2: accepted again after the planted files are removed (the list itself is not reported)'
+	# N1: Tool_Config.xml and the catalog come first although 25 other files are wrong, and the cut-off is noted.
+	foreach ($index in 1..25) { Set-Content -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) -Value 'Write-Output 1' }
+	Write-CheckList $checkRoot
+	foreach ($index in 1..25) { Add-Content -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) -Value 'Write-Output 2' }
+	Add-Content -LiteralPath (Join-Path $checkRoot 'Tool_Config.xml') -Value '<!-- changed -->'
+	Add-Content -LiteralPath (Join-Path $checkRoot 'Issues_List.xml') -Value '<!-- changed -->'
+	$result = Test-CheckList $checkRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems[0] -eq 'changed: Tool_Config.xml' -and $result.Problems[1] -eq 'changed: Issues_List.xml') "N1: Tool_Config.xml and Issues_List.xml are reported first ($($result.Problems[0..2] -join '; '))"
+	Assert-True ($result.Problems.Count -eq 21 -and $result.Problems[20] -eq 'check stopped: more problems may exist') "N1: the cut-off at 20 problems is noted as the last entry ($($result.Problems.Count) entries)"
+	# Exactly 20 problems and nothing more: no cut-off entry.
+	foreach ($index in 1..25) { Remove-Item -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) }
+	Write-CheckList $checkRoot
+	foreach ($index in 1..18) { Set-Content -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) -Value 'x' }
+	Write-CheckList $checkRoot
+	foreach ($index in 1..18) { Add-Content -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) -Value 'y' }
+	$result = Test-CheckList $checkRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems.Count -eq 20 -and ($result.Problems -notcontains 'check stopped: more problems may exist')) "N1: 20 problems (the changed Tool_Config.xml, Issues_List.xml and 18 files) are complete, no cut-off entry ($($result.Problems.Count) entries)"
+	Remove-Item -LiteralPath $checkRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 $pipeName = 'SelfX.Test.' + [guid]::NewGuid().ToString('N')
