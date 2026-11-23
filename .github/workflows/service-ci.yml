@@ -231,7 +231,6 @@ jobs:
           foreach ($bad in -1, 101, 1000) {
             try { [void][SelfX.SelfXAudio]::Restore($bad); throw "Minimum volume $bad was accepted." }
             catch [System.ArgumentException] { "Refused minimum volume $bad." }
-            catch [System.ArgumentOutOfRangeException] { "Refused minimum volume $bad." }
             catch { if ($_.Exception.InnerException -is [System.ArgumentException]) { "Refused minimum volume $bad." } else { throw } }
           }
           # The runner has no playback device: the call must end with a clear result or exception, never hang or crash.
