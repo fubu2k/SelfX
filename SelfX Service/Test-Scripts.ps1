@@ -274,7 +274,7 @@ try {
 		Microsoft.PowerShell.Management\Get-ItemProperty @PSBoundParameters
 	}
 	function global:Get-ChildItem {
-		param($LiteralPath, $Path, $Filter, $Recurse, $File, $Force, $ErrorAction)
+		param($LiteralPath, $Path, $Filter, [switch]$Recurse, [switch]$File, [switch]$Force, $ErrorAction)
 		if ("$LiteralPath" -like 'HKLM:*') { if ($global:FakeRegKeys.ContainsKey("$LiteralPath")) { return @($global:FakeRegKeys["$LiteralPath"] | ForEach-Object { [pscustomobject]@{ PSChildName = $_ } }) }; return @() }
 		Microsoft.PowerShell.Management\Get-ChildItem @PSBoundParameters
 	}
