@@ -46,7 +46,7 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.20
+    Version : 2.8.21
 
     History:
     Version  Date        Author               Change
@@ -61,6 +61,11 @@ Notes:
                                               (log, event 4005; Service_FileCheck=Audit is then ignored). N2: a file of any type without an entry
                                               in the list is refused. N3: the rights check of PowerShell 7 accepts only SYSTEM, Administrators and
                                               TrustedInstaller as writers, also for the folders above pwsh.exe up to the drive root
+    2.8.21   2026-11-23  fubu2k               N5: an unexpected exception while a request is processed is logged (type and cleaned message) and answered
+                                              with the fixed text "ERROR Internal error" (no details; the client shows Error, not a timeout).
+                                              N6: every PowerShell child (RUN, HEALTH, background) is put into a job object with
+                                              KILL_ON_JOB_CLOSE; when the service stops, the whole process tree is ended, so an update or
+                                              uninstall finds no SYSTEM process that still holds files. No new action starts while stopping.
 */
 
 using System;
@@ -184,6 +189,8 @@ namespace SelfX
         readonly string pipeName;
         readonly object logLock = new object();
         readonly SemaphoreSlim runLock = new SemaphoreSlim(1, 1);
+        // Job object of the PowerShell children (N6); created in StartListening, ended in StopListening.
+        volatile ChildJob childJob;
         // Serializes all health runs, because each of them writes the status cache.
         readonly SemaphoreSlim healthLock = new SemaphoreSlim(1, 1);
         readonly ManualResetEvent stopEvent = new ManualResetEvent(false);
@@ -307,6 +314,11 @@ namespace SelfX
             {
                 try { Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)); } catch { }
             }
+            childJob = ChildJob.Create();
+            if (childJob == null)
+            {
+                Log("Warning: the job object for the action processes could not be created (error " + Marshal.GetLastWin32Error() + "); running actions will not end with the service.");
+            }
             listener = new Thread(ListenLoop);
             listener.IsBackground = true;
             listener.Name = "SelfXPipeListener";
@@ -325,11 +337,28 @@ namespace SelfX
         {
             stopping = true;
             stopEvent.Set();
-            // A running background collection is only reading; stop it with the service.
+            // N6: end every running PowerShell child with its descendants (RUN, HEALTH and background), so that an update or
+            // an uninstall does not find a SYSTEM process that still holds files. New starts are refused (stopping).
+            ChildJob job = childJob;
+            childJob = null;
+            if (job != null)
+            {
+                job.Terminate();
+            }
+            // A running background collection is only reading; stop it with the service (fallback without a job).
             int pid = backgroundProcessId;
             if (pid != 0)
             {
                 KillProcessTree(pid);
+            }
+            // The thread of an ended action releases the run slot right after the process ended.
+            if (runLock.Wait(3000))
+            {
+                runLock.Release();
+            }
+            else
+            {
+                Log("An action was still running 3 s after the service stop was requested.");
             }
             // Unblock WaitForConnection.
             try
@@ -663,7 +692,18 @@ namespace SelfX
                     long callerSession = -1;
                     try { uint sessionId; if (GetNamedPipeClientSessionId(pipe.SafePipeHandle, out sessionId)) callerSession = sessionId; } catch { }
 
-                    string response = ProcessRequest(request, user, callerSid, callerIsAdmin, callerSession);
+                    string response;
+                    try
+                    {
+                        response = ProcessRequest(request, user, callerSid, callerIsAdmin, callerSession);
+                    }
+                    catch (Exception ex)
+                    {
+                        // N5: the client gets a fixed answer without details (instead of waiting for a timeout);
+                        // the log has the type and the cleaned message, never the request content.
+                        Log("Request error (" + CleanLogText(user) + "): " + ex.GetType().Name + ": " + CleanLogText(ex.Message));
+                        response = "ERROR Internal error";
+                    }
                     // A client that does not read the answer must not block this thread.
                     if (WriteResponse(pipe, response, ResponseWriteTimeoutMs))
                     {
@@ -1248,6 +1288,11 @@ namespace SelfX
         /// </summary>
         string RunScript(string scriptPath, string scriptName, int timeoutSeconds, string user, bool health = false, string healthFilter = "", string callerSid = null, bool background = false, bool callerIsAdmin = false)
         {
+            // N6: no new process while the service stops (it would outlive the job object that was just ended).
+            if (stopping)
+            {
+                return "ERROR Service is stopping";
+            }
             // PowerShell 7 at its fixed machine-wide location (no PATH search, no user-writable folder). A missing
             // installation fails the action with a clear text instead of running anything else.
             if (health && !dataFolderSafe)
@@ -1335,6 +1380,7 @@ namespace SelfX
                 process.OutputDataReceived += collect;
                 process.ErrorDataReceived += collect;
                 process.Start();
+                AttachToJob(process, scriptName);
                 if (background)
                 {
                     backgroundProcessId = process.Id;
@@ -1688,6 +1734,140 @@ namespace SelfX
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Job object for the PowerShell children of the service (N6). The job ends all its processes when it is
+        /// terminated or when its last handle is closed (KILL_ON_JOB_CLOSE, also if the service process itself dies).
+        /// Processes started by a child join the job automatically. The job has no name (nothing to open or squat).
+        /// A child that spawns a process before it is added to the job is a small gap: pwsh needs far longer for its
+        /// start than this call; the timeout path and the taskkill fallback still cover that case.
+        /// </summary>
+        internal sealed class ChildJob
+        {
+            const int JobObjectExtendedLimitInformationClass = 9;
+            const uint JobObjectLimitKillOnJobClose = 0x00002000;
+
+            [StructLayout(LayoutKind.Sequential)]
+            struct IoCounters
+            {
+                public ulong ReadOperationCount;
+                public ulong WriteOperationCount;
+                public ulong OtherOperationCount;
+                public ulong ReadTransferCount;
+                public ulong WriteTransferCount;
+                public ulong OtherTransferCount;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            struct BasicLimitInformation
+            {
+                public long PerProcessUserTimeLimit;
+                public long PerJobUserTimeLimit;
+                public uint LimitFlags;
+                public UIntPtr MinimumWorkingSetSize;
+                public UIntPtr MaximumWorkingSetSize;
+                public uint ActiveProcessLimit;
+                public UIntPtr Affinity;
+                public uint PriorityClass;
+                public uint SchedulingClass;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            struct ExtendedLimitInformation
+            {
+                public BasicLimitInformation BasicLimitInformation;
+                public IoCounters IoInfo;
+                public UIntPtr ProcessMemoryLimit;
+                public UIntPtr JobMemoryLimit;
+                public UIntPtr PeakProcessMemoryUsed;
+                public UIntPtr PeakJobMemoryUsed;
+            }
+
+            [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+            static extern IntPtr CreateJobObjectW(IntPtr attributes, string name);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool SetInformationJobObject(IntPtr job, int infoClass, IntPtr info, uint infoLength);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool TerminateJobObject(IntPtr job, uint exitCode);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool CloseHandle(IntPtr handle);
+
+            readonly object sync = new object();
+            IntPtr handle;
+
+            ChildJob(IntPtr jobHandle) { handle = jobHandle; }
+
+            /// <summary>
+            /// Create the job with KILL_ON_JOB_CLOSE. Returns null when Windows refuses (the caller logs it and goes on
+            /// without the job, as before).
+            /// </summary>
+            public static ChildJob Create()
+            {
+                IntPtr job = CreateJobObjectW(IntPtr.Zero, null);
+                if (job == IntPtr.Zero) return null;
+                ExtendedLimitInformation limits = new ExtendedLimitInformation();
+                limits.BasicLimitInformation.LimitFlags = JobObjectLimitKillOnJobClose;
+                int length = Marshal.SizeOf(typeof(ExtendedLimitInformation));
+                IntPtr buffer = Marshal.AllocHGlobal(length);
+                try
+                {
+                    Marshal.StructureToPtr(limits, buffer, false);
+                    if (!SetInformationJobObject(job, JobObjectExtendedLimitInformationClass, buffer, (uint)length))
+                    {
+                        CloseHandle(job);
+                        return null;
+                    }
+                }
+                finally { Marshal.FreeHGlobal(buffer); }
+                return new ChildJob(job);
+            }
+
+            /// <summary>
+            /// Put a started process into the job. False when the job is already ended or Windows refuses.
+            /// </summary>
+            public bool Add(Process process)
+            {
+                lock (sync)
+                {
+                    if (handle == IntPtr.Zero) return false;
+                    try { return AssignProcessToJobObject(handle, process.Handle); }
+                    catch (InvalidOperationException) { return false; }
+                }
+            }
+
+            /// <summary>
+            /// End all processes of the job at once and close the handle. Safe to call more than once.
+            /// </summary>
+            public void Terminate()
+            {
+                lock (sync)
+                {
+                    if (handle == IntPtr.Zero) return;
+                    TerminateJobObject(handle, 1);
+                    CloseHandle(handle);
+                    handle = IntPtr.Zero;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Put a started child into the job object. While the service is stopping, a child that cannot be added is ended
+        /// at once; otherwise the failure is logged and the child runs as before (timeout handling still applies).
+        /// </summary>
+        void AttachToJob(Process process, string scriptName)
+        {
+            ChildJob job = childJob;
+            if (job != null && job.Add(process)) return;
+            if (stopping)
+            {
+                KillProcessTree(process.Id);
+                Log("'" + scriptName + "' was ended because the service is stopping.");
+                return;
+            }
+            Log("Warning: '" + scriptName + "' is not in the job object; it would keep running if the service stopped.");
         }
 
         /// <summary>

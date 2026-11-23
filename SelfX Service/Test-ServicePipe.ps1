@@ -32,6 +32,8 @@
     2.8.5    2026-11-23  fubu2k               The file list check covers .exe: changed and unlisted programs are refused.
     2.8.20   2026-11-23  fubu2k               N1: configuration and catalog are checked first, a cut-off is noted. N2: every file type in the install
                                               folder must be listed. N3: rights check of PowerShell 7 for all identities and parent folders.
+    2.8.21   2026-11-23  fubu2k               N5 (pass 2): unexpected exceptions in a request are answered with a fixed text. N6: the job object ends a
+                                              child process and its descendants; nothing is added after it has ended.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -336,6 +338,53 @@ Remove-Item -LiteralPath $oldOther -Force
 [void]$reportService.CleanupReports()
 Assert-True (-not (Test-Path -LiteralPath $sidOld)) 'Reports: an empty SID folder is removed'
 Assert-True (Test-Path -LiteralPath $sidNew) 'Reports: the folder with a recent report stays'
+
+# --- N5 (pass 2): an unexpected exception while a request is processed gets the fixed answer, not a timeout ---
+Assert-True ($sourceText -match 'response = "ERROR Internal error";') 'N5: the service answers an unexpected exception with the fixed text ERROR Internal error'
+Assert-True ($sourceText -notmatch 'ERROR Internal error"\s*\+') 'N5: the fixed answer carries no exception details'
+
+# --- N6: the job object ends the child process and its descendants (KILL_ON_JOB_CLOSE) ---
+$jobType = [SelfX.SelfXService].GetNestedType('ChildJob', [Reflection.BindingFlags]'NonPublic,Public')
+Assert-True ($null -ne $jobType) 'N6: the service has the job object class ChildJob'
+if ($null -ne $jobType) {
+	$job = $jobType.GetMethod('Create', [Reflection.BindingFlags]'Public,Static').Invoke($null, @())
+	Assert-True ($null -ne $job) 'N6: the job object can be created'
+	if ($null -ne $job) {
+		$pwshPath = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+		$pidFile = Join-Path ([IO.Path]::GetTempPath()) ('SelfXJobTest_' + [guid]::NewGuid().ToString('N') + '.txt')
+		# The child waits one second (it is in the job by then), starts a grandchild and writes its ID.
+		$childScript = "Start-Sleep -Seconds 1; `$p = Start-Process -FilePath ping.exe -ArgumentList '-n','120','127.0.0.1' -WindowStyle Hidden -PassThru; Set-Content -LiteralPath '$pidFile' -Value `$p.Id; Start-Sleep -Seconds 120"
+		$startInfo = New-Object Diagnostics.ProcessStartInfo($pwshPath, "-NoLogo -NoProfile -NonInteractive -Command `"$childScript`"")
+		$startInfo.UseShellExecute = $false
+		$startInfo.CreateNoWindow = $true
+		$child = [Diagnostics.Process]::Start($startInfo)
+		$grandchildId = 0
+		try {
+			$added = $jobType.GetMethod('Add').Invoke($job, @($child))
+			Assert-True ($added -eq $true) 'N6: a started process is added to the job'
+			for ($i = 0; $i -lt 40 -and -not (Test-Path -LiteralPath $pidFile); $i++) { Start-Sleep -Milliseconds 500 }
+			if (Test-Path -LiteralPath $pidFile) { $grandchildId = [int](Get-Content -LiteralPath $pidFile -Raw).Trim() }
+			Assert-True ($grandchildId -gt 0) 'N6: the test child started a grandchild process'
+			$jobType.GetMethod('Terminate').Invoke($job, @()) | Out-Null
+			Assert-True ($child.WaitForExit(5000)) 'N6: Terminate ends the child process'
+			if ($grandchildId -gt 0) {
+				Start-Sleep -Milliseconds 500
+				Assert-True ($null -eq (Get-Process -Id $grandchildId -ErrorAction SilentlyContinue)) 'N6: Terminate also ends the grandchild process'
+			}
+			# After the end nothing is added any more (the caller then ends such a process itself).
+			$late = [Diagnostics.Process]::Start((New-Object Diagnostics.ProcessStartInfo($pwshPath, '-NoLogo -NoProfile -Command Start-Sleep -Seconds 30')))
+			try { Assert-True ($jobType.GetMethod('Add').Invoke($job, @($late)) -eq $false) 'N6: a process is not added after the job ended' }
+			finally { try { $late.Kill() } catch { } }
+			$jobType.GetMethod('Terminate').Invoke($job, @()) | Out-Null
+			Assert-True $true 'N6: Terminate can be called twice'
+		}
+		finally {
+			try { if (-not $child.HasExited) { $child.Kill() } } catch { }
+			if ($grandchildId -gt 0) { Stop-Process -Id $grandchildId -Force -ErrorAction SilentlyContinue }
+			Remove-Item -LiteralPath $pidFile -Force -ErrorAction SilentlyContinue
+		}
+	}
+}
 
 $service = New-Object SelfX.SelfXService($pipeName, $logDirectory)
 $silent = New-Object System.Collections.Generic.List[object]

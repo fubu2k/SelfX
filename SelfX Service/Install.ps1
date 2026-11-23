@@ -37,7 +37,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.8.4
+    Version : 2.8.5
 
     History:
     Version  Date        Author               Change
@@ -47,6 +47,8 @@
                                               folder is checked against the list again
     2.8.4    2026-11-23  fubu2k               Security (M1): the data folder is cleaned by the delete helper of SelfXService.exe (handle-based, no
                                               time window between link check and delete); the Bin check runs before the data folder is prepared
+    2.8.5    2026-11-23  fubu2k               Security (N4): SelfXSessionStarter.dll is read once, compared with the hash verified at the start and
+                                              loaded from these bytes (no time between check and load in the Intune staging folder)
 #>
 
 [CmdletBinding()]
@@ -121,6 +123,8 @@ function Test-SelfXPrebuiltBinaries {
 	#  - the manifest lists the SHA256 of the three sources in this package (the files were built from them)
 	#    and of the three files (complete, unchanged copy).
 	# The files are not signed (decision 2026-11-22: allow them by hash, no certificate).
+	# Returns a hashtable <file name in Bin> -> SHA256 that was verified here. A caller that loads one of the files later
+	# compares the bytes it really loads with this value (no second look at the staging folder: N4).
 	param(
 		[Parameter(Mandatory = $true)][string]$BinFolder,
 		[Parameter(Mandatory = $true)][string]$PackageFolder
@@ -132,6 +136,7 @@ function Test-SelfXPrebuiltBinaries {
 		'WinRT/SelfXWinRT.dll'    = 'Service/SelfXWinRT.cs'
 		'Audio/SelfXAudio.dll'    = 'Service/SelfXAudio.cs'
 	}
+	$Verified = @{}
 	$ManifestPath = Join-Path $BinFolder 'SelfX.Binaries.json'
 	If(-not (Test-Path -LiteralPath $BinFolder -PathType Container)) { throw 'The folder Bin is missing in the package. Run tools\Build-SelfXBinaries.ps1 and build the package again (docs\Installation.md).' }
 	If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw 'Bin\SelfX.Binaries.json is missing.' }
@@ -146,7 +151,9 @@ function Test-SelfXPrebuiltBinaries {
 		If((Get-FileHash -LiteralPath $SourcePath -Algorithm SHA256).Hash -ne "$($Manifest.Sources.$Source)") { throw "Bin\$Name was not built from the $Source of this package (rebuild with tools\Build-SelfXBinaries.ps1)." }
 		$File = Join-Path $BinFolder $Name.Replace('/', '\')
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "Bin\$Name is missing." }
-		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
+		$FileHash = (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash
+		If($FileHash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
+		$Verified[$Name] = $FileHash
 	}
 	# The DLLs of the Windows SDK projection in WinRT: only plain file names, each one present and unchanged.
 	ForEach($Name in @($Manifest.Binaries.PSObject.Properties.Name))
@@ -155,8 +162,11 @@ function Test-SelfXPrebuiltBinaries {
 		If($Name -notmatch '^WinRT/[A-Za-z0-9._-]+\.dll$') { throw "Bin\SelfX.Binaries.json lists an unexpected file '$Name'." }
 		$File = Join-Path $BinFolder $Name.Replace('/', '\')
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "Bin\$Name is missing." }
-		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
+		$FileHash = (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash
+		If($FileHash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
+		$Verified[$Name] = $FileHash
 	}
+	Return $Verified
 }
 
 function Test-SelfXFileManifest {
@@ -324,7 +334,7 @@ If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess
 # Logs may contain script output; only SYSTEM and administrators can read them. The folder is cleaned of links and
 # foreign-owned entries first, then owner and rights are set.
 # The package is checked before anything on the device is changed; the delete helper is the checked SelfXService.exe of the package.
-Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
+$VerifiedBinaryHashes = Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
 Initialize-SelfXDataFolder -Path $DataFolder -SafeDeleteExe (Join-Path $BinFolder 'SelfXService.exe')
 New-Item -ItemType Directory -Path $LogFolder -Force | Out-Null
 # The SelfX window, the status icon and the user actions log as the user into Logs\Users\<SID> (SelfXLog.ps1).
@@ -479,8 +489,15 @@ Try
 		{
 			If(-not ('SelfXInstall.SessionStarter' -as [type]))
 			{
-				# The library was checked at the start; it is loaded from the package and not installed.
-				Add-Type -LiteralPath (Join-Path $BinFolder 'SelfXSessionStarter.dll')
+				# The library was checked at the start; it is loaded from the package and not installed. The package folder
+				# (Intune staging) is not protected against changes during the installation, so the file is read once, the
+				# bytes are compared with the hash verified at the start, and exactly these bytes are loaded (N4: no time
+				# between check and load; no second look at the file or at the manifest).
+				$StarterBytes = [IO.File]::ReadAllBytes((Join-Path $BinFolder 'SelfXSessionStarter.dll'))
+				$Sha256 = [Security.Cryptography.SHA256]::Create()
+				Try { $StarterHash = [BitConverter]::ToString($Sha256.ComputeHash($StarterBytes)).Replace('-', '') } Finally { $Sha256.Dispose() }
+				If($StarterHash -ne "$($VerifiedBinaryHashes['SelfXSessionStarter.dll'])") { throw 'SelfXSessionStarter.dll changed after the check; it was not loaded.' }
+				[void][Reflection.Assembly]::Load($StarterBytes)
 			}
 			ForEach($Line in [SelfXInstall.SessionStarter]::StartInActiveSessions($LauncherExe, '/tray', $env:SystemRoot)) { Write-Output "Status icon: $Line" }
 		}

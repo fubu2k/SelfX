@@ -22,6 +22,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.11   2026-11-22  fubu2k               Initial version.
     2.8.18   2026-11-23  fubu2k               Audio library (Audio/SelfXAudio.dll) in the fake package and its refusal cases.
+    2.8.21   2026-11-23  fubu2k               N4: the check returns the verified hashes (Install.ps1 loads SelfXSessionStarter.dll from checked bytes).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -85,13 +86,19 @@ function Reset-Package {
 }
 
 function Test-Accepted {
-	try { Test-SelfXPrebuiltBinaries -BinFolder $bin -PackageFolder $package; return 'accepted' }
+	try { $null = Test-SelfXPrebuiltBinaries -BinFolder $bin -PackageFolder $package; return 'accepted' }
 	catch { return 'refused: ' + $_.Exception.Message }
 }
 
 try {
 	Reset-Package
 	Assert-Equal (Test-Accepted) 'accepted' 'Complete, matching Bin is accepted'
+
+	# N4: the check returns the verified hashes; Install.ps1 compares the bytes of SelfXSessionStarter.dll with this value before loading them.
+	Reset-Package
+	$verified = Test-SelfXPrebuiltBinaries -BinFolder $bin -PackageFolder $package
+	Assert-Equal $verified['SelfXSessionStarter.dll'] (Get-FileHash -LiteralPath (Join-Path $bin 'SelfXSessionStarter.dll') -Algorithm SHA256).Hash 'N4: the check returns the verified SHA256 of SelfXSessionStarter.dll'
+	Assert-Equal $verified.Count 5 'N4: the check returns one hash per checked file'
 
 	Reset-Package
 	Remove-Item -LiteralPath (Join-Path $bin 'SelfX.exe')
