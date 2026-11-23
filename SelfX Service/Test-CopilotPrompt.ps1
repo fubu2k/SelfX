@@ -67,14 +67,14 @@ Assert-Equal ($marker -match '(?i)END\s+DATA|BEGIN\s+DATA|\{DATA\}') $false 'mar
 Assert-Equal ($marker -like '*[[]removed]*') $true 'markers: replaced by a visible note'
 
 # --- address check --------------------------------------------------------------------------------------
-foreach ($valid in 'https://m365.cloud.microsoft/chat', 'https://example.org/a?b=1#c', 'https://copilot.example.org:8443/x') {
+foreach ($valid in 'https://copilot.cloud.microsoft', 'https://m365.cloud.microsoft/chat', 'https://example.org/a?b=1#c', 'https://copilot.example.org:8443/x') {
 	Assert-Equal (Test-SelfXCopilotUrl $valid) $true "url: '$valid' is valid"
 }
 $longUrl = 'https://example.org/' + ('a' * 500)
 foreach ($invalid in $null, '', 'http://example.org', 'ftp://example.org', 'example.org', 'javascript:alert(1)', 'https://', 'https://user:pw@example.org/', 'https://exa mple.org', "https://example.org/`n", 'https://example.org\evil', 'https://example.org/<x>', $longUrl) {
 	Assert-Equal (Test-SelfXCopilotUrl $invalid) $false "url: '$invalid' is rejected"
 }
-Assert-Equal (Get-SelfXCopilotUrlHost 'https://m365.cloud.microsoft/chat') 'm365.cloud.microsoft' 'url: host for the preview'
+Assert-Equal (Get-SelfXCopilotUrlHost 'https://copilot.cloud.microsoft') 'copilot.cloud.microsoft' 'url: host for the preview'
 Assert-Equal (Get-SelfXCopilotUrlHost 'http://example.org') '' 'url: no host for an invalid address'
 
 # --- prompt from facts ----------------------------------------------------------------------------------

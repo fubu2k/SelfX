@@ -312,7 +312,7 @@ If($Ticket_Available)
 		Catch { Write-SelfXLog "Ticket_Config.xml could not be read: $($_.Exception.Message)" 'Warning' }
 	}
 # Hand-over to Copilot Chat (off by default): only an https address from the configuration is opened, the user pastes the text
-$Copilot_Url = (Get-SelfXText "Copilot_Url" "https://m365.cloud.microsoft/chat").Trim()
+$Copilot_Url = (Get-SelfXText "Copilot_Url" "https://copilot.cloud.microsoft").Trim()
 $Copilot_Available = ((Get-SelfXText "Copilot_Enabled" "False") -eq 'True') -and (Test-SelfXCopilotUrl $Copilot_Url)
 If(((Get-SelfXText "Copilot_Enabled" "False") -eq 'True') -and -not $Copilot_Available) { Write-SelfXLog 'Copilot_Url is not a valid https address: the Copilot Chat button is not shown.' 'Warning' }
 $Copilot_Audience = If((Get-SelfXText "Copilot_Audience" "User") -eq 'Admin') { 'Admin' } Else { 'User' }

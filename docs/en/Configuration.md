@@ -499,7 +499,7 @@ commands they do not understand. The text is limited to 6000 characters.
 | Setting | Meaning |
 |---|---|
 | `Copilot_Enabled` | `False` (default) or `True`. |
-| `Copilot_Url` | Address that is opened. Default `https://m365.cloud.microsoft/chat`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
+| `Copilot_Url` | Address that is opened. Default `https://copilot.cloud.microsoft`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
 | `Copilot_Audience` | `User` (default): plain answers for users. `Admin`: technical answers for IT staff. |
 | `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: the company apps row of the device status stays, but without details, so without app names and without error codes. |
 
