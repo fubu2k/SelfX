@@ -103,6 +103,7 @@ Probieren Sie zuerst die einfache Ansicht. Hilft sie nicht oder finden Sie Ihr P
 		<SystemInfo_SyncCompliance_Text>Firmenregeln prüfen</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Unternehmensportal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Remotehilfe (Quick Assist)</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>MDM-Protokolle sammeln</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Protokolle an Support senden</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Geräteprotokolle von {0}</Report_Mail_Subject>
@@ -145,6 +146,7 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Prüft jetzt, ob Ihr Gerät die Regeln Ihrer Firma erfüllt, zum Beispiel Verschlüsselung und aktuelle Updates.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Öffnet das Unternehmensportal. Dort installieren Sie Firmen-Apps selbst.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Öffnet die Remotehilfe. Eine Person vom Support kann dann Ihren Bildschirm sehen und Ihnen helfen. Das geht nur mit Ihrer Zustimmung.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Öffnet Remote Help. Eine Person vom Support kann dann Ihren Bildschirm sehen und Ihnen helfen. Das geht nur mit Ihrer Zustimmung.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Sammelt die Protokolle der Geräteverwaltung (MDM) in einem Ordner. Der Support kann sie auswerten.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Sammelt die Protokolle Ihres Geräts und öffnet eine E-Mail an den Support. Der Bericht hängt schon an. Gesendet wird erst, wenn Sie auf „Senden“ klicken.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Einstellungen: Sprache, Darstellung und Statussymbol</Settings_Button_ToolTip>

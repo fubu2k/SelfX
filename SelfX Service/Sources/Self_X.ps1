@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.12
+    Version : 2.8.13
 
     History:
     Version  Date        Author               Change
@@ -84,6 +84,7 @@
     2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, off by default): preview of the prompt, copy, open the configured https address
     2.8.11   2026-11-22  fubu2k               Copilot Chat: notes for the user in the dialog; Copilot_Include_AppNames also applies to the company apps row; network facts
     2.8.12   2026-11-22  fubu2k               Copilot Chat: the instruction texts of the prompt come from the language files (Copilot_Prompt_User, Copilot_Prompt_Admin)
+    2.8.13   2026-11-23  fubu2k               Remote support tile: with Remote Help installed (signed RemoteHelp.exe) only Remote Help is offered, otherwise Quick Assist
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -1082,11 +1083,33 @@ $SysInfo_Title.Text = Get-SelfXString 'SystemInfo_Title_Text'
 $SysInfo_Refresh.ToolTip = (Get-SelfXString 'SystemInfo_Refresh_Text') + ': ' + (Get-SelfXString 'Tooltip_Refresh')
 $SysInfo_Copy.ToolTip = (Get-SelfXString 'SystemInfo_Copy_Text') + ': ' + (Get-SelfXString 'Tooltip_Copy')
 $SysInfo_Export.ToolTip = (Get-SelfXString 'SystemInfo_Export_Text') + ': ' + (Get-SelfXString 'Tooltip_Export')
+# Remote support tool of the tile (Remote Help, else Quick Assist). Remote Help counts as installed when RemoteHelp.exe
+# in the Program Files folder (writable only by administrators) is a plain file, no link, and validly signed by
+# Microsoft Corporation. Then only Remote Help is offered and Quick Assist is not (one standard in the company).
+Function Get-SelfXRemoteHelpPath
+	{
+		param([string]$Path = (Join-Path $env:ProgramFiles 'Remote Help\RemoteHelp.exe'), [string]$SubjectPattern = 'CN=Microsoft Corporation,*')
+		Try
+			{
+				$Item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+				If($Item.PSIsContainer -or ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $null }
+				$Signature = Get-AuthenticodeSignature -LiteralPath $Item.FullName
+				If($Signature.Status -ne 'Valid' -or -not $Signature.SignerCertificate -or $Signature.SignerCertificate.Subject -notlike $SubjectPattern) { return $null }
+				return $Item.FullName
+			}
+		Catch { return $null }
+	}
+$Global:RemoteHelp_Path = Get-SelfXRemoteHelpPath
 $Tools_Title.Text = Get-SelfXString 'Tools_Title_Text'
 foreach($Tool in 'SyncApps', 'SyncCompliance', 'CompanyPortal', 'QuickAssist', 'MdmDiagnostics', 'SendLogs')
 	{
 		(Get-Variable "SysInfo_$($Tool)_Label").Value.Text = Get-SelfXString "SystemInfo_$($Tool)_Text"
 		(Get-Variable "SysInfo_$Tool").Value.ToolTip = Get-SelfXString "Tooltip_$Tool"
+	}
+If($Global:RemoteHelp_Path)
+	{
+		$SysInfo_QuickAssist_Label.Text = Get-SelfXString 'SystemInfo_RemoteHelp_Text'
+		$SysInfo_QuickAssist.ToolTip = Get-SelfXString 'Tooltip_RemoteHelp'
 	}
 $Btn_Help.ToolTip = Get-SelfXString 'Support_Button_ToolTip'
 $Btn_Settings.ToolTip = Get-SelfXString 'Settings_Button_ToolTip'
@@ -1975,8 +1998,10 @@ Function Invoke-SysInfoAction
 $SysInfo_SyncApps.Add_Click({ Invoke-SysInfoAction { Start-Process "intunemanagementextension://syncapp" } })
 $SysInfo_SyncCompliance.Add_Click({ Invoke-SysInfoAction { Start-Process "intunemanagementextension://synccompliance" } })
 $SysInfo_CompanyPortal.Add_Click({ Invoke-SysInfoAction { Start-Process (Join-Path $env:SystemRoot "explorer.exe") -ArgumentList "shell:AppsFolder\Microsoft.CompanyPortal_8wekyb3d8bbwe!App" } })
+# The tile keeps its internal name SysInfo_QuickAssist; with Remote Help installed it starts Remote Help only.
 $SysInfo_QuickAssist.Add_Click({
 	Invoke-SysInfoAction {
+		If($Global:RemoteHelp_Path) { Start-Process -FilePath $Global:RemoteHelp_Path; return }
 		$QuickAssist_Exe = "$env:SystemRoot\System32\quickassist.exe"
 		If(Test-Path $QuickAssist_Exe) { Start-Process $QuickAssist_Exe } Else { Start-Process "ms-quick-assist:" }
 	}
