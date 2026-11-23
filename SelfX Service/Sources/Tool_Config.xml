@@ -134,4 +134,5 @@
 	<Show_Tray_Icon>True</Show_Tray_Icon> <!-- Start the status icon at sign-in for all users: True or False -->
 	<Tray_Notifications>True</Tray_Notifications> <!-- Show a Windows notification once when a check changes to Error: True or False. True = each user can switch them off in SelfX > Settings or in the menu of the icon; False = off for all users -->
 	<Tray_Poll_Seconds>60</Tray_Poll_Seconds> <!-- How often the icon reads the cached status of the service (15-3600 seconds; no check is run) -->
+	<Tray_Pin_Icon>True</Tray_Pin_Icon> <!-- Windows 11: show the icon permanently next to the clock instead of the hidden icons flyout (sets IsPromoted for the user): True or False. Users can switch it off with HKCU\Software\SelfX\TrayPin = 0 -->
 </GUI_Config>
