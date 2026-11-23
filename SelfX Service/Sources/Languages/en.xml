@@ -199,6 +199,8 @@ Description of the issue:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX copies the text and opens {0}. You paste the text there and send it yourself. SelfX sends nothing.</Copilot_Target_Text>
 		<Copilot_Open_Button>Copy and open Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>The text is in the clipboard and Copilot Chat has been opened. Paste it there (Ctrl+V) and send it.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>The clipboard is emptied in {0} seconds if you do not copy anything else until then. Paste the text before that.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>The clipboard has been emptied. To copy the text again, choose "Copy and open Copilot".</Copilot_Cleared_Text>
 		<Copilot_Error_Text>The text could not be prepared: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Do not write names, passwords or customer data in the description. Copilot can be wrong: do not carry out commands that you do not understand.</Copilot_Warning_Text>
 		<Copilot_Prompt_User><![CDATA[

@@ -45,6 +45,7 @@
 	2.8.1    2026-11-23  fubu2k               New setting Service_Privileges (Restricted | Default), see CHANGELOG.md
 	2.8.2    2026-11-23  fubu2k               New setting Service_FileCheck (Enforce | Audit), see CHANGELOG.md
 	2.8.14   2026-11-23  fubu2k               New settings Link_PasswordReset and Link_SecurityInfo (addresses of the link actions of the catalogue)
+	2.8.17   2026-11-23  fubu2k               New settings Copilot_Clear_Clipboard and Copilot_Clear_Clipboard_Seconds (optional clearing of the clipboard after the text for Copilot Chat was copied)
 -->
 <GUI_Config>	
 	<Tool_Version>2.8.0</Tool_Version> <!-- Tool version -->
@@ -108,6 +109,8 @@
 	<Copilot_Url>https://m365.cloud.microsoft/chat</Copilot_Url> <!-- Address that is opened. Must start with https:// (no user name or password in it, at most 500 characters). Can be any https address, for example another Copilot entry point of your tenant -->
 	<Copilot_Audience>User</Copilot_Audience> <!-- User = answers for the user in plain language (default), Admin = answers for IT staff with technical steps -->
 	<Copilot_Include_AppNames>True</Copilot_Include_AppNames> <!-- True = names of company apps with errors are part of the text. False = the company apps row of the device status is kept without details (no app names, no error codes) -->
+	<Copilot_Clear_Clipboard>False</Copilot_Clear_Clipboard> <!-- True or False (off by default). True = SelfX empties the clipboard after Copilot_Clear_Clipboard_Seconds, but only if the text it copied is still on it (nothing happens if the user has copied something else). The window must still be open at that time; closing SelfX earlier leaves the text on the clipboard. The entry in the Windows clipboard history (Win+V) is not removed by this; SelfX keeps the text out of the history when it copies it -->
+	<Copilot_Clear_Clipboard_Seconds>180</Copilot_Clear_Clipboard_Seconds> <!-- Whole number from 30 to 600 (default 180). Time the user has to paste the text (sign-in and MFA of Copilot Chat take time). Another value is replaced by 180 and a warning is logged -->
 
 	<!-- Device logs for the support (action "Send the device logs to the support", Collect-DeviceLogs.ps1 run as SYSTEM) -->
 	<DeviceLogs_Days>7</DeviceLogs_Days> <!-- Days of event log history in the report (1-60) -->

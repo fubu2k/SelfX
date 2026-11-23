@@ -506,6 +506,33 @@ commands they do not understand. The text is limited to 6000 characters.
 | `Copilot_Url` | Address that is opened. Default `https://m365.cloud.microsoft/chat`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
 | `Copilot_Audience` | `User` (default): plain answers for users. `Admin`: technical answers for IT staff. |
 | `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: the company apps row of the device status stays, but without details, so without app names and without error codes. |
+| `Copilot_Clear_Clipboard` | `False` (default) or `True`: SelfX empties the clipboard after `Copilot_Clear_Clipboard_Seconds`, but only if the text it copied is still on it. See [Emptying the clipboard](#emptying-the-clipboard). |
+| `Copilot_Clear_Clipboard_Seconds` | Whole number from 30 to 600, default `180`. Another value is replaced by 180 and the log names the reason. |
+
+**Emptying the clipboard (optional, `Copilot_Clear_Clipboard`):** If the setting is
+`True`, SelfX starts a timer when it copies the text (default 180 seconds, 30 to 600).
+The dialog names the time. When it ends, SelfX empties the clipboard, but only if the
+text of this copy is still on it. For this the text carries a random marker (its own
+format, only for this purpose); SelfX reads neither the text nor any other content of the
+clipboard. If the user has copied something else in the meantime, SelfX changes nothing.
+If another program holds the clipboard for a moment, SelfX tries up to four more times;
+after that a warning is logged. The log names only the result (`Cleared`, `Changed`,
+`Error`), never the text.
+
+Limits to know:
+- SelfX cannot tell whether the user has pasted the text. The time has to be long enough
+  for sign-in and MFA of Copilot Chat; that is why the default is 180 seconds.
+- The timer runs in the SelfX window. If the user closes SelfX earlier, the text stays on
+  the clipboard. SelfX does not empty it when it closes, because the user may not have
+  pasted it yet.
+- After emptying, the dialog (if still open) shows a note. *Copy and open Copilot* copies
+  the text again (and opens Copilot Chat once more).
+- The clipboard history (Win+V) is not emptied; the text does not get into it in the
+  first place (see above). This does not replace a DLP solution.
+- If the text was copied as plain text only (fallback, warning in the log), SelfX does not
+  empty it.
+- The new texts (`Copilot_Clear_Text`, `Copilot_Cleared_Text`) exist in German and
+  English; other languages show English.
 
 **Adjusting the instruction texts:** The instruction to Copilot (how to answer) is in
 the language files under `Copilot_Prompt_User` (for users) and `Copilot_Prompt_Admin`
