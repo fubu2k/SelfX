@@ -1,7 +1,17 @@
-# Keeps the pinned GitHub Actions (commit SHA) up to date; each update arrives as a pull request.
+# Keeps the pinned GitHub Actions (commit SHA) and the pinned NuGet packages of the .NET projects up to date;
+# each update arrives as a pull request. Nothing is merged automatically.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+
+  # NuGet: the .NET projects under "SelfX Service/Service/Projects" (the folder with the project file is the directory).
+  # Versions are fixed in the .csproj files; packages.lock.json (SelfXService, SelfXWinRT) is checked in and the build restores in
+  # locked mode, so an update that does not also update the lock file fails the build job "Build with .NET 10 (self-contained)".
+  - package-ecosystem: nuget
+    directories:
+      - "/SelfX Service/Service/Projects/*"
     schedule:
       interval: weekly
