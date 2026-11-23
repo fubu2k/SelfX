@@ -624,6 +624,13 @@ SelfX 不会删除或更改任何文件。如果 Defender 发现威胁，会按�
 
 是否要继续？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_GpUpdate">
+				<Name>刷新此电脑的公司设置（组策略）</Name>
+				<Explanation>公司的设置（如网络驱动器、打印机或安全规则）没有到达或已过期。此操作请求 Windows 重新应用组策略。仅适用于已加入域的设备（包括混合加入的设备）。</Explanation>
+				<Alerte_MSG>Windows 将重新检查并应用公司的组策略。这可能需要几分钟。您不会被注销，Windows 也不会重新启动；需要重启或重新登录的设置会在之后生效。如果设备未加入域，操作将以退出代码 3 结束，且不会更改任何内容。
+
+是否要继续？</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>收集设备日志并通过电子邮件发送给支持人员</Name>
 			</Action>

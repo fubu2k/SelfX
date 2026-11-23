@@ -624,6 +624,13 @@ SelfX verwijdert of wijzigt geen bestanden. Vindt Defender een bedreiging, dan h
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_GpUpdate">
+				<Name>De bedrijfsinstellingen (groepsbeleid) van deze pc vernieuwen</Name>
+				<Explanation>Instellingen van uw bedrijf, zoals netwerkstations, printers of beveiligingsregels, komen niet aan of zijn verouderd. De actie vraagt Windows het groepsbeleid opnieuw toe te passen. Dit werkt alleen op apparaten die lid zijn van een domein (ook hybride gekoppelde apparaten).</Explanation>
+				<Alerte_MSG>Windows controleert en past het groepsbeleid van uw bedrijf opnieuw toe. Dit kan enkele minuten duren. U wordt niet afgemeld en Windows start niet opnieuw op; een instelling die een herstart of nieuwe aanmelding nodig heeft, werkt pas daarna. Is uw apparaat geen lid van een domein, dan eindigt de actie met afsluitcode 3 en verandert er niets.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Apparaatlogboeken verzamelen en per e-mail naar de support sturen</Name>
 			</Action>

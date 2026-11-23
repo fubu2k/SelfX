@@ -44,9 +44,10 @@
 	  2.4.6    2026-11-23  fubu2k               New action D_Office_ResetLicence (reset the Office license tokens of the user)
 	  2.4.7    2026-11-23  fubu2k               New action type Context Link (field Link): D_Account_PasswordReset and D_Account_SecurityInfo, new category Account
 	  2.4.8    2026-11-23  fubu2k               New action D_Defender_QuickScan (Microsoft Defender quick scan, Context System)
+	  2.4.9    2026-11-23  fubu2k               New action D_Device_GpUpdate (gpupdate /force, domain / hybrid joined devices, Context User)
 -->
 <Actions>
-	<XML_Version>2.4.8</XML_Version>
+	<XML_Version>2.4.9</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -744,6 +745,18 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Alerte_MSG>A quick scan with Microsoft Defender starts. It checks the places where threats are found most often and usually takes 5 to 30 minutes. You can keep working, but the PC may be slower meanwhile. SelfX shows the result when the scan has finished.
 
 SelfX does not delete or change any files. If Defender finds a threat, it handles it as set by your company; you find the details in Windows Security.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="D_Device_GpUpdate">
+			<Name>Refresh the company settings (Group Policy) of this PC</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>Settings of your company, such as network drives, printers or security rules, do not arrive or are out of date. The action asks Windows to apply the group policies again. It only works on devices that are joined to a domain (also hybrid joined devices).</Explanation>
+			<Script>SelfX_Device_GpUpdate.ps1</Script>
+			<Context>User</Context>
+			<Category>Device</Category>
+			<Alerte_MSG>Windows checks and applies the group policies of your company again. This can take a few minutes. You are not signed out and Windows does not restart; a setting that needs a restart or a new sign-in takes effect after the next one. If your device is not joined to a domain, the action ends with the exit code 3 and changes nothing.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>
