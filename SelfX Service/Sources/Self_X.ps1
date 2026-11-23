@@ -2605,13 +2605,13 @@ Function Update-SelfXCards
 		If($Width -gt 0)
 			{
 				$Columns = $(If($Width -ge 900) { 3 } ElseIf($Width -ge 500) { 2 } Else { 1 })
-				$Form.Resources['StatusCardWidth'] = [double][Math]::Floor(($Width - 12 * $Columns) / $Columns)
+				$Form.Resources['StatusCardWidth'] = [double][Math]::Floor(($Width - 14 * $Columns) / $Columns)
 			}
 		$Width = $InfoCards.ActualWidth
 		If($Width -gt 0)
 			{
 				$Columns = $(If($Width -ge 720) { 2 } Else { 1 })
-				$Form.Resources['InfoCardWidth'] = [double][Math]::Floor(($Width - 12 * $Columns) / $Columns)
+				$Form.Resources['InfoCardWidth'] = [double][Math]::Floor(($Width - 14 * $Columns) / $Columns)
 			}
 	}
 $Form.Add_SizeChanged({ Update-SelfXLayout })
