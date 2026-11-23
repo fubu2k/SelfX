@@ -452,6 +452,15 @@ Czy chcesz kontynuować?</Alerte_MSG>
 
 Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Pakiet Office prosi o aktywację lub zgłasza produkt bez licencji</Name>
+				<Explanation>Word, Excel, Outlook lub inna aplikacja pakietu Office wyświetla komunikat „Produkt bez licencji”, wielokrotnie prosi o aktywację lub zalogowanie albo informuje, że Twoje konto nie ma licencji, mimo że ją ma.</Explanation>
+				<Alerte_MSG>Wszystkie otwarte aplikacje pakietu Office (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype dla firm) zostaną zamknięte. Niezapisana praca zostanie utracona. Następnie zapisane dane licencyjne Twojego konta użytkownika zostaną usunięte. Dokumenty, ustawienia, skrzynka pocztowa i pliki programów pakietu Office nie są zmieniane. Aplikacja Teams nie jest zamykana.
+
+Przy następnym uruchomieniu aplikacji pakietu Office zostaniesz poproszony o zalogowanie się kontem służbowym. Pakiet Office otrzyma wtedy nową licencję.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Uruchom klienta OneDrive</Name>
 				<Explanation>Usługa OneDrive nie jest uruchomiona.</Explanation>

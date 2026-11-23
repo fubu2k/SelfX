@@ -452,6 +452,15 @@
 
 是否要繼續？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office 要求啟用或提示產品未授權</Name>
+				<Explanation>Word、Excel、Outlook 或其他 Office 應用程式顯示「未授權產品」，反覆要求啟用或登入，或提示您的帳戶沒有授權（實際上有）。</Explanation>
+				<Alerte_MSG>所有已開啟的 Office 應用程式（Word、Excel、PowerPoint、Outlook、Access、OneNote、Publisher、Visio、Project、Skype for Business）都將關閉。未儲存的工作將會遺失。接著會移除您的使用者帳戶中儲存的授權資料。您的文件、設定、信箱和 Office 程式檔案不會變更。Teams 不會關閉。
+
+下次啟動 Office 應用程式時，系統會要求您使用工作帳戶登入。隨後 Office 會取得新的授權。
+
+是否要繼續？</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>啟動 OneDrive 客戶端</Name>
 				<Explanation>OneDrive 當前未執行。</Explanation>

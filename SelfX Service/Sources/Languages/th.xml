@@ -452,6 +452,15 @@
 
 คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office ขอให้เปิดใช้งานหรือแจ้งว่าผลิตภัณฑ์ไม่มีลิขสิทธิ์</Name>
+				<Explanation>Word, Excel, Outlook หรือแอป Office อื่นแสดง “ผลิตภัณฑ์ที่ไม่มีลิขสิทธิ์” ขอให้เปิดใช้งานหรือลงชื่อเข้าใช้ซ้ำแล้วซ้ำอีก หรือแจ้งว่าบัญชีของคุณไม่มีสิทธิ์ใช้งานทั้งที่มี</Explanation>
+				<Alerte_MSG>แอป Office ที่เปิดอยู่ทั้งหมด (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) จะถูกปิด งานที่ยังไม่ได้บันทึกจะสูญหาย จากนั้นข้อมูลสิทธิ์การใช้งานที่บันทึกไว้ของบัญชีผู้ใช้ของคุณจะถูกลบ เอกสาร การตั้งค่า กล่องจดหมาย และไฟล์โปรแกรมของ Office จะไม่เปลี่ยนแปลง Teams จะไม่ถูกปิด
+
+เมื่อคุณเริ่มแอป Office ครั้งถัดไป ระบบจะขอให้คุณลงชื่อเข้าใช้ด้วยบัญชีที่ทำงานของคุณ จากนั้น Office จะได้รับสิทธิ์การใช้งานใหม่
+
+คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>เริ่มต้นไคลเอ็นต์ OneDrive</Name>
 				<Explanation>OneDrive ไม่ทำงาน</Explanation>

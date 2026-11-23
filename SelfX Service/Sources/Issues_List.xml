@@ -41,6 +41,7 @@
 	  2.4.3    2026-11-22  fubu2k               New action Q_Outlook (restart classic Outlook)
 	  2.4.4    2026-11-22  fubu2k               New action Q_Device_SyncTime (synchronize the clock, Context System)
 	  2.4.5    2026-11-23  fubu2k               New action D_Outlook_AutoComplete (clear the auto-complete list of classic Outlook)
+	  2.4.6    2026-11-23  fubu2k               New action D_Office_ResetLicence (reset the Office license tokens of the user)
 	  2.4.7    2026-11-23  fubu2k               New action type Context Link (field Link): D_Account_PasswordReset and D_Account_SecurityInfo, new category Account
 -->
 <Actions>
@@ -335,6 +336,20 @@ Do you want to continue?</Alerte_MSG>
 			<Context>User</Context>
 			<Category>Outlook</Category>
 			<Alerte_MSG>The list of suggested e-mail addresses (auto-complete list) of Outlook will be cleared. Outlook will close and start again. Mails you are writing that are not saved as a draft may be lost. Outlook builds the list again while you send new mails. Your mailbox, contacts and profile are not changed. The new Outlook is not affected.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="D_Office_ResetLicence">
+			<Name>Office asks to activate or reports an unlicensed product</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>Word, Excel, Outlook or another Office app shows "Unlicensed Product", asks again and again to activate or to sign in, or says that your account does not have a license although it has one.</Explanation>
+			<Script>SelfX_Office_ResetLicence.ps1</Script>
+			<Context>User</Context>
+			<Category>Office</Category>
+			<Alerte_MSG>All open Office apps (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) will close. Unsaved work is lost. Then the saved license data of your user account is removed. Your documents, settings, mailbox and Office program files are not changed. Teams is not closed.
+
+The next time you start an Office app, you are asked to sign in with your work account. Office then gets a new license.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>

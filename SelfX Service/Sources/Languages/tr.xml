@@ -452,6 +452,15 @@ Devam etmek istiyor musunuz?</Alerte_MSG>
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office etkinleştirme istiyor veya lisanssız ürün bildiriyor</Name>
+				<Explanation>Word, Excel, Outlook veya başka bir Office uygulaması “Lisanssız Ürün” gösteriyor, tekrar tekrar etkinleştirme veya oturum açma istiyor ya da hesabınızın lisansı olduğu halde lisansı olmadığını bildiriyor.</Explanation>
+				<Alerte_MSG>Açık olan tüm Office uygulamaları (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype Kurumsal) kapatılacak. Kaydedilmemiş çalışma kaybolur. Ardından kullanıcı hesabınızın kayıtlı lisans verileri kaldırılır. Belgeleriniz, ayarlarınız, posta kutunuz ve Office program dosyaları değiştirilmez. Teams kapatılmaz.
+
+Bir sonraki Office uygulaması başlatışınızda iş hesabınızla oturum açmanız istenir. Office daha sonra yeni bir lisans alır.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive istemcisini başlatın</Name>
 				<Explanation>OneDrive çalışmıyor.</Explanation>

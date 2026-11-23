@@ -452,6 +452,15 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 
 क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office सक्रियण माँगता है या बिना लाइसेंस वाला उत्पाद बताता है</Name>
+				<Explanation>Word, Excel, Outlook या Office का कोई अन्य ऐप «बिना लाइसेंस वाला उत्पाद» दिखाता है, बार-बार सक्रिय करने या साइन इन करने को कहता है, या बताता है कि आपके खाते के पास लाइसेंस नहीं है, जबकि वह है।</Explanation>
+				<Alerte_MSG>सभी खुले Office ऐप (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) बंद हो जाएँगे। सहेजा नहीं गया काम खो जाएगा। इसके बाद आपके उपयोगकर्ता खाते का सहेजा गया लाइसेंस डेटा हटा दिया जाएगा। आपके दस्तावेज़, सेटिंग, मेलबॉक्स और Office की प्रोग्राम फ़ाइलें नहीं बदली जातीं। Teams बंद नहीं होता।
+
+अगली बार Office का कोई ऐप शुरू करने पर आपसे अपने कार्य खाते से साइन इन करने को कहा जाएगा। इसके बाद Office को नया लाइसेंस मिल जाता है।
+
+क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive क्लाइंट प्रारंभ करें</Name>
 				<Explanation>OneDrive नहीं चल रहा है.</Explanation>

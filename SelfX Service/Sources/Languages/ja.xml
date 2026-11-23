@@ -452,6 +452,15 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 
 続行しますか?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office がライセンス認証を求める、またはライセンスのない製品と表示される</Name>
+				<Explanation>Word、Excel、Outlook などの Office アプリに「ライセンスのない製品」と表示される、ライセンス認証やサインインを繰り返し求められる、またはライセンスがあるのにアカウントにライセンスがないと表示されます。</Explanation>
+				<Alerte_MSG>開いているすべての Office アプリ (Word、Excel、PowerPoint、Outlook、Access、OneNote、Publisher、Visio、Project、Skype for Business) が閉じられます。保存していない作業内容は失われます。その後、お使いのユーザー アカウントに保存されているライセンス データが削除されます。ドキュメント、設定、メールボックス、Office のプログラム ファイルは変更されません。Teams は閉じられません。
+
+次に Office アプリを起動すると、職場のアカウントでのサインインを求められます。その後、Office は新しいライセンスを取得します。
+
+続行しますか?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive クライアントを起動する</Name>
 				<Explanation>OneDrive が実行されていません。</Explanation>

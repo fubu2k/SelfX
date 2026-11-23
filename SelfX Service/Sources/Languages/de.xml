@@ -536,6 +536,15 @@ Möchten Sie fortfahren?</Alerte_MSG>
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office fordert zur Aktivierung auf oder meldet ein nicht lizenziertes Produkt</Name>
+				<Explanation>Word, Excel, Outlook oder eine andere Office-App zeigt „Nicht lizenziertes Produkt“, fordert immer wieder zur Aktivierung oder Anmeldung auf oder meldet, dass Ihr Konto keine Lizenz hat, obwohl es eine hat.</Explanation>
+				<Alerte_MSG>Alle geöffneten Office-Apps (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) werden geschlossen. Nicht gespeicherte Arbeit geht verloren. Danach werden die gespeicherten Lizenzdaten Ihres Benutzerkontos entfernt. Ihre Dokumente, Einstellungen, Ihr Postfach und die Office-Programmdateien werden nicht verändert. Teams wird nicht geschlossen.
+
+Beim nächsten Start einer Office-App werden Sie aufgefordert, sich mit Ihrem Arbeitskonto anzumelden. Office erhält dann eine neue Lizenz.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive starten</Name>
 				<Explanation>OneDrive läuft nicht.</Explanation>

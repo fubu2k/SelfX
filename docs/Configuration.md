@@ -217,6 +217,7 @@ Benachrichtigungen ein oder aus oder verbirgt das Symbol.
 | `Show_Tray_Icon` | `True` | `Install.ps1` legt den Run-Eintrag `SelfXTray` in HKLM an. Das Symbol startet bei jeder Anmeldung. `False` entfernt den Eintrag. |
 | `Tray_Notifications` | `True` | Benachrichtigung bei einem Fehler. `False` schaltet sie für alle aus und blendet den Schalter der Nutzer aus. |
 | `Tray_Poll_Seconds` | `60` | 15 bis 3600. Wie oft das Symbol den Zwischenspeicher liest (es führt keine Prüfung aus). |
+| `Tray_Pin_Icon` | `True` | Windows 11 blendet neue Symbole im Überlauf (Pfeil) aus. `True`: Das Symbol setzt beim Start für den Nutzer `IsPromoted = 1` und steht dauerhaft neben der Uhr. Der Schlüssel `HKCU\Control Panel\NotifyIconSettings` ist von Microsoft nicht dokumentiert. Ein Nutzer kann es mit `HKCU\Software\SelfX\TrayPin = 0` abschalten. |
 
 **Pro Nutzer:** Jeder Nutzer kann Benachrichtigungen ausschalten
 (`HKCU\Software\SelfX\TrayNotifications`, 1 = an, 0 = aus) und das Symbol verbergen
