@@ -485,6 +485,10 @@ SelfX uses no interface and no token: the user pastes the text into Copilot Chat
 2. SelfX shows the finished text in a preview. The user can read and change it.
 3. *Copy and open Copilot* puts the text in the clipboard and opens the address from
    `Copilot_Url`. The user pastes the text (Ctrl+V) and sends it. SelfX sends nothing.
+   SelfX asks Windows **not** to keep the text in the clipboard history (Win+V) or the
+   cloud clipboard. This is a request, not a protection: programs that read the
+   clipboard still see the text, and it stays there until the user copies something
+   else. There is no setting for it.
 4. Copilot Chat is asked to answer in plain language. With `Copilot_Audience` = `Admin`
    it answers for IT staff with technical steps.
 
