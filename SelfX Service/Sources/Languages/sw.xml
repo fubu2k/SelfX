@@ -444,6 +444,13 @@ Je, ungependa kuendelea?</Alerte_MSG>
 
 Je, ungependa kuendelea?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook inapendekeza anwani za barua pepe zisizo sahihi au za zamani</Name>
+				<Explanation>Unapoandika jina kwenye barua pepe mpya, Outlook hupendekeza anwani ambazo si sahihi, hazipo tena au ni za mtu mwingine.</Explanation>
+				<Alerte_MSG>Orodha ya anwani za barua pepe zinazopendekezwa (orodha ya ukamilishaji otomatiki) ya Outlook itafutwa. Outlook itafungwa na kuanzishwa tena. Barua pepe unazoandika ambazo hazijahifadhiwa kama rasimu zinaweza kupotea. Outlook hujenga orodha upya unapotuma barua pepe mpya. Kisanduku chako cha barua, anwani na wasifu havibadilishwi. Outlook mpya haiathiriwi.
+
+Je, ungependa kuendelea?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Anzisha programu ya OneDrive</Name>
 				<Explanation>OneDrive haiendeshwi.</Explanation>

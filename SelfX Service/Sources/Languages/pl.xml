@@ -444,6 +444,13 @@ Czy chcesz kontynuować?</Alerte_MSG>
 
 Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Program Outlook podpowiada nieprawidłowe lub nieaktualne adresy e-mail</Name>
+				<Explanation>Po wpisaniu nazwy w nowej wiadomości program Outlook podpowiada adresy, które są nieprawidłowe, już nie istnieją lub należą do innej osoby.</Explanation>
+				<Alerte_MSG>Lista podpowiadanych adresów e-mail (lista autouzupełniania) programu Outlook zostanie wyczyszczona. Program Outlook zostanie zamknięty i uruchomiony ponownie. Wiadomości, które właśnie piszesz i które nie zostały zapisane jako wersja robocza, mogą zostać utracone. Program Outlook odbuduje listę podczas wysyłania nowych wiadomości. Skrzynka pocztowa, kontakty i profil nie są zmieniane. Nowy program Outlook nie jest objęty tą akcją.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Uruchom klienta OneDrive</Name>
 				<Explanation>Usługa OneDrive nie jest uruchomiona.</Explanation>

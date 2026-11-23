@@ -444,6 +444,13 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 
 계속하시겠습니까?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook에서 잘못되었거나 오래된 메일 주소를 제안함</Name>
+				<Explanation>새 메일에 이름을 입력하면 Outlook이 잘못되었거나 더 이상 존재하지 않거나 다른 사람의 주소를 제안합니다.</Explanation>
+				<Alerte_MSG>Outlook의 제안 메일 주소 목록(자동 완성 목록)이 지워집니다. Outlook이 종료된 후 다시 시작됩니다. 작성 중이며 임시 보관으로 저장하지 않은 메일은 손실될 수 있습니다. 새 메일을 보내면 Outlook이 목록을 다시 만듭니다. 사서함, 연락처 및 프로필은 변경되지 않습니다. 새 Outlook은 영향을 받지 않습니다.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive 클라이언트 시작</Name>
 				<Explanation>OneDrive가 실행되고 있지 않습니다.</Explanation>

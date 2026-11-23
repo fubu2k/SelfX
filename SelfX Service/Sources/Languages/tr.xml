@@ -444,6 +444,13 @@ Devam etmek istiyor musunuz?</Alerte_MSG>
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook yanlış veya eski e-posta adresleri öneriyor</Name>
+				<Explanation>Yeni bir e-postaya ad yazdığınızda Outlook yanlış, artık var olmayan veya başka bir kişiye ait adresler öneriyor.</Explanation>
+				<Alerte_MSG>Outlook'un önerilen e-posta adresleri listesi (otomatik tamamlama listesi) temizlenecek. Outlook kapatılacak ve yeniden başlatılacak. Yazmakta olduğunuz ve taslak olarak kaydetmediğiniz e-postalar kaybolabilir. Outlook, yeni e-postalar gönderdikçe listeyi yeniden oluşturur. Posta kutunuz, kişileriniz ve profiliniz değiştirilmez. Yeni Outlook etkilenmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive istemcisini başlatın</Name>
 				<Explanation>OneDrive çalışmıyor.</Explanation>

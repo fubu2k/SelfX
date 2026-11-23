@@ -444,6 +444,13 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 
 続行しますか?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Outlook_AutoComplete">
+				<Name>Outlook が間違った古いメール アドレスを候補に表示する</Name>
+				<Explanation>新しいメールに名前を入力すると、Outlook が間違っている、すでに存在しない、または別の人のアドレスを候補として表示します。</Explanation>
+				<Alerte_MSG>Outlook の候補として表示されるメール アドレスの一覧 (オートコンプリート リスト) を消去します。Outlook は終了し、再起動します。作成中で下書きとして保存していないメールは失われる可能性があります。新しいメールを送信すると、Outlook は一覧を再作成します。メールボックス、連絡先、プロファイルは変更されません。新しい Outlook は影響を受けません。
+
+続行しますか?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive クライアントを起動する</Name>
 				<Explanation>OneDrive が実行されていません。</Explanation>
