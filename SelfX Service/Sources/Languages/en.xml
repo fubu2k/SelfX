@@ -177,6 +177,11 @@ Description of the issue:</Report_Mail_Body>
 		<Ticket_Row_Label>Report an issue</Ticket_Row_Label>
 		<Ticket_Row_Text>Opens an e-mail to the IT support with your description and the device information of this PC.</Ticket_Row_Text>
 		<Ticket_Button>Create ticket</Ticket_Button>
+		<Step1_Text>Pick your problem</Step1_Text>
+		<Step2_Text>Confirm</Step2_Text>
+		<Step3_Text>Done</Step3_Text>
+		<Help_Ticket_Text>Open a ticket with IT support</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Opens an e-mail to the IT support. Your description and the device information are already prepared. Nothing is sent until you click "Send".</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Create a ticket</Ticket_Window_Title>
 		<Ticket_Intro_Text>Describe what does not work. SelfX prepares an e-mail to the IT support.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Your description</Ticket_Description_Label>

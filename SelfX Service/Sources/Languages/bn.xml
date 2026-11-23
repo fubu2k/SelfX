@@ -179,6 +179,11 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Ticket_Row_Label>সমস্যা জানান</Ticket_Row_Label>
 		<Ticket_Row_Text>আপনার বিবরণ এবং এই পিসির ডিভাইস তথ্যসহ আইটি সহায়তার জন্য একটি ইমেল খোলে।</Ticket_Row_Text>
 		<Ticket_Button>টিকিট তৈরি করুন</Ticket_Button>
+		<Step1_Text>আপনার সমস্যা বেছে নিন</Step1_Text>
+		<Step2_Text>নিশ্চিত করুন</Step2_Text>
+		<Step3_Text>সম্পন্ন</Step3_Text>
+		<Help_Ticket_Text>আইটি সাপোর্টে টিকিট খুলুন</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>আইটি সাপোর্টের জন্য একটি ইমেল খোলে, যেখানে বিবরণ ও ডিভাইসের তথ্য আগে থেকেই তৈরি থাকে। "পাঠান" ক্লিক না করা পর্যন্ত কিছু পাঠানো হয় না।</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>টিকিট তৈরি করুন</Ticket_Window_Title>
 		<Ticket_Intro_Text>কী কাজ করছে না তা বর্ণনা করুন। SelfX আইটি সহায়তার জন্য একটি ইমেল প্রস্তুত করে।</Ticket_Intro_Text>
 		<Ticket_Description_Label>আপনার বিবরণ</Ticket_Description_Label>

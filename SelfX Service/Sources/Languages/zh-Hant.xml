@@ -179,6 +179,11 @@
 		<Ticket_Row_Label>回報問題</Ticket_Row_Label>
 		<Ticket_Row_Text>開啟寄給 IT 支援的電子郵件，內含您的說明和這台電腦的裝置資訊。</Ticket_Row_Text>
 		<Ticket_Button>建立工單</Ticket_Button>
+		<Step1_Text>選擇您的問題</Step1_Text>
+		<Step2_Text>確認</Step2_Text>
+		<Step3_Text>完成</Step3_Text>
+		<Help_Ticket_Text>向 IT 支援建立工單</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>開啟一封寄給 IT 支援的郵件，問題描述與裝置資訊已預先填好。按下「傳送」之前不會傳送任何內容。</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>建立工單</Ticket_Window_Title>
 		<Ticket_Intro_Text>請說明哪裡出了問題。SelfX 會為 IT 支援準備一封電子郵件。</Ticket_Intro_Text>
 		<Ticket_Description_Label>您的說明</Ticket_Description_Label>

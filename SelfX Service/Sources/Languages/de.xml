@@ -177,6 +177,11 @@ Beschreibung des Problems:</Report_Mail_Body>
 		<Ticket_Row_Label>Problem melden</Ticket_Row_Label>
 		<Ticket_Row_Text>Öffnet eine E-Mail an den IT-Support mit Ihrer Beschreibung und den Geräteinformationen dieses PCs.</Ticket_Row_Text>
 		<Ticket_Button>Ticket erstellen</Ticket_Button>
+		<Step1_Text>Problem auswählen</Step1_Text>
+		<Step2_Text>Bestätigen</Step2_Text>
+		<Step3_Text>Fertig</Step3_Text>
+		<Help_Ticket_Text>Ticket beim IT-Support eröffnen</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Öffnet eine E-Mail an den IT-Support. Beschreibung und Geräteinformationen sind schon vorbereitet. Gesendet wird erst, wenn Sie auf „Senden“ klicken.</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Ticket erstellen</Ticket_Window_Title>
 		<Ticket_Intro_Text>Beschreiben Sie, was nicht funktioniert. SelfX bereitet eine E-Mail an den IT-Support vor.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Ihre Beschreibung</Ticket_Description_Label>

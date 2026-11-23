@@ -179,6 +179,11 @@
 		<Ticket_Row_Label>الإبلاغ عن مشكلة</Ticket_Row_Label>
 		<Ticket_Row_Text>يفتح رسالة بريد إلى دعم تقنية المعلومات تتضمن وصفك ومعلومات هذا الكمبيوتر.</Ticket_Row_Text>
 		<Ticket_Button>إنشاء تذكرة</Ticket_Button>
+		<Step1_Text>اختر مشكلتك</Step1_Text>
+		<Step2_Text>تأكيد</Step2_Text>
+		<Step3_Text>تم</Step3_Text>
+		<Help_Ticket_Text>فتح تذكرة لدى دعم تقنية المعلومات</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>يفتح رسالة بريد إلكتروني إلى دعم تقنية المعلومات مع وصف المشكلة ومعلومات الجهاز جاهزَين. لا يُرسل شيء حتى تضغط على «إرسال».</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>إنشاء تذكرة</Ticket_Window_Title>
 		<Ticket_Intro_Text>صف ما لا يعمل. يقوم SelfX بإعداد رسالة بريد إلى دعم تقنية المعلومات.</Ticket_Intro_Text>
 		<Ticket_Description_Label>وصفك</Ticket_Description_Label>

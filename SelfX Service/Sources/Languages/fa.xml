@@ -179,6 +179,11 @@
 		<Ticket_Row_Label>گزارش مشکل</Ticket_Row_Label>
 		<Ticket_Row_Text>یک ایمیل برای پشتیبانی فناوری اطلاعات باز می‌کند که شامل توضیح شما و اطلاعات این رایانه است.</Ticket_Row_Text>
 		<Ticket_Button>ایجاد تیکت</Ticket_Button>
+		<Step1_Text>مشکل خود را انتخاب کنید</Step1_Text>
+		<Step2_Text>تأیید</Step2_Text>
+		<Step3_Text>انجام شد</Step3_Text>
+		<Help_Ticket_Text>ثبت درخواست در پشتیبانی فناوری اطلاعات</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>یک ایمیل به پشتیبانی فناوری اطلاعات باز می‌کند که توضیح و اطلاعات دستگاه از قبل در آن آماده است. تا زمانی که روی «ارسال» نزنید، چیزی ارسال نمی‌شود.</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>ایجاد تیکت</Ticket_Window_Title>
 		<Ticket_Intro_Text>توضیح دهید چه چیزی کار نمی‌کند. SelfX یک ایمیل برای پشتیبانی فناوری اطلاعات آماده می‌کند.</Ticket_Intro_Text>
 		<Ticket_Description_Label>توضیح شما</Ticket_Description_Label>

@@ -179,6 +179,11 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Ticket_Row_Label>Een probleem melden</Ticket_Row_Label>
 		<Ticket_Row_Text>Opent een e-mail aan de IT-support met uw beschrijving en de gegevens van deze pc.</Ticket_Row_Text>
 		<Ticket_Button>Ticket maken</Ticket_Button>
+		<Step1_Text>Kies uw probleem</Step1_Text>
+		<Step2_Text>Bevestigen</Step2_Text>
+		<Step3_Text>Klaar</Step3_Text>
+		<Help_Ticket_Text>Ticket openen bij IT-support</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Opent een e-mail naar de IT-support met uw beschrijving en de apparaatgegevens al ingevuld. Er wordt niets verzonden voordat u op 'Verzenden' klikt.</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Een ticket maken</Ticket_Window_Title>
 		<Ticket_Intro_Text>Beschrijf wat niet werkt. SelfX bereidt een e-mail voor de IT-support voor.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Uw beschrijving</Ticket_Description_Label>

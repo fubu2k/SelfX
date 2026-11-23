@@ -179,6 +179,11 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Ticket_Row_Label>Báo cáo sự cố</Ticket_Row_Label>
 		<Ticket_Row_Text>Mở thư gửi bộ phận hỗ trợ CNTT kèm mô tả của bạn và thông tin của máy tính này.</Ticket_Row_Text>
 		<Ticket_Button>Tạo phiếu yêu cầu</Ticket_Button>
+		<Step1_Text>Chọn sự cố của bạn</Step1_Text>
+		<Step2_Text>Xác nhận</Step2_Text>
+		<Step3_Text>Xong</Step3_Text>
+		<Help_Ticket_Text>Mở yêu cầu hỗ trợ CNTT</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Mở một email tới bộ phận hỗ trợ CNTT, đã có sẵn mô tả và thông tin thiết bị. Chỉ khi bạn nhấp "Gửi" thì email mới được gửi đi.</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Tạo phiếu yêu cầu</Ticket_Window_Title>
 		<Ticket_Intro_Text>Hãy mô tả điều gì không hoạt động. SelfX sẽ soạn sẵn thư gửi bộ phận hỗ trợ CNTT.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Mô tả của bạn</Ticket_Description_Label>

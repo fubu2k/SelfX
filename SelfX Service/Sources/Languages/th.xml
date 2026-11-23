@@ -179,6 +179,11 @@
 		<Ticket_Row_Label>แจ้งปัญหา</Ticket_Row_Label>
 		<Ticket_Row_Text>เปิดอีเมลถึงฝ่ายสนับสนุนไอที พร้อมคำอธิบายของคุณและข้อมูลอุปกรณ์ของพีซีเครื่องนี้</Ticket_Row_Text>
 		<Ticket_Button>สร้างตั๋ว</Ticket_Button>
+		<Step1_Text>เลือกปัญหาของคุณ</Step1_Text>
+		<Step2_Text>ยืนยัน</Step2_Text>
+		<Step3_Text>เสร็จแล้ว</Step3_Text>
+		<Help_Ticket_Text>เปิดตั๋วแจ้งทีมสนับสนุนด้านไอที</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>เปิดอีเมลถึงทีมสนับสนุนด้านไอที โดยมีคำอธิบายและข้อมูลอุปกรณ์เตรียมไว้ให้แล้ว จะไม่มีการส่งใด ๆ จนกว่าคุณจะคลิก "ส่ง"</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>สร้างตั๋ว</Ticket_Window_Title>
 		<Ticket_Intro_Text>อธิบายว่าอะไรใช้งานไม่ได้ SelfX จะเตรียมอีเมลถึงฝ่ายสนับสนุนไอทีให้</Ticket_Intro_Text>
 		<Ticket_Description_Label>คำอธิบายของคุณ</Ticket_Description_Label>

@@ -108,7 +108,7 @@ try {
     $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $mainXml))
     $window.Resources.MergedDictionaries.Add($dictionary)
     foreach ($name in 'Nav_Actions', 'Nav_Status', 'Nav_Info', 'ActionsList', 'StatusCards', 'InfoCards', 'FilterTextBox', 'Mode_Simple', 'Mode_Detailed',
-        'Btn_Help', 'Btn_Settings', 'Btn_About', 'Btn_CheckAll', 'SysInfo_Refresh', 'SysInfo_Copy', 'SysInfo_Export', 'SysInfo_SendLogs', 'Btn_SendLogs',
+        'Btn_Help', 'Btn_Settings', 'Btn_About', 'Btn_CheckAll', 'SysInfo_Refresh', 'SysInfo_Copy', 'SysInfo_Export', 'SysInfo_SendLogs', 'Btn_SendLogs', 'Btn_Ticket', 'Btn_Copilot', 'StepText1', 'StepText2', 'StepText3', 'NavText5', 'NavText6',
         'InfoBar', 'Status_Banner', 'Status_Spinner', 'SysInfo_Spinner', 'Brand_Logo', 'ServiceDot', 'NavBadge') {
         Assert-Equal ($window.FindName($name) -ne $null) $true "Main window control $name"
     }

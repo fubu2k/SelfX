@@ -37,13 +37,14 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.15
+    Version : 2.8.18
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX, http://www.systanddeploy.com)
     2.8.17   2026-11-23  fubu2k               Copilot Chat: optional clearing of the clipboard after a time (Copilot_Clear_Clipboard, Copilot_Clear_Clipboard_Seconds)
+    2.8.18   2026-11-23  fubu2k               Calmer look: larger radii and spacing, three-step hint, status chips with icon, help buttons (ticket, Copilot) in the navigation
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -336,7 +337,7 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ToolTip">
-            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="6" Padding="10,7" MaxWidth="360">
+            <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="10" Padding="12,9" MaxWidth="360">
               <TextBlock Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextPrimary}"/>
             </Border>
           </ControlTemplate>
@@ -347,11 +348,12 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="Background" Value="{DynamicResource Surface}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="CornerRadius" Value="14"/>
     </Style>
     <Style x:Key="BaseButton" TargetType="Button">
       <Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Padding" Value="14,6"/>
+      <Setter Property="Padding" Value="18,9"/>
+      <Setter Property="MinHeight" Value="40"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="Background" Value="{DynamicResource SurfaceAlt}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
@@ -361,7 +363,7 @@ $Global:SelfX_StylesXaml = @'
         <Setter.Value>
           <ControlTemplate TargetType="Button">
             <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
               <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
@@ -381,14 +383,15 @@ $Global:SelfX_StylesXaml = @'
     <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="Transparent"/>
-      <Setter Property="Width" Value="34"/>
-      <Setter Property="Height" Value="34"/>
+      <Setter Property="Width" Value="40"/>
+      <Setter Property="Height" Value="40"/>
+      <Setter Property="MinHeight" Value="0"/>
       <Setter Property="Padding" Value="0"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+            <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
@@ -406,15 +409,16 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style x:Key="AccentIconButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
-      <Setter Property="Width" Value="36"/>
-      <Setter Property="Height" Value="36"/>
+      <Setter Property="Width" Value="40"/>
+      <Setter Property="Height" Value="40"/>
+      <Setter Property="MinHeight" Value="0"/>
       <Setter Property="Padding" Value="0"/>
       <Setter Property="Background" Value="{DynamicResource RunButton}"/>
       <Setter Property="Foreground" Value="{DynamicResource RunButtonFg}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="18">
+            <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="20">
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
@@ -429,12 +433,13 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
       <Setter Property="Width" Value="42"/>
       <Setter Property="Height" Value="32"/>
+      <Setter Property="MinHeight" Value="0"/>
       <Setter Property="Foreground" Value="{DynamicResource TitleBarFg}"/>
     </Style>
     <Style x:Key="ToolTile" TargetType="Button" BasedOn="{StaticResource BaseButton}">
       <Setter Property="Width" Value="136"/>
-      <Setter Property="MinHeight" Value="76"/>
-      <Setter Property="Margin" Value="0,0,8,8"/>
+      <Setter Property="MinHeight" Value="84"/>
+      <Setter Property="Margin" Value="0,0,10,10"/>
       <Setter Property="Padding" Value="8,10"/>
       <Setter Property="Background" Value="{DynamicResource Surface}"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -447,7 +452,7 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
-            <Border Name="Bd" Background="Transparent" CornerRadius="6" Height="40">
+            <Border Name="Bd" Background="Transparent" CornerRadius="12" Height="46">
               <Grid>
                 <Rectangle Name="Ind" Width="3" Height="16" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource Accent}" HorizontalAlignment="Left" Visibility="Hidden"/>
                 <ContentPresenter Margin="12,0,8,0" VerticalAlignment="Center"/>
@@ -471,7 +476,7 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
-            <Border Name="Bd" CornerRadius="14" Padding="12,4" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1">
+            <Border Name="Bd" CornerRadius="18" Padding="16,7" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1">
               <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
@@ -492,7 +497,7 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
-            <Border Name="Bd" CornerRadius="4" Padding="14,5" Background="Transparent">
+            <Border Name="Bd" CornerRadius="9" Padding="16,7" Background="Transparent">
               <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
@@ -558,7 +563,7 @@ $Global:SelfX_StylesXaml = @'
       <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style x:Key="PageTitle" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="24"/>
+      <Setter Property="FontSize" Value="28"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
@@ -568,15 +573,15 @@ $Global:SelfX_StylesXaml = @'
 # Item templates of the main window: action row, status card and information card.
 $Global:SelfX_TemplatesXaml = @'
     <DataTemplate x:Key="ActionTemplate">
-      <Border Name="Row" Style="{StaticResource Card}" Padding="12,10" Margin="0,0,0,6">
+      <Border Name="Row" Style="{StaticResource Card}" Padding="16,14" Margin="0,0,0,10">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <Border Width="38" Height="38" CornerRadius="8" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
-            <TextBlock Style="{StaticResource Glyph}" Text="{Binding Glyph}" FontSize="18" Foreground="{DynamicResource AccentText}"/>
+          <Border Width="46" Height="46" CornerRadius="13" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+            <TextBlock Style="{StaticResource Glyph}" Text="{Binding Glyph}" FontSize="20" Foreground="{DynamicResource AccentText}"/>
           </Border>
-          <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center">
-            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding ShortExplanation}" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+          <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding ShortExplanation}" Foreground="{DynamicResource TextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="40"/>
           </StackPanel>
           <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
             <TextBlock Name="CategoryText" Text="{Binding Category}" Foreground="{DynamicResource TextSecondary}" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -621,12 +626,15 @@ $Global:SelfX_TemplatesXaml = @'
     </DataTemplate>
 
     <DataTemplate x:Key="StatusTemplate">
-      <Border Style="{StaticResource Card}" Width="{DynamicResource StatusCardWidth}" Margin="0,0,12,12" Padding="16,14">
+      <Border Style="{StaticResource Card}" Width="{DynamicResource StatusCardWidth}" Margin="0,0,14,14" Padding="20,18">
         <Grid>
           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
           <DockPanel>
-            <Border Name="Chip" DockPanel.Dock="Right" CornerRadius="10" Padding="9,2" VerticalAlignment="Top" Background="{DynamicResource OkBg}">
-              <TextBlock Name="ChipText" Text="{DynamicResource Str_Health_OK}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource OkFg}"/>
+            <Border Name="Chip" DockPanel.Dock="Right" CornerRadius="13" Padding="10,4" VerticalAlignment="Top" Background="{DynamicResource OkBg}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Name="ChipGlyph" Style="{StaticResource Glyph}" Text="&#xE73E;" FontSize="11" Margin="0,0,5,0" Foreground="{DynamicResource OkFg}"/>
+                <TextBlock Name="ChipText" Text="{DynamicResource Str_Health_OK}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource OkFg}"/>
+              </StackPanel>
             </Border>
             <TextBlock Name="Icon" Style="{StaticResource Glyph}" Text="{Binding Glyph}" FontSize="20" VerticalAlignment="Top" Foreground="{DynamicResource OkFg}"/>
             <TextBlock Text="{Binding Property}" FontSize="14" FontWeight="SemiBold" Margin="12,1,8,0" TextWrapping="Wrap"/>
@@ -669,25 +677,31 @@ $Global:SelfX_TemplatesXaml = @'
           <Setter TargetName="Chip" Property="Background" Value="{DynamicResource WarnBg}"/>
           <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource WarnFg}"/>
           <Setter TargetName="ChipText" Property="Text" Value="{DynamicResource Str_Health_Pending}"/>
+          <Setter TargetName="ChipGlyph" Property="Text" Value="&#xE7BA;"/>
+          <Setter TargetName="ChipGlyph" Property="Foreground" Value="{DynamicResource WarnFg}"/>
           <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource WarnFg}"/>
         </DataTrigger>
         <DataTrigger Binding="{Binding Status}" Value="Error">
           <Setter TargetName="Chip" Property="Background" Value="{DynamicResource ErrBg}"/>
           <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource ErrFg}"/>
           <Setter TargetName="ChipText" Property="Text" Value="{DynamicResource Str_Health_Error}"/>
+          <Setter TargetName="ChipGlyph" Property="Text" Value="&#xEA39;"/>
+          <Setter TargetName="ChipGlyph" Property="Foreground" Value="{DynamicResource ErrFg}"/>
           <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource ErrFg}"/>
         </DataTrigger>
         <DataTrigger Binding="{Binding Status}" Value="Unknown">
           <Setter TargetName="Chip" Property="Background" Value="{DynamicResource NeutralBg}"/>
           <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource NeutralFg}"/>
           <Setter TargetName="ChipText" Property="Text" Value="{DynamicResource Str_Health_Unknown}"/>
+          <Setter TargetName="ChipGlyph" Property="Text" Value="&#xE9CE;"/>
+          <Setter TargetName="ChipGlyph" Property="Foreground" Value="{DynamicResource NeutralFg}"/>
           <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource NeutralFg}"/>
         </DataTrigger>
       </DataTemplate.Triggers>
     </DataTemplate>
 
     <DataTemplate x:Key="InfoTemplate">
-      <Border Style="{StaticResource Card}" Width="{DynamicResource InfoCardWidth}" Margin="0,0,12,12" Padding="16,12">
+      <Border Style="{StaticResource Card}" Width="{DynamicResource InfoCardWidth}" Margin="0,0,14,14" Padding="20,16">
         <StackPanel Grid.IsSharedSizeScope="True">
           <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
             <TextBlock Style="{StaticResource Glyph}" Text="{Binding Glyph}" FontSize="16" Foreground="{DynamicResource AccentText}"/>
@@ -798,13 +812,25 @@ __TEMPLATES__
           </RadioButton>
         </StackPanel>
         <StackPanel Grid.Row="2">
+          <Button Name="Btn_Ticket" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,0,8" Padding="14,10" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Style="{StaticResource Glyph}" Text="&#xE7C3;" FontSize="16" Foreground="{DynamicResource RunButtonFg}"/>
+              <TextBlock Name="NavText5" Margin="10,0,0,0" TextWrapping="Wrap" MaxWidth="150" FontWeight="SemiBold" Foreground="{DynamicResource RunButtonFg}"/>
+            </StackPanel>
+          </Button>
+          <Button Name="Btn_Copilot" Style="{StaticResource BaseButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,0,8" Padding="14,10" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Style="{StaticResource Glyph}" Text="&#xE8F2;" FontSize="16" Foreground="{DynamicResource AccentText}"/>
+              <TextBlock Name="NavText6" Margin="10,0,0,0" TextWrapping="Wrap" MaxWidth="150"/>
+            </StackPanel>
+          </Button>
           <Button Name="Btn_SendLogs" Style="{StaticResource BaseButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,0,10" Padding="12,8">
             <StackPanel Orientation="Horizontal">
               <TextBlock Style="{StaticResource Glyph}" Text="&#xE724;" FontSize="14"/>
               <TextBlock Name="NavText4" Margin="10,0,0,0" TextWrapping="Wrap" MaxWidth="160"/>
             </StackPanel>
           </Button>
-          <Border Name="ServicePill" CornerRadius="6" Background="{DynamicResource SurfaceAlt}" Padding="10,7">
+          <Border Name="ServicePill" CornerRadius="12" Background="{DynamicResource SurfaceAlt}" Padding="10,7">
             <StackPanel Orientation="Horizontal">
               <Ellipse Name="ServiceDot" Width="8" Height="8" Fill="{DynamicResource NeutralFg}" VerticalAlignment="Center"/>
               <StackPanel Name="ServiceText" Margin="10,0,0,0">
@@ -817,8 +843,8 @@ __TEMPLATES__
       </Grid>
 
       <!-- Content -->
-      <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource ContentBg}" CornerRadius="8,0,0,0" BorderBrush="{DynamicResource Stroke}" BorderThickness="1,1,0,0">
-        <Grid Margin="28,20,16,12">
+      <Border Grid.Row="1" Grid.Column="1" Margin="0,0,12,12" Background="{DynamicResource ContentBg}" CornerRadius="18" BorderBrush="{DynamicResource Stroke}" BorderThickness="1">
+        <Grid Margin="32,26,20,16">
           <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 
           <!-- Page: troubleshooting -->
@@ -827,10 +853,16 @@ __TEMPLATES__
             <StackPanel Margin="0,0,12,0">
               <TextBlock Name="Main_Title" Style="{StaticResource PageTitle}"/>
               <TextBlock Name="Subtitle" Style="{StaticResource SubText}" Margin="0,4,0,0"/>
+              <!-- Three simple steps (explanation only, not clickable) -->
+              <StackPanel Orientation="Horizontal" Margin="0,14,0,0" Focusable="False">
+                <Border CornerRadius="12" Background="{DynamicResource SurfaceAlt}" Padding="12,7" Margin="0,0,8,0"><StackPanel Orientation="Horizontal"><Border Width="20" Height="20" CornerRadius="10" Background="{DynamicResource Accent}"><TextBlock Text="1" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentFg}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Name="StepText1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12"/></StackPanel></Border>
+                <Border CornerRadius="12" Background="{DynamicResource SurfaceAlt}" Padding="12,7" Margin="0,0,8,0"><StackPanel Orientation="Horizontal"><Border Width="20" Height="20" CornerRadius="10" Background="{DynamicResource Accent}"><TextBlock Text="2" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentFg}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Name="StepText2" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12"/></StackPanel></Border>
+                <Border CornerRadius="12" Background="{DynamicResource SurfaceAlt}" Padding="12,7"><StackPanel Orientation="Horizontal"><Border Width="20" Height="20" CornerRadius="10" Background="{DynamicResource Accent}"><TextBlock Text="3" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentFg}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Name="StepText3" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12"/></StackPanel></Border>
+              </StackPanel>
             </StackPanel>
             <DockPanel Grid.Row="1" Margin="0,16,12,10">
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="10,0,0,0">
-                <Border CornerRadius="6" Background="{DynamicResource SurfaceAlt}" Padding="3">
+                <Border CornerRadius="12" Background="{DynamicResource SurfaceAlt}" Padding="3">
                   <StackPanel Orientation="Horizontal">
                     <RadioButton Name="Mode_Simple" Style="{StaticResource Segment}" GroupName="View"/>
                     <RadioButton Name="Mode_Detailed" Style="{StaticResource Segment}" GroupName="View"/>
@@ -840,7 +872,7 @@ __TEMPLATES__
                   <TextBlock Style="{StaticResource Glyph}" Text="&#xE9CE;" FontSize="15" Foreground="{DynamicResource InfoIcon}"/>
                 </Button>
               </StackPanel>
-              <Border CornerRadius="6" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1,1,1,2" Height="36">
+              <Border CornerRadius="12" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" Height="44">
                 <Grid Margin="10,0">
                   <TextBlock Style="{StaticResource Glyph}" Text="&#xE721;" FontSize="13" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondary}"/>
                   <TextBlock Name="SearchHint" Margin="26,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" IsHitTestVisible="False"/>
@@ -876,7 +908,7 @@ __SPIN_STATUS__
                 <TextBlock Name="Status_Subtitle" Style="{StaticResource SubText}" Margin="0,4,0,0"/>
               </StackPanel>
             </DockPanel>
-            <Border Name="Status_Banner" Grid.Row="1" CornerRadius="8" Background="{DynamicResource InfoBg}" Padding="16,12" Margin="0,16,24,14">
+            <Border Name="Status_Banner" Grid.Row="1" CornerRadius="14" Background="{DynamicResource InfoBg}" Padding="20,16" Margin="0,18,24,16">
               <DockPanel>
                 <Button Name="Btn_FixAll" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center" Margin="12,0,0,0" Visibility="Collapsed">
                   <StackPanel Orientation="Horizontal">
@@ -1068,6 +1100,13 @@ $NavText1.Text = Get-SelfXString 'Troubleshooting_Tab_Text'
 $NavText2.Text = Get-SelfXString 'Nav_Status_Text'
 $NavText3.Text = Get-SelfXString 'SystemInfo_Tab_Text'
 $NavText4.Text = Get-SelfXString 'SystemInfo_SendLogs_Text'
+$StepText1.Text = Get-SelfXString 'Step1_Text'
+$StepText2.Text = Get-SelfXString 'Step2_Text'
+$StepText3.Text = Get-SelfXString 'Step3_Text'
+$NavText5.Text = Get-SelfXString 'Help_Ticket_Text'
+$NavText6.Text = Get-SelfXString 'Copilot_Row_Label'
+$Btn_Ticket.ToolTip = Get-SelfXString 'Help_Ticket_Tooltip'
+$Btn_Copilot.ToolTip = Get-SelfXString 'Copilot_Row_Text'
 $Btn_SendLogs.ToolTip = Get-SelfXString 'Tooltip_SendLogs'
 $VersionLabel.Text = Get-SelfXString 'Version_Text' $Tool_Version
 $Mode_Simple.Content = Get-SelfXString 'Solution_Mode_Simple'
@@ -1154,8 +1193,8 @@ Function New-SelfXDialog
   <Window.Resources>
 __STYLES__
   </Window.Resources>
-  <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Accent}" BorderThickness="1">
-    <StackPanel Margin="24,18,24,20">
+  <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1">
+    <StackPanel Margin="28,22,28,24">
       <DockPanel Name="DialogHeader" Background="Transparent" Margin="0,0,0,12">
         <TextBlock Name="DialogGlyph" Style="{StaticResource Glyph}" FontSize="20" Margin="0,0,12,0" Foreground="{DynamicResource AccentText}" Visibility="Collapsed"/>
         <TextBlock Name="DialogTitle" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
@@ -1606,6 +1645,20 @@ Else
 	{
 		$SysInfo_SendLogs.Add_Click({ Run_Remediation -rowObj $Global:SysInfo_SendLogs_Action })
 		$Btn_SendLogs.Add_Click({ Run_Remediation -rowObj $Global:SysInfo_SendLogs_Action })
+	}
+
+# Help area of the navigation: with the ticket function the big "open a ticket" button replaces "Send logs to support"
+# (the ticket e-mail carries the device information; the log report stays on the system information page); Copilot Chat has its own button when it is switched on. Both only open the same dialogs as the help window.
+If($Ticket_Available)
+	{
+		$Btn_Ticket.Visibility = 'Visible'
+		$Btn_SendLogs.Visibility = 'Collapsed'
+		$Btn_Ticket.Add_Click({ Show-SelfXTicketDialog })
+	}
+If($Copilot_Available)
+	{
+		$Btn_Copilot.Visibility = 'Visible'
+		$Btn_Copilot.Add_Click({ Show-SelfXCopilotDialog })
 	}
 
 #******************************************************************************
@@ -2271,7 +2324,7 @@ Function Show-SelfXHelpDialog
 		foreach($Entry in $Entries)
 			{
 				$Row = [Windows.Markup.XamlReader]::Parse(@'
-<Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" CornerRadius="6" Background="{DynamicResource SurfaceAlt}" Padding="12,10" Margin="0,0,0,8">
+<Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" CornerRadius="14" Background="{DynamicResource SurfaceAlt}" Padding="16,14" Margin="0,0,0,10">
   <DockPanel>
     <Button Name="Go" DockPanel.Dock="Right" Visibility="Collapsed" VerticalAlignment="Center" Margin="10,0,0,0"/>
     <TextBlock Name="Icon" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Top" Margin="0,2,12,0" Foreground="{DynamicResource AccentText}"/>
@@ -2542,7 +2595,7 @@ Function Update-SelfXLayout
 	{
 		$Narrow = $Form.ActualWidth -lt 900
 		$NavColumn.Width = [System.Windows.GridLength]::new($(If($Narrow) { 60 } Else { 220 }))
-		foreach($Element in $NavText1, $NavText2, $NavText3, $NavText4, $ServiceText) { $Element.Visibility = $(If($Narrow) { 'Collapsed' } Else { 'Visible' }) }
+		foreach($Element in $NavText1, $NavText2, $NavText3, $NavText4, $NavText5, $NavText6, $ServiceText) { $Element.Visibility = $(If($Narrow) { 'Collapsed' } Else { 'Visible' }) }
 		If($Brand_Logo_Image -ne $null) { $Brand_Logo.Visibility = $(If($Narrow) { 'Collapsed' } Else { 'Visible' }) }
 		$NavBadge.Margin = $(If($Narrow) { [System.Windows.Thickness]::new(0, -18, -6, 0) } Else { [System.Windows.Thickness]::new(0) })
 	}
@@ -2552,13 +2605,13 @@ Function Update-SelfXCards
 		If($Width -gt 0)
 			{
 				$Columns = $(If($Width -ge 900) { 3 } ElseIf($Width -ge 500) { 2 } Else { 1 })
-				$Form.Resources['StatusCardWidth'] = [double][Math]::Floor(($Width - 12 * $Columns) / $Columns)
+				$Form.Resources['StatusCardWidth'] = [double][Math]::Floor(($Width - 14 * $Columns) / $Columns)
 			}
 		$Width = $InfoCards.ActualWidth
 		If($Width -gt 0)
 			{
 				$Columns = $(If($Width -ge 720) { 2 } Else { 1 })
-				$Form.Resources['InfoCardWidth'] = [double][Math]::Floor(($Width - 12 * $Columns) / $Columns)
+				$Form.Resources['InfoCardWidth'] = [double][Math]::Floor(($Width - 14 * $Columns) / $Columns)
 			}
 	}
 $Form.Add_SizeChanged({ Update-SelfXLayout })

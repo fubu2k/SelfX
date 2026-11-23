@@ -179,6 +179,11 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Ticket_Row_Label>問題を報告する</Ticket_Row_Label>
 		<Ticket_Row_Text>あなたの説明とこの PC のデバイス情報を添えて、IT サポート宛てのメールを開きます。</Ticket_Row_Text>
 		<Ticket_Button>チケットを作成</Ticket_Button>
+		<Step1_Text>問題を選ぶ</Step1_Text>
+		<Step2_Text>確認する</Step2_Text>
+		<Step3_Text>完了</Step3_Text>
+		<Help_Ticket_Text>IT サポートにチケットを作成</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>IT サポート宛てのメールを開きます。説明とデバイス情報はあらかじめ入力されます。「送信」を押すまで何も送られません。</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>チケットを作成する</Ticket_Window_Title>
 		<Ticket_Intro_Text>うまくいかないことを説明してください。SelfX が IT サポート宛てのメールを用意します。</Ticket_Intro_Text>
 		<Ticket_Description_Label>あなたの説明</Ticket_Description_Label>

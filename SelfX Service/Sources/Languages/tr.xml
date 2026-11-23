@@ -179,6 +179,11 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Ticket_Row_Label>Sorun bildir</Ticket_Row_Label>
 		<Ticket_Row_Text>Açıklamanız ve bu bilgisayarın bilgileriyle BT desteğine bir e-posta açar.</Ticket_Row_Text>
 		<Ticket_Button>Talep oluştur</Ticket_Button>
+		<Step1_Text>Sorununuzu seçin</Step1_Text>
+		<Step2_Text>Onaylayın</Step2_Text>
+		<Step3_Text>Tamam</Step3_Text>
+		<Help_Ticket_Text>BT desteğiyle talep açın</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>BT desteğine, açıklamanız ve cihaz bilgileri hazır bir e-posta açar. "Gönder"e tıklamadan hiçbir şey gönderilmez.</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Talep oluştur</Ticket_Window_Title>
 		<Ticket_Intro_Text>Neyin çalışmadığını açıklayın. SelfX, BT desteği için bir e-posta hazırlar.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Açıklamanız</Ticket_Description_Label>

@@ -179,6 +179,11 @@
 		<Ticket_Row_Label>Повідомити про проблему</Ticket_Row_Label>
 		<Ticket_Row_Text>Відкриває лист до ІТ-підтримки з вашим описом і відомостями про цей комп’ютер.</Ticket_Row_Text>
 		<Ticket_Button>Створити заявку</Ticket_Button>
+		<Step1_Text>Оберіть проблему</Step1_Text>
+		<Step2_Text>Підтвердити</Step2_Text>
+		<Step3_Text>Готово</Step3_Text>
+		<Help_Ticket_Text>Створити заявку в ІТ-підтримку</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Відкриває лист до ІТ-підтримки з готовим описом і відомостями про пристрій. Нічого не надсилається, доки ви не натиснете «Надіслати».</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Створення заявки</Ticket_Window_Title>
 		<Ticket_Intro_Text>Опишіть, що не працює. SelfX підготує лист до ІТ-підтримки.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Ваш опис</Ticket_Description_Label>

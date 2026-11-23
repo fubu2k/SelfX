@@ -177,6 +177,11 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<Ticket_Row_Label>مسئلے کی اطلاع دیں</Ticket_Row_Label>
 		<Ticket_Row_Text>IT سپورٹ کو ایک ای میل کھولتا ہے جس میں آپ کی وضاحت اور اس پی سی کی معلومات ہوں گی۔</Ticket_Row_Text>
 		<Ticket_Button>ٹکٹ بنائیں</Ticket_Button>
+		<Step1_Text>اپنا مسئلہ منتخب کریں</Step1_Text>
+		<Step2_Text>تصدیق کریں</Step2_Text>
+		<Step3_Text>مکمل</Step3_Text>
+		<Help_Ticket_Text>آئی ٹی سپورٹ کے ساتھ ٹکٹ کھولیں</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>آئی ٹی سپورٹ کے لیے ایک ای میل کھلتی ہے جس میں تفصیل اور ڈیوائس کی معلومات پہلے سے تیار ہوتی ہیں۔ جب تک آپ "بھیجیں" پر کلک نہ کریں کچھ نہیں بھیجا جاتا۔</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>ٹکٹ بنائیں</Ticket_Window_Title>
 		<Ticket_Intro_Text>بتائیں کہ کیا کام نہیں کر رہا۔ SelfX IT سپورٹ کے لیے ایک ای میل تیار کرتا ہے۔</Ticket_Intro_Text>
 		<Ticket_Description_Label>آپ کی وضاحت</Ticket_Description_Label>

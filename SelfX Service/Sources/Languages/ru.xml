@@ -179,6 +179,11 @@
 		<Ticket_Row_Label>Сообщить о проблеме</Ticket_Row_Label>
 		<Ticket_Row_Text>Открывает письмо в ИТ-поддержку с вашим описанием и сведениями об этом компьютере.</Ticket_Row_Text>
 		<Ticket_Button>Создать заявку</Ticket_Button>
+		<Step1_Text>Выберите проблему</Step1_Text>
+		<Step2_Text>Подтвердить</Step2_Text>
+		<Step3_Text>Готово</Step3_Text>
+		<Help_Ticket_Text>Открыть заявку в ИТ-поддержку</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Открывает письмо в ИТ-поддержку с готовым описанием и сведениями об устройстве. Ничего не отправляется, пока вы не нажмёте «Отправить».</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Создание заявки</Ticket_Window_Title>
 		<Ticket_Intro_Text>Опишите, что не работает. SelfX подготовит письмо в ИТ-поддержку.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Ваше описание</Ticket_Description_Label>
