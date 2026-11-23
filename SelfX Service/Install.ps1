@@ -37,7 +37,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.8.3
+    Version : 2.8.4
 
     History:
     Version  Date        Author               Change
@@ -45,6 +45,8 @@
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
     2.8.3    2026-11-23  fubu2k               SelfX.Files.json also lists SelfXService.exe and SelfX.exe; after copying, the installed
                                               folder is checked against the list again
+    2.8.4    2026-11-23  fubu2k               Security (M1): the data folder is cleaned by the delete helper of SelfXService.exe (handle-based, no
+                                              time window between link check and delete); the Bin check runs before the data folder is prepared
 #>
 
 [CmdletBinding()]
@@ -262,49 +264,47 @@ function Set-SelfXServicePrivileges {
 	return "Restricted to: $($actual -join ', ')."
 }
 
+function Invoke-SelfXSafeDelete {
+	# Runs the delete helper of SelfXService.exe (/removetree: or /cleandata:, class SafeTree). The helper opens every entry
+	# once without following links and deletes through that handle, so a folder that a user replaces by a junction between
+	# check and delete is never followed (no time window as with Get-Item + Remove-Item). Fail closed: anything but the
+	# exit code 0 together with the marker line is an error; there is no fallback to a delete by path.
+	param(
+		[Parameter(Mandatory = $true)][string]$Exe,
+		[Parameter(Mandatory = $true)][string[]]$Arguments
+	)
+	If(-not (Test-Path -LiteralPath $Exe -PathType Leaf)) { throw "The delete helper '$Exe' is missing." }
+	$output = @(& $Exe @Arguments 2>&1 | ForEach-Object { "$_" })
+	$exitCode = $LASTEXITCODE
+	If(($exitCode -ne 0) -or (@($output | Where-Object { $_ -eq 'SELFX-SAFEDELETE-OK' }).Count -ne 1))
+	{
+		throw "The delete helper failed (exit code $exitCode): $($output -join ' | ')"
+	}
+}
+
 function Initialize-SelfXDataFolder {
 	# Prepares ProgramData\SelfX before anything is written there as SYSTEM. A user can create this folder
 	# (or a link in it) before the installation; the service later writes, rotates and deletes files in it as SYSTEM.
 	# Steps: a link at the folder itself or below it is removed (the link, never its target); entries that are not owned by
 	# SYSTEM, administrators or TrustedInstaller are deleted (link-safe); owner and rights of the folder are set again.
 	# Logs\Users is the area of the users (their own folders are owned by them by design): it is neither entered nor changed.
+	# Deleting is done by the helper in SelfXService.exe (SafeDeleteExe, from the checked package): it works through handles,
+	# so a user cannot redirect the delete with a junction between check and delete.
 	param(
 		[Parameter(Mandatory = $true)][string]$Path,
+		[Parameter(Mandatory = $true)][string]$SafeDeleteExe,
 		[string[]]$TrustedOwnerSids = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'),
 		[string]$UserArea = 'Logs\Users'
 	)
-	$skipFull = [IO.Path]::GetFullPath((Join-Path $Path $UserArea)).TrimEnd('\')
-
-	function Remove-SelfXDataEntry {
-		param([Parameter(Mandatory = $true)][string]$Entry)
-		$item = Get-Item -LiteralPath $Entry -Force -ErrorAction SilentlyContinue
-		If(-not $item) { return }
-		If($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
-		{
-			If($item.PSIsContainer) { [IO.Directory]::Delete($Entry) } Else { [IO.File]::Delete($Entry) }
-			return
-		}
-		If($item.PSIsContainer) { ForEach($child in @([IO.Directory]::EnumerateFileSystemEntries($Entry))) { Remove-SelfXDataEntry -Entry $child } }
-		Remove-Item -LiteralPath $Entry -Force -ErrorAction Stop
-	}
-
-	function Clear-SelfXDataFolder {
-		param([Parameter(Mandatory = $true)][string]$Folder)
-		ForEach($child in @([IO.Directory]::EnumerateFileSystemEntries($Folder)))
-		{
-			$item = Get-Item -LiteralPath $child -Force
-			If($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { Remove-SelfXDataEntry -Entry $child; continue }
-			$owner = (Get-Acl -LiteralPath $child).GetOwner([Security.Principal.SecurityIdentifier]).Value
-			If($TrustedOwnerSids -notcontains $owner) { Remove-SelfXDataEntry -Entry $child; continue }
-			If($item.PSIsContainer -and [IO.Path]::GetFullPath($child).TrimEnd('\') -ne $skipFull) { Clear-SelfXDataFolder -Folder $child }
-		}
-	}
-
 	$root = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
-	If($root -and ($root.Attributes -band [IO.FileAttributes]::ReparsePoint)) { Remove-SelfXDataEntry -Entry $Path; $root = $null }
-	If($root -and -not $root.PSIsContainer) { Remove-SelfXDataEntry -Entry $Path; $root = $null }
+	If($root -and (($root.Attributes -band [IO.FileAttributes]::ReparsePoint) -or -not $root.PSIsContainer))
+	{
+		# A link or a file instead of the folder: remove it (a link itself, never its target).
+		Invoke-SelfXSafeDelete -Exe $SafeDeleteExe -Arguments @("/removetree:$Path")
+		$root = $null
+	}
 	If(-not $root) { New-Item -ItemType Directory -Path $Path -Force | Out-Null }
-	Clear-SelfXDataFolder -Folder $Path
+	Invoke-SelfXSafeDelete -Exe $SafeDeleteExe -Arguments @("/cleandata:$Path", "/trusted:$($TrustedOwnerSids -join ';')", "/skip:$UserArea")
 
 	# Owner first, then rights from scratch: explicit entries that a former owner added are removed by /reset.
 	& icacls.exe $Path /setowner '*S-1-5-32-544' | Out-Null
@@ -323,7 +323,9 @@ If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess
 
 # Logs may contain script output; only SYSTEM and administrators can read them. The folder is cleaned of links and
 # foreign-owned entries first, then owner and rights are set.
-Initialize-SelfXDataFolder -Path $DataFolder
+# The package is checked before anything on the device is changed; the delete helper is the checked SelfXService.exe of the package.
+Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
+Initialize-SelfXDataFolder -Path $DataFolder -SafeDeleteExe (Join-Path $BinFolder 'SelfXService.exe')
 New-Item -ItemType Directory -Path $LogFolder -Force | Out-Null
 # The SelfX window, the status icon and the user actions log as the user into Logs\Users\<SID> (SelfXLog.ps1).
 # Users may only create their own folder (CREATOR OWNER = full control on it); they cannot list the Users
@@ -343,8 +345,7 @@ Try
 
 	# The programs of the package are checked first: when they are missing or do not match, the existing
 	# installation stays untouched and still works.
-	Test-SelfXPrebuiltBinaries -BinFolder $BinFolder -PackageFolder $PackageFolder
-	Write-Output 'Programs in Bin checked against the manifest.'
+	Write-Output 'Programs in Bin checked against the manifest (before the data folder was prepared).'
 	$CheckedFiles = Test-SelfXFileManifest -PackageFolder $PackageFolder
 	If($null -eq $CheckedFiles) { Write-Warning 'SelfX.Files.json is missing in the package: the files are not checked against a hash list. The installation continues.' }
 	Else { Write-Output "Package files checked against SelfX.Files.json ($CheckedFiles files)." }

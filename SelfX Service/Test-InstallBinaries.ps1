@@ -36,7 +36,7 @@ $tokens = $null
 $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Install.ps1'), [ref]$tokens, [ref]$parseErrors)
 Assert-Equal @($parseErrors).Count 0 'Install.ps1 parses'
-foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Test-SelfXWindowsBuild', 'Initialize-SelfXDataFolder', 'Get-SelfXServicePrivileges', 'Set-SelfXServicePrivileges') {
+foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Test-SelfXWindowsBuild', 'Invoke-SelfXSafeDelete', 'Initialize-SelfXDataFolder', 'Get-SelfXServicePrivileges', 'Set-SelfXServicePrivileges') {
 	$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
 	Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
 	if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
@@ -216,8 +216,17 @@ try {
 # Initialize-SelfXDataFolder: links and foreign-owned entries in ProgramData\SelfX are removed, owner and
 # rights are set again. Needs administrator rights (icacls /setowner); without them these checks are skipped.
 $isAdminTest = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+# The delete helper is SelfXService.exe of the build (Bin of the package, or SELFX_TEST_SAFEDELETE_EXE).
+$safeExe = $env:SELFX_TEST_SAFEDELETE_EXE
+if (-not $safeExe) { $safeExe = Join-Path $PSScriptRoot 'Bin\SelfXService.exe' }
 if (-not $isAdminTest) { Write-Output 'Skipped: Initialize-SelfXDataFolder checks need administrator rights.' }
+elseif (-not (Test-Path -LiteralPath $safeExe -PathType Leaf)) {
+	if ($env:SELFX_REQUIRE_BIN -eq '1') { $script:errors.Add("The delete helper '$safeExe' is missing.") }
+	else { Write-Output "Skipped: Initialize-SelfXDataFolder checks need the delete helper ($safeExe; build with tools\Build-SelfXBinaries.ps1)." }
+}
 else {
+	$missingHelper = try { Invoke-SelfXSafeDelete -Exe (Join-Path $root 'missing.exe') -Arguments @('/removetree:C:\x\y'); 'no error' } catch { "$($_.Exception.Message)" }
+	Assert-Equal ($missingHelper -match 'is missing') $true 'Invoke-SelfXSafeDelete: a missing helper is an error (fail closed)'
 	$dataTest = Join-Path $root 'DataTests'
 	function New-TestJunction($Link, $Target) { $null = & cmd.exe /c mklink /J "`"$Link`"" "`"$Target`"" 2>&1; if ($LASTEXITCODE -ne 0) { throw "mklink failed for '$Link'." } }
 	function Get-TestOwner($Path) { (Get-Acl -LiteralPath $Path).GetOwner([Security.Principal.SecurityIdentifier]).Value }
@@ -225,7 +234,7 @@ else {
 	# 1. A folder that does not exist is created; owner = Administrators, only SYSTEM and Administrators have explicit rights.
 	$data1 = Join-Path $dataTest 'new\SelfX'
 	New-Item -ItemType Directory -Path (Split-Path -Parent $data1) -Force | Out-Null
-	Initialize-SelfXDataFolder -Path $data1
+	Initialize-SelfXDataFolder -Path $data1 -SafeDeleteExe $safeExe
 	Assert-Equal (Test-Path -LiteralPath $data1 -PathType Container) $true 'data folder is created'
 	Assert-Equal (Get-TestOwner $data1) 'S-1-5-32-544' 'data folder: owner is Administrators'
 	$rules = @((Get-Acl -LiteralPath $data1).Access)
@@ -240,7 +249,7 @@ else {
 	$data2 = Join-Path $dataTest 'junction\SelfX'
 	New-Item -ItemType Directory -Path (Split-Path -Parent $data2) -Force | Out-Null
 	New-TestJunction $data2 $target2
-	Initialize-SelfXDataFolder -Path $data2
+	Initialize-SelfXDataFolder -Path $data2 -SafeDeleteExe $safeExe
 	Assert-Equal (([IO.File]::GetAttributes($data2) -band [IO.FileAttributes]::ReparsePoint) -eq 0) $true 'junction as data folder: replaced by a real folder'
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $target2 'keep.txt')) $true 'junction as data folder: target content is kept'
 	Assert-Equal ((Get-Acl -LiteralPath $target2).Sddl) $acl2Before 'junction as data folder: rights of the target are unchanged'
@@ -256,7 +265,7 @@ else {
 	Set-Content -LiteralPath (Join-Path $data3 'Logs\Users\S-1-5-21-1-2-3-1001\user.log') -Value 'x'
 	Set-Content -LiteralPath (Join-Path $data3 'Cache\Health.json') -Value '{}'
 	Set-Content -LiteralPath (Join-Path $data3 'Reports\S-1-5-21-1-2-3-1001\r.txt') -Value 'x'
-	Initialize-SelfXDataFolder -Path $data3
+	Initialize-SelfXDataFolder -Path $data3 -SafeDeleteExe $safeExe
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data3 'Logs\evil')) $false 'link below the data folder: removed'
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $target3 'keep.txt')) $true 'link below the data folder: target content is kept'
 	# Files created by an elevated administrator belong to the group Administrators (trusted); otherwise this check does not apply.
@@ -269,7 +278,7 @@ else {
 	# 4. With a list that does not contain the owner of the test files, all of them count as foreign (also Logs, with the user
 	#    area below it) and are deleted; the data folder itself is kept.
 	$ownerFile = Get-TestOwner (Join-Path $data3 'Cache\Health.json')
-	Initialize-SelfXDataFolder -Path $data3 -TrustedOwnerSids @('S-1-5-18-test-no-match')
+	Initialize-SelfXDataFolder -Path $data3 -SafeDeleteExe $safeExe -TrustedOwnerSids @('S-1-5-18-test-no-match')
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data3 'Cache')) $false "foreign-owned folder (owner $ownerFile): deleted"
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data3 'Reports')) $false 'foreign-owned folder with content: deleted'
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data3 'Logs')) $false 'foreign-owned Logs folder: deleted'
