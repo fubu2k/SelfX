@@ -179,6 +179,11 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Ticket_Row_Label>समस्या की सूचना दें</Ticket_Row_Label>
 		<Ticket_Row_Text>आपके विवरण और इस पीसी की डिवाइस जानकारी के साथ IT सहायता को ईमेल खोलता है।</Ticket_Row_Text>
 		<Ticket_Button>टिकट बनाएँ</Ticket_Button>
+		<Step1_Text>अपनी समस्या चुनें</Step1_Text>
+		<Step2_Text>पुष्टि करें</Step2_Text>
+		<Step3_Text>हो गया</Step3_Text>
+		<Help_Ticket_Text>आईटी सपोर्ट के साथ टिकट खोलें</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>आईटी सपोर्ट के लिए एक ईमेल खुलता है, जिसमें विवरण और डिवाइस की जानकारी पहले से तैयार होती है। "भेजें" पर क्लिक करने तक कुछ भी नहीं भेजा जाता।</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>टिकट बनाएँ</Ticket_Window_Title>
 		<Ticket_Intro_Text>बताएँ कि क्या काम नहीं कर रहा है। SelfX IT सहायता के लिए एक ईमेल तैयार करता है।</Ticket_Intro_Text>
 		<Ticket_Description_Label>आपका विवरण</Ticket_Description_Label>

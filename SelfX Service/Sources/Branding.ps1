@@ -20,7 +20,7 @@
     Name    : Branding.ps1
     Package : SelfX Service
     Context : GUI helper (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1 as the signed-in user)
-    Version : 2.5.0
+    Version : 2.5.1
 
     History:
     Version  Date        Author               Change
@@ -28,6 +28,7 @@
     2.1.0    2026-10-28  Wolfgang Baeck       Initial version: company logo, icon and colors
     2.5.0    2026-11-04  Wolfgang Baeck       Modern UI: theme colors without MahApps (dark/light), named
                                               accent colors, readable accent text, title bar text color
+    2.5.1    2026-11-23  Marc                  Calmer base colors (softer surfaces and borders)
 #>
 
 # Named accent colors of the former MahApps themes (Tool_Color), so existing configurations keep their color.
@@ -41,14 +42,14 @@ $Script:SelfXNamedAccents = @{
 # Base colors of the two themes (Windows 11 style). Status colors are fixed so that OK/warning/error look the same everywhere.
 $Script:SelfXThemeBase = @{
 	Dark = @{
-		WindowBg = '#202020'; ContentBg = '#272727'; Surface = '#2D2D2D'; SurfaceAlt = '#343434'; Stroke = '#3D3D3D'
-		HoverBg = '#3A3A3A'; SelectedBg = '#383838'; TextPrimary = '#FFFFFF'; TextSecondary = '#B4B4B4'; ScrollThumb = '#5A5A5A'
+		WindowBg = '#1C1C1E'; ContentBg = '#242426'; Surface = '#2C2C2E'; SurfaceAlt = '#38383A'; Stroke = '#3A3A3C'
+		HoverBg = '#3C3C3E'; SelectedBg = '#3A3A3C'; TextPrimary = '#FFFFFF'; TextSecondary = '#B4B4B4'; ScrollThumb = '#5A5A5A'
 		OkBg = '#1F3A26'; OkFg = '#6CCB5F'; OkSolid = '#6CCB5F'; WarnBg = '#3D3320'; WarnFg = '#FCD34D'; WarnSolid = '#F7B500'
 		ErrBg = '#442726'; ErrFg = '#FF99A4'; ErrSolid = '#D13438'; NeutralBg = '#333333'; NeutralFg = '#C8C8C8'; InfoBg = '#2B3440'
 	}
 	Light = @{
-		WindowBg = '#F3F3F3'; ContentBg = '#F9F9F9'; Surface = '#FFFFFF'; SurfaceAlt = '#F5F5F5'; Stroke = '#E3E3E3'
-		HoverBg = '#EDEDED'; SelectedBg = '#EAEAEA'; TextPrimary = '#1B1B1B'; TextSecondary = '#5F5F5F'; ScrollThumb = '#C2C2C2'
+		WindowBg = '#F2F2F4'; ContentBg = '#FAFAFB'; Surface = '#FFFFFF'; SurfaceAlt = '#F1F1F4'; Stroke = '#E4E4E8'
+		HoverBg = '#ECECF0'; SelectedBg = '#E6E6EB'; TextPrimary = '#1B1B1B'; TextSecondary = '#5F5F5F'; ScrollThumb = '#C2C2C2'
 		OkBg = '#DFF6DD'; OkFg = '#107C10'; OkSolid = '#13A10E'; WarnBg = '#FFF4CE'; WarnFg = '#8A5300'; WarnSolid = '#F7B500'
 		ErrBg = '#FDE7E9'; ErrFg = '#C42B1C'; ErrSolid = '#C42B1C'; NeutralBg = '#EBEBEB'; NeutralFg = '#5F5F5F'; InfoBg = '#EEF5FB'
 	}

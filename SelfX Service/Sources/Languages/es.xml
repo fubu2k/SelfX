@@ -179,6 +179,11 @@ Descripción del problema:</Report_Mail_Body>
 		<Ticket_Row_Label>Notificar un problema</Ticket_Row_Label>
 		<Ticket_Row_Text>Abre un correo al soporte de TI con su descripción y la información de este equipo.</Ticket_Row_Text>
 		<Ticket_Button>Crear ticket</Ticket_Button>
+		<Step1_Text>Elija su problema</Step1_Text>
+		<Step2_Text>Confirmar</Step2_Text>
+		<Step3_Text>Listo</Step3_Text>
+		<Help_Ticket_Text>Abrir un ticket con el soporte de TI</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Abre un correo al soporte de TI con la descripción y la información del equipo ya preparadas. No se envía nada hasta que haga clic en «Enviar».</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Crear un ticket</Ticket_Window_Title>
 		<Ticket_Intro_Text>Describa lo que no funciona. SelfX prepara un correo para el soporte de TI.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Su descripción</Ticket_Description_Label>

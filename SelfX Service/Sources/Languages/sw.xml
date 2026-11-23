@@ -179,6 +179,11 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Ticket_Row_Label>Ripoti tatizo</Ticket_Row_Label>
 		<Ticket_Row_Text>Hufungua barua pepe kwa usaidizi wa TEHAMA yenye maelezo yako na taarifa za kompyuta hii.</Ticket_Row_Text>
 		<Ticket_Button>Unda tiketi</Ticket_Button>
+		<Step1_Text>Chagua tatizo lako</Step1_Text>
+		<Step2_Text>Thibitisha</Step2_Text>
+		<Step3_Text>Imekamilika</Step3_Text>
+		<Help_Ticket_Text>Fungua tiketi kwa msaada wa TEHAMA</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Hufungua barua pepe kwa msaada wa TEHAMA yenye maelezo na taarifa za kifaa tayari. Hakuna kinachotumwa hadi ubofye "Tuma".</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Unda tiketi</Ticket_Window_Title>
 		<Ticket_Intro_Text>Eleza kinachoshindwa kufanya kazi. SelfX huandaa barua pepe kwa usaidizi wa TEHAMA.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Maelezo yako</Ticket_Description_Label>

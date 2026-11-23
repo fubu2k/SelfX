@@ -179,6 +179,11 @@ Descrizione del problema:</Report_Mail_Body>
 		<Ticket_Row_Label>Segnala un problema</Ticket_Row_Label>
 		<Ticket_Row_Text>Apre un’e-mail al supporto IT con la tua descrizione e le informazioni di questo PC.</Ticket_Row_Text>
 		<Ticket_Button>Crea ticket</Ticket_Button>
+		<Step1_Text>Scegli il tuo problema</Step1_Text>
+		<Step2_Text>Conferma</Step2_Text>
+		<Step3_Text>Fatto</Step3_Text>
+		<Help_Ticket_Text>Apri un ticket con il supporto IT</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Apre un'e-mail al supporto IT con descrizione e informazioni sul dispositivo già pronte. Non viene inviato nulla finché non fai clic su «Invia».</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Crea un ticket</Ticket_Window_Title>
 		<Ticket_Intro_Text>Descrivi cosa non funziona. SelfX prepara un’e-mail per il supporto IT.</Ticket_Intro_Text>
 		<Ticket_Description_Label>La tua descrizione</Ticket_Description_Label>

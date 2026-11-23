@@ -179,6 +179,11 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Ticket_Row_Label>문제 신고</Ticket_Row_Label>
 		<Ticket_Row_Text>사용자의 설명과 이 PC의 장치 정보를 담아 IT 지원팀에 보낼 메일을 엽니다.</Ticket_Row_Text>
 		<Ticket_Button>티켓 만들기</Ticket_Button>
+		<Step1_Text>문제 선택</Step1_Text>
+		<Step2_Text>확인</Step2_Text>
+		<Step3_Text>완료</Step3_Text>
+		<Help_Ticket_Text>IT 지원에 티켓 열기</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>IT 지원팀에 보낼 메일을 엽니다. 설명과 장치 정보가 미리 입력되어 있으며, '보내기'를 누르기 전에는 아무것도 전송되지 않습니다.</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>티켓 만들기</Ticket_Window_Title>
 		<Ticket_Intro_Text>작동하지 않는 내용을 설명해 주세요. SelfX가 IT 지원팀에 보낼 메일을 준비합니다.</Ticket_Intro_Text>
 		<Ticket_Description_Label>내 설명</Ticket_Description_Label>

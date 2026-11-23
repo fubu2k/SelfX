@@ -179,6 +179,11 @@ Description du problème :</Report_Mail_Body>
 		<Ticket_Row_Label>Signaler un problème</Ticket_Row_Label>
 		<Ticket_Row_Text>Ouvre un e-mail au support informatique avec votre description et les informations de cet ordinateur.</Ticket_Row_Text>
 		<Ticket_Button>Créer un ticket</Ticket_Button>
+		<Step1_Text>Choisissez votre problème</Step1_Text>
+		<Step2_Text>Confirmer</Step2_Text>
+		<Step3_Text>Terminé</Step3_Text>
+		<Help_Ticket_Text>Ouvrir un ticket auprès du support informatique</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Ouvre un e-mail au support informatique, déjà préparé avec votre description et les informations de l'appareil. Rien n'est envoyé avant que vous cliquiez sur « Envoyer ».</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Créer un ticket</Ticket_Window_Title>
 		<Ticket_Intro_Text>Décrivez ce qui ne fonctionne pas. SelfX prépare un e-mail pour le support informatique.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Votre description</Ticket_Description_Label>

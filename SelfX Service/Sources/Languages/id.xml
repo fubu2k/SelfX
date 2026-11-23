@@ -179,6 +179,11 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Ticket_Row_Label>Laporkan masalah</Ticket_Row_Label>
 		<Ticket_Row_Text>Membuka e-mail ke dukungan TI berisi deskripsi Anda dan informasi PC ini.</Ticket_Row_Text>
 		<Ticket_Button>Buat tiket</Ticket_Button>
+		<Step1_Text>Pilih masalah Anda</Step1_Text>
+		<Step2_Text>Konfirmasi</Step2_Text>
+		<Step3_Text>Selesai</Step3_Text>
+		<Help_Ticket_Text>Buka tiket ke dukungan TI</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>Membuka email ke dukungan TI dengan deskripsi dan informasi perangkat yang sudah disiapkan. Tidak ada yang dikirim sebelum Anda mengeklik "Kirim".</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>Buat tiket</Ticket_Window_Title>
 		<Ticket_Intro_Text>Jelaskan apa yang tidak berfungsi. SelfX menyiapkan e-mail untuk dukungan TI.</Ticket_Intro_Text>
 		<Ticket_Description_Label>Deskripsi Anda</Ticket_Description_Label>

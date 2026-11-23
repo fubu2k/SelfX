@@ -179,6 +179,11 @@
 		<Ticket_Row_Label>报告问题</Ticket_Row_Label>
 		<Ticket_Row_Text>打开发送给 IT 支持的电子邮件，其中包含您的描述和这台电脑的设备信息。</Ticket_Row_Text>
 		<Ticket_Button>创建工单</Ticket_Button>
+		<Step1_Text>选择您的问题</Step1_Text>
+		<Step2_Text>确认</Step2_Text>
+		<Step3_Text>完成</Step3_Text>
+		<Help_Ticket_Text>向 IT 支持提交工单</Help_Ticket_Text>
+		<Help_Ticket_Tooltip>打开一封发给 IT 支持的邮件，问题描述和设备信息已预先填好。点击“发送”之前不会发送任何内容。</Help_Ticket_Tooltip>
 		<Ticket_Window_Title>创建工单</Ticket_Window_Title>
 		<Ticket_Intro_Text>请描述哪里出了问题。SelfX 会为 IT 支持准备一封电子邮件。</Ticket_Intro_Text>
 		<Ticket_Description_Label>您的描述</Ticket_Description_Label>
