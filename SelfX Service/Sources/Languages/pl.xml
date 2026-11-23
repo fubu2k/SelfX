@@ -105,6 +105,7 @@ Jeśli widok uproszczony nie rozwiązuje problemu, wybierz widok szczegółowy.<
 		<SystemInfo_SyncCompliance_Text>Sprawdź zgodność</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Portal firmy</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Szybka pomoc</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Zbierz dzienniki MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Wyślij dzienniki do pomocy technicznej</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Dzienniki urządzenia {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Opis problemu:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Prosi usługę Intune o sprawdzenie teraz, czy urządzenie spełnia zasady firmy.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Otwiera Portal firmy, w którym można instalować aplikacje firmowe.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Otwiera Szybką pomoc, aby pracownik pomocy technicznej mógł zobaczyć Twój ekran i pomóc – tylko za Twoją zgodą.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Otwiera Remote Help, aby pracownik pomocy technicznej mógł zobaczyć Twój ekran i pomóc – tylko za Twoją zgodą.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Zbiera dzienniki zarządzania urządzeniem w folderze dla pomocy technicznej.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Zbiera wszystkie dzienniki urządzenia i otwiera wiadomość e-mail do pomocy technicznej z raportem w załączniku.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Ustawienia (język, wygląd i ikona stanu)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Opis problemu:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX kopiuje tekst i otwiera {0}. Wklejasz tam tekst i wysyłasz go samodzielnie. SelfX niczego nie wysyła.</Copilot_Target_Text>
 		<Copilot_Open_Button>Kopiuj i otwórz Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Tekst jest w schowku, a Copilot Chat został otwarty. Wklej go tam (Ctrl+V) i wyślij.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Schowek zostanie opróżniony za {0} s, jeśli do tego czasu nie skopiujesz niczego innego. Wklej tekst wcześniej.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Schowek został opróżniony. Aby ponownie skopiować tekst, wybierz „Kopiuj i otwórz Copilot”.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Nie można przygotować tekstu: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Nie wpisuj w opisie imion i nazwisk, haseł ani danych klientów. Copilot może się mylić: nie wykonuj poleceń, których nie rozumiesz.</Copilot_Warning_Text>
 		<Version_Text>Wersja {0}</Version_Text>
@@ -635,6 +639,27 @@ Czy chcesz kontynuować?</Alerte_MSG>
 				<Name>Brak dźwięku na tym komputerze</Name>
 				<Explanation>Z głośników lub słuchawek nie wydobywa się dźwięk, chociaż wcześniej wszystko działało. Dźwięk może być wyłączony (wyciszony) lub ustawiony bardzo cicho.</Explanation>
 				<Alerte_MSG>SelfX ponownie włącza dźwięk bieżącego urządzenia odtwarzającego (głośniki lub słuchawki). Jeśli jest wyciszone, dźwięk zostanie włączony; jeśli głośność jest poniżej 30 %, zostanie podniesiona do 30 %. Wyższa głośność pozostaje bez zmian. Inne urządzenia, mikrofon i sterowniki nie są zmieniane.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Rozwiąż problem z programem Outlook</Name>
+				<Explanation>Pracujesz w programie Outlook, ale przestał odpowiadać, nie wysyła ani nie odbiera poczty albo niepoprawnie wyświetla skrzynkę.</Explanation>
+				<Alerte_MSG>Program Outlook zostanie zamknięty i uruchomiony ponownie. Wiadomości, które piszesz i które nie są zapisane jako wersja robocza, zostaną utracone. Po uruchomieniu Outlook może potrzebować czasu na sprawdzenie danych. Twój profil i skrzynka nie są zmieniane. Nowy program Outlook nie jest objęty.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Czas na urządzeniu jest nieprawidłowy</Name>
+				<Explanation>Występują błędy logowania lub certyfikatów albo zegar urządzenia pokazuje złą godzinę. Ta akcja jest wykonywana z uprawnieniami administratora przez lokalną usługę SelfX.</Explanation>
+				<Alerte_MSG>Zegar urządzenia zostanie zsynchronizowany ze źródłem czasu Twojej organizacji. Strefa czasowa nie jest zmieniana. Spróbuj ponownie po tym.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: wyczyść pamięć podręczną</Name>
+				<Explanation>Strony internetowe nie ładują się lub są niepoprawnie wyświetlane w Microsoft Edge. Akcja czyści tylko pamięć podręczną profilu domyślnego.</Explanation>
+				<Alerte_MSG>Microsoft Edge zostanie natychmiast zamknięty; niezapisane dane na stronach internetowych zostaną utracone. Następnie zostanie wyczyszczona pamięć podręczna profilu domyślnego. Pliki cookie, historia, zapisane hasła, zakładki i inne profile nie są naruszane, więc pozostajesz zalogowany na stronach.
 
 Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>

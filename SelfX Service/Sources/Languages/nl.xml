@@ -105,6 +105,7 @@ We raden de gedetailleerde weergave aan als de eenvoudige weergave uw probleem n
 		<SystemInfo_SyncCompliance_Text>Naleving controleren</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Bedrijfsportal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Snelle hulp</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>MDM-logboeken verzamelen</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Logboeken naar support sturen</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Apparaatlogboeken van {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Vraagt Intune om nu te controleren of uw apparaat aan de bedrijfsregels voldoet.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Opent de Bedrijfsportal, waar u bedrijfsapps kunt installeren.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Opent Snelle hulp zodat een supportmedewerker uw scherm kan zien en u kan helpen – alleen met uw toestemming.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Opent Remote Help zodat een supportmedewerker uw scherm kan zien en u kan helpen – alleen met uw toestemming.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Verzamelt de logboeken van apparaatbeheer in een map voor de support.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Verzamelt alle logboeken van uw apparaat en opent een e-mail aan de support met het rapport als bijlage.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Instellingen (taal, weergave en statuspictogram)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX kopieert de tekst en opent {0}. U plakt de tekst daar en verstuurt hem zelf. SelfX verstuurt niets.</Copilot_Target_Text>
 		<Copilot_Open_Button>Kopiëren en Copilot openen</Copilot_Open_Button>
 		<Copilot_Opened_Text>De tekst staat op het klembord en Copilot Chat is geopend. Plak de tekst daar (Ctrl+V) en verstuur hem.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Het klembord wordt over {0} seconden geleegd als u tot die tijd niets anders kopieert. Plak de tekst eerst.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Het klembord is geleegd. Kies “Kopiëren en Copilot openen” om de tekst opnieuw te kopiëren.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>De tekst kon niet worden voorbereid: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Schrijf geen namen, wachtwoorden of klantgegevens in de beschrijving. Copilot kan zich vergissen: voer geen opdrachten uit die u niet begrijpt.</Copilot_Warning_Text>
 		<Version_Text>Versie {0}</Version_Text>
@@ -635,6 +639,27 @@ Wilt u doorgaan?</Alerte_MSG>
 				<Name>Geen geluid op deze pc</Name>
 				<Explanation>Er komt geen geluid uit de luidsprekers of koptelefoon, terwijl alles eerst werkte. Het geluid staat mogelijk uit (gedempt) of heel zacht.</Explanation>
 				<Alerte_MSG>SelfX zet het geluid van uw huidige afspeelapparaat (luidsprekers of koptelefoon) weer aan. Is het gedempt, dan wordt het geluid ingeschakeld; staat het volume onder 30 %, dan wordt het verhoogd tot 30 %. Een hoger volume blijft zoals het is. Andere apparaten, de microfoon en stuurprogramma's worden niet gewijzigd.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Een probleem met Outlook oplossen</Name>
+				<Explanation>U werkt in Outlook, maar het reageert niet meer, verzendt of ontvangt geen e-mail of toont uw postvak niet goed.</Explanation>
+				<Alerte_MSG>Outlook wordt afgesloten en opnieuw gestart. E-mails die u aan het schrijven bent en die niet als concept zijn opgeslagen, gaan verloren. Na het starten kan Outlook even nodig hebben om zijn gegevens te controleren. Uw profiel en postvak worden niet gewijzigd. De nieuwe Outlook is niet getroffen.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>De tijd van uw apparaat klopt niet</Name>
+				<Explanation>Er treden aanmeld- of certificaatfouten op, of de klok van uw apparaat toont de verkeerde tijd. Deze actie wordt met beheerdersrechten uitgevoerd via de lokale SelfX-service.</Explanation>
+				<Alerte_MSG>De klok van uw apparaat wordt gesynchroniseerd met de tijdbron van uw organisatie. De tijdzone wordt niet gewijzigd. Probeer het daarna opnieuw.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: cache wissen</Name>
+				<Explanation>Websites laden niet of worden niet goed weergegeven in Microsoft Edge. De actie wist alleen de cache van het standaardprofiel.</Explanation>
+				<Alerte_MSG>Microsoft Edge wordt direct gesloten; niet-opgeslagen invoer op websites gaat verloren. Daarna wordt de cache van het standaardprofiel gewist. Cookies, geschiedenis, opgeslagen wachtwoorden, bladwijzers en andere profielen worden niet geraakt, u blijft dus aangemeld op websites.
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>

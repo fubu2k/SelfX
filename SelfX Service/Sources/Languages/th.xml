@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>ตรวจสอบการปฏิบัติตามข้อกำหนด</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Quick Assist</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>รวบรวมบันทึก MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>ส่งบันทึกไปยังฝ่ายสนับสนุน</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>บันทึกอุปกรณ์ของ {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@
 		<Tooltip_SyncCompliance>ขอให้ Intune ตรวจสอบทันทีว่าอุปกรณ์ของคุณเป็นไปตามกฎของบริษัทหรือไม่</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>เปิดพอร์ทัลบริษัท ซึ่งคุณสามารถติดตั้งแอปของบริษัทได้</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>เปิดความช่วยเหลือด่วนเพื่อให้เจ้าหน้าที่สนับสนุนเห็นหน้าจอและช่วยเหลือคุณ – เฉพาะเมื่อคุณยินยอม</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>เปิดRemote Helpเพื่อให้เจ้าหน้าที่สนับสนุนเห็นหน้าจอและช่วยเหลือคุณ – เฉพาะเมื่อคุณยินยอม</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>รวบรวมบันทึกการจัดการอุปกรณ์ไว้ในโฟลเดอร์สำหรับฝ่ายสนับสนุน</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>รวบรวมบันทึกทั้งหมดของอุปกรณ์และเปิดอีเมลถึงฝ่ายสนับสนุนพร้อมแนบรายงาน</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>การตั้งค่า (ภาษา ลักษณะและไอคอนสถานะ)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@
 		<Copilot_Target_Text>SelfX คัดลอกข้อความและเปิด {0} คุณวางข้อความที่นั่นและส่งเอง SelfX ไม่ส่งอะไรเลย</Copilot_Target_Text>
 		<Copilot_Open_Button>คัดลอกและเปิด Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>ข้อความอยู่ในคลิปบอร์ดและเปิด Copilot Chat แล้ว วางข้อความที่นั่น (Ctrl+V) แล้วส่ง</Copilot_Opened_Text>
+		<Copilot_Clear_Text>คลิปบอร์ดจะถูกล้างใน {0} วินาที หากคุณไม่คัดลอกอย่างอื่นก่อนหน้านั้น โปรดวางข้อความก่อน</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>ล้างคลิปบอร์ดแล้ว หากต้องการคัดลอกข้อความอีกครั้ง ให้เลือก “คัดลอกและเปิด Copilot”</Copilot_Cleared_Text>
 		<Copilot_Error_Text>เตรียมข้อความไม่สำเร็จ: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>อย่าเขียนชื่อ รหัสผ่าน หรือข้อมูลลูกค้าในคำอธิบาย Copilot อาจผิดพลาดได้ อย่าสั่งรันคำสั่งที่คุณไม่เข้าใจ</Copilot_Warning_Text>
 		<Version_Text>เวอร์ชัน {0}</Version_Text>
@@ -635,6 +639,27 @@ SelfX ไม่ลบหรือเปลี่ยนแปลงไฟล์�
 				<Name>ไม่มีเสียงบนพีซีเครื่องนี้</Name>
 				<Explanation>ไม่มีเสียงออกจากลำโพงหรือหูฟัง ทั้งที่ก่อนหน้านี้ปกติดี เสียงอาจถูกปิด (ปิดเสียง) หรือตั้งไว้เบามาก</Explanation>
 				<Alerte_MSG>SelfX จะเปิดเสียงของอุปกรณ์เล่นเสียงปัจจุบันของคุณ (ลำโพงหรือหูฟัง) อีกครั้ง หากปิดเสียงอยู่ เสียงจะถูกเปิด หากระดับเสียงต่ำกว่า 30 % จะเพิ่มเป็น 30 % ระดับเสียงที่สูงกว่านั้นจะไม่เปลี่ยน อุปกรณ์อื่น ไมโครโฟน และไดรเวอร์จะไม่ถูกเปลี่ยนแปลง
+
+คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>แก้ไขปัญหาของ Outlook</Name>
+				<Explanation>คุณกำลังใช้ Outlook แต่ไม่ตอบสนอง ส่งหรือรับอีเมลไม่ได้ หรือแสดงกล่องจดหมายไม่ถูกต้อง</Explanation>
+				<Alerte_MSG>Outlook จะปิดแล้วเริ่มใหม่ อีเมลที่คุณกำลังเขียนและยังไม่ได้บันทึกเป็นฉบับร่างจะสูญหาย หลังเริ่มใหม่ Outlook อาจใช้เวลาสักครู่เพื่อตรวจสอบข้อมูล โปรไฟล์และกล่องจดหมายของคุณจะไม่ถูกเปลี่ยนแปลง Outlook ใหม่ไม่ได้รับผลกระทบ
+
+คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>เวลาของอุปกรณ์ไม่ถูกต้อง</Name>
+				<Explanation>เกิดข้อผิดพลาดในการลงชื่อเข้าใช้หรือใบรับรอง หรือนาฬิกาของอุปกรณ์แสดงเวลาผิด การดำเนินการนี้ทำงานด้วยสิทธิ์ผู้ดูแลระบบผ่านบริการ SelfX ในเครื่อง</Explanation>
+				<Alerte_MSG>นาฬิกาของอุปกรณ์จะถูกซิงโครไนซ์กับแหล่งเวลาขององค์กรของคุณ ไม่มีการเปลี่ยนเขตเวลา โปรดลองอีกครั้งหลังจากนั้น
+
+คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: ล้างแคช</Name>
+				<Explanation>เว็บไซต์โหลดไม่ขึ้นหรือแสดงผลไม่ถูกต้องใน Microsoft Edge การดำเนินการนี้ล้างเฉพาะแคชของโปรไฟล์เริ่มต้น</Explanation>
+				<Alerte_MSG>Microsoft Edge จะปิดทันที ข้อมูลที่ยังไม่ได้บันทึกบนเว็บไซต์จะสูญหาย จากนั้นแคชของโปรไฟล์เริ่มต้นจะถูกล้าง คุกกี้ ประวัติ รหัสผ่านที่บันทึกไว้ บุ๊กมาร์ก และโปรไฟล์อื่นจะไม่ได้รับผลกระทบ คุณจึงยังคงลงชื่อเข้าใช้เว็บไซต์ต่าง ๆ อยู่
 
 คุณต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
 			</Action>

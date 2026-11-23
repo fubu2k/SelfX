@@ -105,6 +105,7 @@ Gunakan tampilan terperinci jika tampilan sederhana tidak menyelesaikan atau men
 		<SystemInfo_SyncCompliance_Text>Periksa kepatuhan</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Portal Perusahaan</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Bantuan Cepat</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Kumpulkan log MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Kirim log ke dukungan</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Log perangkat {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Meminta Intune untuk memeriksa sekarang apakah perangkat Anda memenuhi aturan perusahaan.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Membuka Portal Perusahaan, tempat Anda dapat menginstal aplikasi perusahaan.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Membuka Bantuan Cepat agar petugas dukungan dapat melihat layar Anda dan membantu – hanya dengan persetujuan Anda.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Membuka Remote Help agar petugas dukungan dapat melihat layar Anda dan membantu – hanya dengan persetujuan Anda.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Mengumpulkan log manajemen perangkat ke dalam folder untuk tim dukungan.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Mengumpulkan semua log perangkat Anda dan membuka email ke tim dukungan dengan laporan terlampir.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Pengaturan (bahasa, tampilan dan ikon status)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX menyalin teks dan membuka {0}. Anda menempelkan teks di sana dan mengirimnya sendiri. SelfX tidak mengirim apa pun.</Copilot_Target_Text>
 		<Copilot_Open_Button>Salin dan buka Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Teks ada di clipboard dan Copilot Chat telah dibuka. Tempelkan di sana (Ctrl+V) lalu kirim.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Clipboard akan dikosongkan dalam {0} detik jika Anda tidak menyalin apa pun sampai saat itu. Tempel teks sebelum itu.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Clipboard sudah dikosongkan. Untuk menyalin teks lagi, pilih “Salin dan buka Copilot”.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Teks tidak dapat disiapkan: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Jangan menulis nama, kata sandi, atau data pelanggan di deskripsi. Copilot bisa salah: jangan menjalankan perintah yang tidak Anda pahami.</Copilot_Warning_Text>
 		<Version_Text>Versi {0}</Version_Text>
@@ -635,6 +639,27 @@ Apakah Anda ingin melanjutkan?</Alerte_MSG>
 				<Name>Tidak ada suara di PC ini</Name>
 				<Explanation>Tidak ada suara dari speaker atau headphone, padahal sebelumnya baik-baik saja. Suara mungkin dimatikan (bisu) atau diatur sangat pelan.</Explanation>
 				<Alerte_MSG>SelfX menyalakan kembali suara perangkat pemutaran Anda saat ini (speaker atau headphone). Jika dibisukan, suara dinyalakan; jika volume di bawah 30 %, volume dinaikkan menjadi 30 %. Volume yang lebih tinggi tidak diubah. Perangkat lain, mikrofon, dan driver tidak diubah.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Mengatasi masalah dengan Outlook</Name>
+				<Explanation>Anda bekerja di Outlook, tetapi tidak merespons, tidak mengirim atau menerima email, atau tidak menampilkan kotak surat Anda dengan benar.</Explanation>
+				<Alerte_MSG>Outlook akan ditutup lalu dimulai lagi. Email yang sedang Anda tulis dan belum disimpan sebagai draf akan hilang. Setelah dimulai, Outlook mungkin memerlukan waktu untuk memeriksa datanya. Profil dan kotak surat Anda tidak diubah. Outlook baru tidak terpengaruh.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Waktu perangkat Anda salah</Name>
+				<Explanation>Terjadi kesalahan masuk atau sertifikat, atau jam perangkat Anda menunjukkan waktu yang salah. Tindakan ini berjalan dengan hak administrator melalui layanan SelfX lokal.</Explanation>
+				<Alerte_MSG>Jam perangkat Anda akan disinkronkan dengan sumber waktu organisasi Anda. Zona waktu tidak diubah. Coba lagi setelahnya.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: hapus cache</Name>
+				<Explanation>Situs web tidak dimuat atau tidak ditampilkan dengan benar di Microsoft Edge. Tindakan ini hanya menghapus cache profil default.</Explanation>
+				<Alerte_MSG>Microsoft Edge akan segera ditutup; input yang belum disimpan di situs web akan hilang. Setelah itu cache profil default dihapus. Cookie, riwayat, kata sandi tersimpan, bookmark, dan profil lain tidak terpengaruh, sehingga Anda tetap masuk di situs web.
 
 Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>

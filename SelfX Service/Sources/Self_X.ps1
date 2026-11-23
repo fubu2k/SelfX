@@ -247,6 +247,26 @@ Function Select-SelfXLinkActions
 	}
 $Global:SelfX_Quick_Actions = @(Select-SelfXLinkActions $Global:SelfX_Quick_Actions)
 $Global:SelfX_Detailed_Actions = @(Select-SelfXLinkActions $Global:SelfX_Detailed_Actions)
+# An action with <Requires>DomainJoined</Requires> is shown only on a domain or hybrid joined device (Win32_ComputerSystem.PartOfDomain).
+# Only a clear "not joined" hides it: if the state cannot be read, the action stays visible (its script checks again and ends with exit 3).
+Function Select-SelfXRequirementActions
+	{
+		param($Actions, $DomainJoined)
+		foreach($Action in $Actions)
+			{
+				If($Action.Requires -ne 'DomainJoined' -or $DomainJoined -ne $false) { $Action; continue }
+				Write-SelfXLog "Action '$($Action.Id)' is not shown: it needs a domain or hybrid joined device."
+			}
+	}
+$SelfX_Needs_Domain = @(@($Global:SelfX_Quick_Actions) + @($Global:SelfX_Detailed_Actions) | Where-Object { $_.Requires -eq 'DomainJoined' }).Count -gt 0
+$SelfX_Domain_Joined = $null
+If($SelfX_Needs_Domain)
+	{
+		Try { $SelfX_Domain_Joined = [bool](Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop).PartOfDomain }
+		Catch { Write-SelfXLog "Domain membership could not be read: $($_.Exception.Message)" 'Warning' }
+	}
+$Global:SelfX_Quick_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Quick_Actions $SelfX_Domain_Joined)
+$Global:SelfX_Detailed_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Detailed_Actions $SelfX_Domain_Joined)
 
 $Tool_Version = $GUI_Config.Tool_Version
 Write-SelfXLog "SelfX $Tool_Version opened: language $($SelfX_UI_Language.Culture) (setting $Global:SelfX_Language_Setting), page '$Page'."

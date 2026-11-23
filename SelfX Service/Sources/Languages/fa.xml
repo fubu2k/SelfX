@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>انطباق را بررسی کنید</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Quick Assist</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>سیاهههای مربوط به MDM را جمع آوری کنید</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>ارسال گزارش‌ها به پشتیبانی</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>گزارش‌های دستگاه {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@
 		<Tooltip_SyncCompliance>از Intune می‌خواهد اکنون بررسی کند که آیا دستگاه شما قوانین شرکت را رعایت می‌کند.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>پورتال شرکت را باز می‌کند که در آن می‌توانید برنامه‌های شرکت را نصب کنید.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>دستیار سریع را باز می‌کند تا کارشناس پشتیبانی صفحه شما را ببیند و کمک کند – فقط با رضایت شما.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Remote Help را باز می‌کند تا کارشناس پشتیبانی صفحه شما را ببیند و کمک کند – فقط با رضایت شما.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>گزارش‌های مدیریت دستگاه را برای پشتیبانی در یک پوشه جمع‌آوری می‌کند.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>همه گزارش‌های دستگاه را جمع‌آوری می‌کند و ایمیلی به پشتیبانی با گزارش پیوست‌شده باز می‌کند.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>تنظیمات (زبان، ظاهر و نماد وضعیت)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@
 		<Copilot_Target_Text>SelfX متن را کپی می‌کند و {0} را باز می‌کند. شما متن را آنجا جای‌گذاری می‌کنید و خودتان ارسال می‌کنید. SelfX چیزی ارسال نمی‌کند.</Copilot_Target_Text>
 		<Copilot_Open_Button>کپی و باز کردن Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>متن در کلیپ‌بورد است و Copilot Chat باز شد. آن را آنجا جای‌گذاری کنید (Ctrl+V) و ارسال کنید.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>اگر تا آن زمان چیز دیگری کپی نکنید، کلیپ‌بورد پس از {0} ثانیه خالی می‌شود. متن را پیش از آن جای‌گذاری کنید.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>کلیپ‌بورد خالی شد. برای کپی دوباره متن، «کپی و باز کردن Copilot» را انتخاب کنید.</Copilot_Cleared_Text>
 		<Copilot_Error_Text>آماده‌سازی متن ممکن نشد: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>در توضیح، نام، گذرواژه یا اطلاعات مشتریان ننویسید. Copilot ممکن است اشتباه کند: دستوراتی را که نمی‌فهمید اجرا نکنید.</Copilot_Warning_Text>
 		<Version_Text>نسخه {0}</Version_Text>
@@ -637,6 +641,27 @@ SelfX هیچ فایلی را حذف یا تغییر نمی‌دهد. اگر Defe
 				<Alerte_MSG>SelfX صدای دستگاه پخش فعلی شما (بلندگو یا هدفون) را دوباره روشن می‌کند. اگر بی‌صدا باشد، صدا روشن می‌شود؛ اگر بلندی صدا کمتر از ۳۰ ٪ باشد، به ۳۰ ٪ افزایش می‌یابد. بلندی بیشتر تغییر نمی‌کند. دستگاه‌های دیگر، میکروفون و درایورها تغییر نمی‌کنند.
 
 آیا می خواهید ادامه دهید؟</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>حل مشکل Outlook</Name>
+				<Explanation>در Outlook کار می‌کنید، اما پاسخ نمی‌دهد، ایمیل ارسال یا دریافت نمی‌کند یا صندوق نامه شما را درست نشان نمی‌دهد.</Explanation>
+				<Alerte_MSG>Outlook بسته و دوباره راه‌اندازی می‌شود. ایمیل‌هایی که در حال نوشتن آن‌ها هستید و به‌صورت پیش‌نویس ذخیره نشده‌اند از بین می‌روند. پس از راه‌اندازی ممکن است Outlook برای بررسی داده‌های خود کمی زمان بخواهد. نمایه و صندوق نامه شما تغییر نمی‌کنند. Outlook جدید تحت‌تأثیر قرار نمی‌گیرد.
+
+می‌خواهید ادامه دهید؟</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>ساعت دستگاه شما نادرست است</Name>
+				<Explanation>خطاهای ورود یا گواهی رخ می‌دهد یا ساعت دستگاه شما زمان نادرستی را نشان می‌دهد. این اقدام با حقوق مدیر از طریق سرویس محلی SelfX اجرا می‌شود.</Explanation>
+				<Alerte_MSG>ساعت دستگاه شما با منبع زمان سازمان‌تان همگام می‌شود. منطقه زمانی تغییر نمی‌کند. پس از آن دوباره تلاش کنید.
+
+می‌خواهید ادامه دهید؟</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: پاک کردن حافظه پنهان</Name>
+				<Explanation>وب‌سایت‌ها در Microsoft Edge بارگیری نمی‌شوند یا درست نمایش داده نمی‌شوند. این اقدام فقط حافظه پنهان نمایه پیش‌فرض را پاک می‌کند.</Explanation>
+				<Alerte_MSG>Microsoft Edge بلافاصله بسته می‌شود؛ ورودی‌های ذخیره‌نشده در وب‌سایت‌ها از بین می‌روند. سپس حافظه پنهان نمایه پیش‌فرض پاک می‌شود. کوکی‌ها، سابقه، گذرواژه‌های ذخیره‌شده، نشانک‌ها و نمایه‌های دیگر تحت‌تأثیر قرار نمی‌گیرند و در وب‌سایت‌ها وارد حساب می‌مانید.
+
+می‌خواهید ادامه دهید؟</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>جمع‌آوری گزارش‌های دستگاه و ارسال آن‌ها از طریق ایمیل به پشتیبانی</Name>

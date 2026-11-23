@@ -11,6 +11,8 @@
       - placeholders ({0}, {1:D2} ...) that differ from the English text
       - a different number of "|" separators in SystemInfo_Export_Filter
 
+    The Copilot prompts (Copilot_Prompt_User / Copilot_Prompt_Admin) exist in en and de only. Every other language uses the English
+    prompt on purpose: it tells Copilot to answer in the language of the problem description (Test-CopilotFacts.ps1 checks the files).
     Missing texts are warnings (SelfX shows the English text instead). Wrong placeholders, unknown
     Ids and invalid files are errors. The script only reads files; it changes nothing.
 
@@ -120,6 +122,7 @@ $Results = foreach($File in $Files)
 						$Texts = Get-Section $Document $Pair[0]
 						foreach($Key in $Pair[1].Keys)
 							{
+								If($Key -like 'Copilot_Prompt_*' -and $File.BaseName -ne 'de') { continue }
 								If((-not $Texts.ContainsKey($Key)) -or [string]::IsNullOrWhiteSpace($Texts[$Key])) { $Warnings.Add("Missing text $($Pair[0])/$Key"); continue }
 								If((Get-Placeholders $Texts[$Key]) -ne (Get-Placeholders $Pair[1][$Key])) { $Errors.Add("Placeholders differ in $Key") }
 							}
