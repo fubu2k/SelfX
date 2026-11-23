@@ -219,7 +219,9 @@ describes the problem and sends it. Nothing is sent automatically.
    `.zip` unless `DeviceLogs_Compress` is `False`.
 3. The folder has a protected ACL: full control for SYSTEM and administrators, read
    access only for the requesting user. The user's previous report is deleted on every
-   run, reports older than 7 days are deleted for all users.
+   run, reports older than 7 days are deleted for all users. In addition, the service
+   deletes reports older than 7 days and empty user folders once a day (also when no new
+   report is created). The next report replaces the copy in `%LOCALAPPDATA%`.
 4. The interface copies the report to `%LOCALAPPDATA%\SelfX\Reports` and opens a new
    e-mail:
    - classic Outlook (COM): recipient `Support_Mail`, subject and text from the
