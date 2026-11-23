@@ -452,9 +452,13 @@ function Get-SelfXHealth {
     param([string]$Root = $PSScriptRoot, [string]$OnlyId = '', [string]$OnlyName = '')
     $want = { param($id, $name = $null) (-not $OnlyId -or $OnlyId -eq $id) -and ($null -eq $name -or -not $OnlyName -or $OnlyName -eq $name) }
     try {
-        $config = New-Object Xml.XmlDocument
+        $config = New-Object System.Xml.XmlDocument
         $config.XmlResolver = $null
-        $config.Load((Join-Path $Root 'Health_Config.xml'))
+        $XmlSettings = New-Object System.Xml.XmlReaderSettings
+        $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+        $XmlSettings.XmlResolver = $null
+        $XmlReader = [System.Xml.XmlReader]::Create((Join-Path $Root 'Health_Config.xml'), $XmlSettings)
+        Try { $config.Load($XmlReader) } Finally { $XmlReader.Dispose() }
         if ($config.DocumentElement.LocalName -ne 'HealthConfig') { throw 'Invalid Health_Config.xml root.' }
         if (-not $config.SelectSingleNode('/HealthConfig/Applications')) { throw 'Applications configuration is missing.' }
         $disk = $config.SelectSingleNode('/HealthConfig/Disk')

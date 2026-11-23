@@ -43,7 +43,11 @@ function Get-SelfXLogRetentionDays {
 		if ($ConfigPath -and (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
 			$xml = New-Object System.Xml.XmlDocument
 			$xml.XmlResolver = $null
-			$xml.Load($ConfigPath)
+			$XmlSettings = New-Object System.Xml.XmlReaderSettings
+			$XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+			$XmlSettings.XmlResolver = $null
+			$XmlReader = [System.Xml.XmlReader]::Create($ConfigPath, $XmlSettings)
+			Try { $xml.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 			$node = $xml.SelectSingleNode('/GUI_Config/Log_Retention_Days')
 			$value = 0
 			if ($node -and [int]::TryParse($node.InnerText.Trim(), [ref]$value) -and $value -ge 1 -and $value -le 3650) { $days = $value }
