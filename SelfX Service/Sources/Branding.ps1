@@ -26,7 +26,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.1.0    2026-10-28  Wolfgang Baeck       Initial version: company logo, icon and colors
-    2.2.0    2026-10-28  Wolfgang Baeck       Comment-based header and function comments
     2.5.0    2026-11-04  Wolfgang Baeck       Modern UI: theme colors without MahApps (dark/light), named
                                               accent colors, readable accent text, title bar text color
 #>

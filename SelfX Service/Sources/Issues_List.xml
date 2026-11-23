@@ -33,17 +33,6 @@
 	History:
 	  Version  Date        Author               Change
 	  1.0.0    2022-10-04  Damien Van Robaeys   Initial version
-	  2.0.0    2026-10-28  Wolfgang Baeck       Merged SelfX Standard and SelfX Admin actions, added Context and TimeoutSeconds
-	  2.2.0    2026-10-28  Wolfgang Baeck       Added Id and shared messages for translations, all base texts in English
-	  2.4.0    2026-11-02  Wolfgang Baeck       Post_Action field; send device logs to the support (Collect-DeviceLogs.ps1)
-	  2.4.1    2026-11-22  fubu2k               Base texts match the scripts: Chrome (default profile, cookies, history, autofill), Teams (cache is cleared), Word and Excel (documents are not reopened)
-	  2.4.2    2026-11-22  fubu2k               New action D_Edge_Cache (Microsoft Edge: clear the cache)
-	  2.4.3    2026-11-22  fubu2k               New action Q_Outlook (restart classic Outlook)
-	  2.4.4    2026-11-22  fubu2k               New action Q_Device_SyncTime (synchronize the clock, Context System)
-	  2.4.5    2026-11-23  fubu2k               New action D_Outlook_AutoComplete (clear the auto-complete list of classic Outlook)
-	  2.4.6    2026-11-23  fubu2k               New action D_Office_ResetLicence (reset the Office license tokens of the user)
-	  2.4.7    2026-11-23  fubu2k               New action type Context Link (field Link): D_Account_PasswordReset and D_Account_SecurityInfo, new category Account
-	  2.4.8    2026-11-23  fubu2k               New action D_Defender_QuickScan (Microsoft Defender quick scan, Context System)
 	  2.4.9    2026-11-23  fubu2k               New action D_Device_GpUpdate (gpupdate /force, domain / hybrid joined devices, Context User)
 -->
 <Actions>

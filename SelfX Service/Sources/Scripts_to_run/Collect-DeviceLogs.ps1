@@ -130,7 +130,7 @@ $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $isAdmin = ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $isSystem = ($identity.User.Value -eq 'S-1-5-18')
 
-# The report is created safely (finding N2): the default places are in C:\Windows\Temp, where a user can create a file with the
+# The report is created safely: the default places are in C:\Windows\Temp, where a user can create a file with the
 # same name in advance (or a link). Such a file (link, hard link, owner that is not SYSTEM, administrators, TrustedInstaller or
 # the account that runs the script) is removed (the name only, never the target) and the report is created new; an existing
 # file of a trusted owner is overwritten as before. The default reports are readable only by SYSTEM and administrators.

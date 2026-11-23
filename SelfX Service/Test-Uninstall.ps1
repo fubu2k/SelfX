@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests that the uninstall deletes the data folders without following junctions (finding F10).
+    Tests that the uninstall deletes the data folders without following junctions.
 
 .DESCRIPTION
     Takes the function Remove-SelfXTree out of Uninstall.ps1 (the script itself is never run: it would uninstall
@@ -19,7 +19,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.6.10   2026-11-22  fubu2k               Initial version (security review finding F10).
+    2.6.10   2026-11-22  fubu2k               Initial version.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0

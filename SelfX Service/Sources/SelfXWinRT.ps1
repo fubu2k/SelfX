@@ -6,7 +6,7 @@
     Dot-sourced by HealthStatus.ps1 and SelfX_Updates_Install.ps1. PowerShell 7 loads SelfXWinRT.dll and the Windows SDK
     projection DLLs from the folder WinRT of the install folder. Install.ps1 checks them against the manifest of the package
     and the service checks the file list before it starts a SYSTEM script. This helper adds the check at the moment of
-    loading (security review finding N4, defense in depth):
+    loading (defense in depth):
       - SelfX.Files.json of the install folder lists every DLL of WinRT as "WinRT/<name>" with its SHA256 (written at package
         build). The file list, the folder WinRT and each DLL must not be a link (junction, symbolic link).
       - Every *.dll in WinRT must be listed, every listed DLL must exist and match its SHA256, and SelfXWinRT.dll must be
@@ -29,7 +29,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.8.14   2026-11-23  fubu2k               Initial version (finding N4: check the WinRT libraries when loading).
+    2.8.14   2026-11-23  fubu2k               Initial version.
 #>
 
 # Open file handles of the checked DLLs; they stay open until the process ends (see above).

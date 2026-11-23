@@ -43,30 +43,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
-    2.1.0    2026-10-28  Wolfgang Baeck       Shortcut and Apps & Features icon from Brand_Icon (branding)
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.5.0    2026-11-04  Wolfgang Baeck       Status icon at sign-in (HKLM Run "SelfXTray"); modern UI without MahApps
-    2.5.2    2026-11-04  Wolfgang Baeck       Fix exit code 1 on update while SelfX or the status icon is open: the
-                                              install folder is emptied instead of deleted (retries for locked files)
-    2.5.3    2026-11-04  Wolfgang Baeck       Shortcuts and status icon start through SelfX.exe: no console window at start
-    2.5.4    2026-11-05  Wolfgang Baeck       Health_Config: Defender Fix button only while the status is not OK
-    2.5.5    2026-11-05  Wolfgang Baeck       Installs HealthChecks\Check-Compliance.ps1 (local compliance criteria for the Compliance row)
-    2.5.6    2026-11-05  Wolfgang Baeck       Installs Scripts_to_run\SelfX_Updates_Install.ps1 (Fix button for pending Windows and Store updates)
-    2.5.8    2026-11-05  Wolfgang Baeck       Status icon starts right after the installation in all active user sessions
-    2.6.0    2026-11-06  Wolfgang Baeck       Logs\Users folder for the logs of the users (SelfXLog.ps1)
-    2.6.11   2026-11-22  fubu2k               Prebuilt programs from Bin, checked against the SHA256 manifest; on-device
-                                              compiling uses a protected TEMP (F9)
-    2.7.0    2026-11-22  fubu2k               .NET 10 programs: Bin is required and checked before the old installation
-                                              is touched; compiling on the device was removed
-    2.8.0    2026-11-22  fubu2k               Windows 11 25H2 (build 26200) is required and checked first; PowerShell 7.6+
-                                              (machine-wide, not changeable by users) is checked: missing or old = warning,
-                                              unsafe rights = abort; WinRT library installed from Bin\WinRT
-    2.8.0    2026-11-22  fubu2k               ProgramData\SelfX is prepared before use: links removed, foreign-owned entries deleted,
-                                              owner and rights set again (F12)
-    2.8.1    2026-11-23  fubu2k               The service token is limited to the privileges the actions need (sc.exe privs,
-                                              Tool_Config Service_Privileges = Restricted | Default, finding N5)
-    2.8.1    2026-11-23  fubu2k               The package is checked against SelfX.Files.json (SHA256 of every installed file) before
-                                              anything is installed; the file is kept in the installation folder (finding N4)
     2.8.2    2026-11-23  fubu2k               SelfX.Files.json also lists the DLLs of Bin\WinRT (installed into WinRT); the package check
                                               covers them (WinRT load check)
 #>
@@ -181,7 +157,7 @@ function Test-SelfXPrebuiltBinaries {
 }
 
 function Test-SelfXFileManifest {
-	# Checks the package against SelfX.Files.json (finding N4): every file below Sources, Uninstall.ps1 and the DLLs of
+	# Checks the package against SelfX.Files.json: every file below Sources, Uninstall.ps1 and the DLLs of
 	# Bin\WinRT (listed as WinRT/<name>) must be listed and unchanged, and nothing may be in the package that is not listed. Returns the number of checked files, or $null
 	# when the package has no such file (older package: warning only). A mismatch throws before anything is installed.
 	param([Parameter(Mandatory = $true)][string]$PackageFolder)
@@ -221,7 +197,7 @@ function Test-SelfXFileManifest {
 }
 
 function Get-SelfXServicePrivileges {
-	# Privileges the service (LocalSystem) keeps (finding N5). Everything else of the LocalSystem token is removed, so the
+	# Privileges the service (LocalSystem) keeps. Everything else of the LocalSystem token is removed, so the
 	# service and every script it starts cannot use SeTcb, SeDebug, SeCreateToken, SeLoadDriver, SeSecurity and the like.
 	# Needed: ChangeNotify (every process), Impersonate (pipe client), CreateGlobal (global objects), Shutdown (restart
 	# action), Systemtime (time sync), Backup/Restore/TakeOwnership (file repairs), ManageVolume (disk check).
@@ -247,7 +223,7 @@ function Set-SelfXServicePrivileges {
 }
 
 function Initialize-SelfXDataFolder {
-	# Prepares ProgramData\SelfX before anything is written there as SYSTEM (finding F12). A user can create this folder
+	# Prepares ProgramData\SelfX before anything is written there as SYSTEM. A user can create this folder
 	# (or a link in it) before the installation; the service later writes, rotates and deletes files in it as SYSTEM.
 	# Steps: a link at the folder itself or below it is removed (the link, never its target); entries that are not owned by
 	# SYSTEM, administrators or TrustedInstaller are deleted (link-safe); owner and rights of the folder are set again.
@@ -306,7 +282,7 @@ $null = Test-SelfXWindowsBuild
 If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) { throw 'Run Install.ps1 in a 64-bit PowerShell (use %SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe from 32-bit agents).' }
 
 # Logs may contain script output; only SYSTEM and administrators can read them. The folder is cleaned of links and
-# foreign-owned entries first, then owner and rights are set (finding F12).
+# foreign-owned entries first, then owner and rights are set.
 Initialize-SelfXDataFolder -Path $DataFolder
 New-Item -ItemType Directory -Path $LogFolder -Force | Out-Null
 # The SelfX window, the status icon and the user actions log as the user into Logs\Users\<SID> (SelfXLog.ps1).
@@ -396,7 +372,7 @@ Try
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null
 	& sc.exe description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null
 	& sc.exe failure $ServiceName reset= 86400 actions= restart/60000/restart/60000/restart/300000 | Out-Null
-	# Privileges of the service (finding N5): Restricted (default) or Default (all LocalSystem privileges).
+	# Privileges of the service: Restricted (default) or Default (all LocalSystem privileges).
 	$PrivilegeMode = "$($ToolConfig.GUI_Config.Service_Privileges)".Trim()
 	If($PrivilegeMode -notin @('Restricted', 'Default'))
 	{

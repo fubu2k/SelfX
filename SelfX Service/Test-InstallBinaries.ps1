@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests the check of the prebuilt programs (.NET 10) of Install.ps1 (finding F9).
+    Tests the check of the prebuilt programs (.NET 10) of Install.ps1.
 
 .DESCRIPTION
     Takes the function Test-SelfXPrebuiltBinaries out of Install.ps1 (the script itself is never run: it would
@@ -20,11 +20,8 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.6.11   2026-11-22  fubu2k               Initial version (security review finding F9).
-    2.7.0    2026-11-22  fubu2k               .NET 10: manifest format 2, Bin is required; the test of the compiler TEMP was removed.
-    2.8.0    2026-11-22  fubu2k               Manifest format 3 (WinRT files), PowerShell 7 and Windows build checks.
-    2.8.1    2026-11-23  fubu2k               Checks of the service privilege list (finding N5).
-    2.8.0    2026-11-22  fubu2k               Checks of Initialize-SelfXDataFolder (security review finding F12).
+    2.6.11   2026-11-22  fubu2k               Initial version.
+    2.8.0    2026-11-22  fubu2k               Checks of Initialize-SelfXDataFolder.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -46,7 +43,7 @@ foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Test-S
 	. ([scriptblock]::Create($definition.Extent.Text))
 }
 
-# Privileges of the service (finding N5): a fixed list; the strong LocalSystem privileges must not be in it.
+# Privileges of the service: a fixed list; the strong LocalSystem privileges must not be in it.
 $privileges = @(Get-SelfXServicePrivileges)
 Assert-Equal ($privileges.Count -ge 5) $true 'N5: the privilege list is not empty'
 Assert-Equal (@($privileges | Where-Object { $_ -notmatch '^Se[A-Za-z]+Privilege$' }).Count) 0 'N5: all entries are privilege names'
@@ -196,7 +193,7 @@ try {
 	$installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
 	Assert-Equal ($installText.IndexOf('$null = Test-SelfXWindowsBuild') -ge 0 -and $installText.IndexOf('$null = Test-SelfXWindowsBuild') -lt $installText.IndexOf('New-Item -ItemType Directory -Path $LogFolder')) $true 'The build check runs before the installer changes anything'
 
-# Initialize-SelfXDataFolder (finding F12): links and foreign-owned entries in ProgramData\SelfX are removed, owner and
+# Initialize-SelfXDataFolder: links and foreign-owned entries in ProgramData\SelfX are removed, owner and
 # rights are set again. Needs administrator rights (icacls /setowner); without them these checks are skipped.
 $isAdminTest = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdminTest) { Write-Output 'Skipped: Initialize-SelfXDataFolder checks need administrator rights.' }

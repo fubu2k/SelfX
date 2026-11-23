@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests the check of the WinRT libraries before they are loaded (security review finding N4).
+    Tests the check of the WinRT libraries before they are loaded.
 
 .DESCRIPTION
     Dot-sources Sources\SelfXWinRT.ps1 and runs it against a temporary "install folder" with stand-in files (plain bytes, no
@@ -23,7 +23,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.8.14   2026-11-23  fubu2k               Initial version (security review finding N4, WinRT load check).
+    2.8.14   2026-11-23  fubu2k               Initial version.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0

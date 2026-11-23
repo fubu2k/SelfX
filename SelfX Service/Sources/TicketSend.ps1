@@ -27,7 +27,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.5    2026-11-22  fubu2k               Initial version
-    2.8.6    2026-11-22  fubu2k               Recipient and Cc from the routing (Get-SelfXTicketTarget), device values for the routing
     2.8.7    2026-11-22  fubu2k               Recipient and Cc can be set per device in the registry (TicketMail, TicketCc)
 #>
 

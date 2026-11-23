@@ -30,23 +30,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version: System information tab
-    2.2.0    2026-10-28  Wolfgang Baeck       Localized labels (-Text), header and comments
-    2.3.0    2026-10-28  Wolfgang Baeck       Optional health report from the local service
-    2.3.1    2026-10-28  Wolfgang Baeck       Preserve remediation mapping on appended status rows
-    2.3.2    2026-10-28  Wolfgang Baeck       Check identity on status rows and single-check recheck
-    2.3.3    2026-10-29  Wolfgang Baeck       Labels for pending reboot and updates to install
-    2.3.4    2026-10-29  Wolfgang Baeck       Label for the Pending (warning) status
-    2.5.0    2026-11-04  Wolfgang Baeck       Detail on status rows; per-user cache (Save/Read-SelfXSystemInfoCache)
-                                              so the information is shown immediately
-    2.5.3    2026-11-04  Wolfgang Baeck       Times in the time zone of the user: UTC markers of the health details
-                                              are converted, status times are kept in UTC, time zone cache is cleared
-    2.5.10   2026-11-06  Wolfgang Baeck       "LAN connected" also for virtual network adapters of virtual machines
-                                              (Hyper-V, VMware): adapters with a default route count (Get-SelfXConnectionTypes);
-                                              fix: last Intune sync was shown one hour (UTC offset) too late, the OMA-DM
-                                              time is local time despite its "Z" (ConvertFrom-SelfXOmaDmTime)
-    2.6.0    2026-11-06  Wolfgang Baeck       Label "Company apps (Intune)" instead of "Applications (local IME cache)"
-    2.8.2    2026-11-22  fubu2k               Uptime row shows a restart hint (warning status) from 7 days without a restart (Get-SelfXUptimeInfo)
-    2.8.3    2026-11-22  fubu2k               Network: proxy setting of the user (server and port, configuration script address; credentials masked) and mapped network drive letters
     2.8.8    2026-11-22  fubu2k               Optional latency measurements (default gateway, DNS lookup and connection time to configured targets;
                                               Network_Test_Config.xml, off by default)
 #>

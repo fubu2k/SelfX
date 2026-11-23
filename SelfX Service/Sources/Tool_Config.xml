@@ -7,44 +7,6 @@
 	History:
 	Version  Date        Author               Change
 	1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX)
-	2.0.0    2026-10-28  Wolfgang Baeck       SelfX Service: local service texts, shortcuts, System information tab
-	2.1.0    2026-10-28  Wolfgang Baeck       Branding settings
-	2.2.0    2026-10-28  Wolfgang Baeck       Multilingual UI: texts moved to Languages, new Tool_Language
-	2.3.0    2026-10-28  Wolfgang Baeck       Health status in System information (Health_Config.xml)
-	2.3.2    2026-10-28  Wolfgang Baeck       Single-status recheck with Ok/Error buttons
-	2.3.3    2026-10-29  Wolfgang Baeck       Pending reboot and updates-to-install status
-	2.3.4    2026-10-29  Wolfgang Baeck       Pending (warning) status; Defender signature update button
-	2.4.0    2026-11-02  Wolfgang Baeck       Device logs for the support by e-mail (DeviceLogs_Days, DeviceLogs_Compress)
-	2.5.0    2026-11-04  Wolfgang Baeck       Modern UI: Device status page, tray icon, help dialog (support hours, Teams, website)
-	2.5.1    2026-11-04  Wolfgang Baeck       Company branding (logo in Branding, brand color)
-	2.5.2    2026-11-04  Wolfgang Baeck       Fix: update no longer fails (exit code 1) while SelfX or the status icon is open
-	2.5.3    2026-11-04  Wolfgang Baeck       Times in the time zone of the user; "Fix all problems" button on the Device status page; start without command window (SelfX.exe)
-	2.5.4    2026-11-05  Wolfgang Baeck       Defender row shows the Fix button only while it is not OK (When="NotOK")
-	2.5.5    2026-11-05  Wolfgang Baeck       Compliance row: local check of the Intune compliance criteria (HealthChecks\Check-Compliance.ps1) instead of Unknown
-	2.5.6    2026-11-05  Wolfgang Baeck       Updates row: Fix button installs pending Windows updates and starts Store app updates as SYSTEM (no restart)
-	2.5.7    2026-11-05  Wolfgang Baeck       Fix: uninstallation closes open SelfX windows and status icons (failed while they were open)
-	2.5.8    2026-11-05  Wolfgang Baeck       Status icon starts right after the installation (signed-in users), not only at the next sign-in
-	2.5.9    2026-11-05  Wolfgang Baeck       Language selection for the user in the settings (Show_Language_Setting)
-	2.5.10   2026-11-06  Wolfgang Baeck       Fix: System information shows "LAN connected" also in virtual machines (Hyper-V, VMware); last Intune sync in local time (was 1 hour too late)
-	2.6.0    2026-11-06  Wolfgang Baeck       Logging of all scripts to ProgramData\SelfX\Logs with housekeeping (Log_Retention_Days); restart and app retry repairs; updates via Windows Update
-	2.6.1    2026-11-06  Wolfgang Baeck       Start and Fix buttons show a rotating icon and "Running..." while the action runs; result of user actions shown
-	2.6.2    2026-11-06  Wolfgang Baeck       Taskbar shows the SelfX icon (Brand_Icon) instead of the PowerShell icon
-	2.6.3    2026-11-06  Wolfgang Baeck       Fix: the Updates Fix button installs the updates again (UsoClient install commands fail on Windows 11 24H2)
-	2.6.4    2026-11-06  Wolfgang Baeck       The device logs report also contains the SelfX logs (service, scripts, own logs of the user)
-	2.6.5    2026-11-06  Wolfgang Baeck       Each user can switch the notifications of the status icon on or off (Tray_Notifications allows it)
-	2.6.6    2026-11-06  Wolfgang Baeck       Appearance Automatic: SelfX follows the app mode of Windows (dark or light)
-	2.6.7    2026-11-16  Wolfgang Baeck       Default appearance Automatic (Tool_Theme Auto): SelfX uses the dark or light mode of Windows
-	2.6.8    2026-11-16  Wolfgang Baeck       Neutral branding and support placeholders (Branding\company_logo.png, example.com)
-	2.6.9    2026-11-19  Wolfgang Baeck       Fix: "Fix" of Updates installs through the Windows Update orchestrator (as in Settings); a repair is no longer refused while the status is read; "Restart pending" also detects restarts that only Settings reported (orchestrator)
-	2.6.11   2026-11-22  fubu2k               Security hardening release (see CHANGELOG.md): includes all changes marked 2.6.10 and 2.6.11 in the script histories - pipe limits and deadlines, device logs report per user, actions blocked while another user is signed in, protected uninstall, optional prebuilt programs checked by SHA256 (Bin), CI. Redeploy the entire package
-	2.6.12   2026-11-22  fubu2k               German is the base language of the user interface (Tool_Language de, no matching language file -> German); English stays the fallback for missing texts
-	2.7.0    2026-11-22  fubu2k               Service and starter are .NET 10 programs (self-contained), built on a build machine; the devices no longer compile (see CHANGELOG.md)
-	2.8.0    2026-11-22  fubu2k               Service, window and status icon run with PowerShell 7 (>= 7.6); minimum Windows 11 25H2 (build 26200); see CHANGELOG.md
-	2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, Copilot_Url, Copilot_Audience, Copilot_Include_AppNames), off by default
-	2.8.11   2026-11-22  fubu2k               Copilot_Include_AppNames also applies to the company apps row of the device status
-	2.8.1    2026-11-23  fubu2k               New setting Service_Privileges (Restricted | Default), see CHANGELOG.md
-	2.8.2    2026-11-23  fubu2k               New setting Service_FileCheck (Enforce | Audit), see CHANGELOG.md
-	2.8.14   2026-11-23  fubu2k               New settings Link_PasswordReset and Link_SecurityInfo (addresses of the link actions of the catalogue)
 	2.8.17   2026-11-23  fubu2k               New settings Copilot_Clear_Clipboard and Copilot_Clear_Clipboard_Seconds (optional clearing of the clipboard after the text for Copilot Chat was copied)
 -->
 <GUI_Config>	

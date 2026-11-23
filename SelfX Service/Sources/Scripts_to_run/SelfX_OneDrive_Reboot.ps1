@@ -21,11 +21,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.0.0    2026-10-28  Wolfgang Baeck       Moved to SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.6.0    2026-11-06  Wolfgang Baeck       OneDrive path from the running process, LOCALAPPDATA or Program Files
-                                              (was C:\Users\<name>, wrong for Entra ID profiles and machine-wide
-                                              installs); also starts OneDrive when it was not running; logging
+    2.6.0    2026-11-06  Wolfgang Baeck       OneDrive path from the running process, LOCALAPPDATA or Program Files; logging
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

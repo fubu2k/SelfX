@@ -17,13 +17,8 @@
        the device, and Settings shows their progress. The script waits while updates are downloaded or
        installed (at most OrchestratorTimeoutSeconds) and logs every update with its action, progress
        and the reason why it waits (for example ReadyToReboot, SeekerUpdate, NeedMoreSpace).
-    Before 2.6.3 the installation was started with "UsoClient StartDownload / StartInstall". Windows 11
-    24H2 no longer accepts these commands (error 0x80070057), so only a scan ran and nothing was
-    installed; a restart that was already pending was even reported as "updates installed".
-    2.6.3 to 2.6.8 used only the Windows Update Agent API. Microsoft documents that the Settings page
-    shows only updates of the orchestrator; updates handled through the WUA API do not appear there and
-    can conflict with it. So the updates could still be listed as pending in Settings. Since 2.6.10 only the
-    orchestrator is used (Windows 11 25H2 is the minimum version); the Windows Update Agent API is gone.
+    Only the orchestrator is used: updates handled through the Windows Update Agent API or UsoClient do not
+    show up in Settings and can conflict with it.
 
     Never restarts Windows and never signs out the user. When an update needs a restart, the
     "Restart pending" status row shows it; the user restarts with its button or himself.
@@ -41,19 +36,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.5.6    2026-11-05  Wolfgang Baeck       Initial version: install pending Windows updates, Store app update scan
-    2.6.0    2026-11-06  Wolfgang Baeck       Windows Update orchestrator (UsoClient); logging
-    2.6.3    2026-11-06  Wolfgang Baeck       Installation through the Windows Update Agent API again: UsoClient
-                                              StartDownload / StartInstall fail on Windows 11 24H2 (0x80070057) and a
-                                              pending restart was reported as installed; result logged per update
-    2.6.9    2026-11-19  Wolfgang Baeck       Windows 11 24H2+: installs through the Windows Update orchestrator
-                                              (WindowsUpdateManager, as "Check for updates" in Settings) and waits
-                                              for it; the Windows Update Agent API only installs what is left;
-                                              feature updates and updates waiting for the restart are skipped
-    2.6.10   2026-11-22  fubu2k               Windows 11 25H2 minimum: only the orchestrator (SelfXWinRT.dll, PowerShell 7);
-                                              the Windows Update Agent API and the PowerShell 5.1 path are removed;
-                                              a missing orchestrator API is an error (exit 1)
-    2.8.14   2026-11-23  fubu2k               The WinRT libraries are checked against SelfX.Files.json before they are loaded
-                                              (SelfXWinRT.ps1, finding N4); a difference = orchestrator API not available (exit 1)
+    2.8.14   2026-11-23  fubu2k               WinRT libraries are loaded only after the check against SelfX.Files.json (SelfXWinRT.ps1)
 #>
 
 # Microsoft Store apps: update scan of the MDM bridge (asynchronous).
@@ -70,7 +53,7 @@ function Start-SelfXStoreUpdate {
 
 # Windows Update orchestrator (Windows.Management.Update.WindowsUpdateManager, Windows 11 25H2 and newer) through
 # SelfXWinRT.dll in the folder WinRT of the install folder. Import-SelfXWinRT (SelfXWinRT.ps1) checks the DLLs against
-# SelfX.Files.json and keeps them open while it loads them (finding N4). PowerShell 7 cannot load the Windows Runtime type
+# SelfX.Files.json and keeps them open while it loads them. PowerShell 7 cannot load the Windows Runtime type
 # by name. Returns $null when the API is not available or a check fails (the reason is logged; replaced in tests).
 function Get-SelfXUpdateManager {
 	try {

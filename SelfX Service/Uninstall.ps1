@@ -35,13 +35,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.4.0    2026-11-02  Wolfgang Baeck       Always delete the device logs reports
-    2.5.0    2026-11-04  Wolfgang Baeck       Remove the status icon autostart and the status cache
-    2.5.2    2026-11-04  Wolfgang Baeck       Retry locked install files (open SelfX window or status icon); a remaining
-                                              empty folder in use is no failure
-    2.5.7    2026-11-05  Wolfgang Baeck       Close open SelfX windows and status icons of all users before removal; a
-                                              service marked for deletion is no failure; log Logs\Uninstall.log
     2.6.10   2026-11-22  fubu2k               Security: the data folders are deleted without following junctions or symbolic
                                               links (users own subfolders of Logs\Users and can create links there); a
                                               link is removed itself, never its target

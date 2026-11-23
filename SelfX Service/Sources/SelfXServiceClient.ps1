@@ -24,19 +24,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.3.0    2026-10-28  Wolfgang Baeck       Validate and decode fixed HEALTH responses
-    2.3.1    2026-10-28  Wolfgang Baeck       Reject invalid remediation filenames in status responses
-    2.3.2    2026-10-28  Wolfgang Baeck       Optional single-check health request
-    2.3.3    2026-10-29  Wolfgang Baeck       Accept PendingReboot and Updates results
-    2.3.4    2026-10-29  Wolfgang Baeck       Accept the Pending (warning) status
-    2.5.0    2026-11-04  Wolfgang Baeck       STATUS request (status cache of the background checks); fix: a HEALTH
-                                              answer was rejected in Windows PowerShell 5.1 ($Matches after -notmatch
-                                              and a JSON array returned as one object)
-    2.5.3    2026-11-04  Wolfgang Baeck       STATUS time is returned in UTC; the GUI converts it to the time zone of the user;
-                                              Start-SelfXHiddenPowerShell starts scripts without any console window
-    2.6.1    2026-11-06  Wolfgang Baeck       Start-SelfXHiddenPowerShell -PassThru returns the process (running state of
-                                              user actions in the window)
     2.6.10   2026-11-22  fubu2k               Security: before a request is sent, the client checks that the process behind
                                               the pipe is the running SelfXService (process ID from the service control
                                               manager); a process of a user that created the pipe name while the service

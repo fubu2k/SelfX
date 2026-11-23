@@ -20,8 +20,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.0.0    2026-10-28  Wolfgang Baeck       Moved to SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
     2.6.0    2026-11-06  Wolfgang Baeck       Full path of wsreset.exe; logging (SelfXLog.ps1)
 #>
 

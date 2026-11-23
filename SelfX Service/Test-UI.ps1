@@ -12,15 +12,6 @@
     Version: 2.6.9
     History:
     2.5.0  2026-11-04  Wolfgang Baeck  Initial UI tests (modern UI, tray icon, theme, caches).
-    2.5.3  2026-11-04  Wolfgang Baeck  Test that SelfX and the status icon start without a console window.
-    2.5.9  2026-11-05  Wolfgang Baeck  Test the language selection of the user (settings, restart, status icon).
-    2.5.10 2026-11-06  Wolfgang Baeck  Test the connection types of the network section (virtual machines, VPN) and the
-                                       local time of the last Intune sync.
-    2.6.1  2026-11-06  Wolfgang Baeck  Test the running state of the start buttons (user actions watched until they end).
-    2.6.2  2026-11-06  Wolfgang Baeck  Test the own taskbar identity (SelfX icon instead of PowerShell).
-    2.6.5  2026-11-06  Wolfgang Baeck  Test the notifications switch of the user (status icon).
-    2.6.6  2026-11-06  Wolfgang Baeck  Test the appearance Automatic (app mode of Windows).
-    2.6.7  2026-11-16  Wolfgang Baeck  Test the default appearance Automatic.
     2.6.9  2026-11-19  Wolfgang Baeck  Test that the cached status read does not block a repair.
 #>
 $ErrorActionPreference = 'Stop'

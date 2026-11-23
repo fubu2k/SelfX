@@ -15,7 +15,6 @@
     Version: 2.6.9
     History:
     2.6.0  2026-11-06  Wolfgang Baeck  Initial version: sandbox tests of all action, repair and check scripts.
-    2.6.3  2026-11-06  Wolfgang Baeck  Updates: Windows Update Agent flow with a simulated session.
     2.6.9  2026-11-19  Wolfgang Baeck  Updates: simulated Windows Update orchestrator; WUA skips feature updates.
 #>
 $ErrorActionPreference = 'Stop'

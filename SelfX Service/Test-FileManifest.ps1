@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests SelfX.Files.json: the hash list of all installed files (security review finding N4).
+    Tests SelfX.Files.json: the hash list of all installed files.
 
 .DESCRIPTION
     Takes New-SelfXFileManifest out of tools\New-SelfXIntuneWin.ps1 and Test-SelfXFileManifest out of Install.ps1 (the
@@ -20,7 +20,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.8.1    2026-11-23  fubu2k               Initial version (security review finding N4).
+    2.8.1    2026-11-23  fubu2k               Initial version.
     2.8.2    2026-11-23  fubu2k               Also the DLLs of Bin\WinRT (WinRT load check).
 #>
 $ErrorActionPreference = 'Stop'

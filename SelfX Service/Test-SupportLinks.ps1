@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests the check of the links of the help dialog (Sources\SupportLinks.ps1, finding N7 of the code review).
+    Tests the check of the links of the help dialog (Sources\SupportLinks.ps1).
 
 .DESCRIPTION
     Pure functions, nothing is read from or changed on the device. Checked: https only, no user name in the link, no
@@ -17,7 +17,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.8.0    2026-11-23  fubu2k               Initial version (code review finding N7).
+    2.8.0    2026-11-23  fubu2k               Initial version.
     2.8.14   2026-11-23  fubu2k               Tests for Resolve-SelfXCatalogLink (links of catalogue actions).
 #>
 $ErrorActionPreference = 'Stop'

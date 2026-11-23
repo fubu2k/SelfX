@@ -33,7 +33,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.6.10   2026-11-22  fubu2k               Initial version (security review finding F11).
+    2.6.10   2026-11-22  fubu2k               Initial version.
 #>
 param(
 	[string]$SourcesFolder = (Join-Path $PSScriptRoot 'Sources')

@@ -49,12 +49,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-04  Wolfgang Baeck       Initial version
-    1.1.0    2026-11-16  Wolfgang Baeck       Module SvRooij.ContentPrep.Cmdlet instead of the IntuneWinAppUtil.exe in the
-                                              repository (license); the Microsoft tool is optional (-ToolPath)
-    1.2.0    2026-11-20  Wolfgang Baeck       Use only the Microsoft tool; remove the module dependency and verify its signature
-    1.3.0    2026-11-22  fubu2k               Only SelfX Service (SelfX Admin and SelfX Standard are no longer part of this repository)
-    1.4.0    2026-11-22  fubu2k               Bin (.NET 10 programs) is required and fully checked; the .NET project files are not packaged
-    1.5.0    2026-11-23  fubu2k               Writes SelfX.Files.json (SHA256 of all installed files) into the package (finding N4)
     1.6.0    2026-11-23  fubu2k               SelfX.Files.json also lists the DLLs of Bin\WinRT (installed into WinRT) for the load check
 #>
 
@@ -128,7 +122,7 @@ function Test-StagedPackage {
     }
 }
 
-# Writes SelfX.Files.json into the staged package (security review finding N4): the SHA256 of every file that Install.ps1
+# Writes SelfX.Files.json into the staged package: the SHA256 of every file that Install.ps1
 # copies to the installation folder (everything below Sources, Uninstall.ps1 and the DLLs of Bin\WinRT, which Install.ps1
 # copies to WinRT\). Install.ps1 checks the package against it before anything is installed and keeps the file in the
 # installation folder; the service uses it before it starts a script and the scripts before they load a WinRT DLL.

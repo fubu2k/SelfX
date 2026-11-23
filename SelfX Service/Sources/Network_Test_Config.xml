@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Network_Test_Config.xml: optional latency measurements on the System information page (SelfX Service 2.8.8).
+  Network_Test_Config.xml: optional latency measurements on the System information page.
   Off by default (Enabled="False"). Only administrators can change this file; users cannot add or change targets.
 
   The measurements run in the context of the user, only read, and send no data other than a name lookup,

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Ticket_Config.xml: routing of the ticket e-mail (SelfX Service 2.8.6).
+  Ticket_Config.xml: routing of the ticket e-mail.
   Only used when Ticket_Enabled is True in Tool_Config.xml. Without a matching rule the e-mail goes to Ticket_Mail
   (or Support_Mail) of Tool_Config.xml, so that address must always be valid.
 

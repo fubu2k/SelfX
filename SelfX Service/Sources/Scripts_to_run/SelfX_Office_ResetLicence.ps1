@@ -29,9 +29,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.8.4    2026-11-23  fubu2k               Token folders independent of the Office version (Licenses and every <version>\Licensing),
-                                              only the contents are removed, links are not followed, own session only,
-                                              graceful close with timeout, Teams not closed, logging and exit code
+    2.8.4    2026-11-23  fubu2k               Token folders independent of the Office version; own session only; logging and exit code
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

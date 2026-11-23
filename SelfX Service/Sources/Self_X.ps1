@@ -43,51 +43,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX, http://www.systanddeploy.com)
-    2.0.0    2026-10-28  Wolfgang Baeck       SelfX Service: offline package, actions as SYSTEM through the local
-                                              service, System information tab
-    2.1.0    2026-10-28  Wolfgang Baeck       Branding: company logo, icon and colors
-    2.2.0    2026-10-28  Wolfgang Baeck       Multilingual user interface (Languages folder), header and comments
-    2.3.0    2026-10-28  Wolfgang Baeck       Health results with color-coded states in System information
-    2.3.1    2026-10-28  Wolfgang Baeck       Confirmed per-status remediation with automatic recheck
-    2.3.2    2026-10-28  Wolfgang Baeck       Ok/Error button rechecks a single status; remediation rechecks only its row
-    2.3.3    2026-10-29  Wolfgang Baeck       Recheck support for the pending reboot and updates statuses
-    2.3.4    2026-10-29  Wolfgang Baeck       Pending (warning) status color and "Pending" recheck button
-    2.4.0    2026-11-02  Wolfgang Baeck       Post_Action MailReport: device logs collected as SYSTEM and attached to
-                                              a new support e-mail; "Send logs to support" button in System information
-    2.5.0    2026-11-04  Wolfgang Baeck       Modern adaptive UI without MahApps: navigation bar, Device status page with
-                                              cards, cached status and system information shown immediately, icon
-                                              buttons with tooltips, help/support, settings and about dialogs, dark and
-                                              light theme, single window per user, -Page parameter for the tray icon
-    2.5.2    2026-11-04  Wolfgang Baeck       The status icon is started outside the install folder (working directory),
-                                              so it no longer blocks updates
-    2.5.3    2026-11-04  Wolfgang Baeck       Times in the time zone of the user; "Fix all problems" button on the
-                                              Device status page (runs the configured repairs one after another);
-                                              scripts and the status icon are started without a console window
-    2.5.9    2026-11-05  Wolfgang Baeck       Language selection in the settings (saved per user, Show_Language_Setting);
-                                              SelfX restarts in the new language
-    2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1: actions, answers, results and every message);
-                                              "Restart now" on the Restart pending row with its own restart warning (never
-                                              in "Fix all problems"); "Retry" on the apps row; the update repair opens
-                                              Settings > Windows Update and reports that the installation continues there
-    2.6.1    2026-11-06  Wolfgang Baeck       Running actions: the start button (and the Fix button of a status card) shows a
-                                              rotating icon and "Running..." and is locked only while the action runs; user
-                                              actions are watched until their script has ended and their result is shown
-    2.6.2    2026-11-06  Wolfgang Baeck       Own taskbar button with the SelfX icon instead of the PowerShell icon
-                                              (AppUserModelID; a pinned SelfX starts SelfX.exe)
-    2.6.3    2026-11-06  Wolfgang Baeck       Updates repair: Settings is no longer opened; "being installed" message while it
-                                              runs, "finished" afterwards and a full status check (updates, pending restart)
-    2.6.5    2026-11-06  Wolfgang Baeck       Settings: switch "Show notifications about problems" of the status icon (per user)
-    2.6.6    2026-11-06  Wolfgang Baeck       Appearance Automatic (Settings): follows the app mode of Windows, also while SelfX is open
-    2.6.7    2026-11-16  Wolfgang Baeck       Default appearance Automatic (Tool_Theme missing or unknown value)
-    2.6.9    2026-11-19  Wolfgang Baeck       Fix, Fix all and Check all are no longer refused while the cached status is read (every minute)
-    2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
-    2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, off by default): preview of the prompt, copy, open the configured https address
-    2.8.11   2026-11-22  fubu2k               Copilot Chat: notes for the user in the dialog; Copilot_Include_AppNames also applies to the company apps row; network facts
-    2.8.12   2026-11-22  fubu2k               Copilot Chat: the instruction texts of the prompt come from the language files (Copilot_Prompt_User, Copilot_Prompt_Admin)
-    2.8.13   2026-11-23  fubu2k               Remote support tile: with Remote Help installed (signed RemoteHelp.exe) only Remote Help is offered, otherwise Quick Assist
-    2.8.14   2026-11-23  fubu2k               Link actions (Context Link): confirmation, then an https address from Tool_Config.xml (Link_<Name>) is opened; not shown when the setting is empty, Off or invalid
-    2.8.15   2026-11-23  fubu2k               Quick scan action: own result texts (no threats / Defender found threats, exit code 2)
-    2.8.16   2026-11-23  fubu2k               Copilot Chat: the copied text is kept out of the clipboard history and the cloud clipboard (CopilotClipboard.ps1)
     2.8.17   2026-11-23  fubu2k               Copilot Chat: optional clearing of the clipboard after a time (Copilot_Clear_Clipboard, Copilot_Clear_Clipboard_Seconds)
 #>
 param(

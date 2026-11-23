@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests tools\New-SelfXWdacPolicy.ps1 (optional WDAC supplemental policy, security review finding N4, part 3).
+    Tests tools\New-SelfXWdacPolicy.ps1 (optional WDAC supplemental policy).
 
 .DESCRIPTION
     Checks that the script parses and runs it in Windows PowerShell 5.1 against a copy of the real package files and a
@@ -19,7 +19,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.8.3    2026-11-23  fubu2k               Initial version (security review finding N4, part 3).
+    2.8.3    2026-11-23  fubu2k               Initial version.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0

@@ -10,7 +10,7 @@
       1. takes the newest DeviceLogs-* file of the current user (only that user can read it),
       2. copies it to %LOCALAPPDATA%\SelfX\Reports (older copies there are deleted),
       3. adds the user's own SelfX logs (ProgramData\SelfX\Logs\Users\<own SID>, last DeviceLogs_Days
-         days) to the copy with the rights of the user (2.6.10). They are not read by the System
+         days) to the copy with the rights of the user. They are not read by the System
          action: the folder is user-writable, so a read as SYSTEM could be redirected to protected
          files. Only the own SID folder is used, never the logs of another user. A problem here never
          stops the e-mail,
@@ -32,8 +32,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.4.0    2026-11-02  Wolfgang Baeck       Initial version: device logs report by e-mail
-    2.6.10   2026-11-22  fubu2k               The own user logs are added here with the rights of the user (were read by
-                                              the System action, which a user-writable folder could redirect)
     2.8.6    2026-11-22  fubu2k               New-SelfXOutlookMail: optional Cc (ticket e-mail)
 #>
 

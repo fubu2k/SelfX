@@ -17,7 +17,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.10   2026-11-22  fubu2k               Initial version
-    2.8.11   2026-11-22  fubu2k               Company apps row without app names, network facts, note text
     2.8.12   2026-11-22  fubu2k               Prompt texts in the language files (en, de), same text as the built-in fallback
 #>
 $ErrorActionPreference = 'Stop'

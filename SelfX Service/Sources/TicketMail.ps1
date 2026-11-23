@@ -35,7 +35,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.4    2026-11-22  fubu2k               Initial version: ticket model and mailto link (no user interface yet)
-    2.8.5    2026-11-22  fubu2k               Device information block, Test-SelfXTicketAddress
     2.8.6    2026-11-22  fubu2k               Routing to support units from Ticket_Config.xml (rules for group tag, OU, category), Cc, group tag field
 #>
 
