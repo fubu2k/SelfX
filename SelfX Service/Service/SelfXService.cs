@@ -46,7 +46,7 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.5
+    Version : 2.8.21
 
     History:
     Version  Date        Author               Change
@@ -55,6 +55,17 @@ Notes:
     2.8.4    2026-11-23  fubu2k               The file check also covers .dll files: a DLL below the install folder (WinRT) must be listed in
     2.8.5    2026-11-23  fubu2k               The file check also covers .exe files: SelfXService.exe and SelfX.exe are compared by SHA256,
                                               an unlisted .exe below the install folder is refused
+    2.8.19   2026-11-23  fubu2k               Installer helper SafeTree (/removetree:, /cleandata:): deletes folder trees through handles opened
+                                              with FILE_FLAG_OPEN_REPARSE_POINT, without a time window between check and delete (M1)
+    2.8.20   2026-11-23  fubu2k               N1: Tool_Config.xml and Issues_List.xml are checked first, a check cut off at 20 problems is noted
+                                              (log, event 4005; Service_FileCheck=Audit is then ignored). N2: a file of any type without an entry
+                                              in the list is refused. N3: the rights check of PowerShell 7 accepts only SYSTEM, Administrators and
+                                              TrustedInstaller as writers, also for the folders above pwsh.exe up to the drive root
+    2.8.21   2026-11-23  fubu2k               N5: an unexpected exception while a request is processed is logged (type and cleaned message) and answered
+                                              with the fixed text "ERROR Internal error" (no details; the client shows Error, not a timeout).
+                                              N6: every PowerShell child (RUN, HEALTH, background) is put into a job object with
+                                              KILL_ON_JOB_CLOSE; when the service stops, the whole process tree is ended, so an update or
+                                              uninstall finds no SYSTEM process that still holds files. No new action starts while stopping.
 */
 
 using System;
@@ -178,6 +189,8 @@ namespace SelfX
         readonly string pipeName;
         readonly object logLock = new object();
         readonly SemaphoreSlim runLock = new SemaphoreSlim(1, 1);
+        // Job object of the PowerShell children (N6); created in StartListening, ended in StopListening.
+        volatile ChildJob childJob;
         // Serializes all health runs, because each of them writes the status cache.
         readonly SemaphoreSlim healthLock = new SemaphoreSlim(1, 1);
         readonly ManualResetEvent stopEvent = new ManualResetEvent(false);
@@ -301,6 +314,11 @@ namespace SelfX
             {
                 try { Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)); } catch { }
             }
+            childJob = ChildJob.Create();
+            if (childJob == null)
+            {
+                Log("Warning: the job object for the action processes could not be created (error " + Marshal.GetLastWin32Error() + "); running actions will not end with the service.");
+            }
             listener = new Thread(ListenLoop);
             listener.IsBackground = true;
             listener.Name = "SelfXPipeListener";
@@ -319,11 +337,28 @@ namespace SelfX
         {
             stopping = true;
             stopEvent.Set();
-            // A running background collection is only reading; stop it with the service.
+            // N6: end every running PowerShell child with its descendants (RUN, HEALTH and background), so that an update or
+            // an uninstall does not find a SYSTEM process that still holds files. New starts are refused (stopping).
+            ChildJob job = childJob;
+            childJob = null;
+            if (job != null)
+            {
+                job.Terminate();
+            }
+            // A running background collection is only reading; stop it with the service (fallback without a job).
             int pid = backgroundProcessId;
             if (pid != 0)
             {
                 KillProcessTree(pid);
+            }
+            // The thread of an ended action releases the run slot right after the process ended.
+            if (runLock.Wait(3000))
+            {
+                runLock.Release();
+            }
+            else
+            {
+                Log("An action was still running 3 s after the service stop was requested.");
             }
             // Unblock WaitForConnection.
             try
@@ -657,7 +692,18 @@ namespace SelfX
                     long callerSession = -1;
                     try { uint sessionId; if (GetNamedPipeClientSessionId(pipe.SafePipeHandle, out sessionId)) callerSession = sessionId; } catch { }
 
-                    string response = ProcessRequest(request, user, callerSid, callerIsAdmin, callerSession);
+                    string response;
+                    try
+                    {
+                        response = ProcessRequest(request, user, callerSid, callerIsAdmin, callerSession);
+                    }
+                    catch (Exception ex)
+                    {
+                        // N5: the client gets a fixed answer without details (instead of waiting for a timeout);
+                        // the log has the type and the cleaned message, never the request content.
+                        Log("Request error (" + CleanLogText(user) + "): " + ex.GetType().Name + ": " + CleanLogText(ex.Message));
+                        response = "ERROR Internal error";
+                    }
                     // A client that does not read the answer must not block this thread.
                     if (WriteResponse(pipe, response, ResponseWriteTimeoutMs))
                     {
@@ -971,21 +1017,28 @@ namespace SelfX
         // Same rule as the generator (tools\New-SelfXIntuneWin.ps1): plain relative names with forward slashes.
         static readonly Regex ListedNamePattern = new Regex(@"^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*\z", RegexOptions.CultureInvariant);
         static readonly Regex Sha256Pattern = new Regex(@"^[0-9A-Fa-f]{64}\z", RegexOptions.CultureInvariant);
-        // Files that PowerShell or the service load as code or configuration; none of them may exist without an entry in the list.
-        // .dll: the WinRT libraries that PowerShell 7 loads (WinRT\*.dll); an unlisted DLL would be code in a SYSTEM process.
-        // .exe: SelfXService.exe and SelfX.exe are listed; an unlisted program in the install folder is refused. A replaced
-        // SelfXService.exe skips its own check: this detects accidents (broken update); the protection against an attacker is the folder ACL and App Control.
-        static readonly string[] CheckedExtensions = { ".ps1", ".psm1", ".psd1", ".ps1xml", ".xml", ".dll", ".exe" };
+        // The generator lists every file of the installation (scripts, configuration, images, WinRT and Audio libraries, both
+        // programs), so no file of any type may exist in the install folder without an entry in the list (a stray .config,
+        // .json, .cmd, .manifest or .dll.config next to a checked program would otherwise go unnoticed). Only the list itself
+        // is exempt. A replaced SelfXService.exe skips its own check: this detects accidents (broken update); the protection
+        // against an attacker is the folder ACL and App Control.
+        // Checked first, so that a long list of other problems cannot hide them: the configuration read by CheckInstalledFiles
+        // (Service_FileCheck) and the action catalog.
+        static readonly string[] PriorityFiles = { "Tool_Config.xml", "Issues_List.xml" };
+        // Last entry of the problem list when the check stopped at MaxFileProblems (the list is then incomplete).
+        const string TruncatedProblem = "check stopped: more problems may exist";
 
         /// <summary>
         /// Compare the installed scripts and configuration with SelfX.Files.json (written at package build, copied
-        /// by Install.ps1). Every listed file must exist with the listed SHA256; no script or XML file below the root may be
+        /// by Install.ps1). Every listed file must exist with the listed SHA256; no file below the root may be
         /// missing from the list; no link (junction, symbolic link) may be in the way. Returns false and the problems (at most
-        /// 20, "kind: name") when anything differs, when the list is missing, too large or invalid (fail closed).
+        /// 20, "kind: name", plus the entry TruncatedProblem when the check stopped there; Tool_Config.xml and Issues_List.xml
+        /// are checked first) when anything differs, when the list is missing, too large or invalid (fail closed).
         /// </summary>
         static bool VerifyInstalledFiles(string root, out List<string> problems)
         {
             problems = new List<string>();
+            bool truncated = false;
             try
             {
                 root = root.TrimEnd('\\');
@@ -1019,13 +1072,22 @@ namespace SelfX
                 }
                 if (expected.Count == 0) { problems.Add("file list: empty"); return false; }
 
+                // Configuration and catalog first, then the rest.
+                List<KeyValuePair<string, string>> ordered = new List<KeyValuePair<string, string>>();
                 foreach (KeyValuePair<string, string> entry in expected)
                 {
-                    if (problems.Count >= MaxFileProblems) break;
+                    if (IsPriorityFile(entry.Key)) ordered.Add(entry);
+                }
+                foreach (KeyValuePair<string, string> entry in expected)
+                {
+                    if (!IsPriorityFile(entry.Key)) ordered.Add(entry);
+                }
+                foreach (KeyValuePair<string, string> entry in ordered)
+                {
                     string full = Path.GetFullPath(Path.Combine(root, entry.Key.Replace('/', '\\')));
-                    if (!full.StartsWith(root + "\\", StringComparison.OrdinalIgnoreCase)) { problems.Add("path: " + entry.Key); continue; }
-                    if (!File.Exists(full)) { problems.Add("missing: " + entry.Key); continue; }
-                    if (IsLinkBelow(root, full)) { problems.Add("link: " + entry.Key); continue; }
+                    if (!full.StartsWith(root + "\\", StringComparison.OrdinalIgnoreCase)) { AddProblem(problems, "path: " + entry.Key, ref truncated); continue; }
+                    if (!File.Exists(full)) { AddProblem(problems, "missing: " + entry.Key, ref truncated); continue; }
+                    if (IsLinkBelow(root, full)) { AddProblem(problems, "link: " + entry.Key, ref truncated); continue; }
                     string actual;
                     try
                     {
@@ -1035,10 +1097,11 @@ namespace SelfX
                             actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
                         }
                     }
-                    catch (IOException) { problems.Add("not readable: " + entry.Key); continue; }
-                    if (!string.Equals(actual, entry.Value, StringComparison.OrdinalIgnoreCase)) problems.Add("changed: " + entry.Key);
+                    catch (IOException) { AddProblem(problems, "not readable: " + entry.Key, ref truncated); continue; }
+                    if (!string.Equals(actual, entry.Value, StringComparison.OrdinalIgnoreCase)) AddProblem(problems, "changed: " + entry.Key, ref truncated);
                 }
-                FindUnlistedFiles(new DirectoryInfo(root), root, expected, problems);
+                FindUnlistedFiles(new DirectoryInfo(root), root, expected, problems, ref truncated);
+                if (truncated) problems.Add(TruncatedProblem);
                 return problems.Count == 0;
             }
             catch (JsonException)
@@ -1066,36 +1129,58 @@ namespace SelfX
             return false;
         }
 
-        static void FindUnlistedFiles(DirectoryInfo folder, string root, Dictionary<string, string> listed, List<string> problems)
+        /// <summary>True for the files that are checked first (name relative to the root, case-insensitive).</summary>
+        static bool IsPriorityFile(string relative)
+        {
+            foreach (string name in PriorityFiles)
+            {
+                if (string.Equals(relative, name, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Adds a problem up to MaxFileProblems; a further problem only sets truncated (the check continues, so the flag means that more problems really exist).</summary>
+        static void AddProblem(List<string> problems, string problem, ref bool truncated)
+        {
+            if (problems.Count >= MaxFileProblems) truncated = true;
+            else problems.Add(problem);
+        }
+
+        static void FindUnlistedFiles(DirectoryInfo folder, string root, Dictionary<string, string> listed, List<string> problems, ref bool truncated)
         {
             foreach (FileSystemInfo entry in folder.EnumerateFileSystemInfos())
             {
-                if (problems.Count >= MaxFileProblems) return;
                 string relative = entry.FullName.Substring(root.Length + 1).Replace('\\', '/');
-                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("link: " + relative); continue; }
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { AddProblem(problems, "link: " + relative, ref truncated); continue; }
                 DirectoryInfo sub = entry as DirectoryInfo;
-                if (sub != null) { FindUnlistedFiles(sub, root, listed, problems); continue; }
-                if (Array.IndexOf(CheckedExtensions, entry.Extension.ToLowerInvariant()) < 0) continue;
-                if (!listed.ContainsKey(relative)) problems.Add("not listed: " + relative);
+                if (sub != null) { FindUnlistedFiles(sub, root, listed, problems, ref truncated); continue; }
+                // Any file type: the list is the complete content of the install folder (see the comment at PriorityFiles).
+                if (string.Equals(relative, FileListName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!listed.ContainsKey(relative)) AddProblem(problems, "not listed: " + relative, ref truncated);
             }
         }
 
         /// <summary>
         /// Called before every start of a script. Returns true when the installed files match SelfX.Files.json. Otherwise
         /// nothing is started (Enforce, default); with Service_FileCheck=Audit in Tool_Config.xml the problem is only logged.
-        /// The setting counts only when the file list is intact and Tool_Config.xml itself is not among the problems.
+        /// The setting counts only when the file list is intact, Tool_Config.xml itself is not among the problems and the check
+        /// was not cut off at the problem limit (Tool_Config.xml is checked first, but a cut-off list cannot prove it).
+        /// Event 4005 notes a cut-off check.
         /// </summary>
         bool CheckInstalledFiles(string scriptName)
         {
             List<string> problems;
             if (VerifyInstalledFiles(installRoot, out problems)) return true;
             bool audit = false;
-            bool settingTrusted = !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.StartsWith("check failed:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
+            bool truncated = problems.Contains(TruncatedProblem);
+            bool settingTrusted = !truncated && !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.StartsWith("check failed:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
             if (settingTrusted) audit = string.Equals(ReadToolConfigValue("Service_FileCheck"), "Audit", StringComparison.OrdinalIgnoreCase);
-            Log("Installed files do not match " + FileListName + " (" + string.Join("; ", problems.GetRange(0, Math.Min(5, problems.Count))) + "); '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
+            string shown = string.Join("; ", problems.GetRange(0, Math.Min(5, problems.Count)));
+            string cutOff = truncated ? " The check stopped after " + MaxFileProblems + " problems; the list is incomplete." : "";
+            Log("Installed files do not match " + FileListName + " (" + shown + ")." + cutOff + " '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
             SecurityEvent(EventFilesChanged, audit ? EventLogEntryType.Warning : EventLogEntryType.Error,
-                audit ? "Installed SelfX files do not match SelfX.Files.json (Audit: actions as SYSTEM are still started). See the SelfX log."
-                      : "Installed SelfX files do not match SelfX.Files.json; SelfX actions as SYSTEM are not started. See the SelfX log.");
+                (audit ? "Installed SelfX files do not match SelfX.Files.json (Audit: actions as SYSTEM are still started). See the SelfX log."
+                       : "Installed SelfX files do not match SelfX.Files.json; SelfX actions as SYSTEM are not started. See the SelfX log.") + cutOff);
             return audit;
         }
 
@@ -1122,34 +1207,54 @@ namespace SelfX
             get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"PowerShell\7\pwsh.exe"); }
         }
 
+        // The only identities that may change PowerShell 7 or the folders above it: SYSTEM, Administrators and TrustedInstaller
+        // (NT SERVICE\TrustedInstaller). Everything else (Everyone, Users, Authenticated Users, Interactive, CREATOR OWNER,
+        // a domain or local group, a single account) counts as "normal users".
+        static readonly string[] TrustedWriterSids =
+        {
+            "S-1-5-18", "S-1-5-32-544", "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"
+        };
+
         /// <summary>
         /// The installer checks the rights of PowerShell 7 only when SelfX is installed. PowerShell 7 can arrive later
-        /// (Autopilot installs apps in any order), so the service checks it again before every start: neither the folder
-        /// nor pwsh.exe may allow Everyone, Authenticated Users, Interactive or Users to change files or permissions.
-        /// A SYSTEM process must never run a program that normal users can replace.
+        /// (Autopilot installs apps in any order), so the service checks it again before every start: pwsh.exe and its folder
+        /// may only be changed by SYSTEM, Administrators and TrustedInstaller (any other identity with write, delete,
+        /// permission or ownership rights is refused), and so may the folders above it up to the drive root (nobody else may
+        /// delete or take over the folder that contains pwsh.exe). The owner is not compared (a device where another
+        /// account owns the folder must keep working); what counts is who may change it. A SYSTEM process must never run a program that normal users can replace.
         /// </summary>
         static bool IsPowerShellProtected(string executable, out string reason)
         {
+            return IsPathChainProtected(executable, null, null, out reason);
+        }
+
+        /// <summary>
+        /// The check behind IsPowerShellProtected. Tests only: stopBefore (null = whole chain) is the first folder above the
+        /// file that is no longer checked, so a test folder below %TEMP% is not judged by the rights of the user profile;
+        /// trustedSids (null = TrustedWriterSids) lets a test that runs as a normal user trust its own account.
+        /// </summary>
+        static bool IsPathChainProtected(string executable, string stopBefore, string[] trustedSids, out string reason)
+        {
             reason = "";
-            string[] userSids = { "S-1-1-0", "S-1-5-11", "S-1-5-4", "S-1-5-32-545" };
-            FileSystemRights dangerous = FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete |
+            if (trustedSids == null) trustedSids = TrustedWriterSids;
+            // pwsh.exe and its own folder: any right that changes, replaces or adds code.
+            FileSystemRights direct = FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete |
                 FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+            // Folders above it: rights that remove or take over the folder below them. Creating new entries (drive root: normal
+            // users may create folders) does not replace an existing folder; rules that only apply to children are skipped.
+            FileSystemRights above = FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
             try
             {
-                foreach (string path in new string[] { Path.GetDirectoryName(executable), executable })
+                FileInfo file = new FileInfo(executable);
+                if (!IsProtectedAgainstChange(file.GetAccessControl(), executable, direct, trustedSids, out reason)) return false;
+                DirectoryInfo folder = file.Directory;
+                if (folder == null) { reason = "'" + executable + "' has no folder"; return false; }
+                if (!IsProtectedAgainstChange(folder.GetAccessControl(), folder.FullName, direct, trustedSids, out reason)) return false;
+                string limit = stopBefore == null ? null : Path.GetFullPath(stopBefore).TrimEnd('\\');
+                for (DirectoryInfo parent = folder.Parent; parent != null; parent = parent.Parent)
                 {
-                    FileSystemSecurity security = path == executable
-                        ? (FileSystemSecurity)new FileInfo(path).GetAccessControl()
-                        : (FileSystemSecurity)new DirectoryInfo(path).GetAccessControl();
-                    foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
-                    {
-                        if (rule.AccessControlType != AccessControlType.Allow) continue;
-                        if (Array.IndexOf(userSids, rule.IdentityReference.Value) >= 0 && (rule.FileSystemRights & dangerous) != 0)
-                        {
-                            reason = "'" + path + "' can be changed by normal users (" + rule.IdentityReference.Value + ")";
-                            return false;
-                        }
-                    }
+                    if (limit != null && string.Equals(parent.FullName.TrimEnd('\\'), limit, StringComparison.OrdinalIgnoreCase)) break;
+                    if (!IsProtectedAgainstChange(parent.GetAccessControl(), parent.FullName, above, trustedSids, out reason)) return false;
                 }
                 return true;
             }
@@ -1161,11 +1266,33 @@ namespace SelfX
             }
         }
 
+        static bool IsProtectedAgainstChange(FileSystemSecurity security, string path, FileSystemRights dangerous, string[] trustedSids, out string reason)
+        {
+            reason = "";
+            foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+            {
+                if (rule.AccessControlType != AccessControlType.Allow) continue;
+                // A rule that only applies to child items (for example CREATOR OWNER in Program Files) says nothing about this item;
+                // the children are checked with their own rights.
+                if ((rule.PropagationFlags & PropagationFlags.InheritOnly) != 0) continue;
+                if ((rule.FileSystemRights & dangerous) == 0) continue;
+                if (Array.IndexOf(trustedSids, rule.IdentityReference.Value) >= 0) continue;
+                reason = "'" + path + "' can be changed by normal users (" + rule.IdentityReference.Value + ")";
+                return false;
+            }
+            return true;
+        }
+
         /// <summary>
         /// Run PowerShell under the service identity and log bounded output and completion.
         /// </summary>
         string RunScript(string scriptPath, string scriptName, int timeoutSeconds, string user, bool health = false, string healthFilter = "", string callerSid = null, bool background = false, bool callerIsAdmin = false)
         {
+            // N6: no new process while the service stops (it would outlive the job object that was just ended).
+            if (stopping)
+            {
+                return "ERROR Service is stopping";
+            }
             // PowerShell 7 at its fixed machine-wide location (no PATH search, no user-writable folder). A missing
             // installation fails the action with a clear text instead of running anything else.
             if (health && !dataFolderSafe)
@@ -1253,6 +1380,7 @@ namespace SelfX
                 process.OutputDataReceived += collect;
                 process.ErrorDataReceived += collect;
                 process.Start();
+                AttachToJob(process, scriptName);
                 if (background)
                 {
                     backgroundProcessId = process.Id;
@@ -1609,6 +1737,140 @@ namespace SelfX
         }
 
         /// <summary>
+        /// Job object for the PowerShell children of the service (N6). The job ends all its processes when it is
+        /// terminated or when its last handle is closed (KILL_ON_JOB_CLOSE, also if the service process itself dies).
+        /// Processes started by a child join the job automatically. The job has no name (nothing to open or squat).
+        /// A child that spawns a process before it is added to the job is a small gap: pwsh needs far longer for its
+        /// start than this call; the timeout path and the taskkill fallback still cover that case.
+        /// </summary>
+        internal sealed class ChildJob
+        {
+            const int JobObjectExtendedLimitInformationClass = 9;
+            const uint JobObjectLimitKillOnJobClose = 0x00002000;
+
+            [StructLayout(LayoutKind.Sequential)]
+            struct IoCounters
+            {
+                public ulong ReadOperationCount;
+                public ulong WriteOperationCount;
+                public ulong OtherOperationCount;
+                public ulong ReadTransferCount;
+                public ulong WriteTransferCount;
+                public ulong OtherTransferCount;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            struct BasicLimitInformation
+            {
+                public long PerProcessUserTimeLimit;
+                public long PerJobUserTimeLimit;
+                public uint LimitFlags;
+                public UIntPtr MinimumWorkingSetSize;
+                public UIntPtr MaximumWorkingSetSize;
+                public uint ActiveProcessLimit;
+                public UIntPtr Affinity;
+                public uint PriorityClass;
+                public uint SchedulingClass;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            struct ExtendedLimitInformation
+            {
+                public BasicLimitInformation BasicLimitInformation;
+                public IoCounters IoInfo;
+                public UIntPtr ProcessMemoryLimit;
+                public UIntPtr JobMemoryLimit;
+                public UIntPtr PeakProcessMemoryUsed;
+                public UIntPtr PeakJobMemoryUsed;
+            }
+
+            [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+            static extern IntPtr CreateJobObjectW(IntPtr attributes, string name);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool SetInformationJobObject(IntPtr job, int infoClass, IntPtr info, uint infoLength);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool TerminateJobObject(IntPtr job, uint exitCode);
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern bool CloseHandle(IntPtr handle);
+
+            readonly object sync = new object();
+            IntPtr handle;
+
+            ChildJob(IntPtr jobHandle) { handle = jobHandle; }
+
+            /// <summary>
+            /// Create the job with KILL_ON_JOB_CLOSE. Returns null when Windows refuses (the caller logs it and goes on
+            /// without the job, as before).
+            /// </summary>
+            public static ChildJob Create()
+            {
+                IntPtr job = CreateJobObjectW(IntPtr.Zero, null);
+                if (job == IntPtr.Zero) return null;
+                ExtendedLimitInformation limits = new ExtendedLimitInformation();
+                limits.BasicLimitInformation.LimitFlags = JobObjectLimitKillOnJobClose;
+                int length = Marshal.SizeOf(typeof(ExtendedLimitInformation));
+                IntPtr buffer = Marshal.AllocHGlobal(length);
+                try
+                {
+                    Marshal.StructureToPtr(limits, buffer, false);
+                    if (!SetInformationJobObject(job, JobObjectExtendedLimitInformationClass, buffer, (uint)length))
+                    {
+                        CloseHandle(job);
+                        return null;
+                    }
+                }
+                finally { Marshal.FreeHGlobal(buffer); }
+                return new ChildJob(job);
+            }
+
+            /// <summary>
+            /// Put a started process into the job. False when the job is already ended or Windows refuses.
+            /// </summary>
+            public bool Add(Process process)
+            {
+                lock (sync)
+                {
+                    if (handle == IntPtr.Zero) return false;
+                    try { return AssignProcessToJobObject(handle, process.Handle); }
+                    catch (InvalidOperationException) { return false; }
+                }
+            }
+
+            /// <summary>
+            /// End all processes of the job at once and close the handle. Safe to call more than once.
+            /// </summary>
+            public void Terminate()
+            {
+                lock (sync)
+                {
+                    if (handle == IntPtr.Zero) return;
+                    TerminateJobObject(handle, 1);
+                    CloseHandle(handle);
+                    handle = IntPtr.Zero;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Put a started child into the job object. While the service is stopping, a child that cannot be added is ended
+        /// at once; otherwise the failure is logged and the child runs as before (timeout handling still applies).
+        /// </summary>
+        void AttachToJob(Process process, string scriptName)
+        {
+            ChildJob job = childJob;
+            if (job != null && job.Add(process)) return;
+            if (stopping)
+            {
+                KillProcessTree(process.Id);
+                Log("'" + scriptName + "' was ended because the service is stopping.");
+                return;
+            }
+            Log("Warning: '" + scriptName + "' is not in the job object; it would keep running if the service stopped.");
+        }
+
+        /// <summary>
         /// Attempt to terminate the timed-out action and its descendants by process ID.
         /// </summary>
         static void KillProcessTree(int processId)
@@ -1838,6 +2100,259 @@ namespace SelfX
     }
 
     /// <summary>
+    /// Delete folder trees as SYSTEM without following junctions or symbolic links and without a time window
+    /// between check and delete (installer helper: /removetree: and /cleandata: of SelfXService.exe).
+    /// Every entry is opened once with FILE_FLAG_OPEN_REPARSE_POINT (a link is opened itself, never its target), is
+    /// judged on that handle (link, folder, owner) and is deleted through the same handle. A folder is held open
+    /// (no share-delete) while its content is processed, so it cannot be renamed or replaced meanwhile.
+    /// </summary>
+    public static class SafeTree
+    {
+        const uint DELETE = 0x00010000;
+        const uint READ_CONTROL = 0x00020000;
+        const uint FILE_READ_ATTRIBUTES = 0x00000080;
+        const uint SHARE_READ_WRITE = 0x00000003;
+        const uint OPEN_EXISTING = 3;
+        const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+        const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+        const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
+        const uint FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
+        const int FileAttributeTagInfo = 9;
+        const int FileDispositionInfoEx = 21;
+        const uint DISPOSITION_DELETE_POSIX_IGNORE_READONLY = 0x13;
+        const int ERROR_FILE_NOT_FOUND = 2;
+        const int ERROR_PATH_NOT_FOUND = 3;
+        const int ERROR_DIR_NOT_EMPTY = 145;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct FILE_ATTRIBUTE_TAG_INFO { public uint FileAttributes; public uint ReparseTag; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct FILE_DISPOSITION_INFO_EX { public uint Flags; }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int infoClass, out FILE_ATTRIBUTE_TAG_INFO info, uint size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FILE_DISPOSITION_INFO_EX info, uint size);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern uint GetFinalPathNameByHandleW(SafeFileHandle handle, StringBuilder path, uint size, uint flags);
+
+        [DllImport("advapi32.dll")]
+        static extern uint GetSecurityInfo(SafeFileHandle handle, int objectType, uint info, out IntPtr owner, out IntPtr group, out IntPtr dacl, out IntPtr sacl, out IntPtr descriptor);
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr LocalFree(IntPtr memory);
+
+        sealed class Result
+        {
+            public int Failed;
+            public readonly List<string> Messages = new List<string>();
+            public void Fail(string path, int error)
+            {
+                Failed++;
+                if (Messages.Count < 20) Messages.Add("SELFX-SAFEDELETE-ERROR: " + path + " (Windows error " + error + ")");
+            }
+        }
+
+        static string Extended(string fullPath)
+        {
+            return fullPath.StartsWith(@"\\?\", StringComparison.Ordinal) ? fullPath : @"\\?\" + fullPath;
+        }
+
+        static SafeFileHandle Open(string path, uint access)
+        {
+            return CreateFileW(Extended(path), access, SHARE_READ_WRITE, IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
+        }
+
+        static bool GetAttributes(SafeFileHandle handle, out uint attributes)
+        {
+            FILE_ATTRIBUTE_TAG_INFO info;
+            attributes = 0;
+            if (!GetFileInformationByHandleEx(handle, FileAttributeTagInfo, out info, (uint)Marshal.SizeOf(typeof(FILE_ATTRIBUTE_TAG_INFO)))) return false;
+            attributes = info.FileAttributes;
+            return true;
+        }
+
+        static string GetOwnerSid(SafeFileHandle handle)
+        {
+            IntPtr owner, group, dacl, sacl, descriptor;
+            if (GetSecurityInfo(handle, 1, 1, out owner, out group, out dacl, out sacl, out descriptor) != 0) return null;
+            try { return new SecurityIdentifier(owner).Value; }
+            finally { if (descriptor != IntPtr.Zero) LocalFree(descriptor); }
+        }
+
+        // The handle must name exactly the expected path: a link in a parent folder would show a different final path.
+        static bool PathMatches(SafeFileHandle handle, string fullPath)
+        {
+            StringBuilder builder = new StringBuilder(1024);
+            uint length = GetFinalPathNameByHandleW(handle, builder, (uint)builder.Capacity, 0);
+            if (length == 0 || length >= builder.Capacity) return false;
+            return string.Equals(builder.ToString().TrimEnd('\\'), Extended(fullPath).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool DeleteByHandle(SafeFileHandle handle, out int error)
+        {
+            FILE_DISPOSITION_INFO_EX info = new FILE_DISPOSITION_INFO_EX();
+            info.Flags = DISPOSITION_DELETE_POSIX_IGNORE_READONLY;
+            error = 0;
+            if (SetFileInformationByHandle(handle, FileDispositionInfoEx, ref info, (uint)Marshal.SizeOf(typeof(FILE_DISPOSITION_INFO_EX)))) return true;
+            error = Marshal.GetLastWin32Error();
+            return false;
+        }
+
+        static List<string> Children(string folder)
+        {
+            // Without the \\?\ prefix, which Extended() adds again for every call.
+            List<string> list = new List<string>();
+            foreach (string entry in Directory.EnumerateFileSystemEntries(Extended(folder)))
+            {
+                list.Add(entry.StartsWith(@"\\?\", StringComparison.Ordinal) ? entry.Substring(4) : entry);
+            }
+            return list;
+        }
+
+        // Deletes the object behind the open handle: a link or file directly, a folder after its content.
+        static void RemoveOpen(SafeFileHandle handle, string path, Result result)
+        {
+            uint attributes;
+            int error;
+            if (!GetAttributes(handle, out attributes)) { result.Fail(path, Marshal.GetLastWin32Error()); return; }
+            bool isFolder = (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && (attributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0;
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                if (isFolder)
+                {
+                    List<string> children;
+                    try { children = Children(path); }
+                    catch (Exception) { result.Fail(path, 0); return; }
+                    foreach (string child in children) RemoveEntry(child, result);
+                }
+                if (DeleteByHandle(handle, out error)) return;
+                // Someone added entries meanwhile: go through the folder again (bounded).
+                if (!(isFolder && error == ERROR_DIR_NOT_EMPTY && result.Failed == 0)) { result.Fail(path, error); return; }
+            }
+            result.Fail(path, ERROR_DIR_NOT_EMPTY);
+        }
+
+        static void RemoveEntry(string path, Result result)
+        {
+            using (SafeFileHandle handle = Open(path, DELETE | FILE_READ_ATTRIBUTES))
+            {
+                if (handle.IsInvalid)
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) result.Fail(path, error);
+                    return;
+                }
+                RemoveOpen(handle, path, result);
+            }
+        }
+
+        // Folders and files that belong to a trusted owner are kept; links and entries of other owners are deleted.
+        static void CleanFolder(string folder, HashSet<string> trusted, string skipFolder, Result result)
+        {
+            List<string> children;
+            try { children = Children(folder); }
+            catch (Exception) { result.Fail(folder, 0); return; }
+            foreach (string child in children)
+            {
+                using (SafeFileHandle handle = Open(child, DELETE | READ_CONTROL | FILE_READ_ATTRIBUTES))
+                {
+                    if (handle.IsInvalid)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) result.Fail(child, error);
+                        continue;
+                    }
+                    uint attributes;
+                    if (!GetAttributes(handle, out attributes)) { result.Fail(child, Marshal.GetLastWin32Error()); continue; }
+                    string owner = GetOwnerSid(handle);
+                    bool isLink = (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+                    if (isLink || owner == null || !trusted.Contains(owner)) { RemoveOpen(handle, child, result); continue; }
+                    if ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && !string.Equals(child.TrimEnd('\\'), skipFolder, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CleanFolder(child, trusted, skipFolder, result);
+                    }
+                }
+            }
+        }
+
+        static string FullPathOrNull(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || path.StartsWith(@"\\", StringComparison.Ordinal) || !Path.IsPathRooted(path)) return null;
+            string full = Path.GetFullPath(path).TrimEnd('\\');
+            return full.Length > 3 ? full : null;
+        }
+
+        /// <summary>mode "removetree": delete the path itself and everything below it; mode "cleandata": delete links and
+        /// foreign-owned entries below the path (the path itself is kept). Returns 0 only when everything worked.</summary>
+        public static int Run(string mode, string path, string trustedSids, string skipRelative)
+        {
+            string full = FullPathOrNull(path);
+            if (full == null) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: the path must be an absolute local path."); return 2; }
+            Result result = new Result();
+            try
+            {
+                if (mode == "removetree")
+                {
+                    using (SafeFileHandle handle = Open(full, DELETE | FILE_READ_ATTRIBUTES))
+                    {
+                        if (handle.IsInvalid)
+                        {
+                            int error = Marshal.GetLastWin32Error();
+                            if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) { Console.WriteLine("SELFX-SAFEDELETE-OK"); return 0; }
+                            result.Fail(full, error);
+                        }
+                        else if (!PathMatches(handle, full)) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: a link lies in the path of " + full); return 1; }
+                        else RemoveOpen(handle, full, result);
+                    }
+                }
+                else
+                {
+                    HashSet<string> trusted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (string sid in (trustedSids ?? "").Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (!Regex.IsMatch(sid, @"^S-1-[0-9]+(-[0-9]+)+\z")) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: invalid SID in /trusted:."); return 2; }
+                        trusted.Add(sid);
+                    }
+                    string skip = null;
+                    if (!string.IsNullOrEmpty(skipRelative))
+                    {
+                        if (skipRelative.Contains("..") || Path.IsPathRooted(skipRelative)) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: invalid /skip:."); return 2; }
+                        skip = Path.GetFullPath(Path.Combine(full, skipRelative)).TrimEnd('\\');
+                    }
+                    using (SafeFileHandle handle = Open(full, FILE_READ_ATTRIBUTES))
+                    {
+                        uint attributes;
+                        if (handle.IsInvalid) { result.Fail(full, Marshal.GetLastWin32Error()); }
+                        else if (!PathMatches(handle, full)) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: a link lies in the path of " + full); return 1; }
+                        else if (!GetAttributes(handle, out attributes) || (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 || (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+                        {
+                            Console.WriteLine("SELFX-SAFEDELETE-ERROR: " + full + " is not a real folder.");
+                            return 1;
+                        }
+                        else CleanFolder(full, trusted, skip, result);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SELFX-SAFEDELETE-ERROR: " + ex.GetType().Name);
+                return 1;
+            }
+            foreach (string message in result.Messages) Console.WriteLine(message);
+            if (result.Failed > 0) { Console.WriteLine("SELFX-SAFEDELETE-FAILED: " + result.Failed); return 1; }
+            Console.WriteLine("SELFX-SAFEDELETE-OK");
+            return 0;
+        }
+    }
+
+    /// <summary>
     /// Provide service-host and interactive troubleshooting entry points.
     /// </summary>
     public static class Program
@@ -1850,6 +2365,17 @@ namespace SelfX
             string pipeName = SelfXService.DefaultPipeName;
             string logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"SelfX\Logs");
             bool console = false;
+
+            // Installer helper (Install.ps1, Uninstall.ps1): delete folders without following links. No service is started.
+            string treeMode = null, treePath = null, treeTrusted = null, treeSkip = null;
+            foreach (string arg in args)
+            {
+                if (arg.StartsWith("/removetree:", StringComparison.OrdinalIgnoreCase)) { treeMode = "removetree"; treePath = arg.Substring(12); }
+                else if (arg.StartsWith("/cleandata:", StringComparison.OrdinalIgnoreCase)) { treeMode = "cleandata"; treePath = arg.Substring(11); }
+                else if (arg.StartsWith("/trusted:", StringComparison.OrdinalIgnoreCase)) { treeTrusted = arg.Substring(9); }
+                else if (arg.StartsWith("/skip:", StringComparison.OrdinalIgnoreCase)) { treeSkip = arg.Substring(6); }
+            }
+            if (treeMode != null) return SafeTree.Run(treeMode, treePath, treeTrusted, treeSkip);
 
             foreach (string arg in args)
             {

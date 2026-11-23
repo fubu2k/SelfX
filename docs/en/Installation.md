@@ -191,7 +191,7 @@ For Intune Win32 apps:
 | Install command | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` |
 | Uninstall command | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` |
 | Install behavior | System |
-| Detection | Custom script `Detection.ps1`. Set `$ExpectedVersion` to the `Tool_Version` of the release. |
+| Detection | Custom script: the file `build\SelfX-Service-<version>.Detection.ps1` that `tools\New-SelfXIntuneWin.ps1` creates (not the copy in the repository). Set `$ExpectedVersion` in the repository to the `Tool_Version` of the release before you build. |
 | Requirement | Windows 11 25H2 (build 26200) or newer, see [Windows version and PowerShell 7](#windows-version-and-powershell-7-since-280). |
 | Dependency | The app "PowerShell 7" (Automatically install: Yes), see the same section. |
 
@@ -200,6 +200,11 @@ Raise `Tool_Version` (`Sources\Tool_Config.xml`) and `$ExpectedVersion`
 unchanged, Intune finds the old version, treats the device as up to date and
 does not install the new package. `tools\New-SelfXIntuneWin.ps1` stops when the
 two values differ.
+
+Next to the `.intunewin` the packaging script writes `SelfX-Service-<version>.Detection.ps1`: `Detection.ps1` with the digest of the
+file list `SelfX.Files.json` of the package. Upload **this** file as the detection script. It detects SelfX only when the version
+**and** the file list match, so an interim state with changed files but an unchanged `Tool_Version` is deployed as an update too
+(finding M2). The copy in the repository only has a placeholder and checks the version only.
 
 **Release through GitHub (tag, draft only).** Instead of building the package by hand, the workflow
 `.github/workflows/release.yml` can create it: adjust `Tool_Version` and `Detection.ps1`, merge, then set and push the
@@ -349,7 +354,7 @@ The result is in `%ProgramData%\SelfX\Logs\Install.log`.
   ```
 
   Older devices then do not receive the app (instead of an installation error).
-- **Detection.** `Detection.ps1` stays as before: it detects SelfX only with an
+- **Detection.** `Detection.ps1` detects SelfX only with an
   exactly matching `Tool_Version` and a registered service. For PowerShell 7 the
   detection rule of the PowerShell app applies, not `Detection.ps1`.
 
@@ -522,7 +527,7 @@ not maintain anything by hand, you build the package again. Before the installat
 file matches the list and that no file without an entry is in the package; otherwise the installation stops before
 anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
 warning. The list is also placed in the installation folder; the service checks before **every** start (action,
-health check, background check) that all listed files are unchanged, that no script and no XML file without an entry is in
+health check, background check) that all listed files are unchanged, that no file of any type without an entry is in
 the installation folder and that no link (junction, symbolic link) is in the way. On a mismatch it starts nothing, writes
 event 4005 and the details to the SelfX log; the installation itself is never affected (Autopilot runs unchanged). A
 missing list in the installation folder also counts as a mismatch. For the first rollout `Service_FileCheck` can be set
