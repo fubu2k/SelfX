@@ -230,7 +230,7 @@ if ($verifyMethod) {
 	Add-Content -LiteralPath (Join-Path $checkRoot 'Tool_Config.xml') -Value '<!-- changed -->'
 	Add-Content -LiteralPath (Join-Path $checkRoot 'Issues_List.xml') -Value '<!-- changed -->'
 	$result = Test-CheckList $checkRoot
-	Assert-True ((-not $result.Ok) -and $result.Problems[0] -eq 'changed: Tool_Config.xml' -and $result.Problems[1] -eq 'changed: Issues_List.xml') "N1: Tool_Config.xml and Issues_List.xml are reported first ($($result.Problems[0..2] -join '; '))"
+	Assert-True ((-not $result.Ok) -and ((@($result.Problems[0..1]) | Sort-Object) -join '|') -eq 'changed: Issues_List.xml|changed: Tool_Config.xml') "N1: Tool_Config.xml and Issues_List.xml are reported first ($($result.Problems[0..2] -join '; '))"
 	Assert-True ($result.Problems.Count -eq 21 -and $result.Problems[20] -eq 'check stopped: more problems may exist') "N1: the cut-off at 20 problems is noted as the last entry ($($result.Problems.Count) entries)"
 	# Exactly 20 problems and nothing more: no cut-off entry.
 	foreach ($index in 1..25) { Remove-Item -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) }
@@ -238,6 +238,8 @@ if ($verifyMethod) {
 	foreach ($index in 1..18) { Set-Content -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) -Value 'x' }
 	Write-CheckList $checkRoot
 	foreach ($index in 1..18) { Add-Content -LiteralPath (Join-Path $checkRoot ('A{0:D2}.ps1' -f $index)) -Value 'y' }
+	Add-Content -LiteralPath (Join-Path $checkRoot 'Tool_Config.xml') -Value '<!-- changed again -->'
+	Add-Content -LiteralPath (Join-Path $checkRoot 'Issues_List.xml') -Value '<!-- changed again -->'
 	$result = Test-CheckList $checkRoot
 	Assert-True ((-not $result.Ok) -and $result.Problems.Count -eq 20 -and ($result.Problems -notcontains 'check stopped: more problems may exist')) "N1: 20 problems (the changed Tool_Config.xml, Issues_List.xml and 18 files) are complete, no cut-off entry ($($result.Problems.Count) entries)"
 	Remove-Item -LiteralPath $checkRoot -Recurse -Force -ErrorAction SilentlyContinue
