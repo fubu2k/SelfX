@@ -14,14 +14,15 @@
     Name    : Test-FileManifest.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.18
+    Version : 2.8.19
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.1    2026-11-23  fubu2k               Initial version.
-    2.8.18   2026-11-23  fubu2k               Also Bin\Audio\SelfXAudio.dll (audio library).
+    2.8.19   2026-11-23  fubu2k               Also SelfXService.exe and SelfX.exe, the check of the installed folder after copying
+                                              and the .exe entry of the service file check.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -49,6 +50,7 @@ function Get-FunctionText($Path, $Name) {
 # Dot-sourced here (script scope), not inside a function, so the functions stay visible.
 . ([scriptblock]::Create((Get-FunctionText (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\New-SelfXIntuneWin.ps1') 'New-SelfXFileManifest')))
 . ([scriptblock]::Create((Get-FunctionText (Join-Path $PSScriptRoot 'Install.ps1') 'Test-SelfXFileManifest')))
+. ([scriptblock]::Create((Get-FunctionText (Join-Path $PSScriptRoot 'Install.ps1') 'Test-SelfXInstalledFiles')))
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFileManifestTest_' + [guid]::NewGuid().ToString('N'))
 $pristine = Join-Path $root 'pristine'
@@ -56,6 +58,17 @@ $package = Join-Path $root 'package'
 function Reset-Package {
 	if (Test-Path -LiteralPath $package) { Remove-Item -LiteralPath $package -Recurse -Force }
 	Copy-Item -LiteralPath $pristine -Destination $package -Recurse
+}
+# What Install.ps1 does: Sources\* and Uninstall.ps1 and SelfX.Files.json to the root, the programs from Bin to the root,
+# the DLLs from Bin\WinRT to WinRT.
+$installed = Join-Path $root 'installed'
+function New-InstalledCopy {
+	if (Test-Path -LiteralPath $installed) { Remove-Item -LiteralPath $installed -Recurse -Force }
+	New-Item -ItemType Directory -Path $installed -Force | Out-Null
+	Copy-Item -Path (Join-Path $pristine 'Sources\*') -Destination $installed -Recurse
+	foreach ($name in 'Uninstall.ps1', 'SelfX.Files.json') { Copy-Item -LiteralPath (Join-Path $pristine $name) -Destination $installed }
+	foreach ($name in 'SelfXService.exe', 'SelfX.exe') { Copy-Item -LiteralPath (Join-Path $pristine "Bin\$name") -Destination $installed }
+	Copy-Item -LiteralPath (Join-Path $pristine 'Bin\WinRT') -Destination (Join-Path $installed 'WinRT') -Recurse
 }
 try {
 	New-Item -ItemType Directory -Path $pristine -Force | Out-Null
@@ -68,11 +81,14 @@ try {
 	# Stand-in for Bin\Audio\SelfXAudio.dll (audio library of the action "No sound").
 	New-Item -ItemType Directory -Path (Join-Path $pristine 'Bin\Audio') -Force | Out-Null
 	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\Audio\SelfXAudio.dll'), [byte[]](9, 10, 11, 12))
+	# Stand-ins for the two programs of Bin (service and starter).
+	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\SelfXService.exe'), [byte[]](17, 18, 19, 20))
+	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\SelfX.exe'), [byte[]](21, 22, 23, 24))
 	$expectedCount = @(Get-ChildItem -LiteralPath $pristine -Recurse -File).Count
 
 	# The generator lists every installed file and the check accepts the result.
 	$count = New-SelfXFileManifest -Stage $pristine -Version '9.9.9'
-	Assert-Equal $count $expectedCount 'generator: every file of Sources, Uninstall.ps1 and Bin\WinRT is listed'
+	Assert-Equal $count $expectedCount 'generator: every file of Sources, Uninstall.ps1, Bin\WinRT and the two programs is listed'
 	$manifest = Get-Content -LiteralPath (Join-Path $pristine 'SelfX.Files.json') -Raw | ConvertFrom-Json
 	Assert-Equal $manifest.ManifestVersion 1 'manifest: format 1'
 	Assert-Equal $manifest.ToolVersion '9.9.9' 'manifest: version'
@@ -82,6 +98,10 @@ try {
 	Assert-Equal ($null -eq $manifest.Files.'SelfX.Files.json') $true 'manifest does not list itself'
 	foreach ($name in 'WinRT/SelfXWinRT.dll', 'WinRT/Microsoft.Windows.SDK.NET.dll') {
 		Assert-Equal ($null -ne $manifest.Files.$name) $true "manifest lists $name"
+	}
+	foreach ($name in 'SelfXService.exe', 'SelfX.exe') {
+		Assert-Equal ($null -ne $manifest.Files.$name) $true "manifest lists $name"
+		Assert-Equal $manifest.Files.$name (Get-FileHash -LiteralPath (Join-Path $pristine "Bin\$name") -Algorithm SHA256).Hash "manifest: SHA256 of $name"
 	}
 	Assert-Equal $manifest.Files.'WinRT/SelfXWinRT.dll' (Get-FileHash -LiteralPath (Join-Path $pristine 'Bin\WinRT\SelfXWinRT.dll') -Algorithm SHA256).Hash 'manifest: SHA256 of the WinRT library'
 	Assert-Equal ($null -ne $manifest.Files.'Audio/SelfXAudio.dll') $true 'manifest lists Audio/SelfXAudio.dll'
@@ -113,6 +133,12 @@ try {
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'WinRT/Extra.dll is in the package but not listed' 'check: an extra WinRT library is refused'
 	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Bin\WinRT\Microsoft.Windows.SDK.NET.dll')
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' 'check: a missing WinRT library is refused'
+	foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
+		Reset-Package; [IO.File]::WriteAllBytes((Join-Path $package "Bin\$program"), [byte[]](99, 99))
+		Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } "$([regex]::Escape($program)) does not match its SHA256" "check: a changed $program is refused"
+		Reset-Package; Remove-Item -LiteralPath (Join-Path $package "Bin\$program")
+		Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' "check: a missing $program is refused"
+	}
 	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Uninstall.ps1') -Value '# changed'
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'does not match its SHA256' 'check: a changed Uninstall.ps1 is refused'
 	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Sources\Health_Config.xml') -Value '<!-- changed -->'
@@ -133,8 +159,51 @@ try {
 	$files = [ordered]@{}; foreach ($property in $manifest.Files.PSObject.Properties) { if ($property.Name -ne 'Uninstall.ps1') { $files[$property.Name] = $property.Value } }
 	Set-Content -LiteralPath (Join-Path $package 'SelfX.Files.json') -Value ([ordered]@{ ManifestVersion = 1; Files = $files } | ConvertTo-Json)
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'Uninstall.ps1 is not listed' 'check: a list without Uninstall.ps1 is refused'
+	foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
+		Reset-Package; $manifest = Get-Content -LiteralPath (Join-Path $package 'SelfX.Files.json') -Raw | ConvertFrom-Json
+		$files = [ordered]@{}; foreach ($property in $manifest.Files.PSObject.Properties) { if ($property.Name -ne $program) { $files[$property.Name] = $property.Value } }
+		Set-Content -LiteralPath (Join-Path $package 'SelfX.Files.json') -Value ([ordered]@{ ManifestVersion = 1; Files = $files } | ConvertTo-Json)
+		Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } "$([regex]::Escape($program)) is not listed" "check: a list without $program is refused"
+	}
 	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'SelfX.Files.json')
 	Assert-Equal ($null -eq (Test-SelfXFileManifest -PackageFolder $package)) $true 'check: a package without the list is reported as not checked'
+
+	# The generator refuses a package without one of the programs.
+	foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
+		Reset-Package; Remove-Item -LiteralPath (Join-Path $package "Bin\$program")
+		Assert-Throws { New-SelfXFileManifest -Stage $package -Version '9.9.9' } "Bin\\$([regex]::Escape($program)) is missing" "generator: a package without $program is refused"
+	}
+
+	# The installed folder after copying: the same list, the files at their installed places.
+	New-InstalledCopy
+	Assert-Equal (Test-SelfXInstalledFiles -InstallFolder $installed) $count 'installed: the unchanged installation is accepted'
+	foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
+		New-InstalledCopy; [IO.File]::WriteAllBytes((Join-Path $installed $program), [byte[]](99, 99))
+		Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } "$([regex]::Escape($program)) in the installation folder does not match" "installed: a changed $program is refused"
+		New-InstalledCopy; Remove-Item -LiteralPath (Join-Path $installed $program)
+		Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } "$([regex]::Escape($program)) is missing in the installation folder" "installed: a missing $program is refused"
+	}
+	New-InstalledCopy; Add-Content -LiteralPath (Join-Path $installed 'Scripts_to_run\SelfX_Device_SyncTime.ps1') -Value '# changed'
+	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'does not match its SHA256' 'installed: a changed script is refused'
+	New-InstalledCopy; Add-Content -LiteralPath (Join-Path $installed 'WinRT\SelfXWinRT.dll') -Value 'x'
+	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'WinRT/SelfXWinRT.dll in the installation folder does not match' 'installed: a changed WinRT library is refused'
+	New-InstalledCopy; Remove-Item -LiteralPath (Join-Path $installed 'Issues_List.xml')
+	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'Issues_List.xml is missing in the installation folder' 'installed: a missing configuration file is refused'
+	New-InstalledCopy; Remove-Item -LiteralPath (Join-Path $installed 'SelfX.Files.json')
+	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'SelfX.Files.json is missing' 'installed: a missing list is refused'
+	New-InstalledCopy; Set-Content -LiteralPath (Join-Path $installed 'SelfX.Files.json') -Value '{ not json'
+	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'not valid JSON' 'installed: a broken list is refused'
+	New-InstalledCopy; Set-Content -LiteralPath (Join-Path $installed 'SelfX.Files.json') -Value '{"ManifestVersion":2,"Files":{"Uninstall.ps1":"00"}}'
+	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'unknown format' 'installed: an unknown list format is refused'
+	foreach ($bad in '../Install.ps1', 'a/../../b.ps1', 'C:/Windows/x.ps1', 'a//b.ps1') {
+		New-InstalledCopy
+		Set-Content -LiteralPath (Join-Path $installed 'SelfX.Files.json') -Value ([ordered]@{ ManifestVersion = 1; Files = [ordered]@{ $bad = 'AA' } } | ConvertTo-Json)
+		Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'unsupported name' "installed: the name '$bad' is refused"
+	}
+
+	# The service file check covers .exe (an unlisted program in the install folder is refused).
+	$serviceSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -Raw
+	Assert-Equal ($serviceSource -match 'CheckedExtensions\s*=\s*\{[^}]*"\.exe"[^}]*\}') $true 'service: the file check covers .exe'
 }
 finally { if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue } }
 

@@ -22,14 +22,14 @@
     Name    : Test-ServicePipe.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.6.11
+    Version : 2.8.5
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.11   2026-11-22  fubu2k               Initial version.
-    2.8.2    2026-11-23  fubu2k               File list check before every start.
+    2.8.5    2026-11-23  fubu2k               The file list check covers .exe: changed and unlisted programs are refused.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -91,7 +91,7 @@ if ($verifyMethod) {
 	}
 	function New-FileList([string]$Root, [hashtable]$Overrides = @{}) {
 		$files = [ordered]@{}
-		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Extension -in '.ps1', '.xml' }) {
+		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Extension -in '.ps1', '.xml', '.exe' }) {
 			$relative = $file.FullName.Substring($Root.Length + 1).Replace('\', '/')
 			$files[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
 		}
@@ -104,12 +104,20 @@ if ($verifyMethod) {
 	Set-Content -LiteralPath (Join-Path $fileRoot 'HealthStatus.ps1') -Value 'Write-Output 1'
 	Set-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_Test.ps1') -Value 'Write-Output 2'
 	Set-Content -LiteralPath (Join-Path $fileRoot 'Issues_List.xml') -Value '<Issues />'
-	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfXService.exe') -Value 'binary, not checked'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfXService.exe') -Value 'binary of the service'
 	New-FileList $fileRoot
 	$result = Test-FileList $fileRoot
 	Assert-True $result.Ok "N4: unchanged files are accepted ($($result.Problems))"
+	# The programs are part of the list (N4 follow-up): a changed program and an unlisted program are refused.
 	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfXService.exe') -Value 'another binary'
-	Assert-True (Test-FileList $fileRoot).Ok 'N4: programs are not part of the list (Bin has its own manifest)'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: SelfXService.exe') "N4: a changed program is refused ($($result.Problems))"
+	New-FileList $fileRoot
+	Assert-True (Test-FileList $fileRoot).Ok 'N4: the changed program is accepted again after the list is rewritten'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Extra.exe') -Value 'planted'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'not listed: Extra.exe') "N4: an unlisted program is refused ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'Extra.exe')
 	Add-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_Test.ps1') -Value 'Write-Output 3'
 	$result = Test-FileList $fileRoot
 	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: Scripts_to_run/SelfX_Test.ps1') "N4: a changed script is refused ($($result.Problems))"

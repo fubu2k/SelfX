@@ -535,7 +535,7 @@ Verwenden Sie das Paket in Intune wie folgt:
 
 `tools\New-SelfXIntuneWin.ps1` schreibt beim Paketbau die Datei `SelfX.Files.json` in das Paket. Sie enthält den
 SHA256 jeder Datei, die `Install.ps1` in den Installationsordner kopiert (alles unter `Sources`, `Uninstall.ps1` und die
-DLLs aus `Bin\WinRT` und `Bin\Audio`, die als `WinRT\...` bzw. `Audio\...` installiert werden).
+DLLs aus `Bin\WinRT` und `Bin\Audio`, die als `WinRT\...` bzw. `Audio\...` installiert werden, sowie `SelfXService.exe` und `SelfX.exe` aus `Bin`).
 Die Liste wird bei jedem Paketbau neu erzeugt: Wer ein Skript oder eine Konfiguration ändert, muss nichts von Hand
 nachpflegen, sondern das Paket neu bauen. `Install.ps1` prüft vor der Installation, dass jede Datei zur Liste passt
 und keine Datei ohne Eintrag im Paket liegt; sonst bricht die Installation ab, bevor etwas geändert wird (die
@@ -566,6 +566,15 @@ Unterordner) oder die Liste abweichen. `tools\Build-SelfXBinaries.ps1` baut sie 
 `SelfX.Binaries.json` und in die AppLocker-Hashregeln auf; `Install.ps1` prüft und installiert sie wie die WinRT-Bibliothek.
 Die Aktion braucht keine Administrator- oder SYSTEM-Rechte und ändert nur Stummschaltung und Lautstärke des
 Standard-Wiedergabegeräts des angemeldeten Nutzers.
+
+Die Liste enthält auch die beiden Programme `SelfXService.exe` und `SelfX.exe`. Der Paketbau bricht ab, wenn eine fehlt. Nach
+dem Kopieren vergleicht `Install.ps1` den **installierten Ordner** noch einmal mit der Liste (jede Datei, auch beide
+Programme); ein Unterschied bricht die Installation ab, bevor der Dienst angelegt wird. Der Dienst prüft beide Programme
+vor jedem Start per SHA256 und lehnt jede `.exe` im Installationsordner ab, die nicht in der Liste steht. Grenze: Eine
+ausgetauschte `SelfXService.exe` überspringt ihre eigene Prüfung. Die Prüfung erkennt daher Unfälle (defektes oder halbes
+Update, Dateifehler) und eine ausgetauschte `SelfX.exe` (sie startet bei jeder Anmeldung aller Nutzer), nicht einen
+Angreifer mit Administratorrechten. Den Schutz dagegen bieten die Ordnerrechte (Nutzer: nur Lesen und Ausführen) und App Control
+(siehe unten). Die Prüfung hasht die beiden Programme (je rund 37 MB) bei jedem Start einer SYSTEM-Aktion mit.
 
 ## App Control for Business (WDAC), optional
 
