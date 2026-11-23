@@ -108,7 +108,7 @@ if ($verifyMethod) {
 	New-FileList $fileRoot
 	$result = Test-FileList $fileRoot
 	Assert-True $result.Ok "N4: unchanged files are accepted ($($result.Problems))"
-	# The programs are part of the list (N4 follow-up): a changed program and an unlisted program are refused.
+	# The programs are part of the list: a changed program and an unlisted program are refused.
 	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfXService.exe') -Value 'another binary'
 	$result = Test-FileList $fileRoot
 	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: SelfXService.exe') "N4: a changed program is refused ($($result.Problems))"

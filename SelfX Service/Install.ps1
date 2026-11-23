@@ -211,7 +211,7 @@ function Test-SelfXFileManifest {
 }
 
 function Test-SelfXInstalledFiles {
-	# After copying (finding N4 follow-up): compares the installed folder with the SelfX.Files.json copied into it. This closes
+	# After copying: compares the installed folder with the SelfX.Files.json copied into it. This closes
 	# the gap between the check of the package and the copy: every listed file (scripts, configuration, WinRT libraries,
 	# SelfXService.exe, SelfX.exe) must exist in the install folder with the listed SHA256. Throws at the first difference.
 	# Returns the number of checked files.

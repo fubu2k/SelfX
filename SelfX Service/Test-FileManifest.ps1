@@ -60,7 +60,7 @@ function Reset-Package {
 	Copy-Item -LiteralPath $pristine -Destination $package -Recurse
 }
 # What Install.ps1 does: Sources\* and Uninstall.ps1 and SelfX.Files.json to the root, the programs from Bin to the root,
-# the DLLs from Bin\WinRT to WinRT.
+# the DLLs from Bin\WinRT to WinRT and from Bin\Audio to Audio.
 $installed = Join-Path $root 'installed'
 function New-InstalledCopy {
 	if (Test-Path -LiteralPath $installed) { Remove-Item -LiteralPath $installed -Recurse -Force }
@@ -69,6 +69,7 @@ function New-InstalledCopy {
 	foreach ($name in 'Uninstall.ps1', 'SelfX.Files.json') { Copy-Item -LiteralPath (Join-Path $pristine $name) -Destination $installed }
 	foreach ($name in 'SelfXService.exe', 'SelfX.exe') { Copy-Item -LiteralPath (Join-Path $pristine "Bin\$name") -Destination $installed }
 	Copy-Item -LiteralPath (Join-Path $pristine 'Bin\WinRT') -Destination (Join-Path $installed 'WinRT') -Recurse
+	Copy-Item -LiteralPath (Join-Path $pristine 'Bin\Audio') -Destination (Join-Path $installed 'Audio') -Recurse
 }
 try {
 	New-Item -ItemType Directory -Path $pristine -Force | Out-Null
