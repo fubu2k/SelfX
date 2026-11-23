@@ -32,7 +32,7 @@ mit der Endung `.en.md` und der Ordner `docs/en`).
 
 ## Bildschirmfotos
 
-Die Bildschirmfotos stammen von SelfX Service 2.6.8 (englische Oberfläche) und
+Die Bildschirmfotos stammen von SelfX Service 2.8 (englische Oberfläche) und
 zeigen Beispieldaten (fiktives Gerät *Contoso*) sowie das Platzhalter-Logo der
 mitgelieferten Konfiguration.
 
@@ -55,6 +55,10 @@ Kopieren oder Exportieren.
 jeder Nutzer kann auch *Dunkel* oder *Hell* wählen.
 
 ![Seite Fehlerbehebung, helles Design](docs/images/selfx-troubleshooting-light.png)
+
+**Hilfe in der Navigation:** mit `Ticket_Enabled` erscheint die Schaltfläche *Ticket beim IT-Support eröffnen*, mit `Copilot_Enabled` zusätzlich *Copilot Chat fragen* (beide standardmäßig aus).
+
+![Navigation mit Schaltflächen für Ticket und Copilot Chat](docs/images/selfx-ticket-copilot-light.png)
 
 **Anpassbares Fenster:** in einem schmalen Fenster zeigt die Navigation nur
 Symbole und die Karten ordnen sich neu an.
