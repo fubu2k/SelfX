@@ -113,7 +113,7 @@ Sprachdateien (siehe [Sprachen](#sprachen)).
 | `Link_PasswordReset`, `Link_SecurityInfo` | Adressen der Link-Aktionen „Passwort zurücksetzen“ (Standard `https://passwordreset.microsoftonline.com/`) und „Anmeldemethoden verwalten“ (Standard `https://mysignins.microsoft.com/security-info`). Nur `https://` ohne Benutzername und Kennwort. Leer oder `Off` blendet die Aktion aus; ein ungültiger Wert blendet sie aus und wird im Protokoll vermerkt. Eigene Link-Aktionen: Schlüssel `Link_<Name>` in `Tool_Config.xml` und eine Aktion mit `Context` `Link` im Katalog. |
 | `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Übergabe an Copilot Chat (siehe [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | Aufbewahrung der Protokolle (siehe [Protokolle](#protokolle-und-aufbewahrung)). |
-| `Service_FileCheck` | `Enforce` (Standard) oder `Audit`: Der Dienst vergleicht vor jedem Start die installierten Skripte und Konfigurationen mit `SelfX.Files.json`. `Enforce` startet bei einer Abweichung nichts, `Audit` protokolliert nur (Ereignis 4005); siehe [Dateiliste](Installation.md#dateiliste-selfxfilesjson). |
+| `Service_FileCheck` | `Enforce` (Standard) oder `Audit`: Der Dienst vergleicht vor jedem Start die installierten Skripte und Konfigurationen mit `SelfX.Files.json`. `Enforce` startet bei einer Abweichung nichts, `Audit` protokolliert nur (Ereignis 4005); siehe [Dateiliste](Installation.md#die-dateiliste-selfxfilesjson). |
 | `Service_Privileges` | `Restricted` (Standard) oder `Default`: Rechte des Dienstes, gelesen von `Install.ps1` (siehe [Rechte des Dienstes](Installation.md#rechte-des-dienstes)). |
 | `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | Statussymbol (siehe [Statussymbol](#statussymbol)). |
 | `Brand_*`, `Tool_Theme`, `Tool_Color` | Aussehen (siehe [Branding](#branding)). |
@@ -762,7 +762,7 @@ try {
   Hintergrundprüfung angefordert wird, wartet auf deren Ende.
 
 **Tests vor dem Paketieren:** Führen Sie alle Tests des Pakets aus (siehe
-[Release-Checkliste](Installation.md#release-checkliste-selfx-service)).
+[Release-Checkliste](Installation.md#checkliste-für-die-bereitstellung)).
 `Test-Catalog.ps1` prüft Katalog und Gesundheitskonfiguration. Die Tests ersetzen
 Systemprüfungen und Skriptausführungen durch Mocks. Sie installieren keinen Dienst.
 `Test-ServicePipe.ps1` startet nur den Pipe-Listener unter einem Test-Pipe-Namen.
@@ -1030,5 +1030,5 @@ Beispiel den Haupttitel, bearbeiten Sie ihn in den Sprachdateien.
 3. Prüfen Sie, dass jedes verwendete Skript im Paket existiert.
 4. Testen Sie Aktionen und Bestätigungstexte auf einem Testgerät.
 5. Liefern Sie Änderungen nur als neue Paketversion aus (Intune-Paket, siehe
-   [Installation](Installation.md#intune-paket-erstellen)). SelfX lädt keine
+   [Installation](Installation.md#schritt-2-paket-bauen)). SelfX lädt keine
    Konfiguration aus dem Netzwerk nach.
