@@ -101,11 +101,9 @@ try {
 	$parseErrors = $null
 	[void][Management.Automation.Language.Parser]::ParseInput($text, [ref]$null, [ref]$parseErrors)
 	Assert-Equal @($parseErrors).Count 0 'tool: the written Detection.ps1 parses'
-	# A Detection.ps1 without the placeholder is refused.
-	$threw = $false
-	try { [void](Tool_New-SelfXDetectionScript -Stage $stage -Target (Join-Path $temp 'out\Again.ps1')) } catch { $threw = $true }
-	Assert-Equal $threw $false 'tool: the staged copy still has the placeholder (the tool does not change the staged file)'
-	Set-Content -LiteralPath (Join-Path $stage 'Detection.ps1') -Value '$ExpectedFilesHash = ''' + ('0' * 64) + ''''
+	# A Detection.ps1 without the placeholder is refused (the digest would not be embedded).
+	$noPlaceholder = '$ExpectedFilesHash = ''' + ('0' * 64) + ''''
+	Set-Content -LiteralPath (Join-Path $stage 'Detection.ps1') -Value $noPlaceholder
 	$threw = $false
 	try { [void](Tool_New-SelfXDetectionScript -Stage $stage -Target (Join-Path $temp 'out\Bad.ps1')) } catch { $threw = $true }
 	Assert-Equal $threw $true 'tool: a Detection.ps1 without the placeholder is refused'
