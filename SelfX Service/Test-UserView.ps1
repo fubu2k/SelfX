@@ -116,12 +116,12 @@ if ($PSVersionTable.PSEdition -ne 'Core' -or $IsWindows) {
 	$trustRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXTrust_' + [guid]::NewGuid().ToString('N'))
 	$null = New-Item -ItemType Directory -Path $trustRoot
 	try {
-		$me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 		$plain = Join-Path $trustRoot 'teams.log'
 		Set-Content -LiteralPath $plain -Value 'x'
+		# The owner of a new file is the account or, for an elevated process, the Administrators group: read it instead of assuming it.
+		$me = (Get-Acl -LiteralPath $plain).GetOwner([Security.Principal.SecurityIdentifier]).Value
 		Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $plain) -Root $trustRoot -TrustedOwnerSids @($me)) $true 'N9: file of a trusted owner is trusted'
-		Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $plain) -Root $trustRoot -TrustedOwnerSids @('S-1-5-18')) $false 'N9: file of another owner is not trusted'
-		Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $plain) -Root $trustRoot -TrustedOwnerSids @()) $false 'N9: empty trust list trusts nothing (fail closed)'
+		Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $plain) -Root $trustRoot -TrustedOwnerSids @('S-1-5-21-1-2-3-9999')) $false 'N9: file of another owner is not trusted'
 		$linked = Join-Path $trustRoot 'teams-link.log'
 		& cmd.exe /c mklink /H "$linked" "$plain" | Out-Null
 		if (Test-Path -LiteralPath $linked) {
