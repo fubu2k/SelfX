@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Центр обновления Windows завершил работу. Состояние устройства проверяется снова и показывает, нужна ли перезагрузка.</Health_Updates_Done>
 		<Health_Apps_Button>Повторить</Health_Apps_Button>
 		<Health_Apps_Started>Установка приложений, которые не удалось установить, запускается снова. Это может занять несколько минут; ход установки виден на корпоративном портале.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>Быстрая проверка завершена. Microsoft Defender не обнаружил угроз.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>Быстрая проверка завершена. Microsoft Defender обнаружил угрозы и обрабатывает их согласно правилам вашей компании. Подробности смотрите в «Безопасности Windows».</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>
 		<Health_Error_Button>Ошибка</Health_Error_Button>
 		<Health_Pending_Button>Ожидает</Health_Pending_Button>
@@ -612,6 +614,15 @@
 			</Action>
 			<Action Id="Q_Device_SendLogs">
 				<Name>Отправить журналы устройства в службу поддержки</Name>
+			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>Проверить этот ПК на вирусы (быстрая проверка Microsoft Defender)</Name>
+				<Explanation>Вы подозреваете вирус, был открыт подозрительный файл или «Безопасность Windows» показывает предупреждение. Действие запускает быструю проверку Microsoft Defender и в конце сообщает, найдены ли угрозы.</Explanation>
+				<Alerte_MSG>Будет запущена быстрая проверка Microsoft Defender. Она проверяет места, где чаще всего находят угрозы, и обычно занимает от 5 до 30 минут. Вы можете продолжать работу, но в это время ПК может работать медленнее. SelfX покажет результат после завершения проверки.
+
+SelfX не удаляет и не изменяет файлы. Если Defender найдёт угрозу, он обработает её согласно правилам вашей компании; подробности смотрите в «Безопасности Windows».
+
+Продолжить?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Собрать журналы устройства и отправить их в службу поддержки по электронной почте</Name>

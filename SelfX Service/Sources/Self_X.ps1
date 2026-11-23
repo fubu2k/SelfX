@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.14
+    Version : 2.8.15
 
     History:
     Version  Date        Author               Change
@@ -86,6 +86,7 @@
     2.8.12   2026-11-22  fubu2k               Copilot Chat: the instruction texts of the prompt come from the language files (Copilot_Prompt_User, Copilot_Prompt_Admin)
     2.8.13   2026-11-23  fubu2k               Remote support tile: with Remote Help installed (signed RemoteHelp.exe) only Remote Help is offered, otherwise Quick Assist
     2.8.14   2026-11-23  fubu2k               Link actions (Context Link): confirmation, then an https address from Tool_Config.xml (Link_<Name>) is opened; not shown when the setting is empty, Off or invalid
+    2.8.15   2026-11-23  fubu2k               Quick scan action: own result texts (no threats / Defender found threats, exit code 2)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -1453,6 +1454,8 @@ $Global:SvcAction_Running = $False
 $Global:SelfX_RestartScript = 'SelfX_Device_Restart.ps1'
 $Global:SelfX_UpdatesScript = 'SelfX_Updates_Install.ps1'
 $Global:SelfX_AppsScript = 'SelfX_Apps_RetryInstall.ps1'
+# The quick scan reports its result in its own words: exit code 0 = no threats, 2 = Defender found threats (details in Windows Security).
+$Global:SelfX_ScanScript = 'SelfX_Defender_QuickScan.ps1'
 $SvcAction_Timer = New-Object System.Windows.Threading.DispatcherTimer
 $SvcAction_Timer.Interval = [TimeSpan]::FromMilliseconds(500)
 $SvcAction_Timer.Add_Tick({
@@ -1485,9 +1488,13 @@ $SvcAction_Timer.Add_Tick({
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_RestartScript)) { $msgbar.SetWarningAlert((Get-SelfXString 'Health_Restart_Started')) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_UpdatesScript) -and -not $Global:FixAll_Active) { $msgbar.SetSuccessAlert((Get-SelfXString 'Health_Updates_Done')) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_AppsScript) -and -not $Global:FixAll_Active) { $msgbar.SetSuccessAlert((Get-SelfXString 'Health_Apps_Started')) }
+				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_ScanScript)) { $msgbar.SetSuccessAlert((Get-SelfXString 'Defender_Scan_Clean_Text')) }
 				Else { $msgbar.SetSuccessAlert((Get-SelfXString 'Action_Success_Text' $Global:SvcAction_Name)) }
 			}
-			'Failed'      { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_ExitCode_Text' $Global:SvcAction_Name $Result.ExitCode)) }
+			'Failed'      {
+				If($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_ScanScript) -and ($Result.ExitCode -eq 2)) { $msgbar.SetWarningAlert((Get-SelfXString 'Defender_Scan_Threats_Text')) }
+				Else { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_ExitCode_Text' $Global:SvcAction_Name $Result.ExitCode)) }
+			}
 			'Busy'        { $msgbar.SetWarningAlert($Service_Busy_Text) }
 			'OtherSessions' { $msgbar.SetWarningAlert($Service_OtherSessions_Text) }
 			'Timeout'     { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Timeout_Text' $Global:SvcAction_Name)) }

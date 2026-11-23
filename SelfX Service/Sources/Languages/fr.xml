@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update a terminé. L’état de l’appareil est vérifié à nouveau et indique si un redémarrage est nécessaire.</Health_Updates_Done>
 		<Health_Apps_Button>Réessayer</Health_Apps_Button>
 		<Health_Apps_Started>L’installation des applications en échec redémarre. Cela peut prendre quelques minutes ; vous pouvez la suivre dans le Portail d’entreprise.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>L’analyse rapide est terminée. Microsoft Defender n’a trouvé aucune menace.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>L’analyse rapide est terminée. Microsoft Defender a trouvé des menaces et les traite selon les règles de votre entreprise. Ouvrez Sécurité Windows pour les détails.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>
 		<Health_Error_Button>Erreur</Health_Error_Button>
 		<Health_Pending_Button>En attente</Health_Pending_Button>
@@ -612,6 +614,15 @@ Cette étape réinitialise votre client OneDrive. La réinitialisation du client
 			</Action>
 			<Action Id="Q_Device_SendLogs">
 				<Name>Envoyer les journaux de l’appareil au support</Name>
+			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>Rechercher des virus sur ce PC (analyse rapide Microsoft Defender)</Name>
+				<Explanation>Vous soupçonnez un virus, un fichier suspect a été ouvert ou Sécurité Windows affiche un avertissement. L’action lance une analyse rapide avec Microsoft Defender et vous indique à la fin si des menaces ont été trouvées.</Explanation>
+				<Alerte_MSG>Une analyse rapide avec Microsoft Defender démarre. Elle examine les emplacements où les menaces sont le plus souvent trouvées et dure en général de 5 à 30 minutes. Vous pouvez continuer à travailler, mais le PC peut être plus lent pendant ce temps. SelfX affiche le résultat à la fin de l’analyse.
+
+SelfX ne supprime ni ne modifie aucun fichier. Si Defender trouve une menace, il la traite selon les règles de votre entreprise ; vous trouverez les détails dans Sécurité Windows.
+
+Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Collecter les journaux de l’appareil et les envoyer au support par e-mail</Name>
