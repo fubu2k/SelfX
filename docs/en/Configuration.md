@@ -112,7 +112,7 @@ The file contains settings only, no texts. All texts are in the language files (
 | `Link_PasswordReset`, `Link_SecurityInfo` | Addresses of the link actions "Reset your password" (default `https://passwordreset.microsoftonline.com/`) and "Manage the sign-in methods" (default `https://mysignins.microsoft.com/security-info`). `https://` only, without user name and password. Empty or `Off` hides the action; an invalid value hides it and is noted in the log. Your own link actions: a key `Link_<Name>` in `Tool_Config.xml` and an action with `Context` `Link` in the catalogue. |
 | `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Hand-over to Copilot Chat (see [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | How long logs are kept (see [Logs](#logs-and-retention)). |
-| `Service_FileCheck` | `Enforce` (default) or `Audit`: before every start the service compares the installed scripts and configuration with `SelfX.Files.json`. `Enforce` starts nothing when they differ, `Audit` only logs (event 4005); see [File list](Installation.md#file-list-selfxfilesjson). |
+| `Service_FileCheck` | `Enforce` (default) or `Audit`: before every start the service compares the installed scripts and configuration with `SelfX.Files.json`. `Enforce` starts nothing when they differ, `Audit` only logs (event 4005); see [File list](Installation.md#the-file-list-selfxfilesjson). |
 | `Service_Privileges` | `Restricted` (default) or `Default`: privileges of the service, read by `Install.ps1` (see [Service privileges](Installation.md#service-privileges)). |
 | `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | The tray icon (see [Tray icon](#tray-icon)). |
 | `Brand_*`, `Tool_Theme`, `Tool_Color` | Appearance (see [Branding](#branding)). |
@@ -730,7 +730,7 @@ try {
   *Busy*. A check requested while a background check runs waits for it to finish.
 
 **Tests before packaging:** run all tests of the package (see the
-[release checklist](Installation.md#release-checklist-selfx-service)).
+[release checklist](Installation.md#deployment-checklist)).
 `Test-Catalog.ps1` checks the catalogue and the health configuration. The tests replace
 system checks and script runs with mocks. They do not install a service.
 `Test-ServicePipe.ps1` starts only the pipe listener under a test pipe name.
@@ -990,5 +990,5 @@ title, edit it in the language files.
 3. Check that every script that is used exists in the package.
 4. Test the actions and confirmation texts on a test device.
 5. Deliver changes only as a new package version (Intune package, see
-   [Installation](Installation.md#building-the-intune-package)). SelfX does not download
+   [Installation](Installation.md#step-2-build-the-package)). SelfX does not download
    configuration from the network.

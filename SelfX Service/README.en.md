@@ -97,7 +97,7 @@ SelfX Service is installed machine-wide and works without any network connection
 | `Sources\SelfX_Tray.ps1` | Status icon in the notification area (started at sign-in through the HKLM Run entry `SelfXTray`, and right after the installation for signed-in users). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Device logs: read-only collector, System wrapper and the GUI e-mail helper. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Service-side collector and administrator-controlled health settings. Optional scripts go in `Sources\HealthChecks`. |
-| `Service\SelfXService.cs` | Source of the Windows service. Built once as a .NET 10 program with `tools\Build-SelfXBinaries.ps1` (since 2.7.0, see [Installation](../docs/en/Installation.md#building-the-programs-selfx-service-since-270)). |
+| `Service\SelfXService.cs` | Source of the Windows service. Built once as a .NET 10 program with `tools\Build-SelfXBinaries.ps1` (since 2.7.0, see [Installation](../docs/en/Installation.md#step-2-build-the-package)). |
 | `Service\SelfXLauncher.cs` | Source of `SelfX.exe` (2.5.3), the starter without console window used by the shortcuts and the status icon autostart. Built like the service as a .NET 10 program (since 2.7.0). |
 | `Service\SelfXSessionStarter.cs` | Used by `Install.ps1` (2.5.8; since 2.7.0 as `SelfXSessionStarter.dll` from `Bin`, netstandard2.0): starts the status icon right after the installation in the sessions of the signed-in users, with their normal rights. |
 | `Bin\` (required, not in Git) | Built `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` and the manifest `SelfX.Binaries.json` from `tools\Build-SelfXBinaries.ps1`. `Install.ps1` checks the files before anything else and installs them; without `Bin` the installation stops (F9, required since 2.7.0). |
@@ -181,7 +181,7 @@ user, for example the device logs report.
   that are built once on a build machine (folder `Bin`). The installation checks
   them against the SHA256 manifest before it changes anything; they are allowed
   with AppLocker hash rules. Nothing is compiled on the device. See
-  [Installation](../docs/en/Installation.md#building-the-programs-selfx-service-since-270).
+  [Installation](../docs/en/Installation.md#step-2-build-the-package).
 - Text from requests is cleaned before it is logged (control characters and line
   separators become `?`, long text is shortened), and rejected requests are
   logged at most 20 times per minute, so a user cannot forge log lines or push
@@ -204,6 +204,6 @@ Set-Location 'C:\Path\To\SelfX Service'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
-See [Installation](../docs/en/Installation.md#selfx-service),
+See [Installation](../docs/en/Installation.md#step-3-set-up-in-intune),
 [Configuration](../docs/en/Configuration.md#selfx-service) and the
 [User manual](../docs/en/User-Manual.md#selfx).

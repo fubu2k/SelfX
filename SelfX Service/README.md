@@ -102,7 +102,7 @@ Netzwerkverbindung. Aktuelle Version: **2.8.0** (siehe das
 | `Sources\SelfX_Tray.ps1` | Statussymbol im Infobereich (beim Anmelden über den HKLM-Run-Eintrag `SelfXTray` gestartet, und direkt nach der Installation für angemeldete Nutzer). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Geräteprotokolle: nur lesender Collector, System-Wrapper und der E-Mail-Helfer der Oberfläche. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Collector auf Dienstseite und vom Administrator gesteuerte Gesundheitseinstellungen. Optionale Skripte kommen nach `Sources\HealthChecks`. |
-| `Service\SelfXService.cs` | Quelltext des Windows-Dienstes. Wird einmal mit `tools\Build-SelfXBinaries.ps1` als .NET-10-Programm gebaut (ab 2.7.0, siehe [Installation](../docs/Installation.md#programme-bauen-selfx-service-ab-270)). |
+| `Service\SelfXService.cs` | Quelltext des Windows-Dienstes. Wird einmal mit `tools\Build-SelfXBinaries.ps1` als .NET-10-Programm gebaut (ab 2.7.0, siehe [Installation](../docs/Installation.md#schritt-2-paket-bauen)). |
 | `Service\SelfXLauncher.cs` | Quelltext von `SelfX.exe` (2.5.3), dem Starter ohne Konsolenfenster, den die Verknüpfungen und der Autostart des Statussymbols verwenden. Wird wie der Dienst als .NET-10-Programm gebaut (ab 2.7.0). |
 | `Service\SelfXSessionStarter.cs` | Von `Install.ps1` verwendet (2.5.8; ab 2.7.0 als `SelfXSessionStarter.dll` aus `Bin`, netstandard2.0): startet das Statussymbol direkt nach der Installation in den Sitzungen der angemeldeten Nutzer, mit deren normalen Rechten. |
 | `Bin\` (Pflicht, nicht in Git) | Gebaute `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` und das Manifest `SelfX.Binaries.json` aus `tools\Build-SelfXBinaries.ps1`. `Install.ps1` prüft die Dateien vor allem anderen und installiert sie; ohne `Bin` bricht die Installation ab (F9, ab 2.7.0 Pflicht). |
@@ -191,7 +191,7 @@ nach ihrer `TimeoutSeconds` gestoppt: Standard ist 900, Maximum 7200. Der Dienst
   Installation prüft sie vor jeder Änderung gegen das SHA256-Manifest; sie
   werden mit AppLocker-Hashregeln zugelassen. Auf dem Gerät wird nichts
   kompiliert. Siehe
-  [Installation](../docs/Installation.md#programme-bauen-selfx-service-ab-270).
+  [Installation](../docs/Installation.md#schritt-2-paket-bauen).
 - Text aus Anfragen wird vor dem Protokollieren bereinigt (Steuerzeichen und
   Zeilentrenner werden zu `?`, langer Text wird gekürzt), und abgelehnte Anfragen
   werden höchstens 20-mal pro Minute protokolliert, sodass ein Nutzer weder
@@ -216,6 +216,6 @@ Set-Location 'C:\Pfad\zu\SelfX Service'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
-Siehe [Installation](../docs/Installation.md#selfx-service),
+Siehe [Installation](../docs/Installation.md#schritt-3-in-intune-einrichten),
 [Konfiguration](../docs/Configuration.md#selfx-service) und das
 [Benutzerhandbuch](../docs/User-Manual.md#selfx).
