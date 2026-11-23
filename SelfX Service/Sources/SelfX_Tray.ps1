@@ -26,13 +26,14 @@
     Name    : SelfX_Tray.ps1
     Package : SelfX Service
     Context : User (started at sign-in, HKLM Run entry)
-    Version : 2.8.9
+    Version : 2.8.19
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.5.0    2026-11-04  Wolfgang Baeck       Initial version: status icon, notifications, menu
     2.8.9    2026-11-23  fubu2k               Windows 11: the icon is shown permanently next to the clock (IsPromoted; Tray_Pin_Icon, user value TrayPin)
+    2.8.19   2026-11-23  fubu2k               New app icon with a frame for every size; the status icon is drawn in the size of the display (sharp at 100 to 200 % scaling)
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -161,21 +162,36 @@ foreach($Candidate in @((Get-TrayConfig 'Brand_Icon' ''), 'icon_systray.ico', 'R
 		$Path = $(If([IO.Path]::IsPathRooted($Candidate)) { $Candidate } Else { Join-Path $Global:Tray_Folder $Candidate })
 		If(Test-Path -LiteralPath $Path -PathType Leaf)
 			{
-				Try { $Global:Tray_Base_Icon = New-Object System.Drawing.Icon($Path, 32, 32); break } Catch {}
+				Try { $Global:Tray_Base_Icon = New-Object System.Drawing.Icon($Path, 32, 32); $Global:Tray_Base_Path = $Path; break } Catch {}
 			}
 	}
+$Global:Tray_Base_Cache = @{}
 $Global:Tray_Icon_Handle = [IntPtr]::Zero
 
 Function New-TrayIcon
 	{
 		param([ValidateSet('OK', 'Warning', 'Error', 'Unknown')][string]$State)
 		$Colors = @{ OK = @(19, 161, 14); Warning = @(247, 181, 0); Error = @(209, 52, 56); Unknown = @(138, 138, 138) }[$State]
-		$Bitmap = New-Object System.Drawing.Bitmap(32, 32)
+		# Size of the notification area icon of this display (16 px at 100 %, 20/24/32 px at higher scaling); the base icon
+		# file holds a frame for each of these sizes, so the icon stays sharp. Without a frame or a size the 32 px icon is used.
+		$Size = 32
+		Try { $Size = [Math]::Min(64, [Math]::Max(16, [int][System.Windows.Forms.SystemInformation]::SmallIconSize.Width)) } Catch {}
+		$Base = $Global:Tray_Base_Icon
+		If($Global:Tray_Base_Icon -and $Global:Tray_Base_Path)
+			{
+				If(-not $Global:Tray_Base_Cache.ContainsKey($Size))
+					{
+						Try { $Global:Tray_Base_Cache[$Size] = New-Object System.Drawing.Icon($Global:Tray_Base_Path, $Size, $Size) } Catch { $Global:Tray_Base_Cache[$Size] = $null }
+					}
+				If($Global:Tray_Base_Cache[$Size]) { $Base = $Global:Tray_Base_Cache[$Size] }
+			}
+		$K = $Size / 32.0
+		$Bitmap = New-Object System.Drawing.Bitmap($Size, $Size)
 		$Graphics = [System.Drawing.Graphics]::FromImage($Bitmap)
 		$Graphics.SmoothingMode = 'AntiAlias'
-		If($Global:Tray_Base_Icon) { $Graphics.DrawIcon($Global:Tray_Base_Icon, (New-Object System.Drawing.Rectangle(0, 0, 32, 32))) }
-		$Graphics.FillEllipse([System.Drawing.Brushes]::White, 16, 16, 16, 16)
-		$Graphics.FillEllipse((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb($Colors[0], $Colors[1], $Colors[2]))), 18, 18, 12, 12)
+		If($Base) { $Graphics.DrawIcon($Base, (New-Object System.Drawing.Rectangle(0, 0, $Size, $Size))) }
+		$Graphics.FillEllipse([System.Drawing.Brushes]::White, [single](16 * $K), [single](16 * $K), [single](16 * $K), [single](16 * $K))
+		$Graphics.FillEllipse((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb($Colors[0], $Colors[1], $Colors[2]))), [single](18 * $K), [single](18 * $K), [single](12 * $K), [single](12 * $K))
 		$Graphics.Dispose()
 		$Handle = $Bitmap.GetHicon()
 		$Bitmap.Dispose()
