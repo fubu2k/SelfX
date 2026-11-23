@@ -126,6 +126,8 @@ Test-Pattern "(?s)\`$wer = Join-Path.*?if \(\`$UserView\) \{[^}]*break \}" 'cras
 Test-Pattern "(?s)if \(\`$UserView -and \`$logs\.Count\).*?foreach \(\`$log in @\(\`$logs \| Select-Object -First 2\)\) \{\s*if \(\`$UserView\) \{ break \}" 'Teams installer log contents are omitted'
 Test-Pattern 'Write-Host "  \$\(Hide-OtherUsers \$finding\)"' 'console output of the findings passes through the filter'
 Test-Pattern 'function Add-Line \{ param\(\[string\]\$Text\) \$writer\.WriteLine\(\(Hide-OtherUsers \$Text\)\) \}' 'every report line passes through Hide-OtherUsers'
+Test-Pattern 'function Add-FileTail \{\s*param[^\r\n]*\s*Add-Line ''''\s*#[^\r\n]*\s*if \(\$UserView\) \{[^}]*return \}' 'file tails (IME, CBS, DISM, setup, Windows Update) are omitted'
+Test-Pattern 'function Add-FilteredLines \{\s*param[^\r\n]*\s*if \(\$UserView\) \{[^}]*return \}' 'filtered log lines are omitted'
 Test-Pattern "\`$ScriptVersion = '1\.3\.4'" 'script version 1.3.4'
 
 if ($script:errors.Count) {

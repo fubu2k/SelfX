@@ -292,7 +292,7 @@ der Wert oder ist er anders, gilt der Nutzer als normaler Nutzer.
 | Anmeldekonto der Geräteregistrierung (UPN), Registrierungs-IDs, FirstSync | ja | nein (nur Typ und Status der Registrierung) |
 | Registrywerte zu Autopilot (Mandant, Profil, Richtlinien-Cache) und die rohe ESP-Verfolgung | ja | nein (der Profilname fehlt, die ESP-Ergebnisse je App des Geräts und der eigenen Phase bleiben) |
 | Kommandozeilen der Prozesse | ja | nein (Name, ID, Startzeit, Speicher) |
-| Inhalt der Protokolle der Intune-Verwaltungserweiterung (IME), der Teams-Installer-Protokolle und der Absturzberichte (WER) | ja | nein (nur Dateinamen, Größe, Zeit) |
+| Inhalt der Protokolle der Intune-Verwaltungserweiterung (IME), des Windows-Servicings (CBS, DISM, `setupact.log`, Windows Update), der Teams-Installer-Protokolle und der Absturzberichte (WER) | ja | nein (nur Dateinamen, Größe, Zeit) |
 | Text der Ereignisse (Einzelereignisse in Abschnitt 8, 10) | ja | nein (nur Zeit, ID, Stufe, Anbieter) |
 | Win32Apps-Registry und ESP-Ergebnisse anderer Nutzer | ja | nein (nur Gerät und eigener Nutzer) |
 | Namen, SIDs und Profilordner anderer Nutzer | unverändert | ersetzt durch `<other user>` |
@@ -307,9 +307,8 @@ Bericht vollständig.
 Im Nutzermodus gilt zusätzlich eine **Schutzschicht für den gesamten Berichtstext**:
 E-Mail-Adressen (UPN) und SIDs anderer Nutzer werden vor dem Schreiben ersetzt, auch wenn
 sie in einem Abschnitt vorkommen, der nicht ausdrücklich gekürzt wird. Die ausgelassenen
-Bereiche sind im Bericht selbst vermerkt. Die Windows-Servicing-Protokolle (CBS, DISM,
-`setupact.log`) bleiben im Bericht, denn sie gehören dem Gerät und nicht einem Nutzer;
-sie laufen durch dieselbe Schutzschicht.
+Bereiche sind im Bericht selbst vermerkt. Von allen Protokolldateien bleiben nur
+Name, Größe und Zeit.
 
 **SelfX-Protokolle im Bericht:** Zwei Seiten fügen sie mit ihren jeweils eigenen
 Rechten hinzu:

@@ -92,7 +92,7 @@
                                        provider and event id (no messages, provider names cleaned); Get-EventCountSummary
     1.3.4    fubu2k                    User view (-UserView) completed: no enrollment account (UPN), no Autopilot / ESP tracking /
                                        policy cache registry dumps, no process command lines, no contents of Intune Management
-                                       Extension, Teams installer and crash report files, no event message texts; ESP apps and
+                                       Extension, CBS / DISM / setup / Windows Update, Teams installer and crash report files, no event message texts; ESP apps and
                                        Win32Apps keys of other users are skipped; all report text is also scrubbed of e-mail
                                        addresses (UPN) and SIDs of other users (Protect-UserViewText).
 #>
@@ -295,11 +295,14 @@ function Get-FileText {
 function Add-FileTail {
     param([string]$Path, [int]$Tail = 200)
     Add-Line ''
+    # User view: log file contents (IME, CBS, DISM, setup, Windows Update) are for administrators; fail closed for every caller.
+    if ($UserView) { Add-Line "--- $Path : (user view: file contents are not part of this report)"; return }
     try { foreach ($line in @(Get-FileText -Path $Path -Tail $Tail)) { Add-Line $line } }
     catch { Add-Line "--- $Path : not readable: $($_.Exception.Message)" }
 }
 function Add-FilteredLines {
     param([string]$Path, [string]$Pattern, [int]$Last = 150, [string]$Title)
+    if ($UserView) { Add-Line ''; Add-Line "--- $Title (user view: file contents are not part of this report; file $Path)"; return }
     try {
         $matches = @(Select-String -LiteralPath $Path -Pattern $Pattern -ErrorAction Stop | Select-Object -Last $Last)
         Add-Line ''
@@ -443,7 +446,7 @@ try {
 Add-Line "Collect-DeviceLogs $ScriptVersion (read-only device log collector: Autopilot / ESP, apps, language deployment)"
 Add-Line "Started: $($startedAt.ToString('yyyy-MM-dd HH:mm:ss')); parameters: Days=$Days; Deep=$($Deep.IsPresent)"
 if ($UserView) {
-    Add-Line 'User view: this report holds only the data of the requesting user and of the device. Not included (administrators only): enrollment account, tenant and Autopilot / ESP registry values, process command lines, contents of Intune Management Extension, Teams installer and crash report files, event message texts, data of other users.'
+    Add-Line 'User view: this report holds only the data of the requesting user and of the device. Not included (administrators only): enrollment account, tenant and Autopilot / ESP registry values, process command lines, contents of Intune Management Extension, Windows servicing (CBS, DISM, setup, Windows Update), Teams installer and crash report files, event message texts, data of other users.'
 }
 
 # ------------------------------------------------------------------------------------------------
