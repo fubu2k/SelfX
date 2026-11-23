@@ -464,6 +464,25 @@ try {
     Assert-Equal ($quick | Where-Object Id -eq 'Q_Device_SendLogs').Name 'Protokolle Ihres Geräts an den Support senden' 'German action name'
     Assert-Equal (($quick | Where-Object Id -eq 'Q_Device_SendLogs').Alerte_MSG -like 'SelfX sammelt jetzt*') $true 'German confirmation text'
     Assert-Equal @($quick + $detailed | Where-Object { $_.Id -notlike '*_SendLogs' -and $_.Post_Action -ne '' }).Count 0 'Other actions have no Post_Action'
+    $pwAction = $detailed | Where-Object Id -eq 'D_Account_PasswordReset'
+    Assert-Equal "$($pwAction.Context)|$($pwAction.Link)|$($pwAction.Script)|$($pwAction.CategoryId)|$($pwAction.Category)" 'Link|Link_PasswordReset||Account|Konto' 'Link action: Context, Link key, no script, German category'
+    Assert-Equal ($pwAction.Name -like 'Passwort vergessen*') $true 'Link action: German name'
+    # Link actions are shown only when their setting of Tool_Config.xml is a valid https address (Select-SelfXLinkActions of Self_X.ps1).
+    . "$sources\SupportLinks.ps1"
+    $selectDef = ([System.Management.Automation.Language.Parser]::ParseFile("$sources\Self_X.ps1", [ref]$null, [ref]$null)).Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Select-SelfXLinkActions' }, $true)
+    Assert-Equal ($selectDef -ne $null) $true 'Select-SelfXLinkActions found in Self_X.ps1'
+    . ([scriptblock]::Create($selectDef.Extent.Text))
+    $script:linkConfig = @{}
+    function Get-SelfXText($Name, $Default) { if ($script:linkConfig.ContainsKey($Name)) { return $script:linkConfig[$Name] }; return $Default }
+    function Write-SelfXLog { param($Message, $Level) }
+    $linkRows = @([pscustomobject]@{ Id = 'A'; Context = 'Link'; Link = 'Link_A' }, [pscustomobject]@{ Id = 'B'; Context = 'Link'; Link = 'Link_B' }, [pscustomobject]@{ Id = 'C'; Context = 'User'; Link = '' })
+    $script:linkConfig = @{ Link_A = 'https://example.com/a'; Link_B = 'http://example.com/b' }
+    Assert-Equal ((@(Select-SelfXLinkActions $linkRows) | ForEach-Object Id) -join ',') 'A,C' 'Link actions: invalid address hides the action, other actions stay'
+    $script:linkConfig = @{ Link_A = 'Off'; Link_B = 'https://example.com/b' }
+    Assert-Equal ((@(Select-SelfXLinkActions $linkRows) | ForEach-Object Id) -join ',') 'B,C' 'Link actions: Off hides the action'
+    $script:linkConfig = @{}
+    Assert-Equal ((@(Select-SelfXLinkActions $linkRows) | ForEach-Object Id) -join ',') 'C' 'Link actions: missing setting hides the action'
+    Remove-Item -LiteralPath Function:\Get-SelfXText, Function:\Write-SelfXLog, Function:\Select-SelfXLinkActions
     Assert-Equal (Get-SelfXString 'Report_Mail_Subject' 'PC1') 'Geräteprotokolle von PC1' 'German subject'
     $timeout = $catalog.SelectSingleNode("//Action[@Id='Q_Device_SendLogs']/TimeoutSeconds").InnerText
     Assert-Equal $timeout '1800' 'Timeout of the collection'

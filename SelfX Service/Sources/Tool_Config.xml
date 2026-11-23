@@ -44,6 +44,7 @@
 	2.8.11   2026-11-22  fubu2k               Copilot_Include_AppNames also applies to the company apps row of the device status
 	2.8.1    2026-11-23  fubu2k               New setting Service_Privileges (Restricted | Default), see CHANGELOG.md
 	2.8.2    2026-11-23  fubu2k               New setting Service_FileCheck (Enforce | Audit), see CHANGELOG.md
+	2.8.14   2026-11-23  fubu2k               New settings Link_PasswordReset and Link_SecurityInfo (addresses of the link actions of the catalogue)
 -->
 <GUI_Config>	
 	<Tool_Version>2.8.0</Tool_Version> <!-- Tool version -->
@@ -92,6 +93,10 @@
 	<Support_Teams></Support_Teams> <!-- Teams chat: address of a user or shared support account (opens a chat), or a full https Teams link -->
 	<Support_Website>https://support.example.com</Support_Website> <!-- Placeholder. Website or ticket system, must start with https:// (http:// is ignored) -->
 	<Support_Mail>support@example.com</Support_Mail> <!-- Placeholder. Support e-mail address. Also the recipient of the device logs e-mail (Post_Action MailReport). Empty = the user enters the recipient -->
+
+	<!-- Link actions of the catalogue (Issues_List.xml, Context Link): after the confirmation the address is opened in the browser of the user. Only https addresses (no user name or password in them). Empty or Off = the action is not shown -->
+	<Link_PasswordReset>https://passwordreset.microsoftonline.com/</Link_PasswordReset> <!-- Reset a forgotten or expired password (self-service password reset of Microsoft Entra ID). Replace it when your company uses another page -->
+	<Link_SecurityInfo>https://mysignins.microsoft.com/security-info</Link_SecurityInfo> <!-- Security info of the account (sign-in methods such as authenticator app and phone number) -->
 
 	<!-- Ticket by e-mail (button in the help dialog): the user describes the issue, SelfX adds the device information (text and file) and opens the e-mail, the user sends it -->
 	<Ticket_Enabled>False</Ticket_Enabled> <!-- True or False. Needs a valid Ticket_Mail or Support_Mail -->

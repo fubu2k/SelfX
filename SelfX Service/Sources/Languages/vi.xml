@@ -299,6 +299,7 @@ Mô tả sự cố:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Tài khoản</Category>
 			<Category Id="Browser">Trình duyệt</Category>
 			<Category Id="Device">Thiết bị</Category>
 			<Category Id="Intune">Intune</Category>
@@ -605,6 +606,20 @@ Bước này sẽ đặt lại ứng dụng OneDrive. Việc đặt lại không
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Thu thập nhật ký thiết bị và gửi cho bộ phận hỗ trợ qua email</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Quên mật khẩu hoặc mật khẩu hết hạn: tự đặt lại</Name>
+				<Explanation>Bạn quên mật khẩu, mật khẩu đã hết hạn hoặc tài khoản của bạn bị khóa. Trên trang đăng nhập tài khoản công ty, bạn có thể tự đặt mật khẩu mới mà không cần gọi bộ phận hỗ trợ.</Explanation>
+				<Alerte_MSG>Trang đặt lại mật khẩu sẽ mở trong trình duyệt web của bạn. Đăng nhập bằng địa chỉ email công việc và làm theo các bước. Bạn có thể được yêu cầu xác nhận danh tính, ví dụ bằng điện thoại hoặc ứng dụng Authenticator. SelfX không nhìn thấy hoặc lưu mật khẩu của bạn.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Quản lý phương thức đăng nhập của tài khoản (thông tin bảo mật)</Name>
+				<Explanation>Bạn có điện thoại mới, làm mất ứng dụng Authenticator hoặc muốn đổi số điện thoại hay phương thức đăng nhập của tài khoản công ty.</Explanation>
+				<Alerte_MSG>Trang thông tin bảo mật của tài khoản sẽ mở trong trình duyệt web của bạn. Đăng nhập bằng tài khoản công việc để thêm, thay đổi hoặc xóa các phương thức đăng nhập như ứng dụng Authenticator hoặc số điện thoại. SelfX không nhìn thấy hoặc lưu dữ liệu của bạn.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

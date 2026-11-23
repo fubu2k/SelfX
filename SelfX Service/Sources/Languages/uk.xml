@@ -299,6 +299,7 @@
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Обліковий запис</Category>
 			<Category Id="Browser">Браузер</Category>
 			<Category Id="Device">Пристрій</Category>
 			<Category Id="Intune">Intune</Category>
@@ -605,6 +606,20 @@
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Зібрати журнали пристрою та надіслати їх до служби підтримки електронною поштою</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Пароль забуто або термін його дії минув: скиньте його самостійно</Name>
+				<Explanation>Ви забули пароль, термін його дії минув або ваш обліковий запис заблоковано. На сторінці входу робочого облікового запису ви можете самостійно встановити новий пароль, не звертаючись до служби підтримки.</Explanation>
+				<Alerte_MSG>Сторінка скидання пароля відкриється у вашому веб-браузері. Увійдіть із робочою адресою електронної пошти та виконайте кроки. Може знадобитися підтвердити особу, наприклад за допомогою телефона або застосунку Authenticator. SelfX не бачить і не зберігає ваш пароль.
+
+Продовжити?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Керування способами входу в обліковий запис (відомості про безпеку)</Name>
+				<Explanation>У вас новий телефон, ви втратили застосунок Authenticator або хочете змінити номер телефона чи спосіб входу в робочий обліковий запис.</Explanation>
+				<Alerte_MSG>Сторінка відомостей про безпеку вашого облікового запису відкриється у веб-браузері. Увійдіть із робочим обліковим записом, щоб додати, змінити або видалити способи входу, наприклад застосунок Authenticator чи номер телефона. SelfX не бачить і не зберігає ваші дані.
+
+Продовжити?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

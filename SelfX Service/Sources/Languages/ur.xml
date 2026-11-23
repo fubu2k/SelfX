@@ -297,6 +297,7 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">اکاؤنٹ</Category>
 			<Category Id="Browser">براؤزر</Category>
 			<Category Id="Device">ڈیوائس</Category>
 			<Category Id="Intune">Intune</Category>
@@ -589,6 +590,20 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>ڈیوائس لاگز جمع کریں اور ای میل کے ذریعے سپورٹ ٹیم کو بھیجیں</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>پاس ورڈ بھول گئے یا میعاد ختم ہو گئی: خود ری سیٹ کریں</Name>
+				<Explanation>آپ اپنا پاس ورڈ بھول گئے ہیں، اس کی میعاد ختم ہو گئی ہے یا آپ کا اکاؤنٹ مقفل ہے۔ اپنے کمپنی اکاؤنٹ کے سائن اِن صفحے پر آپ سپورٹ کو کال کیے بغیر خود نیا پاس ورڈ سیٹ کر سکتے ہیں۔</Explanation>
+				<Alerte_MSG>پاس ورڈ ری سیٹ کرنے کا صفحہ آپ کے ویب براؤزر میں کھلے گا۔ اپنے ورک ای میل ایڈریس سے سائن اِن کریں اور مراحل پر عمل کریں۔ ہو سکتا ہے آپ سے اپنی شناخت کی تصدیق کرنے کو کہا جائے، مثلاً فون یا Authenticator ایپ کے ذریعے۔ SelfX آپ کا پاس ورڈ نہیں دیکھتا اور نہ محفوظ کرتا ہے۔
+
+کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>اپنے اکاؤنٹ کے سائن اِن طریقے منظم کریں (سکیورٹی معلومات)</Name>
+				<Explanation>آپ کے پاس نیا فون ہے، آپ کی Authenticator ایپ کھو گئی ہے یا آپ اپنے کمپنی اکاؤنٹ کا فون نمبر یا سائن اِن کا طریقہ تبدیل کرنا چاہتے ہیں۔</Explanation>
+				<Alerte_MSG>آپ کے اکاؤنٹ کی سکیورٹی معلومات کا صفحہ ویب براؤزر میں کھلے گا۔ Authenticator ایپ یا فون نمبر جیسے سائن اِن طریقے شامل کرنے، تبدیل کرنے یا ہٹانے کے لیے اپنے ورک اکاؤنٹ سے سائن اِن کریں۔ SelfX آپ کا ڈیٹا نہیں دیکھتا اور نہ محفوظ کرتا ہے۔
+
+کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

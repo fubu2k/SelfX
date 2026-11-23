@@ -7,8 +7,9 @@
     Sources\Issues_List.xml (or as a remediation in Sources\Health_Config.xml). Every signed-in user can send
     that request through the named pipe. This test keeps that whitelist safe for every release:
 
-      - every action has a unique Id, a Context of exactly User or System and a plain script file name
-        (letters, digits, _ - . only, no path, no "..", ends with .ps1) that exists in Scripts_to_run;
+      - every action has a unique Id, a Context of exactly User, System or Link; User and System actions have a plain
+        script file name (letters, digits, _ - . only, no path, no "..", ends with .ps1) that exists in Scripts_to_run;
+        Link actions have no script and name a Tool_Config.xml key Link_<Name> with a valid https address;
       - no script is listed with both contexts (the service accepts a script when ANY entry says System);
       - every remediation of Health_Config.xml points to an existing plain file name, is not listed as a
         user action, and has a TimeoutSeconds between 1 and 7200 when it is set;
@@ -88,6 +89,10 @@ Assert-True (Test-Path -LiteralPath $healthPath) "Health_Config.xml exists ($hea
 if ($script:errors.Count) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
 
 $catalog = [xml][IO.File]::ReadAllText($catalogPath)
+$toolConfigPath = Join-Path $SourcesFolder 'Tool_Config.xml'
+Assert-True (Test-Path -LiteralPath $toolConfigPath) "Tool_Config.xml exists ($toolConfigPath)"
+$toolConfig = [xml][IO.File]::ReadAllText($toolConfigPath)
+. (Join-Path $SourcesFolder 'SupportLinks.ps1')   # pure functions: Resolve-SelfXCatalogLink
 $health = [xml][IO.File]::ReadAllText($healthPath)
 
 # --- Catalogue ------------------------------------------------------------------------------------
@@ -100,7 +105,19 @@ foreach ($action in @($catalog.SelectNodes('//Action'))) {
 	Assert-True ($id -ne '') 'Every action has an Id'
 	Assert-True (-not $seenIds.ContainsKey($id)) "Action Id is unique: $id"
 	$seenIds[$id] = $true
-	Assert-True ($context -ceq 'User' -or $context -ceq 'System') "Action $id has Context User or System (found '$context')"
+	Assert-True ($context -ceq 'User' -or $context -ceq 'System' -or $context -ceq 'Link') "Action $id has Context User, System or Link (found '$context')"
+	if ($context -ceq 'Link') {
+		# A link action opens an https address from Tool_Config.xml in the browser of the user: no script, no service, no OtherSessions.
+		$linkKey = "$($action.Link)".Trim()
+		Assert-True ($scriptName -eq '') "Link action $id has no Script (found '$scriptName')"
+		Assert-True ("$($action.OtherSessions)".Trim() -eq '' -and "$($action.Post_Action)".Trim() -eq '' -and "$($action.TimeoutSeconds)".Trim() -eq '') "Link action $id has no OtherSessions, Post_Action or TimeoutSeconds"
+		Assert-True ($linkKey -cmatch '^Link_[A-Za-z0-9]{1,40}$') "Link action ${id}: Link is a Tool_Config.xml key of the form Link_<Name> (found '$linkKey')"
+		$linkValue = "$($toolConfig.GUI_Config.$linkKey)".Trim()
+		$linkResult = Resolve-SelfXCatalogLink -Key $linkKey -Value $linkValue
+		Assert-True ($linkResult.State -ceq 'Ok') "Link action ${id}: Tool_Config.xml has a valid https address for $linkKey (state $($linkResult.State))"
+		continue
+	}
+	Assert-True ("$($action.Link)".Trim() -eq '') "Action $id has no Link (only Context Link uses it)"
 	Assert-True (Test-PlainScriptName $scriptName) "Action $id uses a plain script file name (found '$scriptName')"
 	Assert-True (Test-Path -LiteralPath (Join-Path $scripts $scriptName) -PathType Leaf) "Action ${id}: script exists in Scripts_to_run ($scriptName)"
 	$key = $scriptName.ToLowerInvariant()

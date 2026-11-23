@@ -299,6 +299,7 @@ Opis problemu:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Konto</Category>
 			<Category Id="Browser">Przeglądarka</Category>
 			<Category Id="Device">Urządzenie</Category>
 			<Category Id="Intune">Intune</Category>
@@ -605,6 +606,20 @@ Ten krok resetuje klienta OneDrive. Zresetowanie klienta OneDrive nie powoduje u
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Zbierz dzienniki urządzenia i wyślij je e-mailem do pomocy technicznej</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Zapomniane lub wygasłe hasło: zresetuj je samodzielnie</Name>
+				<Explanation>Zapomniałeś hasła, wygasło ono lub Twoje konto jest zablokowane. Na stronie logowania konta firmowego możesz samodzielnie ustawić nowe hasło bez dzwonienia do pomocy technicznej.</Explanation>
+				<Alerte_MSG>Strona resetowania hasła otworzy się w przeglądarce internetowej. Zaloguj się służbowym adresem e-mail i postępuj zgodnie z instrukcjami. Może być konieczne potwierdzenie tożsamości, na przykład telefonem lub aplikacją Authenticator. SelfX nie widzi ani nie zapisuje Twojego hasła.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Zarządzaj metodami logowania konta (informacje zabezpieczające)</Name>
+				<Explanation>Masz nowy telefon, zgubiłeś aplikację Authenticator albo chcesz zmienić numer telefonu lub metodę logowania konta firmowego.</Explanation>
+				<Alerte_MSG>Strona z informacjami zabezpieczającymi Twojego konta otworzy się w przeglądarce internetowej. Zaloguj się kontem służbowym, aby dodać, zmienić lub usunąć metody logowania, takie jak aplikacja Authenticator lub numer telefonu. SelfX nie widzi ani nie zapisuje Twoich danych.
+
+Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

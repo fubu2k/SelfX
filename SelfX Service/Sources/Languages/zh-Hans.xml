@@ -299,6 +299,7 @@
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">帐户</Category>
 			<Category Id="Browser">浏览器</Category>
 			<Category Id="Device">设备</Category>
 			<Category Id="Intune">Intune</Category>
@@ -605,6 +606,20 @@
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>收集设备日志并通过电子邮件发送给支持人员</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>忘记密码或密码已过期：自行重置</Name>
+				<Explanation>您忘记了密码、密码已过期或帐户被锁定。您可以在公司帐户的登录页面自行设置新密码，无需联系支持人员。</Explanation>
+				<Alerte_MSG>重置密码的页面将在您的网页浏览器中打开。请使用工作电子邮件地址登录并按步骤操作。系统可能要求您验证身份，例如通过手机或 Authenticator 应用。SelfX 不会看到或保存您的密码。
+
+是否要继续？</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>管理帐户的登录方式（安全信息）</Name>
+				<Explanation>您换了新手机、丢失了 Authenticator 应用，或想更改公司帐户的电话号码或登录方式。</Explanation>
+				<Alerte_MSG>帐户的安全信息页面将在您的网页浏览器中打开。请使用工作帐户登录，以添加、更改或删除 Authenticator 应用或电话号码等登录方式。SelfX 不会看到或保存您的数据。
+
+是否要继续？</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

@@ -344,6 +344,7 @@ The data comes from the diagnostic tool SelfX. Names and addresses are replaced 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Account</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Device</Category>
 			<Category Id="Intune">Intune</Category>

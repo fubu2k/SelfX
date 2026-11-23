@@ -299,6 +299,7 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">계정</Category>
 			<Category Id="Browser">브라우저</Category>
 			<Category Id="Device">장치</Category>
 			<Category Id="Intune">Intune</Category>
@@ -605,6 +606,20 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>장치 로그를 수집하여 전자 메일로 지원팀에 보내기</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>비밀번호를 잊었거나 만료됨: 직접 재설정</Name>
+				<Explanation>비밀번호를 잊었거나, 만료되었거나, 계정이 잠겼습니다. 회사 계정의 로그인 페이지에서 지원팀에 전화하지 않고 직접 새 비밀번호를 설정할 수 있습니다.</Explanation>
+				<Alerte_MSG>비밀번호를 재설정하는 페이지가 웹 브라우저에서 열립니다. 회사 메일 주소로 로그인하고 안내에 따르세요. 휴대폰이나 Authenticator 앱 등으로 본인 확인을 요구할 수 있습니다. SelfX는 비밀번호를 보거나 저장하지 않습니다.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>계정 로그인 방법 관리(보안 정보)</Name>
+				<Explanation>새 휴대폰이 생겼거나, Authenticator 앱을 잃어버렸거나, 회사 계정의 전화번호 또는 로그인 방법을 변경하려는 경우에 사용합니다.</Explanation>
+				<Alerte_MSG>계정의 보안 정보 페이지가 웹 브라우저에서 열립니다. 회사 계정으로 로그인하여 Authenticator 앱이나 전화번호 같은 로그인 방법을 추가, 변경 또는 삭제하세요. SelfX는 데이터를 보거나 저장하지 않습니다.
+
+계속하시겠습니까?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

@@ -299,6 +299,7 @@
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">حساب</Category>
 			<Category Id="Browser">مرورگر</Category>
 			<Category Id="Device">دستگاه</Category>
 			<Category Id="Intune">Intune</Category>
@@ -605,6 +606,20 @@
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>جمع‌آوری گزارش‌های دستگاه و ارسال آن‌ها از طریق ایمیل به پشتیبانی</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>رمز عبور را فراموش کرده‌اید یا منقضی شده: خودتان بازنشانی کنید</Name>
+				<Explanation>رمز عبور خود را فراموش کرده‌اید، منقضی شده یا حساب شما قفل شده است. در صفحه ورود حساب سازمانی خود می‌توانید بدون تماس با پشتیبانی، خودتان رمز عبور جدیدی تعیین کنید.</Explanation>
+				<Alerte_MSG>صفحه بازنشانی رمز عبور در مرورگر وب شما باز می‌شود. با نشانی ایمیل کاری خود وارد شوید و مراحل را دنبال کنید. ممکن است لازم باشد هویت خود را مثلاً با تلفن یا برنامه Authenticator تأیید کنید. SelfX رمز عبور شما را نمی‌بیند و ذخیره نمی‌کند.
+
+آیا می خواهید ادامه دهید؟</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>مدیریت روش‌های ورود به حساب (اطلاعات امنیتی)</Name>
+				<Explanation>تلفن جدید دارید، برنامه Authenticator را گم کرده‌اید یا می‌خواهید شماره تلفن یا روش ورود حساب سازمانی خود را تغییر دهید.</Explanation>
+				<Alerte_MSG>صفحه اطلاعات امنیتی حساب شما در مرورگر وب باز می‌شود. با حساب کاری خود وارد شوید تا روش‌های ورود مانند برنامه Authenticator یا شماره تلفن را اضافه، تغییر یا حذف کنید. SelfX داده‌های شما را نمی‌بیند و ذخیره نمی‌کند.
+
+آیا می خواهید ادامه دهید؟</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

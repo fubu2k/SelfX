@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.13
+    Version : 2.8.14
 
     History:
     Version  Date        Author               Change
@@ -85,6 +85,7 @@
     2.8.11   2026-11-22  fubu2k               Copilot Chat: notes for the user in the dialog; Copilot_Include_AppNames also applies to the company apps row; network facts
     2.8.12   2026-11-22  fubu2k               Copilot Chat: the instruction texts of the prompt come from the language files (Copilot_Prompt_User, Copilot_Prompt_Admin)
     2.8.13   2026-11-23  fubu2k               Remote support tile: with Remote Help installed (signed RemoteHelp.exe) only Remote Help is offered, otherwise Quick Assist
+    2.8.14   2026-11-23  fubu2k               Link actions (Context Link): confirmation, then an https address from Tool_Config.xml (Link_<Name>) is opened; not shown when the setting is empty, Off or invalid
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -272,6 +273,21 @@ $XmlReader = [System.Xml.XmlReader]::Create("$Current_Folder\Issues_List.xml", $
 Try { $List_Issues_XML.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 $Global:SelfX_Quick_Actions = @(Get-SelfXLocalizedActions -Catalog $List_Issues_XML -Section 'Quick_Solution')
 $Global:SelfX_Detailed_Actions = @(Get-SelfXLocalizedActions -Catalog $List_Issues_XML -Section 'Detailed_Solution')
+# Link actions (Context Link) open an https address from Tool_Config.xml (key Link_<Name>). An action whose setting is empty,
+# "Off" or not a valid https address is not shown (the reason is logged).
+Function Select-SelfXLinkActions
+	{
+		param($Actions)
+		foreach($Action in $Actions)
+			{
+				If($Action.Context -ne 'Link') { $Action; continue }
+				$Link = Resolve-SelfXCatalogLink -Key $Action.Link -Value (Get-SelfXText $Action.Link '')
+				If($Link.State -eq 'Ok') { $Action; continue }
+				If($Link.State -ne 'Off') { Write-SelfXLog "Action '$($Action.Id)' is not shown: setting '$($Action.Link)' is $($Link.State) (an https address is required)." 'Warning' }
+			}
+	}
+$Global:SelfX_Quick_Actions = @(Select-SelfXLinkActions $Global:SelfX_Quick_Actions)
+$Global:SelfX_Detailed_Actions = @(Select-SelfXLinkActions $Global:SelfX_Detailed_Actions)
 
 $Tool_Version = $GUI_Config.Tool_Version
 Write-SelfXLog "SelfX $Tool_Version opened: language $($SelfX_UI_Language.Culture) (setting $Global:SelfX_Language_Setting), page '$Page'."
@@ -1324,6 +1340,28 @@ Function Run_Remediation($rowObj)
 		$Script_Name = $rowObj.Script
 		$AlerteWarning = $rowObj.Alerte_MSG
 		$AlerteButtons = "$($rowObj.Buttons)".Trim()
+		# Link action: confirmation, then the https address of the setting is opened in the browser of the user. No script runs.
+		If(([string]$rowObj.Context).Trim() -eq 'Link')
+			{
+				$Link = Resolve-SelfXCatalogLink -Key ([string]$rowObj.Link).Trim() -Value (Get-SelfXText ([string]$rowObj.Link).Trim() '')
+				If($Link.State -ne 'Ok') { Write-SelfXLog "Link action '$($rowObj.Id)' was not opened: setting is $($Link.State)." 'Warning'; return }
+				$Link_Result = Show-SelfXDialog -Title "$Run_Solution_Text" -Message "$AlerteWarning" -AffirmativeText (Get-SelfXButtonText 'Ok') -NegativeText (Get-SelfXButtonText 'Cancel') -Kind Question
+				Write-SelfXLog "Link action '$($rowObj.Name)': user answered $Link_Result."
+				If($Link_Result -eq 'Affirmative')
+					{
+						Try
+							{
+								Start-Process $Link.Uri
+								Write-SelfXLog "Link action '$($rowObj.Id)': opened (host $(([uri]$Link.Uri).Host))."
+							}
+						Catch
+							{
+								$msgbar.Clear()
+								$msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_Text' "$($rowObj.Name) ($($_.Exception.Message))"))
+							}
+					}
+				return
+			}
 		If([string]::IsNullOrWhiteSpace($Script_Name)) { return }
 		# The action runs already (its start button is locked; this also covers a second request from the tray).
 		If($rowObj.Running) { return }

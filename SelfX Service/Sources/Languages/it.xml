@@ -299,6 +299,7 @@ Descrizione del problema:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Account</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Dispositivo</Category>
 			<Category Id="Intune">Intune</Category>
@@ -605,6 +606,20 @@ Questo passaggio reimposta il client OneDrive. Il ripristino del client OneDrive
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Raccogli i log del dispositivo e inviali al supporto via e-mail</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Password dimenticata o scaduta: reimpostarla da soli</Name>
+				<Explanation>Ha dimenticato la password, è scaduta o il suo account è bloccato. Nella pagina di accesso del suo account aziendale può impostare da solo una nuova password, senza chiamare il supporto.</Explanation>
+				<Alerte_MSG>La pagina per reimpostare la password si apre nel browser web. Acceda con il suo indirizzo e-mail aziendale e segua i passaggi. Potrebbe essere richiesto di confermare la sua identità, ad esempio con il telefono o l’app Authenticator. SelfX non vede né salva la sua password.
+
+Continuare?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Gestire i metodi di accesso del suo account (informazioni di sicurezza)</Name>
+				<Explanation>Ha un nuovo telefono, ha perso l’app Authenticator o vuole modificare il numero di telefono o il metodo di accesso del suo account aziendale.</Explanation>
+				<Alerte_MSG>La pagina delle informazioni di sicurezza del suo account si apre nel browser web. Acceda con l’account aziendale per aggiungere, modificare o rimuovere metodi di accesso come l’app Authenticator o il numero di telefono. SelfX non vede né salva i suoi dati.
+
+Continuare?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>
