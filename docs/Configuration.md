@@ -269,6 +269,13 @@ Servicing, Ereignisprotokolle, AppX, Windows Update, Netzwerk, Sprache). Er brau
 etwa eine bis einige Minuten. Die Abschnitte und Parameter stehen im Kopf von
 `Collect-DeviceLogs.ps1`.
 
+Abschnitt 8 beginnt mit einer **Zusammenfassung der Ereignisprotokolle** (*System*, *Application*,
+Windows Update, Geräteverwaltung): Kritische Ereignisse, Fehler und Warnungen der letzten
+`DeviceLogs_Days` Tage, gezählt pro Anbieter und Ereignis-ID (die 15 häufigsten, mit erstem und
+letztem Zeitpunkt). Der Meldungstext steht bewusst **nicht** darin, denn er kann Namen, Pfade und
+Adressen enthalten; Anbieternamen werden auf harmlose Zeichen begrenzt. So erkennt der Support auf
+einen Blick, was auffällig oft auftritt. Die Einzelereignisse folgen darunter wie bisher.
+
 **Was ein normaler Nutzer sieht:** Der Bericht wird pro Nutzer gekürzt. Der Dienst
 liest das Token des Anfragenden und setzt `SELFX_CALLER_ADMIN`. Der Wert `1` gilt nur,
 wenn die Gruppe *Administratoren* im Token **aktiviert** ist (erhöhte Rechte). Fehlt

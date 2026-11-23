@@ -256,6 +256,13 @@ names and device logs (Autopilot/ESP, IME and Win32 apps, servicing, event logs,
 Windows Update, network, language). It takes about one to a few minutes. The sections
 and parameters are in the header of `Collect-DeviceLogs.ps1`.
 
+Section 8 starts with a **summary of the event logs** (*System*, *Application*, Windows Update,
+device management): critical events, errors and warnings of the last `DeviceLogs_Days` days,
+counted per provider and event id (the 15 most frequent, with first and last time). The message
+text is deliberately **not** included, because it can contain names, paths and addresses; provider
+names are limited to harmless characters. The support sees at a glance what occurs unusually
+often. The single events follow below as before.
+
 **What a standard user sees:** the report is trimmed per user. The service reads the
 token of the requesting user and sets `SELFX_CALLER_ADMIN`. The value `1` applies only
 if the *Administrators* group is **enabled** in the token (elevated rights). If the
