@@ -512,6 +512,17 @@ Use the package in Intune as follows:
 |---|---|---|
 | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, custom script `Detection.ps1` (see [SelfX Service](#selfx-service)) |
 
+## File list (SelfX.Files.json)
+
+`tools\New-SelfXIntuneWin.ps1` writes the file `SelfX.Files.json` into the package when it is built. It contains the
+SHA256 of every file that `Install.ps1` copies to the installation folder (everything below `Sources` and
+`Uninstall.ps1`). The list is created again at every package build: if you change a script or a configuration you do
+not maintain anything by hand, you build the package again. Before the installation `Install.ps1` checks that every
+file matches the list and that no file without an entry is in the package; otherwise the installation stops before
+anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
+warning. The list is also placed in the installation folder; later versions use it to check scripts before they start.
+`Bin` keeps its own list `SelfX.Binaries.json`.
+
 ## Service privileges
 
 The service runs as LocalSystem. `Install.ps1` limits its token with `sc.exe privs` to the privileges the actions
