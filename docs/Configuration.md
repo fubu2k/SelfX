@@ -231,7 +231,10 @@ und sendet selbst. Nichts wird automatisch gesendet.
    bei `DeviceLogs_Compress` ungleich `False` als `.zip`.
 3. Der Ordner hat eine geschützte ACL: Vollzugriff für SYSTEM und Administratoren,
    Lesen nur für den anfragenden Nutzer. Der vorherige Bericht des Nutzers wird bei
-   jedem Lauf gelöscht, Berichte über 7 Tage alt für alle Nutzer.
+   jedem Lauf gelöscht, Berichte über 7 Tage alt für alle Nutzer. Zusätzlich löscht der
+   Dienst einmal täglich Berichte, die älter als 7 Tage sind, und leere Nutzerordner
+   (auch wenn kein neuer Bericht erstellt wird). Die Kopie in `%LOCALAPPDATA%` ersetzt
+   der nächste Bericht.
 4. Die Oberfläche kopiert den Bericht nach `%LOCALAPPDATA%\SelfX\Reports` und öffnet
    eine neue E-Mail:
    - klassisches Outlook (COM): Empfänger `Support_Mail`, Betreff und Text aus der

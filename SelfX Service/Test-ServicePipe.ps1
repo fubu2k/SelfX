@@ -220,6 +220,34 @@ if ($countMethod) {
 	Assert-True ($result -ge -1) "N5: the check for the own session returns a number (got $result)"
 }
 
+# Report housekeeping: only old DeviceLogs-* files in SID-named folders are deleted, empty SID folders are removed.
+$reportRoot = Join-Path $dataRoot 'Reports'
+$sidOld = Join-Path $reportRoot 'S-1-5-21-1-2-3-1001'
+$sidNew = Join-Path $reportRoot 'S-1-5-21-1-2-3-1002'
+$other = Join-Path $reportRoot 'NotASid'
+New-Item -ItemType Directory -Path $sidOld, $sidNew, $other -Force | Out-Null
+$old = (Get-Date).AddDays(-8)
+$oldReport = Join-Path $sidOld 'DeviceLogs-PC-20260101-000000.txt'
+$oldZip = Join-Path $sidOld 'DeviceLogs-PC-20260101-000000.zip'
+$oldOther = Join-Path $sidOld 'Notes.txt'
+$newReport = Join-Path $sidNew 'DeviceLogs-PC-20260102-000000.txt'
+$otherOld = Join-Path $other 'DeviceLogs-PC-20260101-000000.txt'
+foreach ($file in $oldReport, $oldZip, $oldOther, $newReport, $otherOld) { Set-Content -LiteralPath $file -Value 'x' }
+foreach ($file in $oldReport, $oldZip, $oldOther, $otherOld) { (Get-Item -LiteralPath $file).LastWriteTime = $old }
+$reportService = New-Object SelfX.SelfXService(('SelfX.ReportTest.' + [guid]::NewGuid().ToString('N')), $logDirectory)
+$deleted = $reportService.CleanupReports()
+Assert-True ($deleted -eq 2) "Reports: two old report files are deleted (got $deleted)"
+Assert-True (-not (Test-Path -LiteralPath $oldReport)) 'Reports: the old .txt report is deleted'
+Assert-True (-not (Test-Path -LiteralPath $oldZip)) 'Reports: the old .zip report is deleted'
+Assert-True (Test-Path -LiteralPath $oldOther) 'Reports: a file that is no report stays'
+Assert-True (Test-Path -LiteralPath $sidOld) 'Reports: a folder with a remaining file stays'
+Assert-True (Test-Path -LiteralPath $newReport) 'Reports: a recent report stays'
+Assert-True (Test-Path -LiteralPath $otherOld) 'Reports: a folder that is no SID folder is not touched'
+Remove-Item -LiteralPath $oldOther -Force
+[void]$reportService.CleanupReports()
+Assert-True (-not (Test-Path -LiteralPath $sidOld)) 'Reports: an empty SID folder is removed'
+Assert-True (Test-Path -LiteralPath $sidNew) 'Reports: the folder with a recent report stays'
+
 $service = New-Object SelfX.SelfXService($pipeName, $logDirectory)
 $silent = New-Object System.Collections.Generic.List[object]
 try {

@@ -46,7 +46,7 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.1
+    Version : 2.8.3
 
     History:
     Version  Date        Author               Change
@@ -84,6 +84,8 @@ Notes:
     2.8.2    2026-11-23  fubu2k               Before every start the service checks the installed scripts and configuration against SelfX.Files.json
                                               (SHA256, no unlisted script or XML file, no links); mismatch: nothing is started (event 4005),
                                               Tool_Config.xml Service_FileCheck=Audit only logs (finding N4)
+    2.8.3    2026-11-23  fubu2k               Daily housekeeping also deletes device log reports older than 7 days (Reports\<SID>, only report files,
+                                              only trusted folders without links) and empty user folders
 */
 
 using System;
@@ -131,6 +133,8 @@ namespace SelfX
         int rejectedInWindow = 0;
         int rejectedSuppressed = 0;
         const int DefaultLogRetentionDays = 90;
+        // Device log reports (Reports\<SID>) are kept for 7 days at most; the collect action applies the same limit.
+        const int ReportRetentionDays = 7;
         // Pipe hardening: every local user can open the pipe, so a connection that sends nothing (or never reads the
         // answer) must not hold a thread forever, and one user must not use up all connections or the run slot.
         const int RequestReadTimeoutMs = 5000;
@@ -1439,6 +1443,7 @@ namespace SelfX
                     lastHousekeeping = DateTime.UtcNow;
                     VerifyDataFolder();
                     CleanupLogs();
+                    CleanupReports();
                 }
                 try
                 {
@@ -1562,6 +1567,73 @@ namespace SelfX
                 Log("Log housekeeping error: " + ex.Message);
             }
             return deleted;
+        }
+
+        /// <summary>
+        /// Delete old device log reports: ProgramData\SelfX\Reports\(user SID)\DeviceLogs-*.txt and .zip older than
+        /// ReportRetentionDays, then empty user folders. Only folders named like a SID, only files named like a report, no links,
+        /// and only folders owned by SYSTEM or administrators (the collect action creates them with a protected ACL), so
+        /// a manipulated folder can never make SYSTEM delete other files.
+        /// </summary>
+        public int CleanupReports()
+        {
+            if (!dataFolderSafe) return 0;
+            int deleted = 0;
+            try
+            {
+                string dataRoot = Path.GetDirectoryName(logDirectory.TrimEnd('\\'));
+                if (string.IsNullOrEmpty(dataRoot)) return 0;
+                DirectoryInfo root = new DirectoryInfo(Path.Combine(dataRoot, "Reports"));
+                if (!root.Exists || !IsTrustedFolder(root)) return 0;
+                DateTime limit = DateTime.UtcNow.AddDays(-ReportRetentionDays);
+                foreach (DirectoryInfo folder in root.GetDirectories())
+                {
+                    if (!Regex.IsMatch(folder.Name, @"\AS-1-[0-9]+(-[0-9]+)+\z") || !IsTrustedFolder(folder)) continue;
+                    foreach (FileInfo file in folder.GetFiles())
+                    {
+                        string extension = file.Extension.ToLowerInvariant();
+                        if (!file.Name.StartsWith("DeviceLogs-", StringComparison.Ordinal) || (extension != ".txt" && extension != ".zip")) continue;
+                        if ((file.Attributes & FileAttributes.ReparsePoint) != 0) continue;
+                        if (file.LastWriteTimeUtc >= limit) continue;
+                        try
+                        {
+                            file.Delete();
+                            deleted++;
+                        }
+                        catch { }
+                    }
+                    try
+                    {
+                        // Directory.Delete without recursion fails while the folder still has content.
+                        if (folder.GetFileSystemInfos().Length == 0) folder.Delete();
+                    }
+                    catch { }
+                }
+                if (deleted > 0) Log("Report housekeeping: " + deleted + " report file(s) older than " + ReportRetentionDays + " days deleted.");
+            }
+            catch (Exception ex)
+            {
+                Log("Report housekeeping error: " + ex.Message);
+            }
+            return deleted;
+        }
+
+        /// <summary>
+        /// True when the folder is no link and owned by SYSTEM, an administrator group or the service account.
+        /// </summary>
+        bool IsTrustedFolder(DirectoryInfo directory)
+        {
+            try
+            {
+                if ((directory.Attributes & FileAttributes.ReparsePoint) != 0) return false;
+                SecurityIdentifier owner = (SecurityIdentifier)directory.GetAccessControl().GetOwner(typeof(SecurityIdentifier));
+                string ownerSid = owner == null ? "" : owner.Value;
+                return ownerSid == WindowsIdentity.GetCurrent().User.Value || Array.IndexOf(TrustedOwnerSids, ownerSid) >= 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
