@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update ha terminato. Lo stato del dispositivo viene controllato di nuovo e indica se è necessario un riavvio.</Health_Updates_Done>
 		<Health_Apps_Button>Riprova</Health_Apps_Button>
 		<Health_Apps_Started>L’installazione delle app non riuscite viene riavviata. Può richiedere alcuni minuti; puoi seguirla nel Portale aziendale.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>La scansione rapida è terminata. Microsoft Defender non ha trovato minacce.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>La scansione rapida è terminata. Microsoft Defender ha trovato minacce e le gestisce come stabilito dalla sua azienda. Apra Sicurezza di Windows per i dettagli.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>
 		<Health_Error_Button>Errore</Health_Error_Button>
 		<Health_Pending_Button>In sospeso</Health_Pending_Button>
@@ -612,6 +614,15 @@ Questo passaggio reimposta il client OneDrive. Il ripristino del client OneDrive
 			</Action>
 			<Action Id="Q_Device_SendLogs">
 				<Name>Invia i log del dispositivo al supporto</Name>
+			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>Cercare virus su questo PC (scansione rapida di Microsoft Defender)</Name>
+				<Explanation>Sospetta un virus, è stato aperto un file sospetto o Sicurezza di Windows mostra un avviso. L’azione esegue una scansione rapida con Microsoft Defender e alla fine le indica se sono state trovate minacce.</Explanation>
+				<Alerte_MSG>Si avvia una scansione rapida con Microsoft Defender. Controlla i punti in cui le minacce vengono trovate più spesso e di solito dura da 5 a 30 minuti. Può continuare a lavorare, ma nel frattempo il PC può essere più lento. SelfX mostra il risultato al termine della scansione.
+
+SelfX non elimina né modifica alcun file. Se Defender trova una minaccia, la gestisce come stabilito dalla sua azienda; i dettagli sono in Sicurezza di Windows.
+
+Continuare?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Raccogli i log del dispositivo e inviali al supporto via e-mail</Name>

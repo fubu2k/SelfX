@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update завершив роботу. Стан пристрою перевіряється знову й показує, чи потрібен перезапуск.</Health_Updates_Done>
 		<Health_Apps_Button>Повторити</Health_Apps_Button>
 		<Health_Apps_Started>Інсталяцію програм, які не вдалося інсталювати, запущено знову. Це може тривати кілька хвилин; перебіг видно на корпоративному порталі.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>Швидку перевірку завершено. Microsoft Defender не виявив загроз.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>Швидку перевірку завершено. Microsoft Defender виявив загрози й обробляє їх відповідно до правил вашої компанії. Докладніше дивіться в «Безпеці Windows».</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>
 		<Health_Error_Button>Помилка</Health_Error_Button>
 		<Health_Pending_Button>Очікує</Health_Pending_Button>
@@ -612,6 +614,15 @@
 			</Action>
 			<Action Id="Q_Device_SendLogs">
 				<Name>Надіслати журнали пристрою до служби підтримки</Name>
+			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>Перевірити цей ПК на віруси (швидка перевірка Microsoft Defender)</Name>
+				<Explanation>Ви підозрюєте вірус, було відкрито підозрілий файл або «Безпека Windows» показує попередження. Дія запускає швидку перевірку Microsoft Defender і наприкінці повідомляє, чи знайдено загрози.</Explanation>
+				<Alerte_MSG>Буде запущено швидку перевірку Microsoft Defender. Вона перевіряє місця, де найчастіше знаходять загрози, і зазвичай триває від 5 до 30 хвилин. Ви можете продовжувати роботу, але ПК протягом цього часу може працювати повільніше. SelfX покаже результат після завершення перевірки.
+
+SelfX не видаляє й не змінює файли. Якщо Defender знайде загрозу, він обробить її відповідно до правил вашої компанії; докладніше дивіться в «Безпеці Windows».
+
+Продовжити?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Зібрати журнали пристрою та надіслати їх до служби підтримки електронною поштою</Name>
