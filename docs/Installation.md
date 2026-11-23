@@ -581,6 +581,17 @@ testen, bevor erzwungen wird). SelfX-Skripte verwenden `Add-Type` für einzelne 
 Richtlinie kann ein lokaler Administrator ersetzen; ob sie signiert wird, entscheidet die Organisation. Die Vorlage ist
 noch nicht auf einem Gerät erprobt.
 
+## Ausführungsrichtlinie (`-ExecutionPolicy Bypass`)
+
+Dienst, Starter, Fenster, Statussymbol und Health-Check starten PowerShell mit `-ExecutionPolicy Bypass`. Das ist
+gewollt und vertretbar, weil die Skripte im geschützten Installationsordner liegen (nur Administratoren und SYSTEM
+dürfen schreiben, geprüft durch `Install.ps1`, die Dateiliste und den Dienst). Die Ausführungsrichtlinie ist ohnehin
+keine Sicherheitsgrenze: Jeder Nutzer kann sie mit `-ExecutionPolicy Bypass` umgehen. Zusätzlichen Schutz bieten nur
+die Dateiliste (`SelfX.Files.json`, der Dienst startet nichts Abweichendes) und App Control for Business (siehe oben).
+Erzwingt Ihre Organisation `AllSigned` per Gruppenrichtlinie, gilt der Hinweis zum Signieren im Abschnitt
+[SelfX Service](#selfx-service). Ein eigenes Signaturkonzept gibt es nicht: SelfX bleibt unsigniert und wird per Hash
+zugelassen.
+
 ## Rechte des Dienstes
 
 Der Dienst läuft als LocalSystem. `Install.ps1` begrenzt sein Token mit `sc.exe privs` auf die Rechte, die die
