@@ -111,6 +111,7 @@ Sprachdateien (siehe [Sprachen](#sprachen)).
 | `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket per E-Mail (siehe [Ticket](#ticket-per-e-mail)). |
 | `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Übergabe an Copilot Chat (siehe [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | Aufbewahrung der Protokolle (siehe [Protokolle](#protokolle-und-aufbewahrung)). |
+| `Service_Privileges` | `Restricted` (Standard) oder `Default`: Rechte des Dienstes, gelesen von `Install.ps1` (siehe [Rechte des Dienstes](Installation.md#rechte-des-dienstes)). |
 | `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | Statussymbol (siehe [Statussymbol](#statussymbol)). |
 | `Brand_*`, `Tool_Theme`, `Tool_Color` | Aussehen (siehe [Branding](#branding)). |
 

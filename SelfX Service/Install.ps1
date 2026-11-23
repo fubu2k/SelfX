@@ -63,6 +63,8 @@
                                               unsafe rights = abort; WinRT library installed from Bin\WinRT
     2.8.0    2026-11-22  fubu2k               ProgramData\SelfX is prepared before use: links removed, foreign-owned entries deleted,
                                               owner and rights set again (F12)
+    2.8.1    2026-11-23  fubu2k               The service token is limited to the privileges the actions need (sc.exe privs,
+                                              Tool_Config Service_Privileges = Restricted | Default, finding N5)
 #>
 
 [CmdletBinding()]
@@ -172,6 +174,32 @@ function Test-SelfXPrebuiltBinaries {
 		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "Bin\$Name is missing." }
 		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Manifest.Binaries.$Name)") { throw "Bin\$Name does not match its SHA256 in the manifest." }
 	}
+}
+
+function Get-SelfXServicePrivileges {
+	# Privileges the service (LocalSystem) keeps (finding N5). Everything else of the LocalSystem token is removed, so the
+	# service and every script it starts cannot use SeTcb, SeDebug, SeCreateToken, SeLoadDriver, SeSecurity and the like.
+	# Needed: ChangeNotify (every process), Impersonate (pipe client), CreateGlobal (global objects), Shutdown (restart
+	# action), Systemtime (time sync), Backup/Restore/TakeOwnership (file repairs), ManageVolume (disk check).
+	return @(
+		'SeChangeNotifyPrivilege', 'SeImpersonatePrivilege', 'SeCreateGlobalPrivilege', 'SeShutdownPrivilege',
+		'SeSystemtimePrivilege', 'SeBackupPrivilege', 'SeRestorePrivilege', 'SeTakeOwnershipPrivilege', 'SeManageVolumePrivilege'
+	)
+}
+
+function Set-SelfXServicePrivileges {
+	# Sets the required privileges of the service and checks the result. A failure is a warning only: the installation
+	# (Autopilot) must not fail because of this setting; the service then keeps the default LocalSystem privileges.
+	param([string]$Name, [string]$Mode)
+	if ($Mode -eq 'Default') { return 'Default (all LocalSystem privileges; Service_Privileges = Default).' }
+	$wanted = @(Get-SelfXServicePrivileges)
+	$output = @(& sc.exe privs $Name ($wanted -join '/') 2>&1)
+	if ($LASTEXITCODE -ne 0) { Write-Warning "sc.exe privs failed (exit code $LASTEXITCODE): the service keeps the default privileges. $($output -join ' ')"; return 'Default (setting failed).' }
+	$actual = @([regex]::Matches((@(& sc.exe qprivs $Name 2>&1) -join ' '), 'Se\w+Privilege') | ForEach-Object { $_.Value } | Sort-Object -Unique)
+	$missing = @($wanted | Where-Object { $actual -notcontains $_ })
+	$extra = @($actual | Where-Object { $wanted -notcontains $_ })
+	if ($missing.Count -or $extra.Count) { Write-Warning "The privileges of the service differ from the list (missing: $($missing -join ', '); extra: $($extra -join ', '))." }
+	return "Restricted to: $($actual -join ', ')."
 }
 
 function Initialize-SelfXDataFolder {
@@ -320,6 +348,14 @@ Try
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null
 	& sc.exe description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null
 	& sc.exe failure $ServiceName reset= 86400 actions= restart/60000/restart/60000/restart/300000 | Out-Null
+	# Privileges of the service (finding N5): Restricted (default) or Default (all LocalSystem privileges).
+	$PrivilegeMode = "$($ToolConfig.GUI_Config.Service_Privileges)".Trim()
+	If($PrivilegeMode -notin @('Restricted', 'Default'))
+	{
+		If($PrivilegeMode) { Write-Warning "Service_Privileges '$PrivilegeMode' is not valid (Restricted or Default); using Restricted." }
+		$PrivilegeMode = 'Restricted'
+	}
+	Write-Output ("Service privileges: " + (Set-SelfXServicePrivileges -Name $ServiceName -Mode $PrivilegeMode))
 	Start-Service -Name $ServiceName
 
 	# Shortcuts for all users: SelfX.exe starts Self_X.ps1 without a console window
