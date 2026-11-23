@@ -169,6 +169,22 @@ jobs:
           Copy-Item -LiteralPath $one -Destination $bin -Recurse
           Get-Content -LiteralPath (Join-Path $one 'SelfX.Binaries.json') -Raw
 
+      - name: SBOM (tools\New-SelfXSbom.ps1) is written and consistent with the build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'sbom.cdx.json'
+          & (Join-Path $env:GITHUB_WORKSPACE 'tools\New-SelfXSbom.ps1') -OutputFile $out
+          $bom = Get-Content -LiteralPath $out -Raw | ConvertFrom-Json
+          if ($bom.bomFormat -ne 'CycloneDX' -or $bom.specVersion -ne '1.5') { throw 'Not a CycloneDX 1.5 document.' }
+          $files = @($bom.components | Where-Object type -eq 'file')
+          $libs = @($bom.components | Where-Object type -eq 'library')
+          if ($files.Count -lt 3) { throw "Too few program entries: $($files.Count)" }
+          if (-not ($libs | Where-Object { $_.name -eq 'System.ServiceProcess.ServiceController' })) { throw 'ServiceController package is missing.' }
+          foreach ($file in $files) { if ($file.hashes[0].content -notmatch '^[0-9a-f]{64}$') { throw "Bad hash for $($file.name)" } }
+          foreach ($lib in $libs) { if ($lib.hashes -and $lib.hashes[0].content -notmatch '^[0-9a-f]{128}$') { throw "Bad hash for $($lib.name)" } }
+          "SBOM: $($files.Count) programs, $($libs.Count) packages."
+
       - name: Install.ps1 check accepts the build; session starter loads in Windows PowerShell 5.1
         shell: powershell
         run: |
