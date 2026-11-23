@@ -308,7 +308,7 @@ try {
 		$global:FakeProcesses.Clear()
 
 		# Restart actions (SelfX_Excel_Reboot, SelfX_Word_Reboot, SelfX_Outlook_Reboot, SelfX_Outlook_TeamsAddIn): closed and started again through
-		# Restart-SelfXOfficeApp; the program path must pass the check (below Program Files, no link).
+		# Stop-SelfXOfficeApp; the program path must pass the check (below Program Files, no link).
 		$word64 = Join-Path $pf64 'Microsoft Office\root\Office16\WINWORD.EXE'
 		$excel86 = Join-Path $pf86 'Microsoft Office\root\Office16\EXCEL.EXE'
 		foreach ($file in $word64, $excel86) { New-SandboxFile $file }
