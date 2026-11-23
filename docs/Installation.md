@@ -530,6 +530,28 @@ Verwenden Sie das Paket in Intune wie folgt:
 |---|---|---|
 | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, benutzerdefiniertes Skript `Detection.ps1` (siehe [SelfX Service](#selfx-service)) |
 
+## Rechte des Dienstes
+
+Der Dienst läuft als LocalSystem. `Install.ps1` begrenzt sein Token mit `sc.exe privs` auf die Rechte, die die
+Aktionen brauchen (Einstellung `Service_Privileges` in `Tool_Config.xml`, Standard `Restricted`). Der Dienst und alle
+Skripte, die er startet, können die übrigen Rechte von LocalSystem dann nicht nutzen, zum Beispiel
+`SeTcbPrivilege`, `SeDebugPrivilege`, `SeCreateTokenPrivilege`, `SeLoadDriverPrivilege` und `SeSecurityPrivilege`.
+
+| Recht | Wofür |
+|---|---|
+| `SeChangeNotifyPrivilege` | jeder Prozess |
+| `SeImpersonatePrivilege` | Pipe-Client prüfen |
+| `SeCreateGlobalPrivilege` | globale Objekte des Dienstes |
+| `SeShutdownPrivilege` | Aktion Neustart (`shutdown.exe`) |
+| `SeSystemtimePrivilege` | Zeit synchronisieren |
+| `SeBackupPrivilege`, `SeRestorePrivilege`, `SeTakeOwnershipPrivilege` | Dateireparaturen (zum Beispiel Spooler) |
+| `SeManageVolumePrivilege` | Datenträgerprüfung |
+
+Prüfen: `sc.exe qprivs SelfXService` zeigt die gesetzte Liste. Schlägt das Setzen fehl, meldet `Install.ps1` eine
+Warnung und der Dienst behält die Standardrechte; die Installation (Autopilot) scheitert deshalb nie. Mit
+`Service_Privileges` = `Default` bleiben alle LocalSystem-Rechte; das ist nur zur Fehlersuche gedacht. Testen Sie
+vor der Verteilung jede System-Aktion einmal auf einem Testgerät (Checkliste in der Dokumentation der Gerätetests).
+
 ## Checkliste für die Bereitstellung
 
 1. Die XML-Aktionsliste und jedes referenzierte `.ps1`-Skript prüfen.
