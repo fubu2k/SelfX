@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update is klaar. De apparaatstatus wordt opnieuw gecontroleerd en toont of opnieuw opstarten nodig is.</Health_Updates_Done>
 		<Health_Apps_Button>Opnieuw proberen</Health_Apps_Button>
 		<Health_Apps_Started>De installatie van de mislukte apps wordt opnieuw gestart. Dit kan enkele minuten duren; u kunt het volgen in de Bedrijfsportal.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>De snelle scan is voltooid. Microsoft Defender heeft geen bedreigingen gevonden.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>De snelle scan is voltooid. Microsoft Defender heeft bedreigingen gevonden en behandelt ze volgens de instellingen van uw bedrijf. Open Windows-beveiliging voor details.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>
 		<Health_Error_Button>Fout</Health_Error_Button>
 		<Health_Pending_Button>In behandeling</Health_Pending_Button>
@@ -299,6 +301,7 @@ Beschrijving van het probleem:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Account</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Apparaat</Category>
 			<Category Id="Intune">Intune</Category>
@@ -612,8 +615,31 @@ In deze stap wordt de OneDrive-client opnieuw ingesteld. Het opnieuw instellen v
 			<Action Id="Q_Device_SendLogs">
 				<Name>Apparaatlogboeken naar de support sturen</Name>
 			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>Deze pc op virussen controleren (snelle scan van Microsoft Defender)</Name>
+				<Explanation>U vermoedt een virus, er is een verdacht bestand geopend of Windows-beveiliging toont een waarschuwing. De actie voert een snelle scan uit met Microsoft Defender en meldt aan het einde of er bedreigingen zijn gevonden.</Explanation>
+				<Alerte_MSG>Er start een snelle scan met Microsoft Defender. Die controleert de plaatsen waar bedreigingen het vaakst worden gevonden en duurt meestal 5 tot 30 minuten. U kunt doorwerken, maar de pc kan in die tijd langzamer zijn. SelfX toont het resultaat zodra de scan klaar is.
+
+SelfX verwijdert of wijzigt geen bestanden. Vindt Defender een bedreiging, dan handelt het die af volgens de instellingen van uw bedrijf; details vindt u in Windows-beveiliging.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Apparaatlogboeken verzamelen en per e-mail naar de support sturen</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Wachtwoord vergeten of verlopen: zelf opnieuw instellen</Name>
+				<Explanation>U bent uw wachtwoord vergeten, het is verlopen of uw account is geblokkeerd. Op de aanmeldpagina van uw bedrijfsaccount kunt u zelf een nieuw wachtwoord instellen, zonder de helpdesk te bellen.</Explanation>
+				<Alerte_MSG>De pagina voor het opnieuw instellen van uw wachtwoord wordt geopend in uw webbrowser. Meld u aan met uw zakelijke e-mailadres en volg de stappen. Mogelijk moet u uw identiteit bevestigen, bijvoorbeeld met uw telefoon of de Authenticator-app. SelfX ziet of bewaart uw wachtwoord niet.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Aanmeldmethoden van uw account beheren (beveiligingsgegevens)</Name>
+				<Explanation>U hebt een nieuwe telefoon, uw Authenticator-app kwijt of wilt het telefoonnummer of de aanmeldmethode van uw bedrijfsaccount wijzigen.</Explanation>
+				<Alerte_MSG>De pagina met de beveiligingsgegevens van uw account wordt geopend in uw webbrowser. Meld u aan met uw werkaccount om aanmeldmethoden zoals de Authenticator-app of uw telefoonnummer toe te voegen, te wijzigen of te verwijderen. SelfX ziet of bewaart uw gegevens niet.
+
+Wilt u doorgaan?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

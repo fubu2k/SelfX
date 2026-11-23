@@ -75,7 +75,9 @@ function global:Update-MpSignature { throw 'Update-MpSignature is not allowed (u
 function global:Get-CimInstance {
 	param($Namespace, $ClassName, $Filter, $ErrorAction)
 	if ($Namespace -eq 'root\StandardCimv2' -and $ClassName -eq 'MSFT_NetAdapter') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeAdapters }
-	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpComputerStatus') { return [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00' } }
+	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpComputerStatus') { return [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00'; AMServiceEnabled = $(if ($null -ne $global:DefenderActive) { $global:DefenderActive } else { $true }); AntivirusEnabled = $(if ($null -ne $global:DefenderActive) { $global:DefenderActive } else { $true }); AMRunningMode = 'Normal' } }
+	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpThreatDetection') { return @($global:FakeDetections) }
+	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpThreat') { return @([pscustomobject]@{ ThreatID = 2147519003; ThreatName = 'Virus:DOS/EICAR_Test_File' }) }
 	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftVolumeEncryption' -and $ClassName -eq 'Win32_EncryptableVolume') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeVolumes }
 	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftTpm' -and $ClassName -eq 'Win32_Tpm') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeTpm }
 	if ($Namespace -eq 'root\Microsoft\Windows\Storage' -and $ClassName -eq 'MSFT_Volume') { return @([pscustomobject]@{ DriveLetter = [char]'Z' }, [pscustomobject]@{ DriveLetter = [char]("$env:SystemDrive".TrimEnd(':', '\')[0]) }) }
@@ -98,6 +100,11 @@ function global:Invoke-CimMethod {
 		if ($global:UpdateFails) { throw 'No connection' }
 		$global:SignatureVersion = '1.441.99.0'
 		return [pscustomobject]@{ ReturnValue = $(if ($null -ne $global:UpdateReturn) { $global:UpdateReturn } else { 0 }) }
+	}
+	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpScan' -and $MethodName -eq 'Start') {
+		$global:SelfXTestCalls.Add("Defender-Scan type=$($Arguments.ScanType)")
+		if ($global:ScanFails) { throw 'Scan failed' }
+		return [pscustomobject]@{ ReturnValue = $(if ($null -ne $global:ScanReturn) { $global:ScanReturn } else { 0 }) }
 	}
 	if ($MethodName -ne 'Restart' -or -not $InputObject.InterfaceIndex) { throw 'Invoke-CimMethod is not allowed in tests' }
 	$global:SelfXTestCalls.Add("Restart-NetAdapter $($InputObject.Name)")
@@ -183,6 +190,7 @@ try {
 		If ($text -match '(?i)\$(XmlReader|reader)\)') { Assert-Equal ($text -match '(?i)DtdProcessing\s*=\s*\[(System\.)?Xml\.DtdProcessing\]::Prohibit') $true "$($file.Name) prohibits DTDs" }
 	}
 	foreach ($action in $catalog.SelectNodes('//Action')) {
+		if ($action.Context.Trim() -eq 'Link') { continue }   # Link actions open an address and have no script
 		$text = [IO.File]::ReadAllText((Join-Path $scripts $action.Script.Trim()))
 		Assert-Equal ($text -match "Context\s*:\s*$($action.Context.Trim())") $true "$($action.Script) header context matches the catalog ($($action.GetAttribute('Id')))"
 	}
@@ -447,6 +455,26 @@ try {
 	$global:SignatureVersion = '1.441.85.0'
 	$run = Invoke-TestScript 'SelfX_Defender_UpdateSignature.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Defender-Update' 'Defender: the update runs through CIM (MSFT_MpSignature.Update) only'
+
+	# Defender quick scan: CIM only (ScanType 1), result from the detections, exit codes 0 / 1 / 2, no file paths.
+	$global:DefenderActive = $null; $global:ScanFails = $false; $global:ScanReturn = $null; $global:FakeDetections = @()
+	$run = Invoke-TestScript 'SelfX_Defender_QuickScan.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Defender-Scan type=1' 'Quick scan: no threats = exit 0, quick scan type 1 through CIM only'
+	$global:FakeDetections = @([pscustomobject]@{ ThreatID = 2147519003; InitialDetectionTime = (Get-Date).AddSeconds(5); Resources = 'file:_C:\\Users\\secret\\eicar.com' })
+	$run = Invoke-TestScript 'SelfX_Defender_QuickScan.ps1'
+	Assert-Equal ($run.ExitCode -eq 2 -and "$($run.Output -join ' ')" -like '*1 threat(s)*Virus:DOS/EICAR_Test_File (x1)*') $true 'Quick scan: detection = exit 2 with threat name'
+	Assert-Equal ("$($run.Output -join ' ')" -notmatch 'secret|Users') $true 'Quick scan: no file path in the output'
+	$global:FakeDetections = @([pscustomobject]@{ ThreatID = 2147519003; InitialDetectionTime = (Get-Date).AddDays(-3) })
+	Assert-Equal (Invoke-TestScript 'SelfX_Defender_QuickScan.ps1').ExitCode 0 'Quick scan: old detections are ignored'
+	$global:FakeDetections = @()
+	$global:ScanFails = $true
+	Assert-Equal (Invoke-TestScript 'SelfX_Defender_QuickScan.ps1').ExitCode 1 'Quick scan: scan error = exit 1'
+	$global:ScanFails = $false; $global:ScanReturn = 5
+	Assert-Equal (Invoke-TestScript 'SelfX_Defender_QuickScan.ps1').ExitCode 1 'Quick scan: return value other than 0 = exit 1'
+	$global:ScanReturn = $null; $global:DefenderActive = $false
+	$run = Invoke-TestScript 'SelfX_Defender_QuickScan.ps1'
+	Assert-Equal ($run.ExitCode -eq 1 -and "$($script:calls -join ';')" -eq '') $true 'Quick scan: Defender not active = exit 1, no scan started'
+	$global:DefenderActive = $null
 
 	# The time action may only synchronize: no input, no change of time, time zone, time source or service configuration.
 	$syncText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Device_SyncTime.ps1'))

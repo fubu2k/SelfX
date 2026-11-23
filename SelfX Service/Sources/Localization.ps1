@@ -27,7 +27,7 @@
     Name    : Localization.ps1
     Package : SelfX Service
     Context : GUI helper (dot-sourced by Self_X.ps1 as the signed-in user)
-    Version : 2.6.12
+    Version : 2.8.14
 
     History:
     Version  Date        Author               Change
@@ -38,6 +38,7 @@
     2.5.9    2026-11-05  Wolfgang Baeck       Language chosen by the user: Get-SelfXLanguageList, Resolve-SelfXLanguageSetting,
                                               Get-SelfXLanguageFileCulture
     2.6.12   2026-11-22  fubu2k               German is the base language (no matching file -> de.xml); English stays the fallback for missing texts
+    2.8.14   2026-11-23  fubu2k               Pass the Link field of catalogue actions (Context Link)
 #>
 
 $Script:SelfX_Language = $null
@@ -387,7 +388,7 @@ Function Get-SelfXLocalizedActions
 		Converts the actions of one catalogue section into objects with localized texts.
 	.DESCRIPTION
 		Category contains the localized display name (used in the list and the filter), CategoryId the
-		original Id. Script, Context, Post_Action and Buttons are taken unchanged from the catalogue.
+		original Id. Script, Link, Context, Post_Action and Buttons are taken unchanged from the catalogue.
 	.PARAMETER Section
 		Quick_Solution (simplified view) or Detailed_Solution (detailed view).
 	#>
@@ -406,6 +407,7 @@ Function Get-SelfXLocalizedActions
 				Explanation = Get-SelfXCatalogField -Action $Action -Field 'Explanation' -Catalog $Catalog
 				Buttons     = ([string]$Action.Buttons).Trim()
 				Script      = ([string]$Action.Script).Trim()
+				Link        = ([string]$Action.Link).Trim()
 				Alerte_MSG  = Get-SelfXCatalogField -Action $Action -Field 'Alerte_MSG' -Catalog $Catalog
 				Context     = ([string]$Action.Context).Trim()
 				Post_Action = ([string]$Action.Post_Action).Trim()

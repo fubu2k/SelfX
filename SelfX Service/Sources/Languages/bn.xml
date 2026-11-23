@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update শেষ হয়েছে। ডিভাইসের অবস্থা আবার পরীক্ষা করা হচ্ছে এবং পুনরায় চালু করা দরকার কি না তা দেখায়।</Health_Updates_Done>
 		<Health_Apps_Button>আবার চেষ্টা করুন</Health_Apps_Button>
 		<Health_Apps_Started>ব্যর্থ অ্যাপগুলোর ইনস্টলেশন আবার শুরু হচ্ছে। এতে কয়েক মিনিট লাগতে পারে; আপনি কোম্পানি পোর্টালে তা দেখতে পারবেন।</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>দ্রুত স্ক্যান শেষ হয়েছে। Microsoft Defender কোনো হুমকি পায়নি।</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>দ্রুত স্ক্যান শেষ হয়েছে। Microsoft Defender হুমকি পেয়েছে এবং আপনার কোম্পানির সেটিং অনুযায়ী সেগুলো সামলায়। বিস্তারিত জানতে Windows নিরাপত্তা খুলুন।</Defender_Scan_Threats_Text>
 		<Health_Check_Button>ঠিক আছে</Health_Check_Button>
 		<Health_Error_Button>ত্রুটি</Health_Error_Button>
 		<Health_Pending_Button>মুলতুবি</Health_Pending_Button>
@@ -299,6 +301,7 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">অ্যাকাউন্ট</Category>
 			<Category Id="Browser">ব্রাউজার</Category>
 			<Category Id="Device">ডিভাইস</Category>
 			<Category Id="Intune">Intune</Category>
@@ -612,8 +615,31 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 			<Action Id="Q_Device_SendLogs">
 				<Name>ডিভাইস লগ সহায়তা দলের কাছে পাঠান</Name>
 			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>এই পিসিতে ভাইরাস পরীক্ষা করুন (Microsoft Defender দ্রুত স্ক্যান)</Name>
+				<Explanation>আপনি ভাইরাসের সন্দেহ করছেন, কোনো সন্দেহজনক ফাইল খোলা হয়েছে বা Windows নিরাপত্তা সতর্কতা দেখাচ্ছে। এই কাজটি Microsoft Defender দিয়ে দ্রুত স্ক্যান চালায় এবং শেষে জানায় কোনো হুমকি পাওয়া গেছে কি না।</Explanation>
+				<Alerte_MSG>Microsoft Defender দিয়ে দ্রুত স্ক্যান শুরু হবে। এটি সেই জায়গাগুলো পরীক্ষা করে যেখানে হুমকি সবচেয়ে বেশি পাওয়া যায় এবং সাধারণত ৫ থেকে ৩০ মিনিট সময় নেয়। আপনি কাজ চালিয়ে যেতে পারেন, তবে এ সময় পিসি ধীর হতে পারে। স্ক্যান শেষ হলে SelfX ফলাফল দেখায়।
+
+SelfX কোনো ফাইল মোছে বা পরিবর্তন করে না। Defender কোনো হুমকি পেলে তা আপনার কোম্পানির সেটিং অনুযায়ী সামলায়; বিস্তারিত Windows নিরাপত্তায় দেখুন।
+
+আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>ডিভাইস লগ সংগ্রহ করুন এবং ইমেলের মাধ্যমে সহায়তা দলের কাছে পাঠান</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>পাসওয়ার্ড ভুলে গেছেন বা মেয়াদ শেষ: নিজে রিসেট করুন</Name>
+				<Explanation>আপনি পাসওয়ার্ড ভুলে গেছেন, মেয়াদ শেষ হয়েছে বা আপনার অ্যাকাউন্ট লক হয়েছে। সহায়তায় কল না করেই আপনার কোম্পানির অ্যাকাউন্টের সাইন-ইন পৃষ্ঠায় নিজে নতুন পাসওয়ার্ড সেট করতে পারেন।</Explanation>
+				<Alerte_MSG>পাসওয়ার্ড রিসেটের পৃষ্ঠাটি আপনার ওয়েব ব্রাউজারে খুলবে। আপনার কর্মস্থলের ইমেল ঠিকানা দিয়ে সাইন ইন করুন এবং ধাপগুলো অনুসরণ করুন। আপনার পরিচয় নিশ্চিত করতে বলা হতে পারে, যেমন ফোন বা Authenticator অ্যাপ দিয়ে। SelfX আপনার পাসওয়ার্ড দেখে না বা সংরক্ষণ করে না।
+
+আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>আপনার অ্যাকাউন্টের সাইন-ইন পদ্ধতি পরিচালনা করুন (নিরাপত্তা তথ্য)</Name>
+				<Explanation>আপনার নতুন ফোন হয়েছে, Authenticator অ্যাপ হারিয়ে গেছে বা আপনি কোম্পানির অ্যাকাউন্টের ফোন নম্বর বা সাইন-ইন পদ্ধতি বদলাতে চান।</Explanation>
+				<Alerte_MSG>আপনার অ্যাকাউন্টের নিরাপত্তা তথ্যের পৃষ্ঠাটি ওয়েব ব্রাউজারে খুলবে। Authenticator অ্যাপ বা ফোন নম্বরের মতো সাইন-ইন পদ্ধতি যোগ, পরিবর্তন বা মুছতে আপনার কর্মস্থলের অ্যাকাউন্ট দিয়ে সাইন ইন করুন। SelfX আপনার তথ্য দেখে না বা সংরক্ষণ করে না।
+
+আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

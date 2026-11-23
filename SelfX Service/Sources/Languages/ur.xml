@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update مکمل ہو گیا۔ ڈیوائس کی حالت دوبارہ جانچی جا رہی ہے اور دکھاتی ہے کہ آیا دوبارہ شروع کرنا ضروری ہے۔</Health_Updates_Done>
 		<Health_Apps_Button>دوبارہ کوشش کریں</Health_Apps_Button>
 		<Health_Apps_Started>ناکام ایپس کی انسٹالیشن دوبارہ شروع ہو رہی ہے۔ اس میں چند منٹ لگ سکتے ہیں؛ آپ اسے کمپنی پورٹل میں دیکھ سکتے ہیں۔</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>فوری اسکین مکمل ہو گئی۔ Microsoft Defender کو کوئی خطرہ نہیں ملا۔</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>فوری اسکین مکمل ہو گئی۔ Microsoft Defender کو خطرات ملے ہیں اور وہ انہیں آپ کی کمپنی کی ترتیب کے مطابق سنبھالتا ہے۔ تفصیلات کے لیے Windows سکیورٹی کھولیں۔</Defender_Scan_Threats_Text>
 		<Health_Check_Button>ٹھیک ہے</Health_Check_Button>
 		<Health_Error_Button>خرابی</Health_Error_Button>
 		<Health_Pending_Button>زیر التوا</Health_Pending_Button>
@@ -297,6 +299,7 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">اکاؤنٹ</Category>
 			<Category Id="Browser">براؤزر</Category>
 			<Category Id="Device">ڈیوائس</Category>
 			<Category Id="Intune">Intune</Category>
@@ -596,8 +599,31 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 			<Action Id="Q_Device_SendLogs">
 				<Name>ڈیوائس لاگز سپورٹ ٹیم کو بھیجیں</Name>
 			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>اس پی سی میں وائرس چیک کریں (Microsoft Defender فوری اسکین)</Name>
+				<Explanation>آپ کو وائرس کا شبہ ہے، کوئی مشکوک فائل کھولی گئی یا Windows سکیورٹی انتباہ دکھا رہی ہے۔ یہ عمل Microsoft Defender کے ساتھ فوری اسکین چلاتا ہے اور آخر میں بتاتا ہے کہ کوئی خطرہ ملا یا نہیں۔</Explanation>
+				<Alerte_MSG>Microsoft Defender کے ساتھ فوری اسکین شروع ہوگی۔ یہ ان جگہوں کو چیک کرتی ہے جہاں خطرات سب سے زیادہ ملتے ہیں اور عموماً 5 سے 30 منٹ لیتی ہے۔ آپ کام جاری رکھ سکتے ہیں، لیکن اس دوران پی سی سست ہو سکتا ہے۔ اسکین مکمل ہونے پر SelfX نتیجہ دکھاتا ہے۔
+
+SelfX کوئی فائل حذف یا تبدیل نہیں کرتا۔ اگر Defender کو کوئی خطرہ ملے تو وہ اسے آپ کی کمپنی کی ترتیب کے مطابق سنبھالتا ہے؛ تفصیلات Windows سکیورٹی میں دیکھیں۔
+
+کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>ڈیوائس لاگز جمع کریں اور ای میل کے ذریعے سپورٹ ٹیم کو بھیجیں</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>پاس ورڈ بھول گئے یا میعاد ختم ہو گئی: خود ری سیٹ کریں</Name>
+				<Explanation>آپ اپنا پاس ورڈ بھول گئے ہیں، اس کی میعاد ختم ہو گئی ہے یا آپ کا اکاؤنٹ مقفل ہے۔ اپنے کمپنی اکاؤنٹ کے سائن اِن صفحے پر آپ سپورٹ کو کال کیے بغیر خود نیا پاس ورڈ سیٹ کر سکتے ہیں۔</Explanation>
+				<Alerte_MSG>پاس ورڈ ری سیٹ کرنے کا صفحہ آپ کے ویب براؤزر میں کھلے گا۔ اپنے ورک ای میل ایڈریس سے سائن اِن کریں اور مراحل پر عمل کریں۔ ہو سکتا ہے آپ سے اپنی شناخت کی تصدیق کرنے کو کہا جائے، مثلاً فون یا Authenticator ایپ کے ذریعے۔ SelfX آپ کا پاس ورڈ نہیں دیکھتا اور نہ محفوظ کرتا ہے۔
+
+کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>اپنے اکاؤنٹ کے سائن اِن طریقے منظم کریں (سکیورٹی معلومات)</Name>
+				<Explanation>آپ کے پاس نیا فون ہے، آپ کی Authenticator ایپ کھو گئی ہے یا آپ اپنے کمپنی اکاؤنٹ کا فون نمبر یا سائن اِن کا طریقہ تبدیل کرنا چاہتے ہیں۔</Explanation>
+				<Alerte_MSG>آپ کے اکاؤنٹ کی سکیورٹی معلومات کا صفحہ ویب براؤزر میں کھلے گا۔ Authenticator ایپ یا فون نمبر جیسے سائن اِن طریقے شامل کرنے، تبدیل کرنے یا ہٹانے کے لیے اپنے ورک اکاؤنٹ سے سائن اِن کریں۔ SelfX آپ کا ڈیٹا نہیں دیکھتا اور نہ محفوظ کرتا ہے۔
+
+کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

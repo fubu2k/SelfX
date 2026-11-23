@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update has finished. The device status is checked again and shows whether a restart is needed.</Health_Updates_Done>
 		<Health_Apps_Button>Try again</Health_Apps_Button>
 		<Health_Apps_Started>The installation of the failed apps starts again. This can take a few minutes; you can follow it in the Company Portal.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>The quick scan has finished. Microsoft Defender found no threats.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>The quick scan has finished. Microsoft Defender found threats and handles them as set by your company. Open Windows Security for details.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>
 		<Health_Error_Button>Error</Health_Error_Button>
 		<Health_Pending_Button>Pending</Health_Pending_Button>
@@ -344,6 +346,7 @@ The data comes from the diagnostic tool SelfX. Names and addresses are replaced 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Account</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Device</Category>
 			<Category Id="Intune">Intune</Category>

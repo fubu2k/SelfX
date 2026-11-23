@@ -33,6 +33,8 @@
 		<Health_Updates_Done>Windows Update ist fertig. SelfX prüft den Gerätestatus erneut. Dort sehen Sie, ob ein Neustart nötig ist.</Health_Updates_Done>
 		<Health_Apps_Button>Erneut versuchen</Health_Apps_Button>
 		<Health_Apps_Started>SelfX startet die Installation der fehlgeschlagenen Apps noch einmal. Das kann einige Minuten dauern. Den Fortschritt sehen Sie im Unternehmensportal.</Health_Apps_Started>
+		<Defender_Scan_Clean_Text>Der Schnellscan ist abgeschlossen. Microsoft Defender hat keine Bedrohungen gefunden.</Defender_Scan_Clean_Text>
+		<Defender_Scan_Threats_Text>Der Schnellscan ist abgeschlossen. Microsoft Defender hat Bedrohungen gefunden und behandelt sie nach den Vorgaben Ihres Unternehmens. Details finden Sie in der Windows-Sicherheit.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>In Ordnung</Health_Check_Button>
 		<Health_Error_Button>Fehler</Health_Error_Button>
 		<Health_Pending_Button>Bald erledigen</Health_Pending_Button>
@@ -342,6 +344,7 @@ Die Daten stammen vom Diagnose-Werkzeug SelfX. Namen und Adressen sind absichtli
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Konto</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Gerät</Category>
 			<Category Id="Intune">Intune</Category>
@@ -694,8 +697,31 @@ Das Zurücksetzen baut die lokalen Synchronisierungsdaten neu auf. Es gehen kein
 			<Action Id="Q_Device_SendLogs">
 				<Name>Protokolle Ihres Geräts an den Support senden</Name>
 			</Action>
+			<Action Id="D_Defender_QuickScan">
+				<Name>Diesen PC auf Viren prüfen (Microsoft Defender Schnellscan)</Name>
+				<Explanation>Sie vermuten einen Virus, eine verdächtige Datei wurde geöffnet oder die Windows-Sicherheit zeigt eine Warnung. Die Aktion führt einen Schnellscan mit Microsoft Defender aus und sagt Ihnen am Ende, ob Bedrohungen gefunden wurden.</Explanation>
+				<Alerte_MSG>Ein Schnellscan mit Microsoft Defender startet. Er prüft die Stellen, an denen Bedrohungen am häufigsten gefunden werden, und dauert meist 5 bis 30 Minuten. Sie können weiterarbeiten, der PC kann in dieser Zeit aber langsamer sein. SelfX zeigt das Ergebnis an, sobald der Scan abgeschlossen ist.
+
+SelfX löscht oder ändert keine Dateien. Findet Defender eine Bedrohung, behandelt es sie nach den Vorgaben Ihres Unternehmens; Details finden Sie in der Windows-Sicherheit.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Protokolle Ihres Geräts sammeln und per E-Mail an den Support senden</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Passwort vergessen oder abgelaufen: selbst zurücksetzen</Name>
+				<Explanation>Sie haben Ihr Passwort vergessen, es ist abgelaufen oder Ihr Konto ist gesperrt. Auf der Anmeldeseite Ihres Firmenkontos können Sie selbst ein neues Passwort festlegen, ohne den Support anzurufen.</Explanation>
+				<Alerte_MSG>Die Seite zum Zurücksetzen Ihres Passworts wird in Ihrem Webbrowser geöffnet. Melden Sie sich mit Ihrer geschäftlichen E-Mail-Adresse an und folgen Sie den Schritten. Eventuell müssen Sie Ihre Identität bestätigen, zum Beispiel mit Ihrem Telefon oder der Authenticator-App. SelfX sieht oder speichert Ihr Passwort nicht.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Anmeldemethoden Ihres Kontos verwalten (Sicherheitsinfos)</Name>
+				<Explanation>Sie haben ein neues Telefon, Ihre Authenticator-App verloren oder möchten die Telefonnummer oder Anmeldemethode Ihres Firmenkontos ändern.</Explanation>
+				<Alerte_MSG>Die Seite mit den Sicherheitsinfos Ihres Kontos wird in Ihrem Webbrowser geöffnet. Melden Sie sich mit Ihrem Geschäftskonto an, um Anmeldemethoden wie die Authenticator-App oder Ihre Telefonnummer hinzuzufügen, zu ändern oder zu entfernen. SelfX sieht oder speichert Ihre Daten nicht.
+
+Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>
