@@ -517,7 +517,7 @@ Use the package in Intune as follows:
 
 `tools\New-SelfXIntuneWin.ps1` writes the file `SelfX.Files.json` into the package when it is built. It contains the
 SHA256 of every file that `Install.ps1` copies to the installation folder (everything below `Sources`, `Uninstall.ps1`
-and the DLLs of `Bin\WinRT`, which are installed as `WinRT\...`). The list is created again at every package build: if you change a script or a configuration you do
+the DLLs of `Bin\WinRT`, which are installed as `WinRT\...`, and `SelfXService.exe` and `SelfX.exe` from `Bin`). The list is created again at every package build: if you change a script or a configuration you do
 not maintain anything by hand, you build the package again. Before the installation `Install.ps1` checks that every
 file matches the list and that no file without an entry is in the package; otherwise the installation stops before
 anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
@@ -537,6 +537,15 @@ the update action reports the interface as not available; the reason is in the S
 among the files that are refused without an entry in the list. The check is no replacement for a signature: whoever has
 administrator rights can change the DLL and the list together. While a SelfX process runs the DLLs are locked (as the
 loaded library was before); `Install.ps1` closes the status icon before the update.
+
+The list also contains the two programs `SelfXService.exe` and `SelfX.exe`. The package build fails when one is missing. After
+copying, `Install.ps1` compares the **installed folder** with the list once more (every file, both programs); a difference
+stops the installation before the service is created. The service checks both programs by SHA256 before every start and
+refuses every `.exe` in the installation folder that is not in the list. Limit: a replaced `SelfXService.exe` skips its own
+check. The check therefore detects accidents (a broken or half update, file errors) and a replaced `SelfX.exe` (it starts at
+every sign-in of all users), not an attacker with administrator rights. The protection against that comes from the folder
+rights (users: read and execute only) and App Control (see below). The check hashes the two programs (about 37 MB each) at
+every start of a SYSTEM action.
 
 ## App Control for Business (WDAC), optional
 

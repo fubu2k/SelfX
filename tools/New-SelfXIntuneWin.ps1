@@ -43,7 +43,7 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.5.0
+    Version : 1.6.1
 
     History:
     Version  Date        Author               Change
@@ -56,6 +56,7 @@
     1.4.0    2026-11-22  fubu2k               Bin (.NET 10 programs) is required and fully checked; the .NET project files are not packaged
     1.5.0    2026-11-23  fubu2k               Writes SelfX.Files.json (SHA256 of all installed files) into the package (finding N4)
     1.6.0    2026-11-23  fubu2k               SelfX.Files.json also lists the DLLs of Bin\WinRT (installed into WinRT) for the load check
+    1.6.1    2026-11-23  fubu2k               SelfX.Files.json also lists SelfXService.exe and SelfX.exe from Bin (installed next to the scripts)
 #>
 
 [CmdletBinding()]
@@ -148,6 +149,12 @@ function New-SelfXFileManifest {
             if ($item.DirectoryName -ne (Get-Item -LiteralPath $winRT).FullName) { throw "Unexpected sub folder in Bin\WinRT: $($item.DirectoryName)" }
             $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'WinRT/' + $item.Name })
         }
+    }
+    # The two programs (service and starter) come from Bin and are installed next to the scripts. A missing program is an error.
+    foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
+        $programPath = Join-Path $Stage "Bin\$program"
+        if (-not (Test-Path -LiteralPath $programPath -PathType Leaf)) { throw "Bin\$program is missing in the package." }
+        $entries.Add([pscustomobject]@{ Path = $programPath; Name = $program })
     }
     $files = [ordered]@{}
     foreach ($entry in ($entries | Sort-Object Name)) {
