@@ -71,7 +71,7 @@ Assert-Equal (Protect-UserViewText $ownSid.ToLowerInvariant()) $ownSid.ToLowerIn
 Assert-Equal (Protect-UserViewText 'S-1-5-18 and S-1-5-32-544') 'S-1-5-18 and S-1-5-32-544' 'well-known SIDs stay'
 Assert-Equal (Protect-UserViewText 'Computer DEVICE01, 10.0.0.1, 0x80070005') 'Computer DEVICE01, 10.0.0.1, 0x80070005' 'other text stays unchanged'
 Assert-Equal (Protect-UserViewText '') '' 'empty text'
-Assert-Equal ($null -eq (Protect-UserViewText $null)) $true 'null text'
+Assert-Equal (Protect-UserViewText $null) '' 'null text'
 
 # 2. Hide-OtherUsers: profile names and the new protection layer; administrators are unchanged
 $script:OtherUserPattern = [regex]::new('(?<![\w-])(bob)(?![\w-])', 'IgnoreCase')
