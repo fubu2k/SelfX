@@ -31,9 +31,10 @@ Important elements of an action:
 |---|---|
 | `Id` (attribute) | Unique name, for example `D_Teams_SoundCuts`. The language files use it. |
 | `Name`, `Explanation`, `Alerte_MSG` | Title, explanation and confirmation text (English base text). |
-| `Category` | Category id: `Browser`, `Device`, `Intune`, `Office`, `OneDrive`, `Outlook`, `Teams`. The display name comes from the language file. |
-| `Script` | Name of the script in `Scripts_to_run`. |
-| `Context` | `User`: the script runs as the signed-in user. `System`: the service runs the script as SYSTEM. If the element is missing, `User` applies. |
+| `Category` | Category id: `Account`, `Browser`, `Device`, `Intune`, `Office`, `OneDrive`, `Outlook`, `Teams`. The display name comes from the language file. |
+| `Script` | Name of the script in `Scripts_to_run`. Not used with `Context` `Link`. |
+| `Link` | `Context` `Link` only: name of the setting in `Tool_Config.xml` (`Link_<Name>`, letters and digits) that holds the https address. |
+| `Context` | `User`: the script runs as the signed-in user. `System`: the service runs the script as SYSTEM. `Link`: after the confirmation SelfX opens the https address of the setting (field `Link`) in the browser of the user; no script runs and the service is not involved. If the element is missing, `User` applies. |
 | `TimeoutSeconds` | `System` only. 1 to 7200 seconds, default 900. After that the service stops the script. |
 | `OtherSessions` | `System` only. `Block`: a standard user cannot start the action while another user is actively signed in. Administrators with elevated rights are not affected. If SelfX cannot read the sessions, the action is blocked. Set `Block` on every entry of the same script. In the supplied catalogue it applies to restarting the Intune service, restarting the network adapters and CHKDSK. |
 | `Post_Action` | `System` only. `MailReport`: after a successful run, SelfX opens an e-mail to the support with the report attached (see [Device logs](#device-logs-for-the-support)). |
@@ -108,6 +109,7 @@ The file contains settings only, no texts. All texts are in the language files (
 | `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | The help button (?) and its contacts (see [User interface](#user-interface)). `Support_Mail` is also the recipient of the e-mail with the device logs. |
 | `DeviceLogs_Days`, `DeviceLogs_Compress` | Device logs: days of event log history (1 to 60, default 7) and `.zip` (default) or `.txt`. |
 | `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket by e-mail (see [Ticket](#ticket-by-e-mail)). |
+| `Link_PasswordReset`, `Link_SecurityInfo` | Addresses of the link actions "Reset your password" (default `https://passwordreset.microsoftonline.com/`) and "Manage the sign-in methods" (default `https://mysignins.microsoft.com/security-info`). `https://` only, without user name and password. Empty or `Off` hides the action; an invalid value hides it and is noted in the log. Your own link actions: a key `Link_<Name>` in `Tool_Config.xml` and an action with `Context` `Link` in the catalogue. |
 | `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Hand-over to Copilot Chat (see [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | How long logs are kept (see [Logs](#logs-and-retention)). |
 | `Service_FileCheck` | `Enforce` (default) or `Audit`: before every start the service compares the installed scripts and configuration with `SelfX.Files.json`. `Enforce` starts nothing when they differ, `Audit` only logs (event 4005); see [File list](Installation.md#file-list-selfxfilesjson). |

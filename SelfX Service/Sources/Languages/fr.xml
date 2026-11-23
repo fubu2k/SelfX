@@ -299,6 +299,7 @@ Description du problème :</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Compte</Category>
 			<Category Id="Browser">Navigateur</Category>
 			<Category Id="Device">Appareil</Category>
 			<Category Id="Intune">Intune</Category>
@@ -448,6 +449,15 @@ Voulez-vous continuer ?</Alerte_MSG>
 				<Name>Outlook suggère des adresses e-mail erronées ou obsolètes</Name>
 				<Explanation>Lorsque vous saisissez un nom dans un nouveau message, Outlook suggère des adresses incorrectes, qui n’existent plus ou qui appartiennent à une autre personne.</Explanation>
 				<Alerte_MSG>La liste des adresses e-mail suggérées (liste de saisie semi-automatique) d’Outlook va être vidée. Outlook va se fermer puis redémarrer. Les messages en cours de rédaction qui ne sont pas enregistrés comme brouillon risquent d’être perdus. Outlook reconstruit la liste au fur et à mesure que vous envoyez de nouveaux messages. Votre boîte aux lettres, vos contacts et votre profil ne sont pas modifiés. Le nouvel Outlook n’est pas concerné.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office demande l’activation ou signale un produit sans licence</Name>
+				<Explanation>Word, Excel, Outlook ou une autre application Office affiche « Produit sans licence », demande sans cesse de l’activer ou de se connecter, ou indique que votre compte n’a pas de licence alors qu’il en a une.</Explanation>
+				<Alerte_MSG>Toutes les applications Office ouvertes (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype Entreprise) vont se fermer. Le travail non enregistré est perdu. Ensuite, les données de licence enregistrées de votre compte utilisateur sont supprimées. Vos documents, paramètres, votre boîte aux lettres et les fichiers du programme Office ne sont pas modifiés. Teams n’est pas fermé.
+
+Au prochain démarrage d’une application Office, vous devrez vous connecter avec votre compte professionnel. Office obtient alors une nouvelle licence.
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
@@ -605,6 +615,20 @@ Cette étape réinitialise votre client OneDrive. La réinitialisation du client
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Collecter les journaux de l’appareil et les envoyer au support par e-mail</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Mot de passe oublié ou expiré : le réinitialiser vous-même</Name>
+				<Explanation>Vous avez oublié votre mot de passe, il a expiré ou votre compte est verrouillé. Sur la page de connexion de votre compte professionnel, vous pouvez définir vous-même un nouveau mot de passe, sans appeler le support.</Explanation>
+				<Alerte_MSG>La page de réinitialisation de votre mot de passe s’ouvre dans votre navigateur web. Connectez-vous avec votre adresse e-mail professionnelle et suivez les étapes. Il peut vous être demandé de confirmer votre identité, par exemple avec votre téléphone ou l’application Authenticator. SelfX ne voit ni n’enregistre votre mot de passe.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Gérer les méthodes de connexion de votre compte (infos de sécurité)</Name>
+				<Explanation>Vous avez un nouveau téléphone, vous avez perdu votre application Authenticator ou vous souhaitez modifier le numéro de téléphone ou la méthode de connexion de votre compte professionnel.</Explanation>
+				<Alerte_MSG>La page des infos de sécurité de votre compte s’ouvre dans votre navigateur web. Connectez-vous avec votre compte professionnel pour ajouter, modifier ou supprimer des méthodes de connexion, comme l’application Authenticator ou votre numéro de téléphone. SelfX ne voit ni n’enregistre vos données.
+
+Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

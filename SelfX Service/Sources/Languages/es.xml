@@ -299,6 +299,7 @@ Descripción del problema:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Cuenta</Category>
 			<Category Id="Browser">Navegador</Category>
 			<Category Id="Device">Dispositivo</Category>
 			<Category Id="Intune">Intune</Category>
@@ -448,6 +449,15 @@ Si el problema persiste, póngase en contacto con el equipo de soporte.
 				<Name>Outlook sugiere direcciones de correo incorrectas u obsoletas</Name>
 				<Explanation>Al escribir un nombre en un correo nuevo, Outlook sugiere direcciones incorrectas, que ya no existen o que pertenecen a otra persona.</Explanation>
 				<Alerte_MSG>Se borrará la lista de direcciones de correo sugeridas (lista de autocompletar) de Outlook. Outlook se cerrará y se volverá a iniciar. Es posible que se pierdan los correos que esté escribiendo y no haya guardado como borrador. Outlook vuelve a crear la lista a medida que envía correos nuevos. El buzón, los contactos y el perfil no se modifican. El nuevo Outlook no se ve afectado.
+
+¿Quiere continuar?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office solicita la activación o indica que el producto no tiene licencia</Name>
+				<Explanation>Word, Excel, Outlook u otra aplicación de Office muestra «Producto sin licencia», solicita una y otra vez la activación o el inicio de sesión, o indica que su cuenta no tiene licencia aunque la tiene.</Explanation>
+				<Alerte_MSG>Se cerrarán todas las aplicaciones de Office abiertas (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype Empresarial). Se perderá el trabajo sin guardar. Después se eliminarán los datos de licencia guardados de su cuenta de usuario. Los documentos, la configuración, el buzón y los archivos de programa de Office no se modifican. Teams no se cierra.
+
+La próxima vez que inicie una aplicación de Office, se le pedirá que inicie sesión con su cuenta profesional. Office obtendrá entonces una nueva licencia.
 
 ¿Quiere continuar?</Alerte_MSG>
 			</Action>
@@ -605,6 +615,20 @@ Este paso restablece el cliente de OneDrive. Restablecer el cliente de OneDrive 
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Recopilar los registros del dispositivo y enviarlos al soporte por correo electrónico</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Contraseña olvidada o caducada: restablézcala usted mismo</Name>
+				<Explanation>Ha olvidado la contraseña, ha caducado o su cuenta está bloqueada. En la página de inicio de sesión de su cuenta de empresa puede establecer usted mismo una contraseña nueva, sin llamar al soporte.</Explanation>
+				<Alerte_MSG>La página para restablecer la contraseña se abre en su navegador web. Inicie sesión con su dirección de correo profesional y siga los pasos. Es posible que se le pida confirmar su identidad, por ejemplo con el teléfono o la aplicación Authenticator. SelfX no ve ni guarda su contraseña.
+
+¿Quiere continuar?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Administrar los métodos de inicio de sesión de su cuenta (información de seguridad)</Name>
+				<Explanation>Tiene un teléfono nuevo, ha perdido la aplicación Authenticator o quiere cambiar el número de teléfono o el método de inicio de sesión de su cuenta de empresa.</Explanation>
+				<Alerte_MSG>La página de información de seguridad de su cuenta se abre en su navegador web. Inicie sesión con su cuenta profesional para agregar, cambiar o quitar métodos de inicio de sesión, como la aplicación Authenticator o el número de teléfono. SelfX no ve ni guarda sus datos.
+
+¿Quiere continuar?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

@@ -299,6 +299,7 @@ Descrizione del problema:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Account</Category>
 			<Category Id="Browser">Browser</Category>
 			<Category Id="Device">Dispositivo</Category>
 			<Category Id="Intune">Intune</Category>
@@ -448,6 +449,15 @@ Continuare?</Alerte_MSG>
 				<Name>Outlook suggerisce indirizzi e-mail errati o obsoleti</Name>
 				<Explanation>Quando digita un nome in un nuovo messaggio, Outlook suggerisce indirizzi errati, non più esistenti o appartenenti a un’altra persona.</Explanation>
 				<Alerte_MSG>L’elenco degli indirizzi e-mail suggeriti (elenco di completamento automatico) di Outlook verrà svuotato. Outlook verrà chiuso e riavviato. I messaggi in corso di stesura non salvati come bozza potrebbero andare persi. Outlook ricrea l’elenco man mano che invia nuovi messaggi. Cassetta postale, contatti e profilo non vengono modificati. Il nuovo Outlook non è interessato.
+
+Continuare?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office richiede l’attivazione o segnala un prodotto senza licenza</Name>
+				<Explanation>Word, Excel, Outlook o un’altra app di Office mostra «Prodotto senza licenza», richiede continuamente l’attivazione o l’accesso, oppure segnala che il suo account non ha una licenza anche se ce l’ha.</Explanation>
+				<Alerte_MSG>Tutte le app di Office aperte (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) verranno chiuse. Il lavoro non salvato andrà perso. Poi i dati di licenza salvati del suo account utente vengono rimossi. Documenti, impostazioni, cassetta postale e file di programma di Office non vengono modificati. Teams non viene chiuso.
+
+Al prossimo avvio di un’app di Office le verrà chiesto di accedere con l’account di lavoro. Office otterrà quindi una nuova licenza.
 
 Continuare?</Alerte_MSG>
 			</Action>
@@ -605,6 +615,20 @@ Questo passaggio reimposta il client OneDrive. Il ripristino del client OneDrive
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Raccogli i log del dispositivo e inviali al supporto via e-mail</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Password dimenticata o scaduta: reimpostarla da soli</Name>
+				<Explanation>Ha dimenticato la password, è scaduta o il suo account è bloccato. Nella pagina di accesso del suo account aziendale può impostare da solo una nuova password, senza chiamare il supporto.</Explanation>
+				<Alerte_MSG>La pagina per reimpostare la password si apre nel browser web. Acceda con il suo indirizzo e-mail aziendale e segua i passaggi. Potrebbe essere richiesto di confermare la sua identità, ad esempio con il telefono o l’app Authenticator. SelfX non vede né salva la sua password.
+
+Continuare?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Gestire i metodi di accesso del suo account (informazioni di sicurezza)</Name>
+				<Explanation>Ha un nuovo telefono, ha perso l’app Authenticator o vuole modificare il numero di telefono o il metodo di accesso del suo account aziendale.</Explanation>
+				<Alerte_MSG>La pagina delle informazioni di sicurezza del suo account si apre nel browser web. Acceda con l’account aziendale per aggiungere, modificare o rimuovere metodi di accesso come l’app Authenticator o il numero di telefono. SelfX non vede né salva i suoi dati.
+
+Continuare?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

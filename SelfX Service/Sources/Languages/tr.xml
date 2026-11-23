@@ -299,6 +299,7 @@ Sorunun açıklaması:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Hesap</Category>
 			<Category Id="Browser">Tarayıcı</Category>
 			<Category Id="Device">Cihaz</Category>
 			<Category Id="Intune">Intune</Category>
@@ -448,6 +449,15 @@ Devam etmek istiyor musunuz?</Alerte_MSG>
 				<Name>Outlook yanlış veya eski e-posta adresleri öneriyor</Name>
 				<Explanation>Yeni bir e-postaya ad yazdığınızda Outlook yanlış, artık var olmayan veya başka bir kişiye ait adresler öneriyor.</Explanation>
 				<Alerte_MSG>Outlook'un önerilen e-posta adresleri listesi (otomatik tamamlama listesi) temizlenecek. Outlook kapatılacak ve yeniden başlatılacak. Yazmakta olduğunuz ve taslak olarak kaydetmediğiniz e-postalar kaybolabilir. Outlook, yeni e-postalar gönderdikçe listeyi yeniden oluşturur. Posta kutunuz, kişileriniz ve profiliniz değiştirilmez. Yeni Outlook etkilenmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office etkinleştirme istiyor veya lisanssız ürün bildiriyor</Name>
+				<Explanation>Word, Excel, Outlook veya başka bir Office uygulaması “Lisanssız Ürün” gösteriyor, tekrar tekrar etkinleştirme veya oturum açma istiyor ya da hesabınızın lisansı olduğu halde lisansı olmadığını bildiriyor.</Explanation>
+				<Alerte_MSG>Açık olan tüm Office uygulamaları (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype Kurumsal) kapatılacak. Kaydedilmemiş çalışma kaybolur. Ardından kullanıcı hesabınızın kayıtlı lisans verileri kaldırılır. Belgeleriniz, ayarlarınız, posta kutunuz ve Office program dosyaları değiştirilmez. Teams kapatılmaz.
+
+Bir sonraki Office uygulaması başlatışınızda iş hesabınızla oturum açmanız istenir. Office daha sonra yeni bir lisans alır.
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
@@ -605,6 +615,20 @@ Bu adım OneDrive istemcinizi sıfırlar. OneDrive istemcisini sıfırlamak veri
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Cihaz günlüklerini topla ve e-postayla destek ekibine gönder</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Parolayı unuttum veya süresi doldu: kendiniz sıfırlayın</Name>
+				<Explanation>Parolanızı unuttunuz, süresi doldu veya hesabınız kilitlendi. Şirket hesabınızın oturum açma sayfasında desteği aramadan kendiniz yeni bir parola belirleyebilirsiniz.</Explanation>
+				<Alerte_MSG>Parolanızı sıfırlama sayfası web tarayıcınızda açılır. İş e-posta adresinizle oturum açın ve adımları izleyin. Kimliğinizi, örneğin telefonunuzla veya Authenticator uygulamasıyla doğrulamanız istenebilir. SelfX parolanızı görmez ve kaydetmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Hesabınızın oturum açma yöntemlerini yönetin (güvenlik bilgileri)</Name>
+				<Explanation>Yeni bir telefonunuz var, Authenticator uygulamanızı kaybettiniz veya şirket hesabınızın telefon numarasını ya da oturum açma yöntemini değiştirmek istiyorsunuz.</Explanation>
+				<Alerte_MSG>Hesabınızın güvenlik bilgileri sayfası web tarayıcınızda açılır. Authenticator uygulaması veya telefon numaranız gibi oturum açma yöntemlerini eklemek, değiştirmek ya da kaldırmak için iş hesabınızla oturum açın. SelfX verilerinizi görmez ve kaydetmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

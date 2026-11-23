@@ -14,8 +14,12 @@
 	  Buttons        Buttons of the confirmation dialog: Ok_Cancel, Yes_No or OK. The labels come from the language file.
 	  Explanation    Text shown by the green "more info" button. Ref="<Message Id>" uses a shared text from <Messages>.
 	  Script         Script in Scripts_to_run that is started.
+	  Link           Only for Context Link (instead of Script): name of the setting in Tool_Config.xml (Link_<Name>) that holds the https
+	                 address. After the confirmation the address is opened in the browser of the user; no script runs and the service is
+	                 not involved. The action is not shown when the setting is empty, Off or not an https address.
 	  Context        User   = started by the GUI as the signed-in user.
 	                 System = run as LOCAL SYSTEM by the local SelfX service. Only these entries are allowed by the service.
+	                 Link   = opens an https address from Tool_Config.xml (field Link), see below.
 	  TimeoutSeconds Only for Context System. The service stops the script after this time (default 900, maximum 7200).
 	  OtherSessions  Only for Context System. Block = a normal user cannot start the action while another user has an
 	                 active session on the device (restart, network, disk check, ...). Elevated administrators are not
@@ -23,7 +27,7 @@
 	  Post_Action    Optional. MailReport = after a successful System action the GUI attaches the newest report of the user
 	                 (ProgramData\SelfX\Reports\<user SID>) to a new e-mail to Support_Mail (Outlook, otherwise mail app + Explorer).
 	                 The first System action with MailReport is also offered as "Send logs to support" in System information.
-	  Category       Category Id (Teams, Office, OneDrive, Outlook, Device, Intune, Browser). The display name comes from the language file.
+	  Category       Category Id (Teams, Office, OneDrive, Outlook, Device, Intune, Browser, Account). The display name comes from the language file.
 	  Alerte_MSG     Confirmation text shown before the script runs. Ref="<Message Id>" uses a shared text from <Messages>.
 
 	History:
@@ -37,9 +41,11 @@
 	  2.4.3    2026-11-22  fubu2k               New action Q_Outlook (restart classic Outlook)
 	  2.4.4    2026-11-22  fubu2k               New action Q_Device_SyncTime (synchronize the clock, Context System)
 	  2.4.5    2026-11-23  fubu2k               New action D_Outlook_AutoComplete (clear the auto-complete list of classic Outlook)
+	  2.4.6    2026-11-23  fubu2k               New action D_Office_ResetLicence (reset the Office license tokens of the user)
+	  2.4.7    2026-11-23  fubu2k               New action type Context Link (field Link): D_Account_PasswordReset and D_Account_SecurityInfo, new category Account
 -->
 <Actions>
-	<XML_Version>2.4.5</XML_Version>
+	<XML_Version>2.4.7</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -330,6 +336,20 @@ Do you want to continue?</Alerte_MSG>
 			<Context>User</Context>
 			<Category>Outlook</Category>
 			<Alerte_MSG>The list of suggested e-mail addresses (auto-complete list) of Outlook will be cleared. Outlook will close and start again. Mails you are writing that are not saved as a draft may be lost. Outlook builds the list again while you send new mails. Your mailbox, contacts and profile are not changed. The new Outlook is not affected.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="D_Office_ResetLicence">
+			<Name>Office asks to activate or reports an unlicensed product</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>Word, Excel, Outlook or another Office app shows "Unlicensed Product", asks again and again to activate or to sign in, or says that your account does not have a license although it has one.</Explanation>
+			<Script>SelfX_Office_ResetLicence.ps1</Script>
+			<Context>User</Context>
+			<Category>Office</Category>
+			<Alerte_MSG>All open Office apps (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) will close. Unsaved work is lost. Then the saved license data of your user account is removed. Your documents, settings, mailbox and Office program files are not changed. Teams is not closed.
+
+The next time you start an Office app, you are asked to sign in with your work account. Office then gets a new license.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>
@@ -722,6 +742,30 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Post_Action>MailReport</Post_Action>
 			<Category>Device</Category>
 			<Alerte_MSG Ref="Msg_SendLogs"/>
+		</Action>
+
+		<Action Id="D_Account_PasswordReset">
+			<Name>Forgot or expired password: reset it yourself</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>You forgot your password, it has expired or your account is locked. You can set a new password yourself on the sign-in page of your company account, without calling the support.</Explanation>
+			<Link>Link_PasswordReset</Link>
+			<Context>Link</Context>
+			<Category>Account</Category>
+			<Alerte_MSG>The page to reset your password opens in your web browser. Sign in with your work e-mail address and follow the steps. You may be asked to confirm your identity, for example with your phone or the authenticator app. SelfX does not see or save your password.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
+		<Action Id="D_Account_SecurityInfo">
+			<Name>Manage the sign-in methods of your account (security info)</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>You have a new phone, lost your authenticator app or want to change the phone number or sign-in method of your company account.</Explanation>
+			<Link>Link_SecurityInfo</Link>
+			<Context>Link</Context>
+			<Category>Account</Category>
+			<Alerte_MSG>The security info page of your account opens in your web browser. Sign in with your work account to add, change or remove sign-in methods such as the authenticator app or your phone number. SelfX does not see or save your data.
+
+Do you want to continue?</Alerte_MSG>
 		</Action>
 	</Detailed_Solution>
 </Actions>

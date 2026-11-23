@@ -299,6 +299,7 @@ Opis problemu:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Konto</Category>
 			<Category Id="Browser">Przeglądarka</Category>
 			<Category Id="Device">Urządzenie</Category>
 			<Category Id="Intune">Intune</Category>
@@ -448,6 +449,15 @@ Czy chcesz kontynuować?</Alerte_MSG>
 				<Name>Program Outlook podpowiada nieprawidłowe lub nieaktualne adresy e-mail</Name>
 				<Explanation>Po wpisaniu nazwy w nowej wiadomości program Outlook podpowiada adresy, które są nieprawidłowe, już nie istnieją lub należą do innej osoby.</Explanation>
 				<Alerte_MSG>Lista podpowiadanych adresów e-mail (lista autouzupełniania) programu Outlook zostanie wyczyszczona. Program Outlook zostanie zamknięty i uruchomiony ponownie. Wiadomości, które właśnie piszesz i które nie zostały zapisane jako wersja robocza, mogą zostać utracone. Program Outlook odbuduje listę podczas wysyłania nowych wiadomości. Skrzynka pocztowa, kontakty i profil nie są zmieniane. Nowy program Outlook nie jest objęty tą akcją.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Pakiet Office prosi o aktywację lub zgłasza produkt bez licencji</Name>
+				<Explanation>Word, Excel, Outlook lub inna aplikacja pakietu Office wyświetla komunikat „Produkt bez licencji”, wielokrotnie prosi o aktywację lub zalogowanie albo informuje, że Twoje konto nie ma licencji, mimo że ją ma.</Explanation>
+				<Alerte_MSG>Wszystkie otwarte aplikacje pakietu Office (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype dla firm) zostaną zamknięte. Niezapisana praca zostanie utracona. Następnie zapisane dane licencyjne Twojego konta użytkownika zostaną usunięte. Dokumenty, ustawienia, skrzynka pocztowa i pliki programów pakietu Office nie są zmieniane. Aplikacja Teams nie jest zamykana.
+
+Przy następnym uruchomieniu aplikacji pakietu Office zostaniesz poproszony o zalogowanie się kontem służbowym. Pakiet Office otrzyma wtedy nową licencję.
 
 Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>
@@ -605,6 +615,20 @@ Ten krok resetuje klienta OneDrive. Zresetowanie klienta OneDrive nie powoduje u
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Zbierz dzienniki urządzenia i wyślij je e-mailem do pomocy technicznej</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Zapomniane lub wygasłe hasło: zresetuj je samodzielnie</Name>
+				<Explanation>Zapomniałeś hasła, wygasło ono lub Twoje konto jest zablokowane. Na stronie logowania konta firmowego możesz samodzielnie ustawić nowe hasło bez dzwonienia do pomocy technicznej.</Explanation>
+				<Alerte_MSG>Strona resetowania hasła otworzy się w przeglądarce internetowej. Zaloguj się służbowym adresem e-mail i postępuj zgodnie z instrukcjami. Może być konieczne potwierdzenie tożsamości, na przykład telefonem lub aplikacją Authenticator. SelfX nie widzi ani nie zapisuje Twojego hasła.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Zarządzaj metodami logowania konta (informacje zabezpieczające)</Name>
+				<Explanation>Masz nowy telefon, zgubiłeś aplikację Authenticator albo chcesz zmienić numer telefonu lub metodę logowania konta firmowego.</Explanation>
+				<Alerte_MSG>Strona z informacjami zabezpieczającymi Twojego konta otworzy się w przeglądarce internetowej. Zaloguj się kontem służbowym, aby dodać, zmienić lub usunąć metody logowania, takie jak aplikacja Authenticator lub numer telefonu. SelfX nie widzi ani nie zapisuje Twoich danych.
+
+Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

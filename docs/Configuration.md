@@ -31,9 +31,10 @@ Wichtige Elemente einer Aktion:
 |---|---|
 | `Id` (Attribut) | Eindeutiger Name, zum Beispiel `D_Teams_SoundCuts`. Die Sprachdateien verwenden ihn. |
 | `Name`, `Explanation`, `Alerte_MSG` | Titel, Erklärung und Bestätigungstext (englischer Basistext). |
-| `Category` | Kategorie-Id: `Browser`, `Device`, `Intune`, `Office`, `OneDrive`, `Outlook`, `Teams`. Der Anzeigename kommt aus der Sprachdatei. |
-| `Script` | Name des Skripts in `Scripts_to_run`. |
-| `Context` | `User`: Das Skript läuft als angemeldeter Nutzer. `System`: Der Dienst führt das Skript als SYSTEM aus. Fehlt das Element, gilt `User`. |
+| `Category` | Kategorie-Id: `Account`, `Browser`, `Device`, `Intune`, `Office`, `OneDrive`, `Outlook`, `Teams`. Der Anzeigename kommt aus der Sprachdatei. |
+| `Script` | Name des Skripts in `Scripts_to_run`. Nicht bei `Context` `Link`. |
+| `Link` | Nur für `Context` `Link`: Name der Einstellung in `Tool_Config.xml` (`Link_<Name>`, Buchstaben und Ziffern), die die https-Adresse enthält. |
+| `Context` | `User`: Das Skript läuft als angemeldeter Nutzer. `System`: Der Dienst führt das Skript als SYSTEM aus. `Link`: Nach der Bestätigung öffnet SelfX die https-Adresse der Einstellung (Feld `Link`) im Browser des Nutzers; es läuft kein Skript und der Dienst ist nicht beteiligt. Fehlt das Element, gilt `User`. |
 | `TimeoutSeconds` | Nur für `System`. 1 bis 7200 Sekunden, Standard 900. Danach stoppt der Dienst das Skript. |
 | `OtherSessions` | Nur für `System`. `Block`: Ein normaler Nutzer kann die Aktion nicht starten, solange ein anderer Nutzer aktiv angemeldet ist. Administratoren mit erhöhten Rechten sind nicht betroffen. Kann SelfX die Sitzungen nicht lesen, wird die Aktion blockiert. Setzen Sie `Block` an jeden Eintrag desselben Skripts. Im mitgelieferten Katalog gilt es für den Neustart des Intune-Dienstes, den Neustart der Netzwerkadapter und CHKDSK. |
 | `Post_Action` | Nur für `System`. `MailReport`: Nach einem erfolgreichen Lauf öffnet SelfX eine E-Mail an den Support mit dem Bericht im Anhang (siehe [Geräteprotokolle](#geräteprotokolle-für-den-support)). |
@@ -109,6 +110,7 @@ Sprachdateien (siehe [Sprachen](#sprachen)).
 | `Show_Support_Button`, `Support_Hours`, `Support_Phone_number`, `Support_Mail`, `Support_Teams`, `Support_Website` | Hilfe-Schaltfläche (?) und ihre Kontakte (siehe [Benutzeroberfläche](#benutzeroberfläche)). `Support_Mail` ist auch der Empfänger der E-Mail mit den Geräteprotokollen. |
 | `DeviceLogs_Days`, `DeviceLogs_Compress` | Geräteprotokolle: Tage des Ereignisprotokolls (1 bis 60, Standard 7) und `.zip` (Standard) oder `.txt`. |
 | `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket per E-Mail (siehe [Ticket](#ticket-per-e-mail)). |
+| `Link_PasswordReset`, `Link_SecurityInfo` | Adressen der Link-Aktionen „Passwort zurücksetzen“ (Standard `https://passwordreset.microsoftonline.com/`) und „Anmeldemethoden verwalten“ (Standard `https://mysignins.microsoft.com/security-info`). Nur `https://` ohne Benutzername und Kennwort. Leer oder `Off` blendet die Aktion aus; ein ungültiger Wert blendet sie aus und wird im Protokoll vermerkt. Eigene Link-Aktionen: Schlüssel `Link_<Name>` in `Tool_Config.xml` und eine Aktion mit `Context` `Link` im Katalog. |
 | `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Übergabe an Copilot Chat (siehe [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | Aufbewahrung der Protokolle (siehe [Protokolle](#protokolle-und-aufbewahrung)). |
 | `Service_FileCheck` | `Enforce` (Standard) oder `Audit`: Der Dienst vergleicht vor jedem Start die installierten Skripte und Konfigurationen mit `SelfX.Files.json`. `Enforce` startet bei einer Abweichung nichts, `Audit` protokolliert nur (Ereignis 4005); siehe [Dateiliste](Installation.md#dateiliste-selfxfilesjson). |

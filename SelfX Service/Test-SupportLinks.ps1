@@ -12,12 +12,13 @@
     Name    : Test-SupportLinks.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.0
+    Version : 2.8.14
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.0    2026-11-23  fubu2k               Initial version (code review finding N7).
+    2.8.14   2026-11-23  fubu2k               Tests for Resolve-SelfXCatalogLink (links of catalogue actions).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -71,11 +72,30 @@ Assert-Equal (ConvertTo-SelfXSupportWebUri 'http://support.example.com') '' 'web
 Assert-Equal (ConvertTo-SelfXSupportWebUri 'mailto:support@example.com') '' 'website: mailto refused'
 Assert-Equal (ConvertTo-SelfXSupportWebUri 'msteams:/l/chat/0/0?users=a%40example.com') '' 'website: msteams refused'
 
+# --- links of catalogue actions (Context Link) ---------------------------------------------------------------
+function Get-LinkState($Key, $Value) { (Resolve-SelfXCatalogLink -Key $Key -Value $Value).State }
+Assert-Equal (Resolve-SelfXCatalogLink -Key 'Link_PasswordReset' -Value 'https://passwordreset.microsoftonline.com/').Uri 'https://passwordreset.microsoftonline.com/' 'catalogue link: https address is returned'
+Assert-Equal (Get-LinkState 'Link_PasswordReset' 'https://passwordreset.microsoftonline.com/') 'Ok' 'catalogue link: state Ok'
+Assert-Equal (Get-LinkState 'Link_SecurityInfo' '  https://mysignins.microsoft.com/security-info  ') 'Ok' 'catalogue link: spaces around are trimmed'
+Assert-Equal (Get-LinkState 'Link_PasswordReset' '') 'Off' 'catalogue link: empty value switches the action off'
+Assert-Equal (Get-LinkState 'Link_PasswordReset' $null) 'Off' 'catalogue link: missing value switches the action off'
+Assert-Equal (Get-LinkState 'Link_PasswordReset' 'off') 'Off' 'catalogue link: Off (any case) switches the action off'
+foreach ($bad in 'http://passwordreset.microsoftonline.com/', 'file:///C:/Windows/System32/cmd.exe', 'ms-settings:network', 'mailto:a@b.de', 'msteams:/l/chat/0/0?users=a%40example.com', 'https://user:pw@example.com/', 'https://example.com/a b', 'javascript:alert(1)', 'C:\\Windows\\System32\\cmd.exe', '\\\\server\\share') {
+	Assert-Equal (Get-LinkState 'Link_PasswordReset' $bad) 'Invalid' "catalogue link: '$bad' is refused"
+	Assert-Equal ([bool](Resolve-SelfXCatalogLink -Key 'Link_PasswordReset' -Value $bad).Uri) $false "catalogue link: '$bad' gives no address"
+}
+foreach ($badKey in '', 'PasswordReset', 'Link_', 'Link_a b', 'Link_a;b', 'link_PasswordReset', 'Support_Website', 'Copilot_Url', '..\\Link_A', ('Link_' + ('a' * 41))) {
+	Assert-Equal (Get-LinkState $badKey 'https://example.com/') 'BadKey' "catalogue link: key '$badKey' is refused"
+}
+Assert-Equal (Get-LinkState ('Link_' + ('a' * 40)) 'https://example.com/') 'Ok' 'catalogue link: key with 40 characters is accepted'
+
 # --- the sources use the checks and start no program by a bare name ----------------------------------------
 $gui = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Sources\Self_X.ps1'))
 Assert-Equal ($gui.Contains('. "$Current_Folder\SupportLinks.ps1"')) $true 'Self_X.ps1 loads SupportLinks.ps1'
 Assert-Equal ($gui.Contains('Start-Process $Safe_Uri')) $true 'Open-SelfXUri opens only the checked link'
 Assert-Equal ($gui.Contains('Start-Process $Uri')) $false 'Open-SelfXUri does not open an unchecked link'
+Assert-Equal ($gui.Contains('Start-Process $Link.Uri')) $true 'a link action opens only the address that Resolve-SelfXCatalogLink returned'
+Assert-Equal ($gui -match 'Start-Process\s+\$rowObj') $false 'a link action never opens a value of the catalogue row directly'
 Assert-Equal ($gui -match '"mailto:\$Support_Mail"') $false 'the mailto link is not built from the unchecked Support_Mail'
 Assert-Equal ($gui -match '\^https\?://') $false 'http:// is not accepted for Support_Website'
 Assert-Equal ($gui -match 'Start-Process\s+"explorer\.exe"') $false 'Self_X.ps1 starts Explorer with its full path'

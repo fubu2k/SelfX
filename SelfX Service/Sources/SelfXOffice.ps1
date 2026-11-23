@@ -17,6 +17,10 @@
     (Test-SelfXOfficeProgramPath): rooted local path, expected file name, below Program Files (64 bit, 32 bit),
     an existing file that is not a link. The first candidate that passes is returned; otherwise $null.
 
+    Get-SelfXOfficeLicenseFolder lists the folders of the Office license tokens of the signed-in user
+    (%LOCALAPPDATA%\Microsoft\Office\Licenses and \Microsoft\Office\<version>\Licensing, every version folder
+    that exists). It only reads; it does not delete anything.
+
     Get-SelfXOwnSessionProcess and Close-SelfXOwnSessionProcess only touch processes of the Windows session of the
     caller, so other users on a multi-user device are not affected.
 
@@ -24,12 +28,13 @@
     Name    : SelfXOffice.ps1
     Package : SelfX Service
     Context : Dot-sourced by scripts in Scripts_to_run (user context); also loaded by tests
-    Version : 2.8.0
+    Version : 2.8.4
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.0    2026-11-23  fubu2k               Initial version (program path independent of version and bitness, own-session processes).
+    2.8.4    2026-11-23  fubu2k               Get-SelfXOfficeLicenseFolder (folders of the Office license tokens, independent of the version)
 #>
 
 $Script:SelfXOfficeApps = @{
@@ -118,4 +123,19 @@ function Close-SelfXOwnSessionProcess {
 	if ($left.Count) { $left | Stop-Process -Force -ErrorAction Stop }
 	for ($i = 0; $i -lt $TimeoutSeconds -and (Get-SelfXOwnSessionProcess -Name $Name).Count; $i++) { Start-Sleep -Seconds 1 }
 	return (-not (Get-SelfXOwnSessionProcess -Name $Name).Count)
+}
+
+function Get-SelfXOfficeLicenseFolder {
+	# Existing folders with the Office license tokens of the signed-in user, independent of the Office version:
+	# Licenses (shared computer activation and vNext, Office 2019 / 2021 / 2024 / Microsoft 365 Apps) and
+	# <version>\Licensing for every version folder (16.0, 15.0, ...). Only folders below LOCALAPPDATA are returned.
+	param([string]$LocalAppData = $env:LOCALAPPDATA)
+	if (-not $LocalAppData -or -not [IO.Path]::IsPathRooted($LocalAppData)) { return @() }
+	$officeRoot = Join-Path $LocalAppData 'Microsoft\Office'
+	$folders = New-Object System.Collections.Generic.List[string]
+	$folders.Add((Join-Path $officeRoot 'Licenses'))
+	foreach ($directory in @(Get-ChildItem -LiteralPath $officeRoot -Directory -ErrorAction SilentlyContinue)) {
+		if ($directory.Name -match '^\d{1,3}\.\d{1,3}$') { $folders.Add((Join-Path $directory.FullName 'Licensing')) }
+	}
+	@($folders | Where-Object { Test-Path -LiteralPath $_ -PathType Container })
 }

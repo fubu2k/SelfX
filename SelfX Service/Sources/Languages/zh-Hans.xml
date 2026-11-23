@@ -299,6 +299,7 @@
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">帐户</Category>
 			<Category Id="Browser">浏览器</Category>
 			<Category Id="Device">设备</Category>
 			<Category Id="Intune">Intune</Category>
@@ -448,6 +449,15 @@
 				<Name>Outlook 建议了错误或过时的电子邮件地址</Name>
 				<Explanation>在新邮件中输入姓名时，Outlook 建议的地址有误、已不存在或属于其他人。</Explanation>
 				<Alerte_MSG>将清除 Outlook 的建议电子邮件地址列表（自动完成列表）。Outlook 将关闭并重新启动。正在撰写但尚未保存为草稿的邮件可能会丢失。发送新邮件时，Outlook 会重新生成该列表。您的邮箱、联系人和配置文件不会更改。新版 Outlook 不受影响。
+
+是否要继续？</Alerte_MSG>
+			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office 要求激活或提示产品未授权</Name>
+				<Explanation>Word、Excel、Outlook 或其他 Office 应用显示“未授权产品”，反复要求激活或登录，或提示您的帐户没有许可证（实际上有）。</Explanation>
+				<Alerte_MSG>所有已打开的 Office 应用（Word、Excel、PowerPoint、Outlook、Access、OneNote、Publisher、Visio、Project、Skype for Business）都将关闭。未保存的工作将丢失。然后将删除您的用户帐户中保存的许可证数据。您的文档、设置、邮箱和 Office 程序文件不会更改。Teams 不会关闭。
+
+下次启动 Office 应用时，系统会要求您使用工作帐户登录。随后 Office 会获得新的许可证。
 
 是否要继续？</Alerte_MSG>
 			</Action>
@@ -605,6 +615,20 @@
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>收集设备日志并通过电子邮件发送给支持人员</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>忘记密码或密码已过期：自行重置</Name>
+				<Explanation>您忘记了密码、密码已过期或帐户被锁定。您可以在公司帐户的登录页面自行设置新密码，无需联系支持人员。</Explanation>
+				<Alerte_MSG>重置密码的页面将在您的网页浏览器中打开。请使用工作电子邮件地址登录并按步骤操作。系统可能要求您验证身份，例如通过手机或 Authenticator 应用。SelfX 不会看到或保存您的密码。
+
+是否要继续？</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>管理帐户的登录方式（安全信息）</Name>
+				<Explanation>您换了新手机、丢失了 Authenticator 应用，或想更改公司帐户的电话号码或登录方式。</Explanation>
+				<Alerte_MSG>帐户的安全信息页面将在您的网页浏览器中打开。请使用工作帐户登录，以添加、更改或删除 Authenticator 应用或电话号码等登录方式。SelfX 不会看到或保存您的数据。
+
+是否要继续？</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>

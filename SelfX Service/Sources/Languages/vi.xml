@@ -299,6 +299,7 @@ Mô tả sự cố:</Report_Mail_Body>
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
 	<Catalog>
 		<Categories>
+			<Category Id="Account">Tài khoản</Category>
 			<Category Id="Browser">Trình duyệt</Category>
 			<Category Id="Device">Thiết bị</Category>
 			<Category Id="Intune">Intune</Category>
@@ -448,6 +449,15 @@ Bạn có muốn tiếp tục không?</Alerte_MSG>
 				<Name>Outlook gợi ý địa chỉ email sai hoặc đã lỗi thời</Name>
 				<Explanation>Khi bạn nhập tên trong email mới, Outlook gợi ý các địa chỉ sai, không còn tồn tại hoặc thuộc về người khác.</Explanation>
 				<Alerte_MSG>Danh sách địa chỉ email được gợi ý (danh sách tự động hoàn thành) của Outlook sẽ được xóa. Outlook sẽ đóng và khởi động lại. Các email bạn đang soạn mà chưa lưu thành thư nháp có thể bị mất. Outlook tạo lại danh sách khi bạn gửi email mới. Hộp thư, danh bạ và hồ sơ của bạn không bị thay đổi. Outlook mới không bị ảnh hưởng.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>Office yêu cầu kích hoạt hoặc báo sản phẩm chưa có giấy phép</Name>
+				<Explanation>Word, Excel, Outlook hoặc ứng dụng Office khác hiển thị “Sản phẩm chưa có giấy phép”, liên tục yêu cầu kích hoạt hoặc đăng nhập, hoặc báo rằng tài khoản của bạn không có giấy phép dù thực tế có.</Explanation>
+				<Alerte_MSG>Tất cả ứng dụng Office đang mở (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) sẽ đóng. Công việc chưa lưu sẽ bị mất. Sau đó, dữ liệu giấy phép đã lưu của tài khoản người dùng của bạn sẽ bị xóa. Tài liệu, cài đặt, hộp thư và tệp chương trình Office không bị thay đổi. Teams không bị đóng.
+
+Lần tới khi bạn mở một ứng dụng Office, bạn sẽ được yêu cầu đăng nhập bằng tài khoản cơ quan. Sau đó Office nhận được giấy phép mới.
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
@@ -605,6 +615,20 @@ Bước này sẽ đặt lại ứng dụng OneDrive. Việc đặt lại không
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Thu thập nhật ký thiết bị và gửi cho bộ phận hỗ trợ qua email</Name>
+			</Action>
+			<Action Id="D_Account_PasswordReset">
+				<Name>Quên mật khẩu hoặc mật khẩu hết hạn: tự đặt lại</Name>
+				<Explanation>Bạn quên mật khẩu, mật khẩu đã hết hạn hoặc tài khoản của bạn bị khóa. Trên trang đăng nhập tài khoản công ty, bạn có thể tự đặt mật khẩu mới mà không cần gọi bộ phận hỗ trợ.</Explanation>
+				<Alerte_MSG>Trang đặt lại mật khẩu sẽ mở trong trình duyệt web của bạn. Đăng nhập bằng địa chỉ email công việc và làm theo các bước. Bạn có thể được yêu cầu xác nhận danh tính, ví dụ bằng điện thoại hoặc ứng dụng Authenticator. SelfX không nhìn thấy hoặc lưu mật khẩu của bạn.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Account_SecurityInfo">
+				<Name>Quản lý phương thức đăng nhập của tài khoản (thông tin bảo mật)</Name>
+				<Explanation>Bạn có điện thoại mới, làm mất ứng dụng Authenticator hoặc muốn đổi số điện thoại hay phương thức đăng nhập của tài khoản công ty.</Explanation>
+				<Alerte_MSG>Trang thông tin bảo mật của tài khoản sẽ mở trong trình duyệt web của bạn. Đăng nhập bằng tài khoản công việc để thêm, thay đổi hoặc xóa các phương thức đăng nhập như ứng dụng Authenticator hoặc số điện thoại. SelfX không nhìn thấy hoặc lưu dữ liệu của bạn.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
 		</Actions>
 	</Catalog>
