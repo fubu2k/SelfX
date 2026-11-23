@@ -95,6 +95,9 @@
                                        Extension, CBS / DISM / setup / Windows Update, Teams installer and crash report files, no event message texts; ESP apps and
                                        Win32Apps keys of other users are skipped; all report text is also scrubbed of e-mail
                                        addresses (UPN) and SIDs of other users (Protect-UserViewText).
+    1.3.5    fubu2k                    Teams installer logs (section 10) are only listed and read when the file is trusted: no link or
+                                       hard link, no link in the folder path, owner SYSTEM, administrators, TrustedInstaller or the
+                                       running account (Test-TrustedLogFile); other files are only counted (finding N9).
 #>
 
 [CmdletBinding()]
@@ -123,7 +126,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.3.4'
+$ScriptVersion = '1.3.5'
 if ($UserView) {
     try { $null = [Security.Principal.SecurityIdentifier]::new("$CallerSid") } catch { Write-Error 'The user view needs a valid -CallerSid.'; exit 2 }
 }
@@ -291,6 +294,25 @@ function Get-FileText {
     $header = '--- {0}  (size {1} bytes, last write {2})' -f $item.FullName, $item.Length, $item.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
     $header
     @(Get-Content -LiteralPath $Path -Tail $Tail -ErrorAction Stop | ForEach-Object { "    $_" })
+}
+# Teams installer logs are searched in places where a user can create files (C:\Windows\Temp). Only a file that
+# the report may trust is used: no link or hard link, no link in the folder path below the search folder, and an owner
+# that is SYSTEM, administrators, TrustedInstaller or the account that runs the script (same list as the report file).
+# Other files are only counted. Fails closed: when the owner cannot be read the file is not trusted.
+function Test-TrustedLogFile {
+    param(
+        [Parameter(Mandatory = $true)][IO.FileInfo]$File,
+        [Parameter(Mandatory = $true)][string]$Root,
+        [Parameter(Mandatory = $true)][string[]]$TrustedOwnerSids
+    )
+    if ($File.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
+    if ("$($File.LinkType)" -eq 'HardLink') { return $false }
+    $rootFull = [IO.Path]::GetFullPath($Root).TrimEnd('\')
+    for ($dir = $File.Directory; $dir -and $dir.FullName.TrimEnd('\') -ne $rootFull; $dir = $dir.Parent) {
+        if ($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
+    }
+    try { $owner = (Get-Acl -LiteralPath $File.FullName -ErrorAction Stop).GetOwner([Security.Principal.SecurityIdentifier]).Value } catch { return $false }
+    return ($TrustedOwnerSids -contains $owner)
 }
 function Add-FileTail {
     param([string]$Path, [int]$Tail = 200)
@@ -1045,8 +1067,14 @@ Invoke-Safe 'Teams bootstrapper logs' {
     ''
     '--- Teams installer logs (teamsbootstrapper, MSTeams), newest first'
     $folders = @("$env:SystemRoot\Temp", "$env:SystemRoot\SystemTemp", "$env:ProgramData\Microsoft\Teams", $env:TEMP, "$env:SystemRoot\IMECache") | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -Unique
-    $logs = @(foreach ($folder in $folders) { Get-ChildItem -LiteralPath $folder -Recurse -Depth 2 -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'teams' -and $_.Extension -in '.log', '.txt', '.json' -and $_.FullName -ne $outFile } }) | Sort-Object LastWriteTime -Descending
+    $untrusted = 0
+    $logs = @(foreach ($folder in $folders) {
+            foreach ($candidate in @(Get-ChildItem -LiteralPath $folder -Recurse -Depth 2 -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'teams' -and $_.Extension -in '.log', '.txt', '.json' -and $_.FullName -ne $outFile })) {
+                if (Test-TrustedLogFile -File $candidate -Root $folder -TrustedOwnerSids $trustedOwners) { $candidate } else { $untrusted++ }
+            }
+        }) | Sort-Object LastWriteTime -Descending
     if (-not $logs.Count) { '    (no Teams installer log found in ' + ($folders -join ', ') + ')' }
+    if ($untrusted) { "    ($untrusted file(s) skipped: link, or owner is not SYSTEM, administrators, TrustedInstaller or the running account)" }
     foreach ($log in @($logs | Select-Object -First 15)) { '    {0}  {1} bytes  {2}' -f $log.FullName, $log.Length, $log.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss') }
     if ($UserView -and $logs.Count) { '    (user view: the contents of the Teams installer logs are not part of this report)' }
     foreach ($log in @($logs | Select-Object -First 2)) {

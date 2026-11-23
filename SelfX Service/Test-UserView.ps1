@@ -3,27 +3,28 @@
     Tests the user view (-UserView) of the device log collector: what a normal user never sees in the report.
 
 .DESCRIPTION
-    Takes the functions Protect-UserViewText, Hide-OtherUsers, Test-ForeignUserSid and Get-EventSummary and the two
+    Takes the functions Protect-UserViewText, Hide-OtherUsers, Test-ForeignUserSid, Get-EventSummary and Test-TrustedLogFile and the two
     patterns out of Sources\Scripts_to_run\Collect-DeviceLogs.ps1 (the collector itself is never run) and checks
     them with made-up data: e-mail addresses (UPN) become <hidden>, SIDs of other users become <other user> (the own
     SID stays), event message texts are replaced in the user view and unchanged for administrators. A static check
     makes sure that every area that must not be part of the user report (enrollment account, Autopilot / ESP
     registry values, process command lines, Intune Management Extension, Teams installer and crash report contents,
     other users' ESP phases and Win32Apps keys) is guarded by the user view switch in the collector. Nothing is read
-    from the device and no file is written. Runs in PowerShell 7 and Windows PowerShell 5.1:
+    from the device; only the owner/link test of the Teams installer logs (N9) creates and removes a temporary folder. Runs in PowerShell 7 and Windows PowerShell 5.1:
     pwsh -NoProfile -File .\Test-UserView.ps1
 
 .NOTES
     Name    : Test-UserView.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.20
+    Version : 2.8.22
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.20   2026-11-23  fubu2k               Initial version (finding M3: user view of the device logs).
+    2.8.22   2026-11-23  fubu2k               Tests for the trusted Teams installer logs (finding N9).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -41,7 +42,7 @@ $ast = [Management.Automation.Language.Parser]::ParseFile($collector, [ref]$toke
 Assert-Equal @($parseErrors).Count 0 'Collect-DeviceLogs.ps1 parses'
 
 # Load only the needed functions and the two patterns, never the rest of the collector.
-foreach ($name in 'Protect-UserViewText', 'Hide-OtherUsers', 'Test-ForeignUserSid', 'Get-EventSummary') {
+foreach ($name in 'Protect-UserViewText', 'Hide-OtherUsers', 'Test-ForeignUserSid', 'Get-EventSummary', 'Test-TrustedLogFile') {
 	$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
 	Assert-Equal ($null -ne $definition) $true "Collect-DeviceLogs.ps1 defines $name"
 	if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
@@ -109,6 +110,36 @@ $UserView = [switch]::new($false)
 $out = @(Get-EventSummary -LogName 'System' -Level $null -Max 5)
 Assert-Equal ($out[1] -like '*SECRET-MESSAGE*') $true 'administrator: the message text stays'
 
+# 4b. N9: Teams installer logs are only used when the file is trusted (owner, links). Needs Windows (owner, junction);
+# creates and removes a temporary folder in the temp directory of the running account.
+if ($PSVersionTable.PSEdition -ne 'Core' -or $IsWindows) {
+	$trustRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXTrust_' + [guid]::NewGuid().ToString('N'))
+	$null = New-Item -ItemType Directory -Path $trustRoot
+	try {
+		$me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+		$plain = Join-Path $trustRoot 'teams.log'
+		Set-Content -LiteralPath $plain -Value 'x'
+		Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $plain) -Root $trustRoot -TrustedOwnerSids @($me)) $true 'N9: file of a trusted owner is trusted'
+		Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $plain) -Root $trustRoot -TrustedOwnerSids @('S-1-5-18')) $false 'N9: file of another owner is not trusted'
+		Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $plain) -Root $trustRoot -TrustedOwnerSids @()) $false 'N9: empty trust list trusts nothing (fail closed)'
+		$linked = Join-Path $trustRoot 'teams-link.log'
+		& cmd.exe /c mklink /H "$linked" "$plain" | Out-Null
+		if (Test-Path -LiteralPath $linked) {
+			Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath $linked -Force) -Root $trustRoot -TrustedOwnerSids @($me)) $false 'N9: hard link is not trusted'
+		}
+		$target = Join-Path $trustRoot 'target'
+		$null = New-Item -ItemType Directory -Path $target
+		Set-Content -LiteralPath (Join-Path $target 'teams.log') -Value 'x'
+		$junction = Join-Path $trustRoot 'junction'
+		& cmd.exe /c mklink /J "$junction" "$target" | Out-Null
+		if (Test-Path -LiteralPath $junction) {
+			Assert-Equal (Test-TrustedLogFile -File (Get-Item -LiteralPath (Join-Path $junction 'teams.log') -Force) -Root $trustRoot -TrustedOwnerSids @($me)) $false 'N9: file below a junction is not trusted'
+			(Get-Item -LiteralPath $junction -Force).Delete()
+		}
+	}
+	finally { Remove-Item -LiteralPath $trustRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
 # 5. Static check of the collector: every area is guarded by the user view
 $text = [IO.File]::ReadAllText($collector)
 function Test-Pattern($Pattern, $Message) { Assert-Equal ([regex]::IsMatch($text, $Pattern)) $true $Message }
@@ -128,7 +159,8 @@ Test-Pattern 'Write-Host "  \$\(Hide-OtherUsers \$finding\)"' 'console output of
 Test-Pattern 'function Add-Line \{ param\(\[string\]\$Text\) \$writer\.WriteLine\(\(Hide-OtherUsers \$Text\)\) \}' 'every report line passes through Hide-OtherUsers'
 Test-Pattern 'function Add-FileTail \{\s*param[^\r\n]*\s*Add-Line ''''\s*#[^\r\n]*\s*if \(\$UserView\) \{[^}]*return \}' 'file tails (IME, CBS, DISM, setup, Windows Update) are omitted'
 Test-Pattern 'function Add-FilteredLines \{\s*param[^\r\n]*\s*if \(\$UserView\) \{[^}]*return \}' 'filtered log lines are omitted'
-Test-Pattern "\`$ScriptVersion = '1\.3\.4'" 'script version 1.3.4'
+Test-Pattern "\`$ScriptVersion = '1\.3\.5'" 'script version 1.3.5'
+Test-Pattern "(?s)Invoke-Safe 'Teams bootstrapper logs'.*?Test-TrustedLogFile -File \`$candidate -Root \`$folder -TrustedOwnerSids \`$trustedOwners" 'Teams installer logs: only trusted files (owner, links) are listed and read'
 
 if ($script:errors.Count) {
 	$script:errors | ForEach-Object { Write-Output "FAIL: $_" }
