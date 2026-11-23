@@ -624,6 +624,13 @@ SelfX non elimina né modifica alcun file. Se Defender trova una minaccia, la ge
 
 Continuare?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_GpUpdate">
+				<Name>Aggiornare le impostazioni aziendali (criteri di gruppo) di questo PC</Name>
+				<Explanation>Le impostazioni della sua azienda, come unità di rete, stampanti o regole di sicurezza, non arrivano o sono obsolete. L’azione chiede a Windows di applicare di nuovo i criteri di gruppo. Funziona solo su dispositivi aggiunti a un dominio (anche dispositivi in join ibrido).</Explanation>
+				<Alerte_MSG>Windows controlla e applica di nuovo i criteri di gruppo della sua azienda. Può richiedere alcuni minuti. Non viene disconnesso e Windows non si riavvia; un’impostazione che richiede un riavvio o un nuovo accesso diventa efficace solo dopo. Se il dispositivo non è aggiunto a un dominio, l’azione termina con il codice di uscita 3 e non modifica nulla.
+
+Continuare?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Raccogli i log del dispositivo e inviali al supporto via e-mail</Name>
 			</Action>

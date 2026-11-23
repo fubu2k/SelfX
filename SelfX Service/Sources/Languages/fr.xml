@@ -624,6 +624,13 @@ SelfX ne supprime ni ne modifie aucun fichier. Si Defender trouve une menace, il
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_GpUpdate">
+				<Name>Actualiser les paramètres de l’entreprise (stratégies de groupe) de ce PC</Name>
+				<Explanation>Les paramètres de votre entreprise, comme les lecteurs réseau, les imprimantes ou les règles de sécurité, n’arrivent pas ou sont obsolètes. L’action demande à Windows d’appliquer de nouveau les stratégies de groupe. Elle ne fonctionne que sur les appareils joints à un domaine (y compris les appareils joints en mode hybride).</Explanation>
+				<Alerte_MSG>Windows vérifie et applique de nouveau les stratégies de groupe de votre entreprise. Cela peut prendre quelques minutes. Vous n’êtes pas déconnecté et Windows ne redémarre pas ; un paramètre qui nécessite un redémarrage ou une nouvelle connexion ne prend effet qu’après. Si votre appareil n’est pas joint à un domaine, l’action se termine avec le code de sortie 3 et ne modifie rien.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Collecter les journaux de l’appareil et les envoyer au support par e-mail</Name>
 			</Action>
