@@ -32,7 +32,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.16   2026-11-23  fubu2k               Initial version: text for Copilot Chat is kept out of the clipboard history and the cloud clipboard
-    2.8.17   2026-11-23  fubu2k               Optional clearing of the clipboard after a time (marker format, timer, ConvertTo-SelfXClipboardClearSeconds)
+    2.8.17   2026-11-23  fubu2k               Optional clearing of the clipboard after a time (marker format, timer, ConvertTo-SelfXClipboardClearSeconds); an empty marker is accepted and never cleared
 #>
 
 $script:SelfXClipboardPrivateFormats = @(
@@ -131,12 +131,13 @@ function Clear-SelfXClipboardIfMarker {
 	    -GetMarker and -Clear can be replaced (tests); by default they use the clipboard.
 	#>
 	param(
-		[Parameter(Mandatory = $true)][string]$Marker,
+		[Parameter(Mandatory = $true)][AllowEmptyString()][string]$Marker,
 		[scriptblock]$GetMarker = { Get-SelfXClipboardMarker },
 		[scriptblock]$Clear = { [System.Windows.Clipboard]::Clear() },
 		[int]$Retries = 5,
 		[int]$DelayMilliseconds = 100
 	)
+	# An empty marker identifies nothing: never empty the clipboard for it.
 	if ([string]::IsNullOrEmpty($Marker)) { return 'Changed' }
 	for ($attempt = 1; $attempt -le $Retries; $attempt++) {
 		try {
