@@ -68,7 +68,7 @@ Probieren Sie zuerst die einfache Ansicht. Hilft sie nicht oder finden Sie Ihr P
 		<Button_Yes>Ja</Button_Yes>
 		<Button_No>Nein</Button_No>
 		<Close_Button_Text>Schließen</Close_Button_Text>
-		<Reboot_Alert>Starten Sie Ihr Gerät mindestens einmal pro Woche neu. Dann laufen Updates und Programme zuverlässiger.</Reboot_Alert>
+		<Reboot_Alert>Starten Sie Ihr Gerät bitte täglich neu. Dann laufen Updates und Programme zuverlässiger.</Reboot_Alert>
 
 		<!-- Support and About dialogs -->
 		<Support_Window_Title>So erreichen Sie den Support</Support_Window_Title>
