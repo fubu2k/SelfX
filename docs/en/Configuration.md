@@ -189,6 +189,7 @@ SelfX, checks the status, sends logs, turns notifications on or off or hides the
 | `Show_Tray_Icon` | `True` | `Install.ps1` creates the HKLM run entry `SelfXTray`. The icon starts at every sign-in. `False` removes the entry. |
 | `Tray_Notifications` | `True` | Notification on an error. `False` turns it off for everyone and hides the user switch. |
 | `Tray_Poll_Seconds` | `60` | 15 to 3600. How often the icon reads the cache (it does not run a check). |
+| `Tray_Pin_Icon` | `True` | Windows 11 hides new icons in the overflow (arrow). `True`: at start the icon sets `IsPromoted = 1` for the user, so it stays next to the clock. The key `HKCU\Control Panel\NotifyIconSettings` is not documented by Microsoft. A user can switch it off with `HKCU\Software\SelfX\TrayPin = 0`. |
 
 **Per user:** each user can turn notifications off
 (`HKCU\Software\SelfX\TrayNotifications`, 1 = on, 0 = off) and hide or show the icon

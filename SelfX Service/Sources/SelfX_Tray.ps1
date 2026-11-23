@@ -26,7 +26,7 @@
     Name    : SelfX_Tray.ps1
     Package : SelfX Service
     Context : User (started at sign-in, HKLM Run entry)
-    Version : 2.8.8
+    Version : 2.8.9
 
     History:
     Version  Date        Author               Change
@@ -39,6 +39,7 @@
     2.6.5    2026-11-06  Wolfgang Baeck       Notifications per user (HKCU TrayNotifications): menu item "Show notifications" and
                                               switch in SelfX > Settings; problems are remembered also while they are off
     2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
+    2.8.9    2026-11-23  fubu2k               Windows 11: the icon is shown permanently next to the clock (IsPromoted; Tray_Pin_Icon, user value TrayPin)
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -122,6 +123,36 @@ Function Test-TrayNotificationsOn
 	{
 		return ($Global:Tray_Notify -and ([int](Get-TrayUserSetting 'TrayNotifications' 1) -ne 0))
 	}
+# Windows 11 hides new notification area icons in the overflow flyout. Windows keeps one entry per icon under
+# HKCU\Control Panel\NotifyIconSettings\<id> (value ExecutablePath); IsPromoted = 1 shows the icon next to the clock.
+# The key is not documented by Microsoft, so a failure only means the icon stays in the overflow. All entries of this
+# program file are set: the icon belongs to the process that runs this script (PowerShell). Returns the number of
+# matching entries (0 = Windows has not created the entry yet).
+Function Set-TrayIconPromoted
+	{
+		param([string]$ExecutablePath, [string]$SettingsKey = 'HKCU:\Control Panel\NotifyIconSettings')
+		$Found = 0
+		If(-not $ExecutablePath -or -not (Test-Path -LiteralPath $SettingsKey)) { return 0 }
+		ForEach($Entry in @(Get-ChildItem -LiteralPath $SettingsKey -ErrorAction SilentlyContinue))
+			{
+				Try
+					{
+						$Path = [string]$Entry.GetValue('ExecutablePath')
+						If($Path -and ($Path -ieq $ExecutablePath))
+							{
+								$Found++
+								If([int]$Entry.GetValue('IsPromoted', 0) -ne 1) { Set-ItemProperty -LiteralPath $Entry.PSPath -Name 'IsPromoted' -Value 1 -Type DWord }
+							}
+					}
+				Catch { Write-SelfXLog "Status icon: IsPromoted not set for '$($Entry.PSChildName)': $($_.Exception.Message)" Warning }
+			}
+		return $Found
+	}
+# Tray_Pin_Icon of Tool_Config.xml (administrator) and HKCU\Software\SelfX\TrayPin = 0 (user) can switch this off.
+$Global:Tray_Pin = ((Get-TrayConfig 'Tray_Pin_Icon' 'True') -eq 'True') -and ([int](Get-TrayUserSetting 'TrayPin' 1) -ne 0)
+$Global:Tray_Pinned = $false
+$Global:Tray_Process_Path = ''
+Try { $Global:Tray_Process_Path = (Get-Process -Id $PID).Path } Catch {}
 $Global:Tray_Poll_Seconds = 60
 $Poll = 0
 If([int]::TryParse((Get-TrayConfig 'Tray_Poll_Seconds' '60'), [ref]$Poll) -and $Poll -ge 15 -and $Poll -le 3600) { $Global:Tray_Poll_Seconds = $Poll }
@@ -341,6 +372,11 @@ $Global:Tray_Timer = New-Object System.Windows.Forms.Timer
 $Global:Tray_Timer.Interval = 1000
 $Global:Tray_Timer.Add_Tick({
 	$Global:Tray_Ticks++
+	# Windows creates the entry of the icon shortly after it appears: try for the first 20 seconds.
+	If($Global:Tray_Pin -and -not $Global:Tray_Pinned -and $Global:Tray_Ticks -ge 2 -and $Global:Tray_Ticks -le 20)
+		{
+			If((Set-TrayIconPromoted -ExecutablePath $Global:Tray_Process_Path) -gt 0) { $Global:Tray_Pinned = $true; Write-SelfXLog 'Status icon is shown permanently in the notification area (IsPromoted).' }
+		}
 	If($Global:Tray_Exit_At -and ((Get-Date) -ge $Global:Tray_Exit_At)) { Stop-Tray 'hidden by the user'; return }
 	If($Global:Tray_Command.WaitOne(0))
 		{
