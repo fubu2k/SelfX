@@ -482,7 +482,8 @@ try {
     Assert-Equal ((@(Select-SelfXLinkActions $linkRows) | ForEach-Object Id) -join ',') 'B,C' 'Link actions: Off hides the action'
     $script:linkConfig = @{}
     Assert-Equal ((@(Select-SelfXLinkActions $linkRows) | ForEach-Object Id) -join ',') 'C' 'Link actions: missing setting hides the action'
-    Remove-Item -LiteralPath Function:\Get-SelfXText, Function:\Write-SelfXLog, Function:\Select-SelfXLinkActions
+    # Write-SelfXLog stays as a stub: Start-SelfXSystemAction (tested below) logs the request.
+    Remove-Item -LiteralPath Function:\Get-SelfXText, Function:\Select-SelfXLinkActions
     Assert-Equal (Get-SelfXString 'Report_Mail_Subject' 'PC1') 'Geräteprotokolle von PC1' 'German subject'
     $timeout = $catalog.SelectSingleNode("//Action[@Id='Q_Device_SendLogs']/TimeoutSeconds").InnerText
     Assert-Equal $timeout '1800' 'Timeout of the collection'
