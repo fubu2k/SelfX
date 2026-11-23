@@ -171,6 +171,7 @@ contain no request text and no user names (every user can read the Application l
 | 4002 | Warning | A request or connection was rejected (invalid, not allowed, limit). |
 | 4003 | Warning | PowerShell 7 is not protected against changes by users; actions as SYSTEM are not started. |
 | 4004 | Error | `%ProgramData%\SelfX` is not protected (link or foreign owner); the service writes nothing there until an administrator repairs it (reinstall SelfX). |
+| 4005 | Error | The installed scripts or configuration do not match `SelfX.Files.json` (changed, missing, not listed, link, list missing or invalid); the service starts nothing. With `Service_FileCheck` = `Audit` a warning and actions keep running. Details are in the SelfX log. |
 | 4099 | Warning | Further events of the same ID were not written (limit). |
 
 The installer exits with code 0 on success and 1 on an error. The reason is
@@ -520,8 +521,12 @@ SHA256 of every file that `Install.ps1` copies to the installation folder (every
 not maintain anything by hand, you build the package again. Before the installation `Install.ps1` checks that every
 file matches the list and that no file without an entry is in the package; otherwise the installation stops before
 anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
-warning. The list is also placed in the installation folder; later versions use it to check scripts before they start.
-`Bin` keeps its own list `SelfX.Binaries.json`.
+warning. The list is also placed in the installation folder; the service checks before **every** start (action,
+health check, background check) that all listed files are unchanged, that no script and no XML file without an entry is in
+the installation folder and that no link (junction, symbolic link) is in the way. On a mismatch it starts nothing, writes
+event 4005 and the details to the SelfX log; the installation itself is never affected (Autopilot runs unchanged). A
+missing list in the installation folder also counts as a mismatch. For the first rollout `Service_FileCheck` can be set
+to `Audit` (log only). `Bin` keeps its own list `SelfX.Binaries.json`.
 
 ## Service privileges
 

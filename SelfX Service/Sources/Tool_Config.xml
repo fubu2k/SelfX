@@ -43,6 +43,7 @@
 	2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, Copilot_Url, Copilot_Audience, Copilot_Include_AppNames), off by default
 	2.8.11   2026-11-22  fubu2k               Copilot_Include_AppNames also applies to the company apps row of the device status
 	2.8.1    2026-11-23  fubu2k               New setting Service_Privileges (Restricted | Default), see CHANGELOG.md
+	2.8.2    2026-11-23  fubu2k               New setting Service_FileCheck (Enforce | Audit), see CHANGELOG.md
 -->
 <GUI_Config>	
 	<Tool_Version>2.8.0</Tool_Version> <!-- Tool version -->
@@ -109,6 +110,9 @@
 
 	<!-- Service privileges (read by Install.ps1): Restricted = the service keeps only the privileges the actions need (default), Default = all LocalSystem privileges (only to find a problem) -->
 	<Service_Privileges>Restricted</Service_Privileges>
+
+	<!-- File check (read by the service): Enforce = before every start the service compares the installed scripts and configuration with SelfX.Files.json and starts nothing when they differ (default), Audit = only log and write event 4005 (for the first rollout) -->
+	<Service_FileCheck>Enforce</Service_FileCheck>
 
 	<!-- Logging: all SelfX scripts log to %ProgramData%\SelfX\Logs (users: Logs\Users\<SID>), see docs\Configuration.md -->
 	<Log_Retention_Days>90</Log_Retention_Days> <!-- Log files older than this number of days are deleted (1-3650, default 90) -->

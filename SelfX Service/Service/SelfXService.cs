@@ -81,6 +81,9 @@ Notes:
     2.8.0    2026-11-23  fubu2k               Header comments: build with the .NET 10 SDK (no .NET Framework compiler); version line
     2.8.1    2026-11-23  fubu2k               The OtherSessions check reads the sessions by name (WTSQuerySessionInformation) instead of WTSQueryUserToken:
                                               the service no longer needs SeTcbPrivilege (finding N5)
+    2.8.2    2026-11-23  fubu2k               Before every start the service checks the installed scripts and configuration against SelfX.Files.json
+                                              (SHA256, no unlisted script or XML file, no links); mismatch: nothing is started (event 4005),
+                                              Tool_Config.xml Service_FileCheck=Audit only logs (finding N4)
 */
 
 using System;
@@ -91,9 +94,11 @@ using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
@@ -224,6 +229,7 @@ namespace SelfX
         const int EventRejected = 4002;
         const int EventPowerShellUnprotected = 4003;
         const int EventDataFolderUnsafe = 4004;
+        const int EventFilesChanged = 4005;
         const int EventSuppressed = 4099;
         sealed class EventWindow { public DateTime Start = DateTime.MinValue; public int Count; public int Suppressed; }
         volatile string backgroundState = "Active";
@@ -986,6 +992,149 @@ namespace SelfX
             finally { WTSFreeMemory(info); }
         }
 
+        const string FileListName = "SelfX.Files.json";
+        const long MaxFileListBytes = 1048576;
+        const int MaxFileProblems = 20;
+        // Same rule as the generator (tools\New-SelfXIntuneWin.ps1): plain relative names with forward slashes.
+        static readonly Regex ListedNamePattern = new Regex(@"^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*\z", RegexOptions.CultureInvariant);
+        static readonly Regex Sha256Pattern = new Regex(@"^[0-9A-Fa-f]{64}\z", RegexOptions.CultureInvariant);
+        // Files that PowerShell or the service load as code or configuration; none of them may exist without an entry in the list.
+        static readonly string[] CheckedExtensions = { ".ps1", ".psm1", ".psd1", ".ps1xml", ".xml" };
+
+        /// <summary>
+        /// Finding N4: compare the installed scripts and configuration with SelfX.Files.json (written at package build, copied
+        /// by Install.ps1). Every listed file must exist with the listed SHA256; no script or XML file below the root may be
+        /// missing from the list; no link (junction, symbolic link) may be in the way. Returns false and the problems (at most
+        /// 20, "kind: name") when anything differs, when the list is missing, too large or invalid (fail closed).
+        /// </summary>
+        static bool VerifyInstalledFiles(string root, out List<string> problems)
+        {
+            problems = new List<string>();
+            try
+            {
+                root = root.TrimEnd('\\');
+                string listPath = Path.Combine(root, FileListName);
+                FileInfo listInfo = new FileInfo(listPath);
+                if (!listInfo.Exists) { problems.Add("file list: missing"); return false; }
+                if ((listInfo.Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("file list: is a link"); return false; }
+                if (listInfo.Length > MaxFileListBytes) { problems.Add("file list: too large"); return false; }
+                Dictionary<string, string> expected = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                using (JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(listPath), new JsonDocumentOptions { MaxDepth = 4 }))
+                {
+                    JsonElement top = document.RootElement;
+                    JsonElement version, files;
+                    if (top.ValueKind != JsonValueKind.Object || !top.TryGetProperty("ManifestVersion", out version) ||
+                        version.ValueKind != JsonValueKind.Number || version.GetInt32() != 1 ||
+                        !top.TryGetProperty("Files", out files) || files.ValueKind != JsonValueKind.Object)
+                    {
+                        problems.Add("file list: unsupported format");
+                        return false;
+                    }
+                    foreach (JsonProperty entry in files.EnumerateObject())
+                    {
+                        string hash = entry.Value.ValueKind == JsonValueKind.String ? entry.Value.GetString() : null;
+                        if (!ListedNamePattern.IsMatch(entry.Name) || hash == null || !Sha256Pattern.IsMatch(hash) || expected.ContainsKey(entry.Name))
+                        {
+                            problems.Add("file list: invalid entry");
+                            return false;
+                        }
+                        expected[entry.Name] = hash;
+                    }
+                }
+                if (expected.Count == 0) { problems.Add("file list: empty"); return false; }
+
+                foreach (KeyValuePair<string, string> entry in expected)
+                {
+                    if (problems.Count >= MaxFileProblems) break;
+                    string full = Path.GetFullPath(Path.Combine(root, entry.Key.Replace('/', '\\')));
+                    if (!full.StartsWith(root + "\\", StringComparison.OrdinalIgnoreCase)) { problems.Add("path: " + entry.Key); continue; }
+                    if (!File.Exists(full)) { problems.Add("missing: " + entry.Key); continue; }
+                    if (IsLinkBelow(root, full)) { problems.Add("link: " + entry.Key); continue; }
+                    string actual;
+                    try
+                    {
+                        using (FileStream stream = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (SHA256 sha = SHA256.Create())
+                        {
+                            actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
+                        }
+                    }
+                    catch (IOException) { problems.Add("not readable: " + entry.Key); continue; }
+                    if (!string.Equals(actual, entry.Value, StringComparison.OrdinalIgnoreCase)) problems.Add("changed: " + entry.Key);
+                }
+                FindUnlistedFiles(new DirectoryInfo(root), root, expected, problems);
+                return problems.Count == 0;
+            }
+            catch (Exception ex)
+            {
+                // Fail closed: when the list or the files cannot be read, nothing is started.
+                problems.Add("check failed: " + ex.GetType().Name);
+                return false;
+            }
+        }
+
+        /// <summary>True when the file or one of its folders below the root is a link (junction, symbolic link).</summary>
+        static bool IsLinkBelow(string root, string full)
+        {
+            FileSystemInfo item = new FileInfo(full);
+            while (item != null && item.FullName.Length > root.Length)
+            {
+                if ((item.Attributes & FileAttributes.ReparsePoint) != 0) return true;
+                item = item is FileInfo ? ((FileInfo)item).Directory : ((DirectoryInfo)item).Parent;
+            }
+            return false;
+        }
+
+        static void FindUnlistedFiles(DirectoryInfo folder, string root, Dictionary<string, string> listed, List<string> problems)
+        {
+            foreach (FileSystemInfo entry in folder.EnumerateFileSystemInfos())
+            {
+                if (problems.Count >= MaxFileProblems) return;
+                string relative = entry.FullName.Substring(root.Length + 1).Replace('\\', '/');
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("link: " + relative); continue; }
+                DirectoryInfo sub = entry as DirectoryInfo;
+                if (sub != null) { FindUnlistedFiles(sub, root, listed, problems); continue; }
+                if (Array.IndexOf(CheckedExtensions, entry.Extension.ToLowerInvariant()) < 0) continue;
+                if (!listed.ContainsKey(relative)) problems.Add("not listed: " + relative);
+            }
+        }
+
+        /// <summary>
+        /// Called before every start of a script. Returns true when the installed files match SelfX.Files.json. Otherwise
+        /// nothing is started (Enforce, default); with Service_FileCheck=Audit in Tool_Config.xml the problem is only logged.
+        /// The setting counts only when the file list is intact and Tool_Config.xml itself is not among the problems.
+        /// </summary>
+        bool CheckInstalledFiles(string scriptName)
+        {
+            List<string> problems;
+            if (VerifyInstalledFiles(installRoot, out problems)) return true;
+            bool audit = false;
+            bool settingTrusted = !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
+            if (settingTrusted) audit = string.Equals(ReadToolConfigValue("Service_FileCheck"), "Audit", StringComparison.OrdinalIgnoreCase);
+            Log("Installed files do not match " + FileListName + " (" + string.Join("; ", problems.GetRange(0, Math.Min(5, problems.Count))) + "); '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
+            SecurityEvent(EventFilesChanged, audit ? EventLogEntryType.Warning : EventLogEntryType.Error,
+                audit ? "Installed SelfX files do not match SelfX.Files.json (Audit: actions as SYSTEM are still started). See the SelfX log."
+                      : "Installed SelfX files do not match SelfX.Files.json; SelfX actions as SYSTEM are not started. See the SelfX log.");
+            return audit;
+        }
+
+        string ReadToolConfigValue(string name)
+        {
+            try
+            {
+                string toolConfig = Path.Combine(installRoot, "Tool_Config.xml");
+                XmlReaderSettings settings = new XmlReaderSettings();
+                settings.DtdProcessing = DtdProcessing.Prohibit;
+                settings.XmlResolver = null;
+                XmlDocument document = new XmlDocument();
+                document.XmlResolver = null;
+                using (XmlReader reader = XmlReader.Create(toolConfig, settings)) { document.Load(reader); }
+                XmlNode node = document.SelectSingleNode("/GUI_Config/" + name);
+                return node == null ? "" : node.InnerText.Trim();
+            }
+            catch { return ""; }
+        }
+
         /// <summary>Fixed path of PowerShell 7 (machine-wide installation, writable only by administrators).</summary>
         static string PowerShellPath
         {
@@ -1060,6 +1209,11 @@ namespace SelfX
             {
                 Log("PowerShell " + version.FileMajorPart + "." + version.FileMinorPart + " found; 7.6 or newer is required; '" + scriptName + "' was not started.");
                 return "ERROR PowerShell 7.6 or newer is required";
+            }
+            // Finding N4: scripts and configuration must be exactly what the package contained.
+            if (!CheckInstalledFiles(scriptName))
+            {
+                return "ERROR Installed files are not intact";
             }
             // Health runs also update the status cache; the path contains no quotes.
             ProcessStartInfo startInfo = new ProcessStartInfo(powershell,

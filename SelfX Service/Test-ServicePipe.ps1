@@ -30,6 +30,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.11   2026-11-22  fubu2k               Initial version (security review findings A4 and A5).
     2.8.0    2026-11-23  fubu2k               First pipe instance check (finding N3).
+    2.8.2    2026-11-23  fubu2k               File list check before every start (finding N4).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -79,6 +80,81 @@ Assert-True (-not (Test-ProtectionResult $fakeExe)) 'Everyone can write: not pro
 Assert-True (Test-ProtectionResult $fakeExe) 'Users can read and run: protected'
 Assert-True (-not (Test-ProtectionResult (Join-Path $fakeFolder 'missing.exe'))) 'Rights cannot be read: not protected (fail closed)'
 Remove-Item -LiteralPath $fakeFolder -Recurse -Force -ErrorAction SilentlyContinue
+
+# --- N4: the service checks the installed files against SelfX.Files.json before every start ---
+$verifyMethod = [SelfX.SelfXService].GetMethod('VerifyInstalledFiles', [Reflection.BindingFlags]'NonPublic,Static')
+Assert-True ($null -ne $verifyMethod) 'N4: the service has the file list check'
+if ($verifyMethod) {
+	function Test-FileList([string]$Root) {
+		$arguments = [object[]]@($Root, $null)
+		$ok = [bool]$verifyMethod.Invoke($null, $arguments)
+		return [pscustomobject]@{ Ok = $ok; Problems = @($arguments[1]) -join '; ' }
+	}
+	function New-FileList([string]$Root, [hashtable]$Overrides = @{}) {
+		$files = [ordered]@{}
+		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Extension -in '.ps1', '.xml' }) {
+			$relative = $file.FullName.Substring($Root.Length + 1).Replace('\', '/')
+			$files[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+		}
+		foreach ($key in $Overrides.Keys) { $files[$key] = $Overrides[$key] }
+		$json = [ordered]@{ ManifestVersion = 1; ToolVersion = '9.9.9'; Files = $files } | ConvertTo-Json -Depth 4
+		[IO.File]::WriteAllText((Join-Path $Root 'SelfX.Files.json'), $json, (New-Object Text.UTF8Encoding($false)))
+	}
+	$fileRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFilesTest_' + [guid]::NewGuid().ToString('N'))
+	New-Item -ItemType Directory -Path (Join-Path $fileRoot 'Scripts_to_run') -Force | Out-Null
+	Set-Content -LiteralPath (Join-Path $fileRoot 'HealthStatus.ps1') -Value 'Write-Output 1'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_Test.ps1') -Value 'Write-Output 2'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Issues_List.xml') -Value '<Issues />'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfXService.exe') -Value 'binary, not checked'
+	New-FileList $fileRoot
+	$result = Test-FileList $fileRoot
+	Assert-True $result.Ok "N4: unchanged files are accepted ($($result.Problems))"
+	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfXService.exe') -Value 'another binary'
+	Assert-True (Test-FileList $fileRoot).Ok 'N4: programs are not part of the list (Bin has its own manifest)'
+	Add-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_Test.ps1') -Value 'Write-Output 3'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: Scripts_to_run/SelfX_Test.ps1') "N4: a changed script is refused ($($result.Problems))"
+	New-FileList $fileRoot
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_New.ps1') -Value 'Write-Output 4'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'not listed: Scripts_to_run/SelfX_New.ps1') "N4: an unlisted script is refused ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_New.ps1')
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Extra.xml') -Value '<X />'
+	Assert-True (-not (Test-FileList $fileRoot).Ok) 'N4: an unlisted XML file is refused'
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'Extra.xml')
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Issues_List.xml') -Value '<Issues><Action /></Issues>'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: Issues_List.xml') 'N4: a changed catalog is refused'
+	New-FileList $fileRoot
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'HealthStatus.ps1')
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'missing: HealthStatus.ps1') 'N4: a missing file is refused'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'HealthStatus.ps1') -Value 'Write-Output 1'
+	New-FileList $fileRoot @{ '../Outside.ps1' = ('A' * 64) }
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: invalid entry') 'N4: a name with a path traversal is refused'
+	New-FileList $fileRoot @{ 'Issues_List.xml' = 'not-a-hash' }
+	Assert-True ((Test-FileList $fileRoot).Problems -match 'file list: invalid entry') 'N4: an invalid hash is refused'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json') -Value '{ broken'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: ') 'N4: a broken list is refused (fail closed)'
+	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json') -Value '{"ManifestVersion":2,"Files":{"a.ps1":"%s"}}'.Replace('%s', ('A' * 64))
+	Assert-True ((Test-FileList $fileRoot).Problems -match 'unsupported format') 'N4: an unknown format is refused'
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json')
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: missing') 'N4: a missing list is refused (fail closed)'
+	# A junction in the way is refused: the files behind it are not the files of the package.
+	New-FileList $fileRoot
+	$elsewhere = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFilesElsewhere_' + [guid]::NewGuid().ToString('N'))
+	New-Item -ItemType Directory -Path $elsewhere -Force | Out-Null
+	Copy-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_Test.ps1') -Destination $elsewhere
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run') -Recurse -Force
+	New-Item -ItemType Junction -Path (Join-Path $fileRoot 'Scripts_to_run') -Target $elsewhere | Out-Null
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'link: ') "N4: a junction is refused ($($result.Problems))"
+	(Get-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run')).Delete()
+	Remove-Item -LiteralPath $elsewhere, $fileRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 $pipeName = 'SelfX.Test.' + [guid]::NewGuid().ToString('N')
 $dataRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXPipeTest_' + [guid]::NewGuid().ToString('N'))
