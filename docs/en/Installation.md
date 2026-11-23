@@ -522,7 +522,7 @@ not maintain anything by hand, you build the package again. Before the installat
 file matches the list and that no file without an entry is in the package; otherwise the installation stops before
 anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
 warning. The list is also placed in the installation folder; the service checks before **every** start (action,
-health check, background check) that all listed files are unchanged, that no script and no XML file without an entry is in
+health check, background check) that all listed files are unchanged, that no file of any type without an entry is in
 the installation folder and that no link (junction, symbolic link) is in the way. On a mismatch it starts nothing, writes
 event 4005 and the details to the SelfX log; the installation itself is never affected (Autopilot runs unchanged). A
 missing list in the installation folder also counts as a mismatch. For the first rollout `Service_FileCheck` can be set
