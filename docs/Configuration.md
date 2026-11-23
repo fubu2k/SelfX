@@ -269,6 +269,13 @@ Servicing, Ereignisprotokolle, AppX, Windows Update, Netzwerk, Sprache). Er brau
 etwa eine bis einige Minuten. Die Abschnitte und Parameter stehen im Kopf von
 `Collect-DeviceLogs.ps1`.
 
+Abschnitt 8 beginnt mit einer **Zusammenfassung der Ereignisprotokolle** (*System*, *Application*,
+Windows Update, Geräteverwaltung): Kritische Ereignisse, Fehler und Warnungen der letzten
+`DeviceLogs_Days` Tage, gezählt pro Anbieter und Ereignis-ID (die 15 häufigsten, mit erstem und
+letztem Zeitpunkt). Der Meldungstext steht bewusst **nicht** darin, denn er kann Namen, Pfade und
+Adressen enthalten; Anbieternamen werden auf harmlose Zeichen begrenzt. So erkennt der Support auf
+einen Blick, was auffällig oft auftritt. Die Einzelereignisse folgen darunter wie bisher.
+
 **Was ein normaler Nutzer sieht:** Der Bericht wird pro Nutzer gekürzt. Der Dienst
 liest das Token des Anfragenden und setzt `SELFX_CALLER_ADMIN`. Der Wert `1` gilt nur,
 wenn die Gruppe *Administratoren* im Token **aktiviert** ist (erhöhte Rechte). Fehlt
@@ -500,6 +507,10 @@ Text selbst in Copilot Chat ein.
 3. *Kopieren und Copilot öffnen* legt den Text in die Zwischenablage und öffnet die
    Adresse aus `Copilot_Url`. Der Nutzer fügt den Text ein (Strg+V) und sendet ihn
    selbst ab. SelfX sendet nichts.
+   SelfX bittet Windows dabei, den Text **nicht** in den Verlauf der Zwischenablage
+   (Win+V) und nicht in die Cloud-Zwischenablage aufzunehmen. Das ist eine Bitte, kein
+   Schutz: Programme, die die Zwischenablage lesen, sehen den Text weiterhin, und er
+   bleibt dort, bis der Nutzer etwas anderes kopiert. Es gibt keine Einstellung dafür.
 4. Copilot Chat soll in einfacher Sprache antworten. Mit `Copilot_Audience` = `Admin`
    antwortet es für IT-Personal mit technischen Schritten.
 

@@ -706,6 +706,13 @@ SelfX löscht oder ändert keine Dateien. Findet Defender eine Bedrohung, behand
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_GpUpdate">
+				<Name>Die Unternehmenseinstellungen (Gruppenrichtlinien) dieses PCs aktualisieren</Name>
+				<Explanation>Einstellungen Ihres Unternehmens, etwa Netzlaufwerke, Drucker oder Sicherheitsregeln, kommen nicht an oder sind veraltet. Die Aktion fordert Windows auf, die Gruppenrichtlinien erneut anzuwenden. Sie funktioniert nur auf Geräten, die einer Domäne beigetreten sind (auch hybrid verbundene Geräte).</Explanation>
+				<Alerte_MSG>Windows prüft und wendet die Gruppenrichtlinien Ihres Unternehmens erneut an. Das kann einige Minuten dauern. Sie werden nicht abgemeldet und Windows startet nicht neu; eine Einstellung, die einen Neustart oder eine neue Anmeldung braucht, wird erst danach wirksam. Ist Ihr Gerät keiner Domäne beigetreten, endet die Aktion mit dem Exitcode 3 und ändert nichts.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Protokolle Ihres Geräts sammeln und per E-Mail an den Support senden</Name>
 			</Action>
