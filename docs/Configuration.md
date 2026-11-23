@@ -269,6 +269,13 @@ Servicing, Ereignisprotokolle, AppX, Windows Update, Netzwerk, Sprache). Er brau
 etwa eine bis einige Minuten. Die Abschnitte und Parameter stehen im Kopf von
 `Collect-DeviceLogs.ps1`.
 
+Abschnitt 8 beginnt mit einer **Zusammenfassung der Ereignisprotokolle** (*System*, *Application*,
+Windows Update, Geräteverwaltung): Kritische Ereignisse, Fehler und Warnungen der letzten
+`DeviceLogs_Days` Tage, gezählt pro Anbieter und Ereignis-ID (die 15 häufigsten, mit erstem und
+letztem Zeitpunkt). Der Meldungstext steht bewusst **nicht** darin, denn er kann Namen, Pfade und
+Adressen enthalten; Anbieternamen werden auf harmlose Zeichen begrenzt. So erkennt der Support auf
+einen Blick, was auffällig oft auftritt. Die Einzelereignisse folgen darunter wie bisher.
+
 **Was ein normaler Nutzer sieht:** Der Bericht wird pro Nutzer gekürzt. Der Dienst
 liest das Token des Anfragenden und setzt `SELFX_CALLER_ADMIN`. Der Wert `1` gilt nur,
 wenn die Gruppe *Administratoren* im Token **aktiviert** ist (erhöhte Rechte). Fehlt
@@ -527,7 +534,7 @@ Text ist auf 6000 Zeichen begrenzt.
 | Einstellung | Bedeutung |
 |---|---|
 | `Copilot_Enabled` | `False` (Standard) oder `True`. |
-| `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://m365.cloud.microsoft/chat`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
+| `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://copilot.cloud.microsoft`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
 | `Copilot_Audience` | `User` (Standard): einfache Antworten für Nutzer. `Admin`: technische Antworten für IT-Personal. |
 | `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: Die Zeile der Firmen-Apps im Gerätestatus bleibt, aber ohne Einzelheiten, also ohne App-Namen und ohne Fehlercodes. |
 | `Copilot_Clear_Clipboard` | `False` (Standard) oder `True`: SelfX leert die Zwischenablage nach `Copilot_Clear_Clipboard_Seconds`, aber nur, wenn der kopierte Text noch darin steht. Siehe [Zwischenablage leeren](#zwischenablage-leeren). |

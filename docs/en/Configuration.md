@@ -256,6 +256,13 @@ names and device logs (Autopilot/ESP, IME and Win32 apps, servicing, event logs,
 Windows Update, network, language). It takes about one to a few minutes. The sections
 and parameters are in the header of `Collect-DeviceLogs.ps1`.
 
+Section 8 starts with a **summary of the event logs** (*System*, *Application*, Windows Update,
+device management): critical events, errors and warnings of the last `DeviceLogs_Days` days,
+counted per provider and event id (the 15 most frequent, with first and last time). The message
+text is deliberately **not** included, because it can contain names, paths and addresses; provider
+names are limited to harmless characters. The support sees at a glance what occurs unusually
+often. The single events follow below as before.
+
 **What a standard user sees:** the report is trimmed per user. The service reads the
 token of the requesting user and sets `SELFX_CALLER_ADMIN`. The value `1` applies only
 if the *Administrators* group is **enabled** in the token (elevated rights). If the
@@ -503,7 +510,7 @@ commands they do not understand. The text is limited to 6000 characters.
 | Setting | Meaning |
 |---|---|
 | `Copilot_Enabled` | `False` (default) or `True`. |
-| `Copilot_Url` | Address that is opened. Default `https://m365.cloud.microsoft/chat`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
+| `Copilot_Url` | Address that is opened. Default `https://copilot.cloud.microsoft`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
 | `Copilot_Audience` | `User` (default): plain answers for users. `Admin`: technical answers for IT staff. |
 | `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: the company apps row of the device status stays, but without details, so without app names and without error codes. |
 | `Copilot_Clear_Clipboard` | `False` (default) or `True`: SelfX empties the clipboard after `Copilot_Clear_Clipboard_Seconds`, but only if the text it copied is still on it. See [Emptying the clipboard](#emptying-the-clipboard). |
