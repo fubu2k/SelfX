@@ -23,6 +23,7 @@
     2.6.11   2026-11-22  fubu2k               Initial version (security review finding F9).
     2.7.0    2026-11-22  fubu2k               .NET 10: manifest format 2, Bin is required; the test of the compiler TEMP was removed.
     2.8.0    2026-11-22  fubu2k               Manifest format 3 (WinRT files), PowerShell 7 and Windows build checks.
+    2.8.1    2026-11-23  fubu2k               Checks of the service privilege list (finding N5).
     2.8.0    2026-11-22  fubu2k               Checks of Initialize-SelfXDataFolder (security review finding F12).
 #>
 $ErrorActionPreference = 'Stop'
@@ -38,12 +39,23 @@ $tokens = $null
 $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Install.ps1'), [ref]$tokens, [ref]$parseErrors)
 Assert-Equal @($parseErrors).Count 0 'Install.ps1 parses'
-foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Test-SelfXWindowsBuild', 'Initialize-SelfXDataFolder') {
+foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Test-SelfXWindowsBuild', 'Initialize-SelfXDataFolder', 'Get-SelfXServicePrivileges', 'Set-SelfXServicePrivileges') {
 	$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
 	Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
 	if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
 	. ([scriptblock]::Create($definition.Extent.Text))
 }
+
+# Privileges of the service (finding N5): a fixed list; the strong LocalSystem privileges must not be in it.
+$privileges = @(Get-SelfXServicePrivileges)
+Assert-Equal ($privileges.Count -ge 5) $true 'N5: the privilege list is not empty'
+Assert-Equal (@($privileges | Where-Object { $_ -notmatch '^Se[A-Za-z]+Privilege$' }).Count) 0 'N5: all entries are privilege names'
+Assert-Equal (@($privileges | Select-Object -Unique).Count) $privileges.Count 'N5: no duplicate privilege'
+foreach ($required in 'SeChangeNotifyPrivilege', 'SeImpersonatePrivilege', 'SeCreateGlobalPrivilege') { Assert-Equal ($privileges -contains $required) $true "N5: $required is kept (the service needs it)" }
+foreach ($forbidden in 'SeTcbPrivilege', 'SeDebugPrivilege', 'SeCreateTokenPrivilege', 'SeLoadDriverPrivilege', 'SeSecurityPrivilege', 'SeAuditPrivilege', 'SeSystemEnvironmentPrivilege', 'SeCreatePermanentPrivilege', 'SeLockMemoryPrivilege') {
+	Assert-Equal ($privileges -contains $forbidden) $false "N5: $forbidden is removed from the service"
+}
+Assert-Equal ("$(Set-SelfXServicePrivileges -Name 'SelfXTestNoSuchService' -Mode 'Default')" -like 'Default*') $true 'N5: Service_Privileges = Default leaves the privileges unchanged (no sc.exe call)'
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('SelfXInstallBinariesTest_' + [guid]::NewGuid().ToString('N'))
 $package = Join-Path $root 'package'

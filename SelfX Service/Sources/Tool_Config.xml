@@ -42,6 +42,7 @@
 	2.8.0    2026-11-22  fubu2k               Service, window and status icon run with PowerShell 7 (>= 7.6); minimum Windows 11 25H2 (build 26200); see CHANGELOG.md
 	2.8.10   2026-11-22  fubu2k               Optional hand-over to Copilot Chat (Copilot_Enabled, Copilot_Url, Copilot_Audience, Copilot_Include_AppNames), off by default
 	2.8.11   2026-11-22  fubu2k               Copilot_Include_AppNames also applies to the company apps row of the device status
+	2.8.1    2026-11-23  fubu2k               New setting Service_Privileges (Restricted | Default), see CHANGELOG.md
 -->
 <GUI_Config>	
 	<Tool_Version>2.8.0</Tool_Version> <!-- Tool version -->
@@ -105,6 +106,9 @@
 	<!-- Device logs for the support (action "Send the device logs to the support", Collect-DeviceLogs.ps1 run as SYSTEM) -->
 	<DeviceLogs_Days>7</DeviceLogs_Days> <!-- Days of event log history in the report (1-60) -->
 	<DeviceLogs_Compress>True</DeviceLogs_Compress> <!-- Attach the report as .zip (True) or as .txt (False) -->
+
+	<!-- Service privileges (read by Install.ps1): Restricted = the service keeps only the privileges the actions need (default), Default = all LocalSystem privileges (only to find a problem) -->
+	<Service_Privileges>Restricted</Service_Privileges>
 
 	<!-- Logging: all SelfX scripts log to %ProgramData%\SelfX\Logs (users: Logs\Users\<SID>), see docs\Configuration.md -->
 	<Log_Retention_Days>90</Log_Retention_Days> <!-- Log files older than this number of days are deleted (1-3650, default 90) -->

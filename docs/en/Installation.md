@@ -512,6 +512,28 @@ Use the package in Intune as follows:
 |---|---|---|
 | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` | System | `Uninstall.ps1`, custom script `Detection.ps1` (see [SelfX Service](#selfx-service)) |
 
+## Service privileges
+
+The service runs as LocalSystem. `Install.ps1` limits its token with `sc.exe privs` to the privileges the actions
+need (setting `Service_Privileges` in `Tool_Config.xml`, default `Restricted`). The service and all scripts it
+starts can then no longer use the other LocalSystem privileges, for example `SeTcbPrivilege`, `SeDebugPrivilege`,
+`SeCreateTokenPrivilege`, `SeLoadDriverPrivilege` and `SeSecurityPrivilege`.
+
+| Privilege | Used for |
+|---|---|
+| `SeChangeNotifyPrivilege` | every process |
+| `SeImpersonatePrivilege` | checking the pipe client |
+| `SeCreateGlobalPrivilege` | global objects of the service |
+| `SeShutdownPrivilege` | restart action (`shutdown.exe`) |
+| `SeSystemtimePrivilege` | time sync |
+| `SeBackupPrivilege`, `SeRestorePrivilege`, `SeTakeOwnershipPrivilege` | file repairs (for example spooler) |
+| `SeManageVolumePrivilege` | disk check |
+
+Check: `sc.exe qprivs SelfXService` shows the configured list. If setting it fails, `Install.ps1` warns and the
+service keeps the default privileges; the installation (Autopilot) never fails because of this. With
+`Service_Privileges` = `Default` all LocalSystem privileges stay; use this only to find a problem. Test every System
+action once on a test device before the rollout (checklist in the device test documentation).
+
 ## Deployment checklist
 
 1. Review the XML action list and every referenced `.ps1` script.
