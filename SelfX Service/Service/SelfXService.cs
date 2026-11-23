@@ -46,7 +46,7 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.5
+    Version : 2.8.19
 
     History:
     Version  Date        Author               Change
@@ -55,6 +55,8 @@ Notes:
     2.8.4    2026-11-23  fubu2k               The file check also covers .dll files: a DLL below the install folder (WinRT) must be listed in
     2.8.5    2026-11-23  fubu2k               The file check also covers .exe files: SelfXService.exe and SelfX.exe are compared by SHA256,
                                               an unlisted .exe below the install folder is refused
+    2.8.19   2026-11-23  fubu2k               Installer helper SafeTree (/removetree:, /cleandata:): deletes folder trees through handles opened
+                                              with FILE_FLAG_OPEN_REPARSE_POINT, without a time window between check and delete (M1)
 */
 
 using System;
@@ -1838,6 +1840,259 @@ namespace SelfX
     }
 
     /// <summary>
+    /// Delete folder trees as SYSTEM without following junctions or symbolic links and without a time window
+    /// between check and delete (installer helper: /removetree: and /cleandata: of SelfXService.exe).
+    /// Every entry is opened once with FILE_FLAG_OPEN_REPARSE_POINT (a link is opened itself, never its target), is
+    /// judged on that handle (link, folder, owner) and is deleted through the same handle. A folder is held open
+    /// (no share-delete) while its content is processed, so it cannot be renamed or replaced meanwhile.
+    /// </summary>
+    public static class SafeTree
+    {
+        const uint DELETE = 0x00010000;
+        const uint READ_CONTROL = 0x00020000;
+        const uint FILE_READ_ATTRIBUTES = 0x00000080;
+        const uint SHARE_READ_WRITE = 0x00000003;
+        const uint OPEN_EXISTING = 3;
+        const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+        const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+        const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
+        const uint FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
+        const int FileAttributeTagInfo = 9;
+        const int FileDispositionInfoEx = 21;
+        const uint DISPOSITION_DELETE_POSIX_IGNORE_READONLY = 0x13;
+        const int ERROR_FILE_NOT_FOUND = 2;
+        const int ERROR_PATH_NOT_FOUND = 3;
+        const int ERROR_DIR_NOT_EMPTY = 145;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct FILE_ATTRIBUTE_TAG_INFO { public uint FileAttributes; public uint ReparseTag; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct FILE_DISPOSITION_INFO_EX { public uint Flags; }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int infoClass, out FILE_ATTRIBUTE_TAG_INFO info, uint size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FILE_DISPOSITION_INFO_EX info, uint size);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern uint GetFinalPathNameByHandleW(SafeFileHandle handle, StringBuilder path, uint size, uint flags);
+
+        [DllImport("advapi32.dll")]
+        static extern uint GetSecurityInfo(SafeFileHandle handle, int objectType, uint info, out IntPtr owner, out IntPtr group, out IntPtr dacl, out IntPtr sacl, out IntPtr descriptor);
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr LocalFree(IntPtr memory);
+
+        sealed class Result
+        {
+            public int Failed;
+            public readonly List<string> Messages = new List<string>();
+            public void Fail(string path, int error)
+            {
+                Failed++;
+                if (Messages.Count < 20) Messages.Add("SELFX-SAFEDELETE-ERROR: " + path + " (Windows error " + error + ")");
+            }
+        }
+
+        static string Extended(string fullPath)
+        {
+            return fullPath.StartsWith(@"\\?\", StringComparison.Ordinal) ? fullPath : @"\\?\" + fullPath;
+        }
+
+        static SafeFileHandle Open(string path, uint access)
+        {
+            return CreateFileW(Extended(path), access, SHARE_READ_WRITE, IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
+        }
+
+        static bool GetAttributes(SafeFileHandle handle, out uint attributes)
+        {
+            FILE_ATTRIBUTE_TAG_INFO info;
+            attributes = 0;
+            if (!GetFileInformationByHandleEx(handle, FileAttributeTagInfo, out info, (uint)Marshal.SizeOf(typeof(FILE_ATTRIBUTE_TAG_INFO)))) return false;
+            attributes = info.FileAttributes;
+            return true;
+        }
+
+        static string GetOwnerSid(SafeFileHandle handle)
+        {
+            IntPtr owner, group, dacl, sacl, descriptor;
+            if (GetSecurityInfo(handle, 1, 1, out owner, out group, out dacl, out sacl, out descriptor) != 0) return null;
+            try { return new SecurityIdentifier(owner).Value; }
+            finally { if (descriptor != IntPtr.Zero) LocalFree(descriptor); }
+        }
+
+        // The handle must name exactly the expected path: a link in a parent folder would show a different final path.
+        static bool PathMatches(SafeFileHandle handle, string fullPath)
+        {
+            StringBuilder builder = new StringBuilder(1024);
+            uint length = GetFinalPathNameByHandleW(handle, builder, (uint)builder.Capacity, 0);
+            if (length == 0 || length >= builder.Capacity) return false;
+            return string.Equals(builder.ToString().TrimEnd('\\'), Extended(fullPath).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool DeleteByHandle(SafeFileHandle handle, out int error)
+        {
+            FILE_DISPOSITION_INFO_EX info = new FILE_DISPOSITION_INFO_EX();
+            info.Flags = DISPOSITION_DELETE_POSIX_IGNORE_READONLY;
+            error = 0;
+            if (SetFileInformationByHandle(handle, FileDispositionInfoEx, ref info, (uint)Marshal.SizeOf(typeof(FILE_DISPOSITION_INFO_EX)))) return true;
+            error = Marshal.GetLastWin32Error();
+            return false;
+        }
+
+        static List<string> Children(string folder)
+        {
+            // Without the \\?\ prefix, which Extended() adds again for every call.
+            List<string> list = new List<string>();
+            foreach (string entry in Directory.EnumerateFileSystemEntries(Extended(folder)))
+            {
+                list.Add(entry.StartsWith(@"\\?\", StringComparison.Ordinal) ? entry.Substring(4) : entry);
+            }
+            return list;
+        }
+
+        // Deletes the object behind the open handle: a link or file directly, a folder after its content.
+        static void RemoveOpen(SafeFileHandle handle, string path, Result result)
+        {
+            uint attributes;
+            int error;
+            if (!GetAttributes(handle, out attributes)) { result.Fail(path, Marshal.GetLastWin32Error()); return; }
+            bool isFolder = (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && (attributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0;
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                if (isFolder)
+                {
+                    List<string> children;
+                    try { children = Children(path); }
+                    catch (Exception) { result.Fail(path, 0); return; }
+                    foreach (string child in children) RemoveEntry(child, result);
+                }
+                if (DeleteByHandle(handle, out error)) return;
+                // Someone added entries meanwhile: go through the folder again (bounded).
+                if (!(isFolder && error == ERROR_DIR_NOT_EMPTY && result.Failed == 0)) { result.Fail(path, error); return; }
+            }
+            result.Fail(path, ERROR_DIR_NOT_EMPTY);
+        }
+
+        static void RemoveEntry(string path, Result result)
+        {
+            using (SafeFileHandle handle = Open(path, DELETE | FILE_READ_ATTRIBUTES))
+            {
+                if (handle.IsInvalid)
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) result.Fail(path, error);
+                    return;
+                }
+                RemoveOpen(handle, path, result);
+            }
+        }
+
+        // Folders and files that belong to a trusted owner are kept; links and entries of other owners are deleted.
+        static void CleanFolder(string folder, HashSet<string> trusted, string skipFolder, Result result)
+        {
+            List<string> children;
+            try { children = Children(folder); }
+            catch (Exception) { result.Fail(folder, 0); return; }
+            foreach (string child in children)
+            {
+                using (SafeFileHandle handle = Open(child, DELETE | READ_CONTROL | FILE_READ_ATTRIBUTES))
+                {
+                    if (handle.IsInvalid)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) result.Fail(child, error);
+                        continue;
+                    }
+                    uint attributes;
+                    if (!GetAttributes(handle, out attributes)) { result.Fail(child, Marshal.GetLastWin32Error()); continue; }
+                    string owner = GetOwnerSid(handle);
+                    bool isLink = (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+                    if (isLink || owner == null || !trusted.Contains(owner)) { RemoveOpen(handle, child, result); continue; }
+                    if ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && !string.Equals(child.TrimEnd('\\'), skipFolder, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CleanFolder(child, trusted, skipFolder, result);
+                    }
+                }
+            }
+        }
+
+        static string FullPathOrNull(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || path.StartsWith(@"\\", StringComparison.Ordinal) || !Path.IsPathRooted(path)) return null;
+            string full = Path.GetFullPath(path).TrimEnd('\\');
+            return full.Length > 3 ? full : null;
+        }
+
+        /// <summary>mode "removetree": delete the path itself and everything below it; mode "cleandata": delete links and
+        /// foreign-owned entries below the path (the path itself is kept). Returns 0 only when everything worked.</summary>
+        public static int Run(string mode, string path, string trustedSids, string skipRelative)
+        {
+            string full = FullPathOrNull(path);
+            if (full == null) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: the path must be an absolute local path."); return 2; }
+            Result result = new Result();
+            try
+            {
+                if (mode == "removetree")
+                {
+                    using (SafeFileHandle handle = Open(full, DELETE | FILE_READ_ATTRIBUTES))
+                    {
+                        if (handle.IsInvalid)
+                        {
+                            int error = Marshal.GetLastWin32Error();
+                            if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) { Console.WriteLine("SELFX-SAFEDELETE-OK"); return 0; }
+                            result.Fail(full, error);
+                        }
+                        else if (!PathMatches(handle, full)) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: a link lies in the path of " + full); return 1; }
+                        else RemoveOpen(handle, full, result);
+                    }
+                }
+                else
+                {
+                    HashSet<string> trusted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (string sid in (trustedSids ?? "").Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (!Regex.IsMatch(sid, @"^S-1-[0-9]+(-[0-9]+)+\z")) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: invalid SID in /trusted:."); return 2; }
+                        trusted.Add(sid);
+                    }
+                    string skip = null;
+                    if (!string.IsNullOrEmpty(skipRelative))
+                    {
+                        if (skipRelative.Contains("..") || Path.IsPathRooted(skipRelative)) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: invalid /skip:."); return 2; }
+                        skip = Path.GetFullPath(Path.Combine(full, skipRelative)).TrimEnd('\\');
+                    }
+                    using (SafeFileHandle handle = Open(full, FILE_READ_ATTRIBUTES))
+                    {
+                        uint attributes;
+                        if (handle.IsInvalid) { result.Fail(full, Marshal.GetLastWin32Error()); }
+                        else if (!PathMatches(handle, full)) { Console.WriteLine("SELFX-SAFEDELETE-ERROR: a link lies in the path of " + full); return 1; }
+                        else if (!GetAttributes(handle, out attributes) || (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 || (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+                        {
+                            Console.WriteLine("SELFX-SAFEDELETE-ERROR: " + full + " is not a real folder.");
+                            return 1;
+                        }
+                        else CleanFolder(full, trusted, skip, result);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SELFX-SAFEDELETE-ERROR: " + ex.GetType().Name);
+                return 1;
+            }
+            foreach (string message in result.Messages) Console.WriteLine(message);
+            if (result.Failed > 0) { Console.WriteLine("SELFX-SAFEDELETE-FAILED: " + result.Failed); return 1; }
+            Console.WriteLine("SELFX-SAFEDELETE-OK");
+            return 0;
+        }
+    }
+
+    /// <summary>
     /// Provide service-host and interactive troubleshooting entry points.
     /// </summary>
     public static class Program
@@ -1850,6 +2105,17 @@ namespace SelfX
             string pipeName = SelfXService.DefaultPipeName;
             string logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"SelfX\Logs");
             bool console = false;
+
+            // Installer helper (Install.ps1, Uninstall.ps1): delete folders without following links. No service is started.
+            string treeMode = null, treePath = null, treeTrusted = null, treeSkip = null;
+            foreach (string arg in args)
+            {
+                if (arg.StartsWith("/removetree:", StringComparison.OrdinalIgnoreCase)) { treeMode = "removetree"; treePath = arg.Substring(12); }
+                else if (arg.StartsWith("/cleandata:", StringComparison.OrdinalIgnoreCase)) { treeMode = "cleandata"; treePath = arg.Substring(11); }
+                else if (arg.StartsWith("/trusted:", StringComparison.OrdinalIgnoreCase)) { treeTrusted = arg.Substring(9); }
+                else if (arg.StartsWith("/skip:", StringComparison.OrdinalIgnoreCase)) { treeSkip = arg.Substring(6); }
+            }
+            if (treeMode != null) return SafeTree.Run(treeMode, treePath, treeTrusted, treeSkip);
 
             foreach (string arg in args)
             {
