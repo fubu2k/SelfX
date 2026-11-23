@@ -15,3 +15,7 @@ updates:
       - "/SelfX Service/Service/Projects/*"
     schedule:
       interval: weekly
+    # A new version is proposed only after it has been public for 7 days (protects against freshly published, compromised versions).
+    # Security updates are not delayed by the cooldown.
+    cooldown:
+      default-days: 7
