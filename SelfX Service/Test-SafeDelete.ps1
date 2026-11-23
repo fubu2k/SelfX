@@ -103,13 +103,14 @@ try {
 	Assert-Equal (Invoke-Helper @("/cleandata:$temp", '/trusted:S-1-5-18', '/skip:..\x')).Code 2 'cleandata: /skip: with .. is refused'
 
 	# 6. cleandata: trusted owner kept, foreign owner deleted, links deleted, user area not entered, root kept.
-	$me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 	$data = Join-Path $temp 'Data'
 	[void][IO.Directory]::CreateDirectory((Join-Path $data 'Logs\Users\S-1-5-21-1-2-3-1001'))
 	[void][IO.Directory]::CreateDirectory((Join-Path $data 'Cache'))
 	[IO.File]::WriteAllText((Join-Path $data 'Cache\Health.json'), '{}')
 	[IO.File]::WriteAllText((Join-Path $data 'Logs\Users\S-1-5-21-1-2-3-1001\u.log'), 'x')
 	New-TestJunction (Join-Path $data 'Logs\evil') $outside
+	# Owner of the new files: the user, or the group Administrators when an elevated administrator creates them.
+	$me = (Get-Acl -LiteralPath (Join-Path $data 'Cache\Health.json')).GetOwner([Security.Principal.SecurityIdentifier]).Value
 	$r = Invoke-Helper @("/cleandata:$data", "/trusted:$me", '/skip:Logs\Users')
 	Assert-Equal $r.Ok $true "cleandata: result ok ($($r.Output))"
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $data 'Logs\evil')) $false 'cleandata: link is removed'
