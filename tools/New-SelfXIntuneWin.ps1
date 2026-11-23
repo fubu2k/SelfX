@@ -55,6 +55,7 @@
     1.3.0    2026-11-22  fubu2k               Only SelfX Service (SelfX Admin and SelfX Standard are no longer part of this repository)
     1.4.0    2026-11-22  fubu2k               Bin (.NET 10 programs) is required and fully checked; the .NET project files are not packaged
     1.5.0    2026-11-23  fubu2k               Writes SelfX.Files.json (SHA256 of all installed files) into the package (finding N4)
+    1.6.0    2026-11-23  fubu2k               SelfX.Files.json also lists the DLLs of Bin\WinRT (installed into WinRT) for the load check
 #>
 
 [CmdletBinding()]
@@ -128,19 +129,31 @@ function Test-StagedPackage {
 }
 
 # Writes SelfX.Files.json into the staged package (security review finding N4): the SHA256 of every file that Install.ps1
-# copies to the installation folder (everything below Sources, plus Uninstall.ps1). Install.ps1 checks the package against
-# it before anything is installed and keeps the file in the installation folder; the service uses it before it starts a script.
+# copies to the installation folder (everything below Sources, Uninstall.ps1 and the DLLs of Bin\WinRT, which Install.ps1
+# copies to WinRT\). Install.ps1 checks the package against it before anything is installed and keeps the file in the
+# installation folder; the service uses it before it starts a script and the scripts before they load a WinRT DLL.
 function New-SelfXFileManifest {
     param([string]$Stage, [string]$Version)
     $sources = Join-Path $Stage 'Sources'
     if (-not (Test-Path -LiteralPath $sources -PathType Container)) { throw 'The folder Sources is missing in the package.' }
-    $files = [ordered]@{}
-    $items = @(Get-ChildItem -LiteralPath $sources -Recurse -File -Force) + @(Get-Item -LiteralPath (Join-Path $Stage 'Uninstall.ps1') -Force)
-    foreach ($item in ($items | Sort-Object FullName)) {
+    $entries = New-Object System.Collections.Generic.List[object]
+    foreach ($item in (@(Get-ChildItem -LiteralPath $sources -Recurse -File -Force) + @(Get-Item -LiteralPath (Join-Path $Stage 'Uninstall.ps1') -Force))) {
         $relative = if ($item.FullName.StartsWith($sources + '\', [StringComparison]::OrdinalIgnoreCase)) { $item.FullName.Substring($sources.Length + 1) } else { $item.Name }
-        $relative = $relative.Replace('\', '/')
-        if ($relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $relative -match '(^|/)\.\.?(/|$)') { throw "Unsupported file name in the package: $relative" }
-        $files[$relative] = (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash
+        $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = $relative.Replace('\', '/') })
+    }
+    # The WinRT libraries come from Bin (built by tools\Build-SelfXBinaries.ps1) and are installed into the folder WinRT.
+    $winRT = Join-Path $Stage 'Bin\WinRT'
+    if (Test-Path -LiteralPath $winRT -PathType Container) {
+        foreach ($item in @(Get-ChildItem -LiteralPath $winRT -Recurse -File -Force)) {
+            if ($item.DirectoryName -ne (Get-Item -LiteralPath $winRT).FullName) { throw "Unexpected sub folder in Bin\WinRT: $($item.DirectoryName)" }
+            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'WinRT/' + $item.Name })
+        }
+    }
+    $files = [ordered]@{}
+    foreach ($entry in ($entries | Sort-Object Name)) {
+        if ($entry.Name -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $entry.Name -match '(^|/)\.\.?(/|$)') { throw "Unsupported file name in the package: $($entry.Name)" }
+        if ($files.Contains($entry.Name)) { throw "Duplicate file name in the package: $($entry.Name)" }
+        $files[$entry.Name] = (Get-FileHash -LiteralPath $entry.Path -Algorithm SHA256).Hash
     }
     $manifest = [ordered]@{
         ManifestVersion = 1
