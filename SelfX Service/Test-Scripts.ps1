@@ -175,6 +175,13 @@ try {
 		Assert-Equal ($code -match "(?i)Start-Process\s+-FilePath\s+'[A-Za-z]+\.exe'") $false "$($file.Name) starts no program by a bare name"
 		if ($referenced -notcontains $file.Name) { $script:unused += $file.Name }
 	}
+	# XML files are read through an XmlReader that prohibits DTDs (no entity expansion, no external resolution).
+	foreach ($file in Get-ChildItem -LiteralPath $sources -Filter '*.ps1' -Recurse) {
+		$text = [IO.File]::ReadAllText($file.FullName)
+		$loads = @([regex]::Matches($text, '(?i)\.Load\((?!\$(XmlReader|reader)\))'))
+		Assert-Equal $loads.Count 0 "$($file.Name) loads XML only through the DTD-prohibiting reader"
+		If ($text -match '(?i)\$(XmlReader|reader)\)') { Assert-Equal ($text -match '(?i)DtdProcessing\s*=\s*\[System\.Xml\.DtdProcessing\]::Prohibit') $true "$($file.Name) prohibits DTDs" }
+	}
 	foreach ($action in $catalog.SelectNodes('//Action')) {
 		$text = [IO.File]::ReadAllText((Join-Path $scripts $action.Script.Trim()))
 		Assert-Equal ($text -match "Context\s*:\s*$($action.Context.Trim())") $true "$($action.Script) header context matches the catalog ($($action.GetAttribute('Id')))"

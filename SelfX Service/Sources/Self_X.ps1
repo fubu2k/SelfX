@@ -232,7 +232,12 @@ $Global:SysInfo_Script = $Global:SelfXClient_Script + "`r`n" + (Get-Content -Lit
 # Settings (Tool_Config.xml), language and action catalogue
 #******************************************************************************
 $Config_XML = New-Object System.Xml.XmlDocument
-$Config_XML.Load("$Current_Folder\Tool_Config.xml")
+$Config_XML.XmlResolver = $null
+$XmlSettings = New-Object System.Xml.XmlReaderSettings
+$XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+$XmlSettings.XmlResolver = $null
+$XmlReader = [System.Xml.XmlReader]::Create("$Current_Folder\Tool_Config.xml", $XmlSettings)
+Try { $Config_XML.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 $GUI_Config = $Config_XML.GUI_Config
 
 # Returns a setting of Tool_Config.xml, or Default when it is missing or empty
@@ -258,7 +263,12 @@ $SelfX_UI_Language = Initialize-SelfXLanguage -LanguageFolder $Global:SelfX_Lang
 
 # Action catalogue: base data and English texts. Names, categories and messages are translated per language.
 $List_Issues_XML = New-Object System.Xml.XmlDocument
-$List_Issues_XML.Load("$Current_Folder\Issues_List.xml")
+$List_Issues_XML.XmlResolver = $null
+$XmlSettings = New-Object System.Xml.XmlReaderSettings
+$XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+$XmlSettings.XmlResolver = $null
+$XmlReader = [System.Xml.XmlReader]::Create("$Current_Folder\Issues_List.xml", $XmlSettings)
+Try { $List_Issues_XML.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 $Global:SelfX_Quick_Actions = @(Get-SelfXLocalizedActions -Catalog $List_Issues_XML -Section 'Quick_Solution')
 $Global:SelfX_Detailed_Actions = @(Get-SelfXLocalizedActions -Catalog $List_Issues_XML -Section 'Detailed_Solution')
 

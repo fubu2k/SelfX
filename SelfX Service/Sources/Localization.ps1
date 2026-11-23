@@ -55,7 +55,12 @@ Function Read-SelfXLanguageFile
 		{
 			# XmlDocument.Load honours the encoding declaration, so UTF-8 files without BOM are read correctly
 			$Document = New-Object System.Xml.XmlDocument
-			$Document.Load($Path)
+			$Document.XmlResolver = $null
+			$XmlSettings = New-Object System.Xml.XmlReaderSettings
+			$XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+			$XmlSettings.XmlResolver = $null
+			$XmlReader = [System.Xml.XmlReader]::Create($Path, $XmlSettings)
+			Try { $Document.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 			If($Document.DocumentElement.LocalName -ne 'SelfX_Language') { return $null }
 			return $Document
 		}

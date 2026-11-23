@@ -69,7 +69,12 @@ Function Set-TrayUserSetting
 
 # Settings of the administrator (Tool_Config.xml) and the user (HKCU)
 $Config = New-Object System.Xml.XmlDocument
-$Config.Load((Join-Path $Global:Tray_Folder 'Tool_Config.xml'))
+$Config.XmlResolver = $null
+$XmlSettings = New-Object System.Xml.XmlReaderSettings
+$XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+$XmlSettings.XmlResolver = $null
+$XmlReader = [System.Xml.XmlReader]::Create((Join-Path $Global:Tray_Folder 'Tool_Config.xml'), $XmlSettings)
+Try { $Config.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 $GUI_Config = $Config.GUI_Config
 Function Get-TrayConfig($Name, $Default)
 	{
@@ -292,7 +297,12 @@ $Global:Tray_Status_Item = $Menu.Items.Add((Get-SelfXString 'Tray_Tooltip_Unknow
 	Start-TrayStatusJob Full
 })
 $Catalog = New-Object System.Xml.XmlDocument
-$Catalog.Load((Join-Path $Global:Tray_Folder 'Issues_List.xml'))
+$Catalog.XmlResolver = $null
+$XmlSettings = New-Object System.Xml.XmlReaderSettings
+$XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+$XmlSettings.XmlResolver = $null
+$XmlReader = [System.Xml.XmlReader]::Create((Join-Path $Global:Tray_Folder 'Issues_List.xml'), $XmlSettings)
+Try { $Catalog.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 If($Catalog.SelectSingleNode("//Action[normalize-space(Post_Action)='MailReport' and normalize-space(Context)='System']"))
 	{
 		[void]$Menu.Items.Add((Get-SelfXString 'SystemInfo_SendLogs_Text'), $null, { Open-SelfX 'SendLogs' })

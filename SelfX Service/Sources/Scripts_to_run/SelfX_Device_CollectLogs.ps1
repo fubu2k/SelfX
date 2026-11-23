@@ -92,7 +92,11 @@ function Get-ConfigValue {
     try {
         $config = New-Object System.Xml.XmlDocument
         $config.XmlResolver = $null
-        $config.Load($ConfigPath)
+        $XmlSettings = New-Object System.Xml.XmlReaderSettings
+        $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+        $XmlSettings.XmlResolver = $null
+        $XmlReader = [System.Xml.XmlReader]::Create($ConfigPath, $XmlSettings)
+        Try { $config.Load($XmlReader) } Finally { $XmlReader.Dispose() }
         $node = $config.SelectSingleNode("/GUI_Config/$Name")
         if ($node -and -not [string]::IsNullOrWhiteSpace($node.InnerText)) { return $node.InnerText.Trim() }
     } catch { }
