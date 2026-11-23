@@ -110,6 +110,7 @@ The file contains settings only, no texts. All texts are in the language files (
 | `Ticket_Enabled`, `Ticket_Mail`, `Ticket_Subject_Tag` | Ticket by e-mail (see [Ticket](#ticket-by-e-mail)). |
 | `Copilot_Enabled`, `Copilot_Url`, `Copilot_Audience`, `Copilot_Include_AppNames` | Hand-over to Copilot Chat (see [Copilot Chat](#copilot-chat)). |
 | `Log_Retention_Days` | How long logs are kept (see [Logs](#logs-and-retention)). |
+| `Service_FileCheck` | `Enforce` (default) or `Audit`: before every start the service compares the installed scripts and configuration with `SelfX.Files.json`. `Enforce` starts nothing when they differ, `Audit` only logs (event 4005); see [File list](Installation.md#file-list-selfxfilesjson). |
 | `Service_Privileges` | `Restricted` (default) or `Default`: privileges of the service, read by `Install.ps1` (see [Service privileges](Installation.md#service-privileges)). |
 | `Show_Tray_Icon`, `Tray_Notifications`, `Tray_Poll_Seconds` | The tray icon (see [Tray icon](#tray-icon)). |
 | `Brand_*`, `Tool_Theme`, `Tool_Color` | Appearance (see [Branding](#branding)). |

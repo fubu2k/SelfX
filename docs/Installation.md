@@ -178,6 +178,7 @@ Ereignis-ID gelten höchstens 10 Einträge in 10 Minuten, danach meldet 4099 die
 | 4002 | Warnung | Eine Anfrage oder Verbindung wurde abgelehnt (ungültig, nicht erlaubt, Begrenzung). |
 | 4003 | Warnung | PowerShell 7 ist nicht gegen Änderungen durch Nutzer geschützt; Aktionen als SYSTEM werden nicht gestartet. |
 | 4004 | Fehler | `%ProgramData%\SelfX` ist nicht geschützt (Verknüpfung oder fremder Besitzer); der Dienst schreibt dort nichts, bis ein Administrator es repariert (SelfX neu installieren). |
+| 4005 | Fehler | Die installierten Skripte oder Konfigurationen stimmen nicht mit `SelfX.Files.json` überein (geändert, fehlend, nicht gelistet, Verknüpfung, Liste fehlt oder ungültig); der Dienst startet nichts. Mit `Service_FileCheck` = `Audit` Warnung, Aktionen laufen weiter. Die Einzelheiten stehen im SelfX-Protokoll. |
 | 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
 
 Der Installer endet bei Erfolg mit Exitcode 0 und bei einem Fehler mit 1. Den Grund
@@ -538,8 +539,13 @@ Die Liste wird bei jedem Paketbau neu erzeugt: Wer ein Skript oder eine Konfigur
 nachpflegen, sondern das Paket neu bauen. `Install.ps1` prüft vor der Installation, dass jede Datei zur Liste passt
 und keine Datei ohne Eintrag im Paket liegt; sonst bricht die Installation ab, bevor etwas geändert wird (die
 bestehende Installation bleibt unberührt). Fehlt die Liste (älteres Paket), gibt es nur eine Warnung. Die Liste wird
-auch im Installationsordner abgelegt; spätere Versionen prüfen damit Skripte vor dem Start. `Bin` hat weiterhin die
-eigene Liste `SelfX.Binaries.json`.
+auch im Installationsordner abgelegt: Der Dienst prüft vor **jedem** Start (Aktion, Health-Check, Hintergrundprüfung),
+dass alle gelisteten Dateien unverändert sind, dass kein Skript und keine XML-Datei ohne Eintrag im Installationsordner
+liegt und dass keine Verknüpfung (Junction, Symlink) im Weg ist. Bei einer Abweichung startet er nichts, schreibt
+Ereignis 4005 und die Einzelheiten ins SelfX-Protokoll; die Installation selbst ist nie betroffen (Autopilot läuft
+unverändert). Fehlt die Liste im Installationsordner, gilt das ebenfalls als Abweichung. Für den ersten Rollout kann
+`Service_FileCheck` auf `Audit` gestellt werden (nur protokollieren). `Bin` hat weiterhin die eigene Liste
+`SelfX.Binaries.json`.
 
 ## Rechte des Dienstes
 
