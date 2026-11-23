@@ -16,7 +16,7 @@ Description:
     arguments are ignored. Runs with the rights of the signed-in user; nothing is elevated.
     The status icon gets the Windows folder as working directory so that it does not lock
     the install folder during updates. Exit code 0 when PowerShell was started, otherwise 1.
-    Compiled locally using the .NET Framework compiler (C# 5); no remote API is used.
+    Built with the .NET 10 SDK (Projects\SelfXLauncher\SelfXLauncher.csproj); no remote API is used.
 
 Notes:
     Name    : SelfXLauncher.cs

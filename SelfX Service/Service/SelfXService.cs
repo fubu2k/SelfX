@@ -40,13 +40,13 @@ Description:
     does not itself restart Windows. /console runs with the invoking user's rights;
     /pipe: and /logdir: override the endpoint and log location for troubleshooting.
     Program.Main returns 0 after normal service/console completion, not an action code.
-    Compiled locally using the .NET Framework compiler (C# 5); no remote API is used.
+    Built with the .NET 10 SDK (Projects\SelfXService\SelfXService.csproj); no remote API is used.
 
 Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.6.0
+    Version : 2.8.0
 
     History:
     Version  Date        Author               Change
@@ -78,6 +78,7 @@ Notes:
                                               ends reliably; one deadline for the whole request. The per-user connection limit is
                                               applied when the connection is accepted (owner of the client process), before any data
                                               is read
+    2.8.0    2026-11-23  fubu2k               Header comments: build with the .NET 10 SDK (no .NET Framework compiler); version line
 */
 
 using System;

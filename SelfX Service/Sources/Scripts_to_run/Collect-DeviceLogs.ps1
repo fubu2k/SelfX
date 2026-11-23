@@ -25,26 +25,20 @@
          network tests to the Windows Update / language pack download hosts
       5  Language state: current user, signed-in users, sign-in screen (.DEFAULT), system,
          installed languages and language packs (registry and file based; -Deep adds DISM queries)
-      6  Swisscom deployment: markers, scheduled tasks with last result, files, version of the
-         keyboard script
-      7  Swisscom logs (complete; limited by -MaxLinesPerLog), including the first sign-in Store update log and state
-      8  Intune Management Extension: log files, lines about the language apps and every app the
+      6  Intune Management Extension: log files, lines about the language apps and every app the
          ESP marked as failed or still running (found by name and by app ID), the AppWorkload.log
          context before each failure (download, install command, exit code), Win32Apps registry
          state of those apps (error codes), IMECache
-      9  Windows servicing logs: CBS.log, DISM.log, setupact.log, ReportingEvents.txt
-     10  Event logs of the last -Days days (setup, servicing, Windows Update, MDM, Autopilot, MUI,
+      7  Windows servicing logs: CBS.log, DISM.log, setupact.log, ReportingEvents.txt
+      8  Event logs of the last -Days days (setup, servicing, Windows Update, MDM, Autopilot, MUI,
          application and system errors)
-     11  Crash reports (WER) of DISM / TiWorker / PowerShell
-     12  AppX / MSIX deployment (e.g. new Teams, error 0x80073D3F "drive not found"): AppX volumes and
+      9  Crash reports (WER) of DISM / TiWorker / PowerShell
+     10  AppX / MSIX deployment (e.g. new Teams, error 0x80073D3F "drive not found"): AppX volumes and
          default volume, package root, AppX policies (registry and Intune), Teams packages
          (installed and provisioned), Teams bootstrapper logs, AppX deployment event logs
 
 .PARAMETER Days
     Days of event log history (default 7).
-
-.PARAMETER MaxLinesPerLog
-    Maximum number of lines per Swisscom log file (default 2500, the end of the file is used).
 
 .PARAMETER Deep
     Also runs Get-WindowsCapability / Get-WindowsPackage / Get-AppxProvisionedPackage (DISM). They
@@ -92,12 +86,13 @@
     1.3.1    fubu2k                    The report file is created safely: a file, link or hard link that was created in advance
                                        in C:\Windows\Temp (not owned by SYSTEM, administrators or the running account) is
                                        removed and replaced; the default reports are readable only by SYSTEM and administrators.
+    1.3.2    fubu2k                    Removed the Swisscom specific sections (deployment markers, tasks and files, Swisscom logs)
+                                       and the parameter -MaxLinesPerLog; sections renumbered 1 to 10.
 #>
 
 [CmdletBinding()]
 param(
     [ValidateRange(1, 60)][int]$Days = 7,
-    [ValidateRange(100, 20000)][int]$MaxLinesPerLog = 2500,
     [switch]$Deep,
     [string]$OutputPath,
     # User view (1.3.0): report for a normal user. Set by SelfX_Device_CollectLogs.ps1 (SelfX Service) for callers who
@@ -121,7 +116,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.3.1'
+$ScriptVersion = '1.3.2'
 if ($UserView) {
     try { $null = [Security.Principal.SecurityIdentifier]::new("$CallerSid") } catch { Write-Error 'The user view needs a valid -CallerSid.'; exit 2 }
 }
@@ -400,8 +395,8 @@ Write-Host "Collect-DeviceLogs $ScriptVersion - read-only. Output: $outFile"
 if (-not $isAdmin) { Write-Host 'WARNING: not elevated. Machine logs may not be readable. Run as administrator for a complete report.' -ForegroundColor Yellow }
 
 try {
-Add-Line "Collect-DeviceLogs $ScriptVersion (read-only device log collector: Autopilot / ESP, apps, Swisscom language deployment)"
-Add-Line "Started: $($startedAt.ToString('yyyy-MM-dd HH:mm:ss')); parameters: Days=$Days; MaxLinesPerLog=$MaxLinesPerLog; Deep=$($Deep.IsPresent)"
+Add-Line "Collect-DeviceLogs $ScriptVersion (read-only device log collector: Autopilot / ESP, apps, language deployment)"
+Add-Line "Started: $($startedAt.ToString('yyyy-MM-dd HH:mm:ss')); parameters: Days=$Days; Deep=$($Deep.IsPresent)"
 
 # ------------------------------------------------------------------------------------------------
 Add-Section '1. Context'
@@ -472,11 +467,11 @@ Invoke-Safe 'Loaded profiles' {
 # ------------------------------------------------------------------------------------------------
 Add-Section '2. Windows setup / ESP / Autopilot state'
 Invoke-Safe 'OOBE API' {
-    if (-not ('Swisscom.LanguageDeployment.Collector' -as [type])) {
-        Add-Type -Namespace Swisscom.LanguageDeployment -Name Collector -MemberDefinition '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool OOBEComplete(out int isOOBEComplete);'
+    if (-not ('SelfX.DeviceLogs.Collector' -as [type])) {
+        Add-Type -Namespace SelfX.DeviceLogs -Name Collector -MemberDefinition '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool OOBEComplete(out int isOOBEComplete);'
     }
     $completed = 0
-    $ok = [Swisscom.LanguageDeployment.Collector]::OOBEComplete([ref]$completed)
+    $ok = [SelfX.DeviceLogs.Collector]::OOBEComplete([ref]$completed)
     "OOBEComplete API : ok=$ok completed=$completed"
 }
 Invoke-Safe 'Setup registry' {
@@ -669,7 +664,6 @@ Invoke-Safe 'International current' {
 Invoke-Safe 'HKCU' {
     'Current user hive (HKCU):'
     Get-ProfileSettings -Root 'HKCU:'
-    Get-RegistryValues -Path 'HKCU:\Software\Swisscom\LanguageDeployment'
 }
 Invoke-Safe 'Loaded user hives' {
     foreach ($key in @(Get-ChildItem -LiteralPath 'Registry::HKEY_USERS' -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^S-1-(5-21|12-1)-[\d-]+$' -and (-not $UserView -or $_.PSChildName -eq $script:CallerSid) })) {
@@ -724,71 +718,7 @@ else {
 }
 
 # ------------------------------------------------------------------------------------------------
-Add-Section '6. Swisscom deployment: markers, tasks, files'
-Invoke-Safe 'HKLM markers' { Get-RegistryTree -Path 'HKLM:\SOFTWARE\Swisscom\LanguageDeployment' -MaxLines 150 }
-Invoke-Safe 'Tasks' {
-    $tasks = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskPath -like '*Swisscom*' -or $_.TaskName -match 'Language|Keyboard' })
-    if (-not $tasks.Count) { 'no deployment tasks found' }
-    foreach ($task in $tasks) {
-        $info = Get-ScheduledTaskInfo -TaskName $task.TaskName -TaskPath $task.TaskPath -ErrorAction SilentlyContinue
-        $triggers = (@($task.Triggers | ForEach-Object { $_.CimClass.CimClassName -replace '^MSFT_Task', '' -replace 'Trigger$', '' }) -join '/')
-        '{0}{1}: state={2}; last run={3}; last result=0x{4:X}; next run={5}; triggers={6}; principal={7}' -f $task.TaskPath, $task.TaskName, $task.State, $info.LastRunTime, $info.LastTaskResult, $info.NextRunTime, $triggers, $(if ($task.Principal.UserId) { $task.Principal.UserId } else { $task.Principal.GroupId })
-        '    arguments: ' + (@($task.Actions | ForEach-Object { $_.Arguments }) -join ' ')
-    }
-}
-Invoke-Safe 'Program files' {
-    foreach ($folder in (Join-Path $env:ProgramFiles 'Swisscom\LanguageDeployment'), (Join-Path $env:ProgramData 'Swisscom\LanguageDeployment')) {
-        "Folder $folder :"
-        if (Test-Path -LiteralPath $folder) {
-            Get-ChildItem -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { '    {0}  {1} bytes  {2}' -f $_.FullName.Substring($folder.Length), $_.Length, $_.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss') }
-        }
-        else { '    (not found)' }
-    }
-    $keyboardScript = Join-Path $env:ProgramFiles 'Swisscom\LanguageDeployment\Set-SwissKeyboard.ps1'
-    if (Test-Path -LiteralPath $keyboardScript) {
-        'Set-SwissKeyboard.ps1: ' + ((Select-String -LiteralPath $keyboardScript -Pattern "^\`$ScriptVersion" | Select-Object -First 1).Line)
-    }
-}
-
-# ------------------------------------------------------------------------------------------------
-Add-Section '7. Swisscom logs (end of each file, up to MaxLinesPerLog lines)'
-$logFiles = New-Object System.Collections.Generic.List[string]
-foreach ($folder in (Join-Path $env:ProgramData 'Swisscom\LanguageDeployment\Logs'), (Join-Path $env:LOCALAPPDATA 'Swisscom\LanguageDeployment\Logs')) {
-    if (Test-Path -LiteralPath $folder) { foreach ($file in @(Get-ChildItem -LiteralPath $folder -File -Force -ErrorAction SilentlyContinue | Sort-Object Name)) { $logFiles.Add($file.FullName) } }
-    else { Add-Line "Folder not found: $folder" }
-}
-foreach ($pattern in '*DeviceLanguage*.log*', '*UserLanguage*.log*', '*LanguagePack*.log*', '*SwissKeyboard*.log*', '*FirstLogonStoreUpdate*.log*') {
-    foreach ($file in @(Get-ChildItem -LiteralPath "$env:SystemRoot\Temp" -Filter $pattern -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne $outFile })) {
-        if (-not $logFiles.Contains($file.FullName)) { $logFiles.Add($file.FullName) }
-    }
-}
-if (-not $logFiles.Count) { Add-Line 'No Swisscom logs found (the app did not start, or the logs are not readable: run elevated).' }
-foreach ($logFile in $logFiles) { Add-FileTail -Path $logFile -Tail $MaxLinesPerLog }
-# Last run of every language install log: exit code and error message.
-Invoke-Safe 'Language app last run' {
-    foreach ($logFile in @($logFiles | Where-Object { $_ -match 'Install-(Device|User)Language' })) {
-        $exit = @(Select-String -LiteralPath $logFile -Pattern 'Final exit code: (\d+)' -ErrorAction SilentlyContinue) | Select-Object -Last 1
-        if ($exit -and $exit.Matches[0].Groups[1].Value -ne '0') {
-            $message = @(Select-String -LiteralPath $logFile -Pattern '\[ERROR\] (Exception message|Failed step): (.+)' -ErrorAction SilentlyContinue) | Select-Object -Last 2 | ForEach-Object { $_.Matches[0].Groups[2].Value }
-            Add-Finding -Level ERROR -Text "$(Split-Path $logFile -Leaf): last run ended with exit code $($exit.Matches[0].Groups[1].Value): $($message -join ' / ')"
-        }
-    }
-    # One-time Store app update at the first sign-in (Start-FirstLogonStoreUpdate.ps1): state and result.
-    $status = Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Swisscom\LanguageDeployment' -ErrorAction SilentlyContinue
-    $task = Get-ScheduledTask -TaskPath '\Swisscom\LanguageDeployment\' -TaskName 'Start-FirstLogonStoreUpdate' -ErrorAction SilentlyContinue
-    ''
-    '--- First sign-in Store update (inbox app names in the user language)'
-    '    registered {0}; attempts {1}; done {2}; result {3}; task present {4}' -f $status.FirstLogonStoreUpdateRegisteredAt, $status.FirstLogonStoreUpdateAttempts, $status.FirstLogonStoreUpdateDoneAt, $status.FirstLogonStoreUpdateResult, [bool]$task
-    if ("$($status.FirstLogonStoreUpdateResult)" -like 'failed*') {
-        Add-Finding -Level WARN -Text "First sign-in Store update: $($status.FirstLogonStoreUpdateResult); the inbox apps get their language through the regular Store updates. See Swisscom-FirstLogonStoreUpdate.log."
-    }
-    elseif ($status.FirstLogonStoreUpdateRegisteredAt -and -not $status.FirstLogonStoreUpdateDoneAt -and -not $task) {
-        Add-Finding -Level WARN -Text 'First sign-in Store update was registered, but neither the task nor a result exists (task removed by someone else?).'
-    }
-}
-
-# ------------------------------------------------------------------------------------------------
-Add-Section '8. Intune Management Extension'
+Add-Section '6. Intune Management Extension'
 Invoke-Safe 'IME log files' {
     "IME log folder: $imeFolder"
     if (Test-Path -LiteralPath $imeFolder) {
@@ -798,12 +728,6 @@ Invoke-Safe 'IME log files' {
 }
 Invoke-Safe 'IME app ids' {
     $guidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
-    # Apps of the Swisscom deployment: the install log names the IMECache folder <app id>_<version>.
-    foreach ($logFile in $logFiles) {
-        foreach ($match in @(Select-String -LiteralPath $logFile -Pattern 'IMECache\\' -ErrorAction SilentlyContinue | Select-Object -First 5)) {
-            foreach ($guid in [regex]::Matches($match.Line, $guidPattern)) { $null = $languageAppIds.Add($guid.Value.ToLowerInvariant()) }
-        }
-    }
     # Apps that the ESP marked as failed (InstallationState 4) or that are still running (2) were added in section 2
     # (device and user phases).
     foreach ($file in @(Get-ChildItem -LiteralPath $imeFolder -Filter 'IntuneManagementExtension*.log' -File -ErrorAction SilentlyContinue)) {
@@ -890,7 +814,7 @@ Invoke-Safe 'IMECache' {
 }
 
 # ------------------------------------------------------------------------------------------------
-Add-Section '9. Windows servicing logs'
+Add-Section '7. Windows servicing logs'
 $cbs = "$env:SystemRoot\Logs\CBS\CBS.log"
 $dism = "$env:SystemRoot\Logs\DISM\dism.log"
 if (Test-Path -LiteralPath $cbs) {
@@ -919,7 +843,7 @@ Add-Line ''
 Add-Line "Other servicing logs present: $((@(Get-ChildItem -LiteralPath "$env:SystemRoot\Logs" -Directory -ErrorAction SilentlyContinue | ForEach-Object Name)) -join ', ')"
 
 # ------------------------------------------------------------------------------------------------
-Add-Section "10. Event logs (last $Days days)"
+Add-Section "8. Event logs (last $Days days)"
 foreach ($spec in @(
         @{ Log = 'Setup'; Level = $null; Max = 80 },
         @{ Log = 'Microsoft-Windows-MUI/Admin'; Level = $null; Max = 40 },
@@ -943,7 +867,7 @@ Invoke-Safe 'Event log: servicing providers' {
 }
 
 # ------------------------------------------------------------------------------------------------
-Add-Section '11. Crash reports (WER) of servicing / PowerShell processes'
+Add-Section '9. Crash reports (WER) of servicing / PowerShell processes'
 Invoke-Safe 'WER' {
     $limit = (Get-Date).AddDays(-$Days)
     $reports = @()
@@ -966,7 +890,7 @@ Invoke-Safe 'WER' {
 # MSIX / AppX apps (e.g. the new Teams installed by teamsbootstrapper.exe as a Win32 app) are deployed to the
 # AppX default volume. 0x80073D3F (ERROR_INSTALL_DRIVE_NOT_FOUND) means that this volume or a drive used by the
 # deployment does not exist (e.g. "Change where new content is saved" or a policy points to a removed drive).
-Add-Section '12. AppX / MSIX deployment (Store and MSIX apps, new Teams)'
+Add-Section '10. AppX / MSIX deployment (Store and MSIX apps, new Teams)'
 $failedAppx = @($script:FailedEspApps | Where-Object { $_.Error -match '0x80073[CD]' }).Count -gt 0
 Invoke-Safe 'AppX volumes' {
     Import-Module Appx -ErrorAction Stop
