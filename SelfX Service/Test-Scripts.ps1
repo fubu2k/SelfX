@@ -493,6 +493,17 @@ try {
 	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '3|0' 'GPUpdate: not domain joined = exit 3, nothing started'
 	$global:PartOfDomain = $null
 
+	# No sound (User context): the library is loaded through the checked loader only; without a valid install folder nothing runs (exit 1),
+	# no process, no keys, no registry. The calls into Core Audio need a device and are covered by the manual device test.
+	$audioText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Audio_Restore.ps1'))
+	$audioCode = $audioText.Substring($audioText.IndexOf('#>') + 2)
+	Assert-Equal ($audioCode -match '(?im)^\s*param\s*\(') $false 'No sound: script has no parameters'
+	Assert-Equal ($audioCode -match 'Import-SelfXAudio -InstallFolder \$installFolder') $true 'No sound: the library is loaded through Import-SelfXAudio'
+	Assert-Equal ($audioCode -match '(?i)Start-Process|Invoke-Expression|iex\b|SendKeys|Add-Type|Assembly\]::Load|Set-ItemProperty|New-ItemProperty|reg\.exe|sc\.exe|\$args|\$env:') $false 'No sound: no process, no keys, no own code loading, no registry, no caller input'
+	Assert-Equal ($audioCode -match '\$MinimumVolumePercent = 30\b') $true 'No sound: the minimum volume is a fixed 30 %'
+	$run = Invoke-TestScript 'SelfX_Audio_Restore.ps1'
+	Assert-Equal ($run.ExitCode -eq 1 -and "$($run.Output -join ' ')" -like '*Sound could not be switched on*SelfX.Files.json is missing*') $true 'No sound: without a checked install folder nothing is loaded (exit 1, short reason)'
+
 	# The time action may only synchronize: no input, no change of time, time zone, time source or service configuration.
 	$syncText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Device_SyncTime.ps1'))
 	$syncCode = $syncText.Substring($syncText.IndexOf('#>') + 2)

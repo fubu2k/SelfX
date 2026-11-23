@@ -631,6 +631,13 @@ Devam etmek istiyor musunuz?</Alerte_MSG>
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Bu bilgisayarda ses yok</Name>
+				<Explanation>Daha önce her şey yolundayken hoparlörlerden veya kulaklıktan ses gelmiyor. Ses kapalı (sessize alınmış) veya çok kısık olabilir.</Explanation>
+				<Alerte_MSG>SelfX, geçerli oynatma aygıtınızın (hoparlör veya kulaklık) sesini yeniden açar. Sessize alınmışsa ses açılır; ses düzeyi %30'un altındaysa %30'a yükseltilir. Daha yüksek bir ses düzeyi olduğu gibi kalır. Diğer aygıtlar, mikrofon ve sürücüler değiştirilmez.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Cihaz günlüklerini topla ve e-postayla destek ekibine gönder</Name>
 			</Action>

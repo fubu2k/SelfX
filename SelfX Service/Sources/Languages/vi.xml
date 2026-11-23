@@ -631,6 +631,13 @@ Bạn có muốn tiếp tục không?</Alerte_MSG>
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_NoSound">
+				<Name>Không có âm thanh trên PC này</Name>
+				<Explanation>Không có âm thanh từ loa hoặc tai nghe, dù trước đó mọi thứ vẫn bình thường. Âm thanh có thể bị tắt (tắt tiếng) hoặc đặt rất nhỏ.</Explanation>
+				<Alerte_MSG>SelfX bật lại âm thanh của thiết bị phát hiện tại (loa hoặc tai nghe). Nếu đang tắt tiếng, âm thanh được bật; nếu âm lượng dưới 30 %, âm lượng được tăng lên 30 %. Âm lượng cao hơn được giữ nguyên. Thiết bị khác, micrô và trình điều khiển không bị thay đổi.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Thu thập nhật ký thiết bị và gửi cho bộ phận hỗ trợ qua email</Name>
 			</Action>

@@ -219,6 +219,27 @@ jobs:
             "Manager created: $($manager.GetType().FullName), IsScanning=$($manager.IsScanning)"
           } catch { "Orchestrator not available on this runner: $($_.Exception.GetType().FullName): $($_.Exception.Message)" }
 
+      - name: SelfXAudio.dll loads in PowerShell 7 (Core Audio, action "No sound")
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $folder = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Bin\Audio'
+          Get-ChildItem -LiteralPath $folder | Format-Table Name, Length
+          if (@(Get-ChildItem -LiteralPath $folder).Count -ne 1) { throw 'Bin\Audio must contain SelfXAudio.dll only.' }
+          [void][Reflection.Assembly]::LoadFrom((Join-Path $folder 'SelfXAudio.dll'))
+          # An invalid minimum volume is refused before the audio service is touched.
+          foreach ($bad in -1, 101, 1000) {
+            try { [void][SelfX.SelfXAudio]::Restore($bad); throw "Minimum volume $bad was accepted." }
+            catch [System.ArgumentException] { "Refused minimum volume $bad." }
+            catch [System.ArgumentOutOfRangeException] { "Refused minimum volume $bad." }
+            catch { if ($_.Exception.InnerException -is [System.ArgumentException]) { "Refused minimum volume $bad." } else { throw } }
+          }
+          # The runner has no playback device: the call must end with a clear result or exception, never hang or crash.
+          try {
+            $result = [SelfX.SelfXAudio]::Restore(30)
+            "Result: $($result | Out-String)"
+          } catch { "No playback device on this runner: $($_.Exception.GetType().FullName): $($_.Exception.Message)" }
+
       - name: Start the service in console mode
         shell: pwsh
         run: |

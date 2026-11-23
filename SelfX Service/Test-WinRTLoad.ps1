@@ -162,8 +162,8 @@ try {
 	Close-Handles
 
 	# --- the callers and the service ---
-	$loaders = @(Get-ChildItem -LiteralPath $sources -Recurse -Filter '*.ps1' -File | Where-Object { $_.Name -ne 'SelfXWinRT.ps1' -and (Select-String -LiteralPath $_.FullName -Pattern 'Assembly\]::(LoadFrom|LoadFile|Load)\b' -Quiet) })
-	Assert-Equal ($loaders.Name -join ', ') '' 'no other script loads an assembly (only SelfXWinRT.ps1)'
+	$loaders = @(Get-ChildItem -LiteralPath $sources -Recurse -Filter '*.ps1' -File | Where-Object { $_.Name -notin 'SelfXWinRT.ps1', 'SelfXAudio.ps1' -and (Select-String -LiteralPath $_.FullName -Pattern 'Assembly\]::(LoadFrom|LoadFile|Load)\b' -Quiet) })
+	Assert-Equal ($loaders.Name -join ', ') '' 'no other script loads an assembly (only SelfXWinRT.ps1 and SelfXAudio.ps1)'
 	foreach ($caller in 'HealthStatus.ps1', 'Scripts_to_run\SelfX_Updates_Install.ps1') {
 		$text = Get-Content -LiteralPath (Join-Path $sources $caller) -Raw
 		Assert-Equal ($text -match 'Import-SelfXWinRT -InstallFolder') $true "$caller loads the library through Import-SelfXWinRT"

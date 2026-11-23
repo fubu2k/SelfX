@@ -14,7 +14,7 @@
     Name    : Test-InstallBinaries.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.0
+    Version : 2.8.18
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -23,6 +23,7 @@
     2.6.11   2026-11-22  fubu2k               Initial version (security review finding F9).
     2.7.0    2026-11-22  fubu2k               .NET 10: manifest format 2, Bin is required; the test of the compiler TEMP was removed.
     2.8.0    2026-11-22  fubu2k               Manifest format 3 (WinRT files), PowerShell 7 and Windows build checks.
+    2.8.18   2026-11-23  fubu2k               Audio library (Audio/SelfXAudio.dll) in the fake package and its refusal cases.
     2.8.1    2026-11-23  fubu2k               Checks of the service privilege list (finding N5).
     2.8.0    2026-11-22  fubu2k               Checks of Initialize-SelfXDataFolder (security review finding F12).
 #>
@@ -65,6 +66,7 @@ $files = [ordered]@{
 	'SelfX.exe'               = 'Service/SelfXLauncher.cs'
 	'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'
 	'WinRT/SelfXWinRT.dll'    = 'Service/SelfXWinRT.cs'
+	'Audio/SelfXAudio.dll'    = 'Service/SelfXAudio.cs'
 }
 
 function Reset-Package {
@@ -146,6 +148,25 @@ try {
 	$manifest.Binaries.PSObject.Properties.Remove('WinRT/Projection.dll')
 	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
 	Assert-Equal ((Test-Accepted) -like 'refused*unexpected file*') $true 'A manifest entry outside WinRT is refused'
+
+	# --- Audio library: expected like the programs, nothing else may be listed below Audio ---
+	Reset-Package
+	Remove-Item -LiteralPath (Join-Path $bin 'Audio\SelfXAudio.dll')
+	Assert-Equal ((Test-Accepted) -like 'refused*Audio/SelfXAudio.dll is missing*') $true 'A missing audio library is refused'
+	Reset-Package
+	[IO.File]::WriteAllText((Join-Path $bin 'Audio\SelfXAudio.dll'), 'replaced')
+	Assert-Equal ((Test-Accepted) -like 'refused*Audio/SelfXAudio.dll does not match*') $true 'A changed audio library is refused'
+	Reset-Package
+	[IO.File]::WriteAllText((Join-Path $package 'Service\SelfXAudio.cs'), '// changed source')
+	Assert-Equal ((Test-Accepted) -like 'refused*not built from*SelfXAudio.cs*') $true 'An audio library built from other sources is refused'
+	Reset-Package
+	$extraAudio = Join-Path $bin 'Audio\Other.dll'
+	[IO.File]::WriteAllText($extraAudio, 'other')
+	$manifestPath = Join-Path $bin 'SelfX.Binaries.json'
+	$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+	$manifest.Binaries | Add-Member -NotePropertyName 'Audio/Other.dll' -NotePropertyValue (Get-FileHash -LiteralPath $extraAudio -Algorithm SHA256).Hash
+	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
+	Assert-Equal ((Test-Accepted) -like 'refused*unexpected file*Audio/Other.dll*') $true 'An additional file listed below Audio is refused'
 
 	Reset-Package
 	Remove-Item -LiteralPath $bin -Recurse -Force

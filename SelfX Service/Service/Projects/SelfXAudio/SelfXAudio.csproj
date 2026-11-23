@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SelfX Service: SelfXAudio.dll, switches the sound of the default playback device on again through the Core Audio
+       COM interfaces (library for PowerShell 7). No NuGet package, no dependency apart from the .NET runtime. -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>SelfXAudio</AssemblyName>
+    <RootNamespace>SelfX</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\SelfXAudio.cs" Link="SelfXAudio.cs" />
+  </ItemGroup>
+</Project>
