@@ -83,7 +83,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $files = @(Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'build') -File | ForEach-Object { $_.FullName })
-          if ($files.Count -lt 3) { throw 'Expected the .intunewin, the SBOM and SHA256SUMS.txt.' }
+          if ($files.Count -lt 4) { throw 'Expected the .intunewin, the detection script, the SBOM and SHA256SUMS.txt.' }
           $version = $env:GITHUB_REF_NAME.TrimStart('v')
-          gh release create $env:GITHUB_REF_NAME @files --draft --verify-tag --title "SelfX Service $version" --notes 'Draft. Files: .intunewin (Intune Win32 app), SBOM (CycloneDX), SHA256SUMS.txt. Compare the SHA-256 values before the upload to Intune. See docs/Installation.md.'
+          gh release create $env:GITHUB_REF_NAME @files --draft --verify-tag --title "SelfX Service $version" --notes 'Draft. Files: .intunewin (Intune Win32 app), Detection.ps1 (detection script for Intune, with the file list digest), SBOM (CycloneDX), SHA256SUMS.txt. Compare the SHA-256 values before the upload to Intune. See docs/Installation.md.'
           if ($LASTEXITCODE -ne 0) { throw 'gh release create failed.' }
