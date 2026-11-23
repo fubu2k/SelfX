@@ -9,6 +9,8 @@
     check its data file after a forced close, so the first start may take longer. Nothing is deleted
     or reset (profile, data files and add-ins stay unchanged). The new Outlook (olk.exe) is not
     affected. Does not restart Windows.
+    The program path is independent of the Office version, the bitness and the installation type and is checked (SelfXOffice.ps1,
+    Restart-SelfXOfficeApp): below Program Files, no link; if no valid path is known, nothing is closed.
     Logs to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1).
     Exit 0 = Outlook restarted or not running; exit 1 = Outlook could not be closed.
 
@@ -16,13 +18,14 @@
     Name    : SelfX_Outlook_Reboot.ps1
     Package : SelfX Service
     Context : User
-    Version : 2.8.0
+    Version : 2.8.19
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.2    2026-11-22  fubu2k               Initial version (own session, classic Outlook only)
     2.8.0    2026-11-23  fubu2k               Program path from the closed process or from App Paths; nothing is closed when it is unknown
+    2.8.19   2026-11-23  fubu2k               Program path and restart through Restart-SelfXOfficeApp (SelfXOffice.ps1); path is checked (Program Files, no link)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -31,26 +34,15 @@ if (Test-Path -LiteralPath $SelfXLogScript) { . $SelfXLogScript; Initialize-Self
 else { function Write-SelfXLog { param($Message, $Level) } }
 trap { Write-SelfXLog "Failed: $($_.Exception.Message)" Error; break }
 
-$session = (Get-Process -Id $PID).SessionId
-$outlook = @(Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session })
-if (-not $outlook.Count) {
+# The helper finds the program independent of the Office version and bitness and checks the path (SelfXOffice.ps1).
+$officeHelper = Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXOffice.ps1'
+if (-not (Test-Path -LiteralPath $officeHelper -PathType Leaf)) { throw 'SelfXOffice.ps1 is missing in the installation folder.' }
+. $officeHelper
+
+$result = Restart-SelfXOfficeApp -Application Outlook -TimeoutSeconds 30
+if (-not $result.WasRunning) {
 	Write-SelfXLog 'Outlook is not running; nothing to restart.'
 	exit 0
 }
-# Capture the executable path before termination removes its process metadata.
-$outlookPath = $outlook | Where-Object { $_.Path } | Select-Object -First 1 -ExpandProperty Path
-if (-not $outlookPath) {
-	# No search through the program path: the path comes from the machine-wide App Paths registration (administrators only).
-	$appPath = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\OUTLOOK.EXE' -ErrorAction SilentlyContinue).'(default)'
-	if ($appPath -and (Test-Path -LiteralPath $appPath.Trim('"') -PathType Leaf)) { $outlookPath = $appPath.Trim('"') }
-}
-if (-not $outlookPath) { throw 'The program path of Outlook could not be determined; Outlook was not closed.' }
-Write-SelfXLog "Closing $($outlook.Count) Outlook process(es) ($outlookPath)."
-$outlook | Stop-Process -Force -ErrorAction Stop
-for ($i = 0; $i -lt 30 -and (Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }); $i++) { Start-Sleep -Seconds 1 }
-if (Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }) {
-	throw 'Outlook is still running after 30 seconds; it was not restarted.'
-}
-Start-Process -FilePath $outlookPath
 Write-SelfXLog 'Outlook started again.'
 exit 0

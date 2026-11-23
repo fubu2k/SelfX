@@ -21,6 +21,10 @@
     (%LOCALAPPDATA%\Microsoft\Office\Licenses and \Microsoft\Office\<version>\Licensing, every version folder
     that exists). It only reads; it does not delete anything.
 
+    Restart-SelfXOfficeApp closes classic Outlook, Word or Excel of the own session and starts it again from the checked program
+    path (used by the restart actions). The path comes from the closed process or the registry and must pass
+    Test-SelfXOfficeProgramPath; if no path passes, nothing is closed.
+
     Get-SelfXOwnSessionProcess and Close-SelfXOwnSessionProcess only touch processes of the Windows session of the
     caller, so other users on a multi-user device are not affected.
 
@@ -28,13 +32,14 @@
     Name    : SelfXOffice.ps1
     Package : SelfX Service
     Context : Dot-sourced by scripts in Scripts_to_run (user context); also loaded by tests
-    Version : 2.8.4
+    Version : 2.8.19
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.0    2026-11-23  fubu2k               Initial version (program path independent of version and bitness, own-session processes).
     2.8.4    2026-11-23  fubu2k               Get-SelfXOfficeLicenseFolder (folders of the Office license tokens, independent of the version)
+    2.8.19   2026-11-23  fubu2k               Restart-SelfXOfficeApp (shared by the Outlook, Word and Excel restart actions; program path is checked)
 #>
 
 $Script:SelfXOfficeApps = @{
@@ -138,4 +143,28 @@ function Get-SelfXOfficeLicenseFolder {
 		if ($directory.Name -match '^\d{1,3}\.\d{1,3}$') { $folders.Add((Join-Path $directory.FullName 'Licensing')) }
 	}
 	@($folders | Where-Object { Test-Path -LiteralPath $_ -PathType Container })
+}
+
+function Restart-SelfXOfficeApp {
+	# Closes the app in the own session at once (unsaved input is lost, as the action tells the user), waits up to TimeoutSeconds
+	# and starts it again from the checked program path. Returns an object (WasRunning, ProcessCount, Path); nothing is changed when
+	# the app is not running. Throws when no valid program path is known (nothing is closed then) or the app does not close.
+	param(
+		[Parameter(Mandatory = $true)][ValidateSet('Outlook', 'Word', 'Excel')][string]$Application,
+		[ValidateRange(1, 120)][int]$TimeoutSeconds = 30
+	)
+	$app = $Script:SelfXOfficeApps[$Application]
+	$name = [IO.Path]::GetFileNameWithoutExtension($app.Exe)
+	$running = @(Get-SelfXOwnSessionProcess -Name $name)
+	if (-not $running.Count) { return [pscustomobject]@{ WasRunning = $false; ProcessCount = 0; Path = $null } }
+	# The path is read before the process ends; it is used only if it passes the check (otherwise the registry is used).
+	$processPath = $running | Where-Object { $_.Path } | Select-Object -First 1 -ExpandProperty Path
+	$path = Get-SelfXOfficeAppPath -Application $Application -ProcessPath $processPath
+	if (-not $path) { throw "The program path of $Application could not be determined; $Application was not closed." }
+	if (Get-Command Write-SelfXLog -ErrorAction SilentlyContinue) { Write-SelfXLog "Closing $($running.Count) $Application process(es) ($path)." }
+	$running | Stop-Process -Force -ErrorAction Stop
+	for ($i = 0; $i -lt $TimeoutSeconds -and (Get-SelfXOwnSessionProcess -Name $name).Count; $i++) { Start-Sleep -Seconds 1 }
+	if ((Get-SelfXOwnSessionProcess -Name $name).Count) { throw "$Application is still running after $TimeoutSeconds seconds; it was not restarted." }
+	Start-Process -FilePath $path
+	return [pscustomobject]@{ WasRunning = $true; ProcessCount = $running.Count; Path = $path }
 }

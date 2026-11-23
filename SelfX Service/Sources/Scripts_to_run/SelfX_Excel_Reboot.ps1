@@ -9,6 +9,8 @@
     executable; workbooks are not explicitly reopened.
     Exits 0 when no Excel process exists. A missing path, failed termination or a surviving
     Excel process raise an error (exit 1) instead of starting another instance.
+    The program path is independent of the Office version, the bitness and the installation type and is checked (SelfXOffice.ps1,
+    Restart-SelfXOfficeApp): below Program Files, no link; if no valid path is known, nothing is closed.
     Logs to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1).
 
 .NOTES
@@ -22,6 +24,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-10-28  Wolfgang Baeck       Initial version (based on SelfX_Word_Reboot.ps1)
     2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1); only processes of the user's session
+    2.8.19   2026-11-23  fubu2k               Program path and restart through Restart-SelfXOfficeApp (SelfXOffice.ps1); path is checked (Program Files, no link)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -30,24 +33,15 @@ if (Test-Path -LiteralPath $SelfXLogScript) { . $SelfXLogScript; Initialize-Self
 else { function Write-SelfXLog { param($Message, $Level) } }
 trap { Write-SelfXLog "Failed: $($_.Exception.Message)" Error; break }
 
-$session = (Get-Process -Id $PID).SessionId
-$excel = @(Get-Process -Name EXCEL -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session })
-if ($excel.Count -eq 0) {
+# The helper finds the program independent of the Office version and bitness and checks the path (SelfXOffice.ps1).
+$officeHelper = Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXOffice.ps1'
+if (-not (Test-Path -LiteralPath $officeHelper -PathType Leaf)) { throw 'SelfXOffice.ps1 is missing in the installation folder.' }
+. $officeHelper
+
+$result = Restart-SelfXOfficeApp -Application Excel -TimeoutSeconds 15
+if (-not $result.WasRunning) {
 	Write-SelfXLog 'Excel is not running; nothing to restart.'
-	Write-Output 'Excel is not running.'
 	exit 0
 }
-# Capture the executable location before terminating the processes that expose it.
-$excelPath = $excel | Where-Object { $_.Path } | Select-Object -First 1 -ExpandProperty Path
-if (-not $excelPath) { throw 'Could not determine the Excel executable path.' }
-Write-SelfXLog "Closing $($excel.Count) Excel process(es) ($excelPath)."
-# Forced termination does not offer a save prompt for unsaved workbooks.
-$excel | Stop-Process -Force -ErrorAction Stop
-for ($i = 0; $i -lt 15 -and (Get-Process -Name EXCEL -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }); $i++) { Start-Sleep -Seconds 1 }
-# Do not start another instance while a previous Excel process still holds files.
-if (Get-Process -Name EXCEL -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }) {
-	throw 'Excel is still running; it was not restarted.'
-}
-Start-Process -FilePath $excelPath
 Write-SelfXLog 'Excel started again.'
 exit 0

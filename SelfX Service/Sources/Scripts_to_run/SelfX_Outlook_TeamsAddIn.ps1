@@ -10,6 +10,8 @@
     (outlook.exe) of the user's session, waits up to 30 seconds and starts Outlook again.
     Outlook windows close and unsaved items may be lost. Does not install a missing add-in; the
     new Outlook (olk.exe) does not use COM add-ins, its Teams integration is not changed.
+    The program path is independent of the Office version, the bitness and the installation type and is checked (SelfXOffice.ps1,
+    Restart-SelfXOfficeApp): below Program Files, no link; if no valid path is known, nothing is closed.
     Logs to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1).
     Exit 0 = add-in enabled (and Outlook restarted when it was running); exit 1 = error.
 
@@ -17,13 +19,14 @@
     Name    : SelfX_Outlook_TeamsAddIn.ps1
     Package : SelfX Service
     Context : User
-    Version : 2.8.0
+    Version : 2.8.19
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
     2.8.0    2026-11-23  fubu2k               Program path from the closed process or from App Paths; nothing is closed when it is unknown
+    2.8.19   2026-11-23  fubu2k               Restart through Restart-SelfXOfficeApp (SelfXOffice.ps1); program path is checked (Program Files, no link)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -42,25 +45,16 @@ if (-not (Test-Path -LiteralPath $doNotDisable)) { New-Item -Path $doNotDisable 
 Set-ItemProperty -LiteralPath $doNotDisable -Name 'TeamsAddin.FastConnect' -Value 1 -Type DWord -Force
 Write-SelfXLog 'Teams meeting add-in: LoadBehavior = 3, DoNotDisableAddinList = 1.'
 
-$session = (Get-Process -Id $PID).SessionId
-$outlook = @(Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session })
-if (-not $outlook.Count) {
+# The helper finds the program independent of the Office version and bitness and checks the path (SelfXOffice.ps1).
+$officeHelper = Join-Path (Split-Path -Parent $PSScriptRoot) 'SelfXOffice.ps1'
+if (-not (Test-Path -LiteralPath $officeHelper -PathType Leaf)) { throw 'SelfXOffice.ps1 is missing in the installation folder.' }
+. $officeHelper
+
+# Outlook must be restarted so that the setting is loaded; nothing is closed if Outlook is not running.
+$result = Restart-SelfXOfficeApp -Application Outlook -TimeoutSeconds 30
+if (-not $result.WasRunning) {
 	Write-SelfXLog 'Outlook is not running; the add-in loads at the next start of Outlook.'
 	exit 0
 }
-$outlookPath = $outlook | Where-Object { $_.Path } | Select-Object -First 1 -ExpandProperty Path
-if (-not $outlookPath) {
-	# No search through the program path: the path comes from the machine-wide App Paths registration (administrators only).
-	$appPath = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\OUTLOOK.EXE' -ErrorAction SilentlyContinue).'(default)'
-	if ($appPath -and (Test-Path -LiteralPath $appPath.Trim('"') -PathType Leaf)) { $outlookPath = $appPath.Trim('"') }
-}
-if (-not $outlookPath) { throw 'The program path of Outlook could not be determined; Outlook was not closed.' }
-$outlook | Stop-Process -Force -ErrorAction Stop
-# Wait for the old Outlook instance to exit so the start loads the add-in setting.
-for ($i = 0; $i -lt 30 -and (Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }); $i++) { Start-Sleep -Seconds 1 }
-if (Get-Process -Name OUTLOOK -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session }) {
-	throw 'Outlook is still running after 30 seconds; it was not restarted.'
-}
-Start-Process -FilePath $outlookPath
 Write-SelfXLog 'Outlook started again.'
 exit 0
