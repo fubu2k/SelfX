@@ -24,7 +24,7 @@ Service** weiterentwickelt.
 Die Arbeit in diesem Fork konzentriert sich auf
 Sicherheit, Tests und Bereitstellung von SelfX Service: siehe
 [Sicherheitshärtung in diesem Fork](#sicherheitshärtung-in-diesem-fork) und das
-[Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **2.8.0**.
+[Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **3.0.0**.
 
 Deutsch ist die Basissprache der Oberfläche und dieser Dokumentation; Englisch
 ist der Rückfall für fehlende Texte und die Übersetzung der Dokumentation (Dateien

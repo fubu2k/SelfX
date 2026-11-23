@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Read-only Intune/SCCM detection for ProgramFiles\SelfX. Requires SelfXService.exe, SelfX.exe,
-    Tool_Config.xml, a registered SelfXService, an exact Tool_Version match of 2.8.0 and the file list of the
+    Tool_Config.xml, a registered SelfXService, an exact Tool_Version match of 3.0.0 and the file list of the
     package: SelfX.Files.json in the install folder must have the digest that tools\New-SelfXIntuneWin.ps1 writes
     into $ExpectedFilesHash of the Detection.ps1 it creates (build\SelfX-Service-<version>.Detection.ps1; upload that
     file to Intune). So an update with changed files is found even when Tool_Version did not change.
@@ -18,7 +18,7 @@
     Name    : Detection.ps1
     Package : SelfX Service
     Context : Detection
-    Version : 2.8.1
+    Version : 3.0.0
 
     History:
     Version  Date        Author               Change
@@ -27,9 +27,10 @@
     2.8.0    2026-11-22  fubu2k               Detect version 2.8.0 (PowerShell 7, Windows 11 25H2)
     2.8.1    2026-11-23  fubu2k               Security (M2): also compares the digest of the file list SelfX.Files.json with the value
                                               embedded by the packaging tool (changed files are detected without a version change)
+    3.0.0    2026-11-23  fubu2k               Detect version 3.0.0 (release)
 #>
 
-$ExpectedVersion = '2.8.0'
+$ExpectedVersion = '3.0.0'
 # Digest of the file list of the package. tools\New-SelfXIntuneWin.ps1 replaces the placeholder in the Detection.ps1 it writes
 # to the build folder; the repository copy keeps it (version check only).
 $ExpectedFilesHash = '__SELFX_FILES_HASH__'
