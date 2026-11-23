@@ -69,7 +69,7 @@ $temp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXDetectionTest-' + [guid]::Ne
 [void][IO.Directory]::CreateDirectory($temp)
 try {
 	function Write-List($Path, $Files, $Version = 1) {
-		$list = [ordered]@{ ManifestVersion = $Version; ToolVersion = '2.8.0'; BuiltUtc = [DateTime]::UtcNow.ToString('o'); Files = $Files }
+		$list = [ordered]@{ ManifestVersion = $Version; ToolVersion = '3.0.0'; BuiltUtc = [DateTime]::UtcNow.ToString('o'); Files = $Files }
 		[IO.File]::WriteAllText($Path, ($list | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
 	}
 	$list = Join-Path $temp 'SelfX.Files.json'
