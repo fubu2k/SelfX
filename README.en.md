@@ -26,7 +26,7 @@ deployment of SelfX Service: see
 
 ## Screenshots
 
-The screenshots were taken with SelfX Service 2.6.8 and show sample data (fictional device
+The screenshots were taken with SelfX Service 2.8 and show sample data (fictional device
 *Contoso*) and the placeholder logo of the delivered configuration.
 
 **Troubleshooting:** actions in plain language, with search, categories and an
@@ -48,6 +48,10 @@ ready to copy or export.
 each user can also choose *Dark* or *Light*.
 
 ![Troubleshooting page, light appearance](docs/images/selfx-troubleshooting-light.png)
+
+**Help in the navigation:** with `Ticket_Enabled` the button *Open a ticket with IT support* appears, with `Copilot_Enabled` also *Ask Copilot Chat* (both off by default).
+
+![Navigation with ticket and Copilot Chat buttons](docs/images/selfx-ticket-copilot-light.png)
 
 **Adaptive window:** in a narrow window the navigation shows only icons and the
 cards rearrange.
