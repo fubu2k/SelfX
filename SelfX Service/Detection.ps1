@@ -20,37 +20,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.3.0    2026-10-28  Wolfgang Baeck       Detect the health-reporting package version
-    2.3.1    2026-10-28  Wolfgang Baeck       Detect the health remediation package version
-    2.3.2    2026-10-28  Wolfgang Baeck       Detect the per-status recheck package version
-    2.3.3    2026-10-29  Wolfgang Baeck       Detect the pending reboot / updates status package version
-    2.3.4    2026-10-29  Wolfgang Baeck       Detect the Pending status / Defender signature update package version
-    2.4.0    2026-11-02  Wolfgang Baeck       Detect the device logs (send to support) package version
-    2.5.0    2026-11-04  Wolfgang Baeck       Detect the modern UI / background checks package version
-    2.5.1    2026-11-04  Wolfgang Baeck       Detect the branding package version
-    2.5.2    2026-11-04  Wolfgang Baeck       Detect the package version with the update fix (exit code 1)
-    2.5.3    2026-11-04  Wolfgang Baeck       Detect the version with user time zone, "Fix all problems" and SelfX.exe
-    2.5.4    2026-11-05  Wolfgang Baeck       Detect version 2.5.4 (Defender Fix button only while not OK)
-    2.5.5    2026-11-05  Wolfgang Baeck       Detect version 2.5.5 (local compliance criteria check)
-    2.5.6    2026-11-05  Wolfgang Baeck       Detect version 2.5.6 (Fix button for pending Windows and Store updates)
-    2.5.7    2026-11-05  Wolfgang Baeck       Detect version 2.5.7 (uninstallation closes open SelfX windows)
-    2.5.8    2026-11-05  Wolfgang Baeck       Detect version 2.5.8 (status icon starts right after the installation)
-    2.5.9    2026-11-05  Wolfgang Baeck       Detect version 2.5.9 (language selection for the user)
-    2.5.10   2026-11-06  Wolfgang Baeck       Detect version 2.5.10 (LAN detection in virtual machines, last Intune sync time)
-    2.6.0    2026-11-06  Wolfgang Baeck       Detect version 2.6.0 (logging, restart / app retry repairs); logs the result
-    2.6.1    2026-11-06  Wolfgang Baeck       Detect version 2.6.1 (running state of the start buttons)
-    2.6.2    2026-11-06  Wolfgang Baeck       Detect version 2.6.2 (SelfX icon in the taskbar)
-    2.6.3    2026-11-06  Wolfgang Baeck       Detect version 2.6.3 (update installation fixed)
-    2.6.4    2026-11-06  Wolfgang Baeck       Detect version 2.6.4 (SelfX logs in the device logs report)
-    2.6.5    2026-11-06  Wolfgang Baeck       Detect version 2.6.5 (notifications per user)
-    2.6.6    2026-11-06  Wolfgang Baeck       Detect version 2.6.6 (appearance Automatic)
-    2.6.7    2026-11-16  Wolfgang Baeck       Detect version 2.6.7 (default appearance Automatic)
-    2.6.8    2026-11-16  Wolfgang Baeck       Detect version 2.6.8 (neutral branding placeholders)
-    2.6.9    2026-11-19  Wolfgang Baeck       Detect version 2.6.9 (Windows updates through the orchestrator)
-    2.6.11   2026-11-22  fubu2k               Detect version 2.6.11 (security hardening, see CHANGELOG.md)
-    2.6.12   2026-11-22  fubu2k               Detect version 2.6.12 (German base language)
-    2.7.0    2026-11-22  fubu2k               Detect version 2.7.0 (.NET 10 programs)
     2.8.0    2026-11-22  fubu2k               Detect version 2.8.0 (PowerShell 7, Windows 11 25H2)
 #>
 

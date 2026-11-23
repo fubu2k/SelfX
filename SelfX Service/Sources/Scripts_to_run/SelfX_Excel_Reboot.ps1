@@ -21,9 +21,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-10-28  Wolfgang Baeck       Initial version (based on SelfX_Word_Reboot.ps1)
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1); only processes of the user's session; waits up
-                                              to 15 seconds for Excel to close
+    2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1); only processes of the user's session
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

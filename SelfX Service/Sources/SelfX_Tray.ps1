@@ -32,13 +32,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.5.0    2026-11-04  Wolfgang Baeck       Initial version: status icon, notifications, menu
-    2.5.2    2026-11-04  Wolfgang Baeck       Working directory outside the install folder (did block updates)
-    2.5.3    2026-11-04  Wolfgang Baeck       SelfX and the icon are started without a console window (SelfX.exe / CreateNoWindow)
-    2.5.9    2026-11-05  Wolfgang Baeck       Language chosen by the user; restart after a change of the language
-    2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1): start, status changes, notifications, stop reason
-    2.6.5    2026-11-06  Wolfgang Baeck       Notifications per user (HKCU TrayNotifications): menu item "Show notifications" and
-                                              switch in SelfX > Settings; problems are remembered also while they are off
-    2.8.8    2026-11-22  fubu2k               Passes Network_Test_Config.xml to the system information collection (optional latency measurements)
     2.8.9    2026-11-23  fubu2k               Windows 11: the icon is shown permanently next to the clock (IsPromoted; Tray_Pin_Icon, user value TrayPin)
 #>
 

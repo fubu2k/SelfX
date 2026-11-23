@@ -27,8 +27,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin, full scan)
-    2.8.15   2026-11-23  fubu2k               Quick scan through CIM (no job, no Start-MpScan), the result is read from the detections
-                                              (the original always reported "no threats"), no file paths, exit codes 0 / 1 / 2
+    2.8.15   2026-11-23  fubu2k               Quick scan through CIM; result read from the detections; no file paths; exit codes 0 / 1 / 2
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

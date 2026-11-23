@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests the limits of the service pipe with the real service code (findings F3, A4, A5).
+    Tests the limits of the service pipe with the real service code (deadlines and connection limits).
 
 .DESCRIPTION
     Compiles Service\SelfXService.cs in memory and starts only its pipe listener in this process, under a test
@@ -28,9 +28,8 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.6.11   2026-11-22  fubu2k               Initial version (security review findings A4 and A5).
-    2.8.0    2026-11-23  fubu2k               First pipe instance check (finding N3).
-    2.8.2    2026-11-23  fubu2k               File list check before every start (finding N4).
+    2.6.11   2026-11-22  fubu2k               Initial version.
+    2.8.2    2026-11-23  fubu2k               File list check before every start.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0

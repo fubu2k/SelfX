@@ -10,8 +10,6 @@
     "chkdsk /f". Used for OneDrive files that are locked by a damaged reparse point
     (error 0x80071129). This script does not restart Windows; the user restarts later.
     The check at the next start can take several minutes.
-    Before 2.6.0 the script answered the chkdsk prompt with "Y", which Windows in other
-    display languages (for example German, "J") did not accept, so no check was scheduled.
     Logs to ProgramData\SelfX\Logs (SelfXLog.ps1).
     Exit 0 = check scheduled; exit 1 = scheduling failed.
 
@@ -25,10 +23,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.0.0    2026-10-28  Wolfgang Baeck       Runs as SYSTEM through the SelfX service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.6.0    2026-11-06  Wolfgang Baeck       Repair-Volume -OfflineScanAndFix instead of "echo Y| chkdsk" (worked
-                                              only in English Windows); logging (SelfXLog.ps1)
     2.6.10   2026-11-22  fubu2k               CIM method Repair instead of Repair-Volume (no compatibility layer in PowerShell 7)
 #>
 

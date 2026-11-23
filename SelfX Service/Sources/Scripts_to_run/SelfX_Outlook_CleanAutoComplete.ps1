@@ -25,8 +25,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.8.0    2026-11-23  fubu2k               Program path independent of Office version and bitness (no fixed Office16 path), own session
-                                              only, graceful close with timeout, no silent errors, logging and exit code
+    2.8.0    2026-11-23  fubu2k               Program path independent of Office version and bitness; own session only; logging and exit code
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

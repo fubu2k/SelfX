@@ -22,8 +22,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.2    2026-11-22  fubu2k               Initial version (own session, classic Outlook only)
-    2.8.0    2026-11-23  fubu2k               No start by program name: the path is taken from the closed process or from App Paths, nothing is
-                                              closed when it is unknown (code review finding N8)
+    2.8.0    2026-11-23  fubu2k               Program path from the closed process or from App Paths; nothing is closed when it is unknown
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

@@ -32,7 +32,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    1.0.0    2026-11-23  fubu2k               Initial version (security review finding N12).
+    1.0.0    2026-11-23  fubu2k               Initial version.
 #>
 
 [CmdletBinding()]

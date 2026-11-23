@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Checks the links of the help dialog (finding N7 of the code review).
+    Checks the links of the help dialog.
 
 .DESCRIPTION
     Pure functions, nothing is read from or changed on the device. The links come from Tool_Config.xml (only
@@ -26,7 +26,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.8.0    2026-11-23  fubu2k               Initial version (code review finding N7).
+    2.8.0    2026-11-23  fubu2k               Initial version.
     2.8.14   2026-11-23  fubu2k               Resolve-SelfXCatalogLink (links of catalogue actions with Context Link).
 #>
 

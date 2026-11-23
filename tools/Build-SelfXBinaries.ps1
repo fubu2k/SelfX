@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Builds the programs of SelfX Service once on a build machine with .NET 10 and writes a SHA256 manifest and
-    AppLocker hash rules (security review finding F9).
+    AppLocker hash rules.
 
 .DESCRIPTION
     The devices do not compile anything. This script builds the three programs from the sources of the package
@@ -37,9 +37,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.6.11   2026-11-22  fubu2k               Initial version (security review finding F9).
-    2.7.0    2026-11-22  fubu2k               Builds with the .NET SDK 10 (dotnet publish, self-contained); manifest
-                                              format 2.
+    2.6.11   2026-11-22  fubu2k               Initial version.
     2.8.18   2026-11-23  fubu2k               Also builds Bin\Audio\SelfXAudio.dll (Service\SelfXAudio.cs)
 #>
 

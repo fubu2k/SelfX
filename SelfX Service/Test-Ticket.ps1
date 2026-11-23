@@ -15,7 +15,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.4    2026-11-22  fubu2k               Initial version
-    2.8.6    2026-11-22  fubu2k               Routing (Ticket_Config.xml), Cc, device values
     2.8.7    2026-11-22  fubu2k               Recipient and Cc from the registry
 #>
 $ErrorActionPreference = 'Stop'

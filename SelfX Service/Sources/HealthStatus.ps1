@@ -14,30 +14,8 @@
     Version: 2.8.1
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial local health checks and extension contract.
-    2.3.1  2026-10-28  Wolfgang Baeck  Expose configured remediation mappings without running repairs.
-    2.3.2  2026-10-28  Wolfgang Baeck  Optional single-check collection (-OnlyId / -OnlyName).
-    2.3.3  2026-10-29  Wolfgang Baeck  Pending reboot and offline "updates to install" checks.
-    2.3.4  2026-10-29  Wolfgang Baeck  Pending (warning) status for updates and compliance; Defender
-                                       signature version and last update; Remediation When="NotOK".
-    2.5.0  2026-11-04  Wolfgang Baeck  Status cache file (-CacheFile) for background checks and tray icon.
-    2.5.3  2026-11-04  Wolfgang Baeck  Times in details as UTC markers {utc:...} (shown in the time zone of
-                                       the user); last Windows Update scan is UTC (was shown as local time).
-    2.5.5  2026-11-05  Wolfgang Baeck  Script checks show their last output line as detail (the exit code still
-                                       defines the status); clearer text for an unconfigured compliance check.
-    2.6.0  2026-11-06  Wolfgang Baeck  Logging (SelfXLog.ps1); apps: app id from the key <app id>_<revision> (the
-                                       user id was taken before), names from the IME logs, error codes in hex,
-                                       not applicable apps (3000-3999) are not counted, clear detail text.
-    2.6.9  2026-11-19  Wolfgang Baeck  Pending restart also from the Windows Update Agent (SystemInfo.RebootRequired)
-                                       and the orchestrator (ReadyToReboot, Windows 11 24H2+): Settings showed
-                                       "Restart now" while SelfX reported no restart; updates that only wait for
-                                       the restart are no longer listed as "to install".
-    2.6.10 2026-11-22  fubu2k          Security: a single check (HEALTH <Id> <name>) never adds rows to the shared status
-                                       cache; an unknown name could be appended by any user and made the cache invalid
-                                       for all users. The placeholder result "Collection" is never stored.
-    2.8.1  2026-11-22  fubu2k          Pending restart: the detail also names the last restart and, when it is newer, the
-                                       time the last Windows update was installed (read-only, no new state).
     2.8.2  2026-11-23  fubu2k          Security: the WinRT libraries are checked against SelfX.Files.json when they are loaded
-                                       (SelfXWinRT.ps1); a difference = no orchestrator information (finding N4).
+                                       (SelfXWinRT.ps1); a difference = no orchestrator information.
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 

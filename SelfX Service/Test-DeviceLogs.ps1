@@ -13,10 +13,6 @@
     Version: 2.6.10
     History:
     2.4.0  2026-11-02  Wolfgang Baeck  Initial device logs tests.
-    2.6.4  2026-11-06  Wolfgang Baeck  SelfX logs in the report (selection, own user logs only, no junctions, size limit).
-    2.6.10 2026-11-22  fubu2k          User logs are no longer read as SYSTEM: the System action adds machine logs only; the GUI
-                                       helper adds the own user logs with the rights of the user (own SID folder, no junction,
-                                       no foreign owner, zip and txt, tolerant of a broken copy).
     2.6.10 2026-11-22  fubu2k          User view: only an elevated administrator (SELFX_CALLER_ADMIN=1) gets the full report;
                                        normal users get the collector with -UserView and no SelfX machine logs.
 #>
@@ -187,7 +183,7 @@ try {
     Assert-Equal @(Get-ChildItem -LiteralPath $userFolder -File)[0].Extension '.zip' 'Compression is the default'
     Set-TestConfig 7 True
 
-    # --- SelfX logs in the report (2.6.4) ------------------------------------------------------
+    # --- SelfX logs in the report ------------------------------------------------------
     $logRoot = Join-Path $temp 'SelfXLogs'
     function New-LogFile([string]$Name, [int]$AgeDays, [string]$Content = 'line') {
         $path = Join-Path $logRoot $Name
@@ -251,7 +247,7 @@ try {
     Assert-Equal $script:collectorUserView $false 'Administrator: the collector runs without -UserView (full report)'
     Remove-Item -LiteralPath $meFolder -Recurse -Force
 
-    # --- User view for normal users (2.6.10) -----------------------------------------------------
+    # --- User view for normal users -----------------------------------------------------
     # Only SELFX_CALLER_ADMIN=1 (set by the service from the client token) gives the full report; everything else is a normal user.
     foreach ($value in @('1', '0', '', 'true', 'yes', ' 1', '11')) {
         $env:SELFX_CALLER_ADMIN = $value
@@ -383,7 +379,7 @@ try {
     $result = Send-SelfXSupportReport -To 'x' -Subject 'S' -Body 'B' -ReportFolder $reports -Destination $blocked
     Assert-Equal $result.Status 'Error' 'Copy failure'
 
-    # --- Own user logs added by the GUI with the rights of the user (2.6.10) -------------------------------
+    # --- Own user logs added by the GUI with the rights of the user -------------------------------
     $usersRoot = Join-Path $logRoot 'Users'
     New-LogFile "Users\$me\old_2026-09-01.log" 30 'old user log'
     New-LogFile "Users\$me\notes.txt" 0 'not a log'

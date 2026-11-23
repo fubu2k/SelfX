@@ -22,8 +22,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.0.0    2026-10-28  Wolfgang Baeck       Checks all Firefox profiles under LOCALAPPDATA and APPDATA
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
     2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1); failed removals are reported (exit 1)
 #>
 

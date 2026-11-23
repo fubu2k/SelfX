@@ -23,13 +23,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.0.0    2026-10-28  Wolfgang Baeck       Moved to SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.6.0    2026-11-06  Wolfgang Baeck       Creates the add-in key when missing (Set-ItemProperty failed), adds the
-                                              add-in to DoNotDisableAddinList, waits at most 30 s for Outlook (the wait
-                                              had no timeout), no error when Outlook was not running; logging
-    2.8.0    2026-11-23  fubu2k               No start by program name: the path is taken from the closed process or from App Paths, nothing is
-                                              closed when it is unknown (code review finding N8)
+    2.8.0    2026-11-23  fubu2k               Program path from the closed process or from App Paths; nothing is closed when it is unknown
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

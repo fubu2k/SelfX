@@ -23,11 +23,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.0.0    2026-10-28  Wolfgang Baeck       New Teams cache, moved to SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.6.0    2026-11-06  Wolfgang Baeck       Only Teams processes of the user (was every process named *teams*); new
-                                              Teams is started through its app ID (several processes made the start
-                                              fail) and also when it was not running; logging
+    2.6.0    2026-11-06  Wolfgang Baeck       Only Teams processes of the user; logging
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.

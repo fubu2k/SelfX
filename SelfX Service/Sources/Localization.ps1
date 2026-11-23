@@ -33,11 +33,6 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.2.0    2026-10-28  Wolfgang Baeck       Initial version: multilingual user interface
-    2.2.0    2026-10-28  Wolfgang Baeck       Use German for Swiss German cultures
-    2.4.0    2026-11-02  Wolfgang Baeck       Pass the Post_Action field of catalogue actions
-    2.5.9    2026-11-05  Wolfgang Baeck       Language chosen by the user: Get-SelfXLanguageList, Resolve-SelfXLanguageSetting,
-                                              Get-SelfXLanguageFileCulture
-    2.6.12   2026-11-22  fubu2k               German is the base language (no matching file -> de.xml); English stays the fallback for missing texts
     2.8.14   2026-11-23  fubu2k               Pass the Link field of catalogue actions (Context Link)
 #>
 

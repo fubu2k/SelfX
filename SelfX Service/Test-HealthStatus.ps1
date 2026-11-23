@@ -8,17 +8,6 @@
     Version: 2.6.10
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial isolated health-check tests.
-    2.3.1  2026-10-28  Wolfgang Baeck  Test remediation mapping, service allowlist and recheck callbacks.
-    2.3.2  2026-10-28  Wolfgang Baeck  Test single-check filter, HEALTH request validation and OK button.
-    2.3.3  2026-10-29  Wolfgang Baeck  Test pending reboot and updates-to-install checks (registry/WUA mocked).
-    2.3.4  2026-10-29  Wolfgang Baeck  Test Pending status, Defender details and When="NotOK" remediations.
-    2.5.0  2026-11-04  Wolfgang Baeck  Test status cache, STATUS request, background settings and status cards.
-        2.5.3  2026-11-04  Wolfgang Baeck  Test UTC time markers and conversion into the time zone of the user.
-        2.5.5  2026-11-05  Wolfgang Baeck  Test the last output line of script checks as detail text.
-        2.5.6  2026-11-05  Wolfgang Baeck  Test the Updates remediation and the remediation TimeoutSeconds of the service.
-        2.6.9  2026-11-19  Wolfgang Baeck  Test the pending restart from the Windows Update Agent and the orchestrator.
-        2.6.10 2026-11-22  fubu2k          Test that a single check with an unknown name never changes the shared status cache.
-        2.6.10 2026-11-22  fubu2k          Test the service regex anchors (\z), the cleaning of log text and the rate limit of rejected requests.
         2.6.10 2026-11-22  fubu2k          Test the pipe limits (connections per user, pause after an action) and the read deadline.
     #>
 $ErrorActionPreference = 'Stop'

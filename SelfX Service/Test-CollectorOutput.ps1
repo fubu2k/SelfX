@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests that the log collector creates its report file safely (finding N2 of the code review).
+    Tests that the log collector creates its report file safely.
 
 .DESCRIPTION
     Takes the function Open-SelfXReportWriter out of Sources\Scripts_to_run\Collect-DeviceLogs.ps1 (the collector itself is
@@ -20,7 +20,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    2.8.0    2026-11-22  fubu2k               Initial version (security review finding N2).
+    2.8.0    2026-11-22  fubu2k               Initial version.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0

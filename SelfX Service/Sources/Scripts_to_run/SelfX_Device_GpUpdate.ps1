@@ -25,7 +25,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard, gpupdate with echo y)
-    2.8.16   2026-11-23  fubu2k               Only domain / hybrid devices, no echo y, empty input, waits with a time limit and exit code, never /boot or /logoff
+    2.8.16   2026-11-23  fubu2k               Only domain / hybrid devices; time limit and exit code
 #>
 
 # Logging (SelfXLog.ps1 in the install folder); the action also works without it.

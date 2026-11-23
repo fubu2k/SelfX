@@ -23,10 +23,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
-    2.0.0    2026-10-28  Wolfgang Baeck       Restarts only non-disabled physical adapters without confirmation
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1); virtual machines: adapters with a default route
-                                              (before, nothing was restarted); exit 1 when no adapter was restarted
+    2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1) and exit code
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -39,7 +36,7 @@ trap { Write-SelfXLog "Failed: $($_.Exception.Message)" Error; break }
 function Select-SelfXRestartAdapters {
 	param([object[]]$Adapters = @(), [int[]]$GatewayIndexes = @())
 	$enabled = @($Adapters | Where-Object { $_ -and "$($_.Status)" -notin @('Disabled', 'Not Present') })
-	# Physical adapters (hardware, not virtual) as before; preserve adapters the user or administrator disabled.
+	# Physical adapters (hardware, not virtual); preserve adapters the user or administrator disabled.
 	$physical = @($enabled | Where-Object { ($_.HardwareInterface -eq $true -or $_.ConnectorPresent -eq $true) -and $_.Virtual -ne $true })
 	if ($physical.Count) { return $physical }
 	# Virtual machine: its network adapters are virtual. Restart those that connect the device.

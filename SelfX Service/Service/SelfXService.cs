@@ -52,42 +52,8 @@ Notes:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.0.0    2026-10-28  Wolfgang Baeck       Initial version for SelfX Service
-    2.2.0    2026-10-28  Wolfgang Baeck       Added description, history and comments
-    2.3.0    2026-10-28  Wolfgang Baeck       Fixed HEALTH endpoint for protected local status checks
-    2.3.1    2026-10-28  Wolfgang Baeck       Allow installed remediation scripts from protected health config
-    2.3.2    2026-10-28  Wolfgang Baeck       Validated single-check HEALTH <Id> [base64 name] request
-    2.3.3    2026-10-29  Wolfgang Baeck       Allow PendingReboot and Updates check Ids
-    2.4.0    2026-11-02  Wolfgang Baeck       Pass the caller SID to RUN scripts (SELFX_CALLER_SID)
-    2.5.0    2026-11-04  Wolfgang Baeck       Background health checks, status cache and STATUS request
-    2.5.3    2026-11-04  Wolfgang Baeck       Log uses the current time zone (cache cleared after time zone changes)
-    2.5.6    2026-11-05  Wolfgang Baeck       Optional TimeoutSeconds on Health_Config remediations (max. 7200)
-    2.6.0    2026-11-06  Wolfgang Baeck       Daily log housekeeping (Log_Retention_Days in Tool_Config.xml, default 90)
-    2.6.10   2026-11-22  fubu2k               Pipe hardening: deadline for reading the request and writing the answer, thread per
-                                              connection, limits of 64 connections (8 per user), pause after HEALTH (3 s) and
-                                              after a RUN of the same action by the same user (15 s)
-    2.6.10   2026-11-22  fubu2k               Log hardening: request text is cleaned and shortened, rejected requests are rate limited;
-                                              regex anchors use \z instead of $
-    2.6.10   2026-11-22  fubu2k               RUN children also receive SELFX_CALLER_ADMIN (1 = elevated administrator, from the client token)
-    2.6.10   2026-11-22  fubu2k               OtherSessions=Block (catalog element / Health_Config attribute): a normal user cannot start
-                                              such an action while another user has an active session (answer ERROR OtherSessions)
-    2.8.0    2026-11-23  fubu2k               First pipe instance with FirstPipeInstance (a pipe name that another process already owns is
-                                              not joined: logged, retried); Windows event log entries 4001-4004 and 4099 (fixed texts,
-                                              rate limited); ProgramData\SelfX is checked at start and daily (link, owner), the service
-                                              writes nothing there while it is not safe (N3, N6, F12)
-    2.6.11   2026-11-22  fubu2k               Pipe deadlines use overlapped I/O (asynchronous pipe handle), so a cancelled read or write
-                                              ends reliably; one deadline for the whole request. The per-user connection limit is
-                                              applied when the connection is accepted (owner of the client process), before any data
-                                              is read
-    2.8.0    2026-11-23  fubu2k               Header comments: build with the .NET 10 SDK (no .NET Framework compiler); version line
-    2.8.1    2026-11-23  fubu2k               The OtherSessions check reads the sessions by name (WTSQuerySessionInformation) instead of WTSQueryUserToken:
-                                              the service no longer needs SeTcbPrivilege (finding N5)
-    2.8.2    2026-11-23  fubu2k               Before every start the service checks the installed scripts and configuration against SelfX.Files.json
-                                              (SHA256, no unlisted script or XML file, no links); mismatch: nothing is started (event 4005),
-                                              Tool_Config.xml Service_FileCheck=Audit only logs (finding N4)
-    2.8.3    2026-11-23  fubu2k               Daily housekeeping also deletes device log reports older than 7 days (Reports\<SID>, only report files,
-                                              only trusted folders without links) and empty user folders
     2.8.4    2026-11-23  fubu2k               The file check also covers .dll files: a DLL below the install folder (WinRT) must be listed in
-                                              SelfX.Files.json too (finding N4, WinRT load check)
+                                              SelfX.Files.json too (WinRT load check)
 */
 
 using System;
@@ -188,8 +154,8 @@ namespace SelfX
         [DllImport("wtsapi32.dll")]
         static extern void WTSFreeMemory(IntPtr memory);
 
-        // User and domain of a session by name. Unlike WTSQueryUserToken this needs no SeTcbPrivilege (security review
-        // finding N5: the service must not depend on one of the strongest privileges of LocalSystem).
+        // User and domain of a session by name. Unlike WTSQueryUserToken this needs no SeTcbPrivilege (the service must not depend on one of the strongest
+        // privileges of LocalSystem).
         [DllImport("wtsapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         static extern bool WTSQuerySessionInformationW(IntPtr server, int sessionId, int infoClass, out IntPtr buffer, out int bytesReturned);
 
@@ -215,16 +181,16 @@ namespace SelfX
         readonly SemaphoreSlim healthLock = new SemaphoreSlim(1, 1);
         readonly ManualResetEvent stopEvent = new ManualResetEvent(false);
         volatile bool stopping;
-        // Defense in depth (finding F12): ProgramData\SelfX is checked when the service starts and before the daily housekeeping.
+        // Defense in depth: ProgramData\SelfX is checked when the service starts and before the daily housekeeping.
         // While it is not safe (link, or an owner other than SYSTEM, administrators, TrustedInstaller or the service account)
         // nothing is written there and no status cache is read or produced.
         volatile bool dataFolderSafe = true;
         static readonly string[] TrustedOwnerSids = { "S-1-5-18", "S-1-5-32-544", "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464" };
-        // The first pipe instance is created with FirstPipeInstance (finding N3): when another process already owns the pipe
+        // The first pipe instance is created with FirstPipeInstance: when another process already owns the pipe
         // name, the service does not join it but logs the problem and retries.
         bool firstPipeInstanceCreated;
         int pipeInUseFailures;
-        // Windows event log (finding N6): only when running under the Service Control Manager, fixed texts, rate limited per
+        // Windows event log: only when running under the Service Control Manager, fixed texts, rate limited per
         // event ID (the Application log can be read by every user, so no request text and no user names go there).
         bool securityEventsEnabled;
         readonly object eventLock = new object();
@@ -1009,7 +975,7 @@ namespace SelfX
         static readonly string[] CheckedExtensions = { ".ps1", ".psm1", ".psd1", ".ps1xml", ".xml", ".dll" };
 
         /// <summary>
-        /// Finding N4: compare the installed scripts and configuration with SelfX.Files.json (written at package build, copied
+        /// Compare the installed scripts and configuration with SelfX.Files.json (written at package build, copied
         /// by Install.ps1). Every listed file must exist with the listed SHA256; no script or XML file below the root may be
         /// missing from the list; no link (junction, symbolic link) may be in the way. Returns false and the problems (at most
         /// 20, "kind: name") when anything differs, when the list is missing, too large or invalid (fail closed).
@@ -1222,7 +1188,7 @@ namespace SelfX
                 Log("PowerShell " + version.FileMajorPart + "." + version.FileMinorPart + " found; 7.6 or newer is required; '" + scriptName + "' was not started.");
                 return "ERROR PowerShell 7.6 or newer is required";
             }
-            // Finding N4: scripts and configuration must be exactly what the package contained.
+            // Scripts and configuration must be exactly what the package contained.
             if (!CheckInstalledFiles(scriptName))
             {
                 return "ERROR Installed files are not intact";
@@ -1723,7 +1689,7 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Check ProgramData\SelfX (finding F12): no link, and an owner that only administrators can set. The installer prepares
+        /// Check ProgramData\SelfX: no link, and an owner that only administrators can set. The installer prepares
         /// the folder; this check is the second line of defense when a user changed it later or created it before an update.
         /// </summary>
         bool CheckDataFolder(out string reason)

@@ -11,19 +11,19 @@
     The report is compressed to a .zip file with the same name unless DeviceLogs_Compress is False
     in Tool_Config.xml. DeviceLogs_Days (1-60, default 7) sets the event log history.
 
-    The machine logs of SelfX itself are added (2.6.4): the logs of the SelfX service and scripts in
+    The machine logs of SelfX itself are added: the logs of the SelfX service and scripts in
     ProgramData\SelfX\Logs (SelfXService.log, Install.log and Uninstall.log always, the other
     *.log files of the last DeviceLogs_Days days). In the .zip they are separate files in the
     folder SelfX-Logs; in a .txt report they are appended as the last section. At most the last
     2 MB of each file and 30 MB in total are added.
 
-    The logs of the user in Logs\Users\<SID> are NOT read here (2.6.10): users can create and change
+    The logs of the user in Logs\Users\<SID> are NOT read here: users can create and change
     that folder, so reading it as SYSTEM could be redirected (junction swap between check and read)
     to protected files. The SelfX GUI adds the user's own logs to its copy of the report with the
     rights of the user (SupportReport.ps1, Add-SelfXUserLogsToReport), so a user can only add what
     that user can read anyway.
 
-    Scope (2.6.10): the service also sets SELFX_CALLER_ADMIN (1 = the client token has the local Administrators
+    Scope: the service also sets SELFX_CALLER_ADMIN (1 = the client token has the local Administrators
     group enabled, otherwise 0). Only then the report is complete. For every other caller (also when the variable
     is missing, for example with an older service) the collector runs with -UserView and the machine logs of
     SelfX (they name all users) are not added; the report contains only the data of the requesting user.
@@ -63,15 +63,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.4.0    2026-11-02  Wolfgang Baeck       Initial version: device logs for the support by e-mail
-    2.5.1    2026-11-04  Wolfgang Baeck       Fix: script paths resolved in the body ($PSScriptRoot is empty
-                                              in parameter defaults of Windows PowerShell 5.1)
-    2.6.0    2026-11-06  Wolfgang Baeck       Logging to ProgramData\SelfX\Logs (SelfXLog.ps1)
-    2.6.4    2026-11-06  Wolfgang Baeck       The SelfX logs (service, scripts, own logs of the user) are added to the report
-    2.6.10   2026-11-22  fubu2k               Security: the user logs (Logs\Users\<SID>) are no longer read as SYSTEM (race on a
-                                              user-writable folder); the GUI adds them with the rights of the user
-    2.6.10   2026-11-22  fubu2k               Multi-user: only an elevated administrator (SELFX_CALLER_ADMIN=1) gets the full
-                                              report. Normal users get the collector with -UserView (own session, profile
-                                              and hive; other users hidden) and only their own SelfX user logs.
+    2.6.10   2026-11-22  fubu2k               Normal users get the reduced report of their own data (-UserView); user logs are added by the GUI
 #>
 
 [CmdletBinding()]
@@ -133,7 +125,7 @@ function Invoke-DeviceLogCollector {
     $powershell = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'
     if (-not (Test-Path -LiteralPath $powershell -PathType Leaf)) { throw 'PowerShell 7 is not installed (expected: %ProgramFiles%\PowerShell\7\pwsh.exe).' }
     $arguments = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $CollectorPath, '-OutputPath', $OutputPath, '-Days', $Days)
-    # Normal users get the reduced report of their own data only (2.6.10).
+    # Normal users get the reduced report of their own data only.
     if ($UserView) { $arguments += @('-UserView', '-CallerSid', $CallerSid) }
     return @(& $powershell @arguments 2>&1)
 }

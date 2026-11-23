@@ -1,7 +1,6 @@
 <#
 .SYNOPSIS
-    Creates an optional App Control for Business (WDAC) supplemental policy with hash rules for SelfX Service
-    (security review finding N4, part 3).
+    Creates an optional App Control for Business (WDAC) supplemental policy with hash rules for SelfX Service.
 
 .DESCRIPTION
     Nothing in the SelfX package depends on this script: WDAC support is optional. The script reads the package folder
@@ -47,7 +46,7 @@
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    1.0.0    2026-11-23  fubu2k               Initial version (security review finding N4, part 3).
+    1.0.0    2026-11-23  fubu2k               Initial version.
 #>
 
 [CmdletBinding()]
