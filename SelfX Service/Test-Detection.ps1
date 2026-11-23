@@ -49,8 +49,8 @@ Import-Function $detectionScript @('Get-SelfXFilesDigest', 'Test-SelfXFilesList'
 $Prefix = 'Tool_'
 Import-Function $toolScript @('Get-SelfXFilesDigest', 'New-SelfXDetectionScript')
 # Test-SelfXFilesList of Detection.ps1 calls Get-SelfXFilesDigest: make that name resolve to the Detection.ps1 version.
-function global:Get-SelfXFilesDigest { param([hashtable]$Files) Det_Get-SelfXFilesDigest -Files $Files }
-# The tool function calls Get-SelfXFilesDigest with an ordered dictionary; the Detection.ps1 version takes a hashtable.
+function global:Get-SelfXFilesDigest { param($Files) $copy = @{}; foreach ($key in $Files.Keys) { $copy[$key] = $Files[$key] }; Det_Get-SelfXFilesDigest -Files $copy }
+# New-SelfXDetectionScript of the tool passes an ordered dictionary; the wrapper hands it on as a hashtable.
 $files = [ordered]@{ 'Self_X.ps1' = 'aa11'; 'Languages/de.xml' = 'bb22'; 'Uninstall.ps1' = 'cc33'; 'SelfXService.exe' = 'dd44' }
 $plain = @{}; foreach ($key in $files.Keys) { $plain[$key] = $files[$key] }
 
@@ -93,7 +93,7 @@ try {
 	Write-List (Join-Path $stage 'SelfX.Files.json') $files
 	$target = Join-Path $temp 'out\Detection.ps1'
 	[void][IO.Directory]::CreateDirectory((Split-Path -Parent $target))
-	$written = Tool_New-SelfXDetectionScript -Stage $stage -Target $target
+	$written = New-SelfXDetectionScript -Stage $stage -Target $target
 	Assert-Equal $written $digestTool 'tool: the digest of the staged list is returned'
 	$text = [IO.File]::ReadAllText($target)
 	Assert-Equal ($text -match "\`$ExpectedFilesHash = '$digestTool'") $true 'tool: the digest replaces the placeholder in Detection.ps1'
@@ -105,7 +105,7 @@ try {
 	$noPlaceholder = '$ExpectedFilesHash = ''' + ('0' * 64) + ''''
 	Set-Content -LiteralPath (Join-Path $stage 'Detection.ps1') -Value $noPlaceholder
 	$threw = $false
-	try { [void](Tool_New-SelfXDetectionScript -Stage $stage -Target (Join-Path $temp 'out\Bad.ps1')) } catch { $threw = $true }
+	try { [void](New-SelfXDetectionScript -Stage $stage -Target (Join-Path $temp 'out\Bad.ps1')) } catch { $threw = $true }
 	Assert-Equal $threw $true 'tool: a Detection.ps1 without the placeholder is refused'
 
 	# The repository copy contains the placeholder exactly once as assignment and keeps working as version check.
