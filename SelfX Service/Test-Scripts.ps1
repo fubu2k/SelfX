@@ -53,9 +53,10 @@ function global:Stop-Process {
 	process { foreach ($item in @($InputObject)) { if ($item) { $global:SelfXTestCalls.Add("Stop-Process $($item.ProcessName)"); if (-not $global:StopIgnored) { [void]$global:FakeProcesses.Remove($item) } } } }
 }
 function global:Start-Process {
-	param([Parameter(Position = 0)][string]$FilePath, [Parameter(Position = 1)]$ArgumentList, [switch]$PassThru, [switch]$Wait, $WindowStyle)
+	param([Parameter(Position = 0)][string]$FilePath, [Parameter(Position = 1)]$ArgumentList, [switch]$PassThru, [switch]$Wait, $WindowStyle, $RedirectStandardInput)
 	$global:SelfXTestCalls.Add("Start-Process $FilePath $(@($ArgumentList) -join ' ')".Trim())
-	if ($PassThru) { $fake = [pscustomobject]@{ ExitCode = 0 }; $fake | Add-Member ScriptMethod WaitForExit { param($ms) $true }; return $fake }
+	if ($RedirectStandardInput) { $global:SelfXTestCalls.Add("  stdin-empty=$((Get-Item -LiteralPath $RedirectStandardInput).Length -eq 0)") }
+	if ($PassThru) { $fake = [pscustomobject]@{ ExitCode = $(if ($null -ne $global:ProcExit) { $global:ProcExit } else { 0 }) }; $fake | Add-Member ScriptMethod WaitForExit { param($ms) -not $global:ProcHang }; $fake | Add-Member ScriptMethod Kill { $global:SelfXTestCalls.Add('Kill') }; return $fake }
 }
 function global:Start-Sleep { param([int]$Seconds, [int]$Milliseconds) }
 function global:Restart-Service { param($Name, [switch]$Force, $ErrorAction) $global:SelfXTestCalls.Add("Restart-Service $Name") }
@@ -78,6 +79,7 @@ function global:Get-CimInstance {
 	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpComputerStatus') { return [pscustomobject]@{ AntivirusSignatureVersion = $global:SignatureVersion; AntivirusSignatureLastUpdated = [datetime]'2026-11-06 10:00'; AMServiceEnabled = $(if ($null -ne $global:DefenderActive) { $global:DefenderActive } else { $true }); AntivirusEnabled = $(if ($null -ne $global:DefenderActive) { $global:DefenderActive } else { $true }); AMRunningMode = 'Normal' } }
 	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpThreatDetection') { return @($global:FakeDetections) }
 	if ($Namespace -eq 'root\Microsoft\Windows\Defender' -and $ClassName -eq 'MSFT_MpThreat') { return @([pscustomobject]@{ ThreatID = 2147519003; ThreatName = 'Virus:DOS/EICAR_Test_File' }) }
+	if ($Namespace -ne 'root\StandardCimv2' -and $ClassName -eq 'Win32_ComputerSystem') { return [pscustomobject]@{ PartOfDomain = $(if ($null -ne $global:PartOfDomain) { $global:PartOfDomain } else { $true }) } }
 	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftVolumeEncryption' -and $ClassName -eq 'Win32_EncryptableVolume') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeVolumes }
 	if ($Namespace -eq 'root\CIMV2\Security\MicrosoftTpm' -and $ClassName -eq 'Win32_Tpm') { if ($global:FakeCimFails) { throw 'Mock CIM denied' }; return $global:FakeTpm }
 	if ($Namespace -eq 'root\Microsoft\Windows\Storage' -and $ClassName -eq 'MSFT_Volume') { return @([pscustomobject]@{ DriveLetter = [char]'Z' }, [pscustomobject]@{ DriveLetter = [char]("$env:SystemDrive".TrimEnd(':', '\')[0]) }) }
@@ -475,6 +477,21 @@ try {
 	$run = Invoke-TestScript 'SelfX_Defender_QuickScan.ps1'
 	Assert-Equal ($run.ExitCode -eq 1 -and "$($script:calls -join ';')" -eq '') $true 'Quick scan: Defender not active = exit 1, no scan started'
 	$global:DefenderActive = $null
+
+	# Group policy update (User context): only domain / hybrid devices, fixed arguments, empty input, time limit, exit codes 0 / 1 / 3.
+	$global:PartOfDomain = $null; $global:ProcExit = $null; $global:ProcHang = $false
+	$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $(Join-Path $env:SystemRoot 'System32\gpupdate.exe') /force;  stdin-empty=True" 'GPUpdate: fixed program, only /force, empty input'
+	Assert-Equal (($script:calls -join ' ') -match '(?i)/boot|/logoff|echo') $false 'GPUpdate: never /boot, /logoff or echo'
+	$global:ProcExit = 1
+	Assert-Equal (Invoke-TestScript 'SelfX_Device_GpUpdate.ps1').ExitCode 1 'GPUpdate: a failed gpupdate is exit 1'
+	$global:ProcExit = $null; $global:ProcHang = $true
+	$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+	Assert-Equal ($run.ExitCode -eq 1 -and ($script:calls -contains 'Kill')) $true 'GPUpdate: a run that does not finish is ended (exit 1)'
+	$global:ProcHang = $false; $global:PartOfDomain = $false
+	$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '3|0' 'GPUpdate: not domain joined = exit 3, nothing started'
+	$global:PartOfDomain = $null
 
 	# The time action may only synchronize: no input, no change of time, time zone, time source or service configuration.
 	$syncText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Device_SyncTime.ps1'))
