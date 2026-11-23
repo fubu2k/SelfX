@@ -1,0 +1,89 @@
+# Release of SelfX Service: runs only when a version tag (v<major>.<minor>.<patch>) is pushed.
+# It builds the programs, the Intune package (.intunewin), the SBOM and the SHA-256 list and creates a DRAFT release.
+# Nothing is published automatically: the draft is checked and published by hand. No secret except the workflow token is used.
+name: SelfX Service release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+# The token can write releases; it is handed only to the last step.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build the release files and create the draft
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      # Microsoft Win32 Content Prep Tool (builds the .intunewin). Pinned by tag; the script also requires a valid Microsoft
+      # Authenticode signature. Optional hardening: set the repository variable INTUNEWINAPPUTIL_SHA256 to pin the file hash.
+      INTUNEWINAPPUTIL_TAG: v1.8.7
+      INTUNEWINAPPUTIL_SHA256: ${{ vars.INTUNEWINAPPUTIL_SHA256 }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: The tag matches Tool_Version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $xml = New-Object System.Xml.XmlDocument
+          $xml.XmlResolver = $null
+          $xml.Load((Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Sources\Tool_Config.xml'))
+          $version = $xml.SelectSingleNode('/GUI_Config/Tool_Version').InnerText.Trim()
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag $env:GITHUB_REF_NAME does not match Tool_Version $version." }
+          "Release $version"
+
+      - name: Build the programs (tools\Build-SelfXBinaries.ps1)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & (Join-Path $env:GITHUB_WORKSPACE 'tools\Build-SelfXBinaries.ps1')
+
+      - name: Download the Content Prep Tool (pinned tag)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tool = Join-Path $env:RUNNER_TEMP 'IntuneWinAppUtil.exe'
+          $url = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/$env:INTUNEWINAPPUTIL_TAG/IntuneWinAppUtil.exe"
+          Invoke-WebRequest -Uri $url -OutFile $tool -UseBasicParsing
+          $hash = (Get-FileHash -LiteralPath $tool -Algorithm SHA256).Hash
+          "IntuneWinAppUtil.exe $env:INTUNEWINAPPUTIL_TAG SHA-256 $hash"
+          if ($env:INTUNEWINAPPUTIL_SHA256 -and $hash -ne $env:INTUNEWINAPPUTIL_SHA256.Trim()) { throw 'IntuneWinAppUtil.exe does not match INTUNEWINAPPUTIL_SHA256.' }
+          # New-SelfXIntuneWin.ps1 requires a valid Microsoft Authenticode signature.
+          "TOOL_PATH=$tool" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "TOOL_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build the Intune package, the SBOM and the SHA-256 list
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:GITHUB_WORKSPACE
+          & (Join-Path $root 'tools\New-SelfXIntuneWin.ps1') -ToolPath $env:TOOL_PATH
+          if ($LASTEXITCODE -ne 0) { throw 'New-SelfXIntuneWin.ps1 failed.' }
+          & (Join-Path $root 'tools\New-SelfXSbom.ps1')
+          $build = Join-Path $root 'build'
+          $lines = foreach ($file in Get-ChildItem -LiteralPath $build -File | Sort-Object Name) {
+            '{0}  {1}' -f (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $file.Name
+          }
+          $lines += "# Build tool: IntuneWinAppUtil.exe $env:INTUNEWINAPPUTIL_TAG SHA-256 $($env:TOOL_SHA256.ToLowerInvariant())"
+          [IO.File]::WriteAllText((Join-Path $build 'SHA256SUMS.txt'), (($lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+          Get-Content -LiteralPath (Join-Path $build 'SHA256SUMS.txt')
+
+      # Only this step receives the token (contents: write) and only creates a draft; it runs no repository code.
+      - name: Create a draft release (not published)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = @(Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'build') -File | ForEach-Object { $_.FullName })
+          if ($files.Count -lt 3) { throw 'Expected the .intunewin, the SBOM and SHA256SUMS.txt.' }
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          gh release create $env:GITHUB_REF_NAME @files --draft --verify-tag --title "SelfX Service $version" --notes 'Draft. Files: .intunewin (Intune Win32 app), SBOM (CycloneDX), SHA256SUMS.txt. Compare the SHA-256 values before the upload to Intune. See docs/Installation.md.'
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed.' }

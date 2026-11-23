@@ -207,6 +207,19 @@ findet Intune die alte Version, hält das Gerät für aktuell und installiert da
 Paket nicht. `tools\New-SelfXIntuneWin.ps1` bricht ab, wenn die beiden Werte
 voneinander abweichen.
 
+**Release über GitHub (Tag, nur Entwurf).** Statt das Paket von Hand zu bauen, kann der Workflow
+`.github/workflows/release.yml` es erzeugen: `Tool_Version` und `Detection.ps1` anpassen, mergen, dann den Tag
+`v<Tool_Version>` (zum Beispiel `v2.8.1`) auf main setzen und pushen. Der Workflow bricht ab, wenn Tag und
+`Tool_Version` nicht übereinstimmen. Er baut die Programme (`Bin`), das `.intunewin`
+(`IntuneWinAppUtil.exe` in der festgelegten Version, Microsoft-Signatur wird geprüft), eine Stückliste
+(`SelfX-Service-<Version>.sbom.cdx.json`, SBOM im Format CycloneDX; sie listet die Programme mit SHA-256 und die
+NuGet-Pakete mit Version und Hash) und `SHA256SUMS.txt`. Er legt daraus einen **Entwurf** unter *Releases* an und
+veröffentlicht nichts. Prüfen Sie den Entwurf, vergleichen Sie die SHA-256-Werte, laden Sie die `.intunewin` in
+die Intune-Oberfläche (Microsoft Intune Admin Center > Apps > Windows > Hinzufügen > Windows-App (Win32)) hoch und
+veröffentlichen Sie den Entwurf erst danach. Optional: Die Repository-Variable `INTUNEWINAPPUTIL_SHA256` legt den
+Hash von `IntuneWinAppUtil.exe` fest; ohne sie gilt nur Tag plus Microsoft-Signatur. Eine GitHub Artifact
+Attestation wird nicht verwendet.
+
 `Uninstall.ps1` entfernt den Dienst, `%ProgramFiles%\SelfX`, die Verknüpfungen, den
 Eintrag unter Apps & Features, den Autostart des Statussymbols (`SelfXTray`), den
 Status-Cache (`%ProgramData%\SelfX\Cache`) und die Berichte mit Geräteprotokollen
