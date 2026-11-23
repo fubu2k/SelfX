@@ -451,6 +451,15 @@
 
 هل تريد المتابعة؟</Alerte_MSG>
 			</Action>
+			<Action Id="D_Office_ResetLicence">
+				<Name>يطلب Office التنشيط أو يبلّغ عن منتج غير مرخّص</Name>
+				<Explanation>يعرض Word أو Excel أو Outlook أو تطبيق Office آخر الرسالة «منتج غير مرخّص»، أو يطلب التنشيط أو تسجيل الدخول مرارًا، أو يبلّغ بأن حسابك ليس لديه ترخيص رغم أنه يملك ترخيصًا.</Explanation>
+				<Alerte_MSG>سيتم إغلاق جميع تطبيقات Office المفتوحة (Word وExcel وPowerPoint وOutlook وAccess وOneNote وPublisher وVisio وProject وSkype for Business). سيُفقد العمل غير المحفوظ. بعد ذلك تُزال بيانات الترخيص المحفوظة لحساب المستخدم الخاص بك. لا يتم تغيير المستندات والإعدادات وصندوق البريد وملفات برنامج Office. لا يتم إغلاق Teams.
+
+عند تشغيل أحد تطبيقات Office في المرة القادمة، سيُطلب منك تسجيل الدخول بحساب العمل الخاص بك. يحصل Office بعد ذلك على ترخيص جديد.
+
+هل تريد المتابعة؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>بدء تشغيل العميل OneDrive</Name>
 				<Explanation>OneDrive لا يعمل.</Explanation>
