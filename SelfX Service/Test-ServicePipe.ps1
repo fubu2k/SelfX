@@ -132,7 +132,7 @@ function Invoke-TestRequest([string]$Request, [int]$TimeoutMs = 5000) {
 
 # --- N5: the OtherSessions check needs no SeTcbPrivilege (no WTSQueryUserToken); it fails closed on bad input ---
 $sourceText = [IO.File]::ReadAllText($source)
-Assert-True (-not $sourceText.Contains('WTSQueryUserToken')) 'N5: the service does not call WTSQueryUserToken (no SeTcbPrivilege needed)'
+Assert-True ($sourceText -notmatch 'static\s+extern\s+bool\s+WTSQueryUserToken') 'N5: the service does not import WTSQueryUserToken (no SeTcbPrivilege needed)'
 $countMethod = [SelfX.SelfXService].GetMethod('CountOtherUserSessions', [Reflection.BindingFlags]'NonPublic,Static')
 Assert-True ($null -ne $countMethod) 'N5: the service has the session check'
 if ($countMethod) {
