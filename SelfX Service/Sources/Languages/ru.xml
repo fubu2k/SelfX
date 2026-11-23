@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>Проверить соответствие</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Портал компании</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Быстрая помощь</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Собрать журналы MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Отправить журналы в поддержку</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Журналы устройства {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@
 		<Tooltip_SyncCompliance>Просит Intune проверить сейчас, соответствует ли устройство правилам компании.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Открывает Корпоративный портал, где можно установить корпоративные приложения.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Открывает Быструю помощь, чтобы сотрудник поддержки мог видеть ваш экран и помочь – только с вашего согласия.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Открывает Remote Help, чтобы сотрудник поддержки мог видеть ваш экран и помочь – только с вашего согласия.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Собирает журналы управления устройством в папку для поддержки.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Собирает все журналы устройства и открывает письмо в поддержку с отчётом во вложении.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Параметры (язык, оформление и значок состояния)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@
 		<Copilot_Target_Text>SelfX копирует текст и открывает {0}. Вы вставляете текст там и отправляете его сами. SelfX ничего не отправляет.</Copilot_Target_Text>
 		<Copilot_Open_Button>Копировать и открыть Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Текст находится в буфере обмена, Copilot Chat открыт. Вставьте текст туда (Ctrl+V) и отправьте.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Буфер обмена будет очищен через {0} с, если до этого вы ничего не скопируете. Вставьте текст раньше.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Буфер обмена очищен. Чтобы снова скопировать текст, выберите «Копировать и открыть Copilot».</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Не удалось подготовить текст: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Не указывайте в описании имена, пароли или данные клиентов. Copilot может ошибаться: не выполняйте команды, которых вы не понимаете.</Copilot_Warning_Text>
 		<Version_Text>Версия {0}</Version_Text>
@@ -637,6 +641,27 @@ SelfX не удаляет и не изменяет файлы. Если Defender
 				<Alerte_MSG>SelfX снова включает звук текущего устройства воспроизведения (колонки или наушники). Если звук отключён, он включается; если громкость ниже 30 %, она повышается до 30 %. Более высокая громкость не меняется. Другие устройства, микрофон и драйверы не изменяются.
 
 Продолжить?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Решить проблему с Outlook</Name>
+				<Explanation>Вы работаете в Outlook, но он не отвечает, не отправляет и не получает почту или неправильно показывает почтовый ящик.</Explanation>
+				<Alerte_MSG>Outlook будет закрыт и запущен снова. Письма, которые вы пишете и которые не сохранены как черновик, будут потеряны. После запуска Outlook может некоторое время проверять свои данные. Ваш профиль и почтовый ящик не изменяются. Новый Outlook не затрагивается.
+
+Хотите продолжить?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>Время на вашем устройстве неверно</Name>
+				<Explanation>Возникают ошибки входа или сертификатов, либо часы устройства показывают неверное время. Это действие выполняется с правами администратора через локальную службу SelfX.</Explanation>
+				<Alerte_MSG>Часы вашего устройства будут синхронизированы с источником времени вашей организации. Часовой пояс не изменяется. После этого повторите попытку.
+
+Хотите продолжить?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: очистить кэш</Name>
+				<Explanation>Веб-сайты не загружаются или отображаются неправильно в Microsoft Edge. Действие очищает только кэш профиля по умолчанию.</Explanation>
+				<Alerte_MSG>Microsoft Edge будет немедленно закрыт; несохранённые данные на веб-сайтах будут потеряны. Затем кэш профиля по умолчанию очищается. Файлы cookie, журнал, сохранённые пароли, закладки и другие профили не затрагиваются, поэтому вы останетесь в системе на веб-сайтах.
+
+Хотите продолжить?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Собрать журналы устройства и отправить их в службу поддержки по электронной почте</Name>

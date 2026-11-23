@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>अनुपालन की जाँच करें</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Quick Assist</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>MDM लॉग एकत्र करें</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>सहायता को लॉग भेजें</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>{0} के डिवाइस लॉग</Report_Mail_Subject>
@@ -147,6 +148,7 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Tooltip_SyncCompliance>Intune से अभी जाँचने के लिए कहता है कि आपका डिवाइस कंपनी के नियमों को पूरा करता है या नहीं।</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>कंपनी पोर्टल खोलता है, जहाँ आप कंपनी के ऐप्स इंस्टॉल कर सकते हैं।</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>क्विक असिस्ट खोलता है ताकि सहायता कर्मी आपकी स्क्रीन देखकर मदद कर सके – केवल आपकी सहमति से।</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Remote Help खोलता है ताकि सहायता कर्मी आपकी स्क्रीन देखकर मदद कर सके – केवल आपकी सहमति से।</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>डिवाइस प्रबंधन लॉग सहायता टीम के लिए एक फ़ोल्डर में एकत्र करता है।</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>आपके डिवाइस के सभी लॉग एकत्र करता है और रिपोर्ट संलग्न करके सहायता टीम के लिए ईमेल खोलता है।</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>सेटिंग्स (भाषा, रूप और स्थिति आइकन)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Copilot_Target_Text>SelfX पाठ कॉपी करता है और {0} खोलता है। आप पाठ वहाँ पेस्ट करते हैं और खुद भेजते हैं। SelfX कुछ नहीं भेजता।</Copilot_Target_Text>
 		<Copilot_Open_Button>कॉपी करें और Copilot खोलें</Copilot_Open_Button>
 		<Copilot_Opened_Text>पाठ क्लिपबोर्ड में है और Copilot Chat खुल गया है। उसे वहाँ पेस्ट करें (Ctrl+V) और भेजें।</Copilot_Opened_Text>
+		<Copilot_Clear_Text>अगर तब तक आप कुछ और कॉपी नहीं करते, तो क्लिपबोर्ड {0} सेकंड में खाली हो जाएगा। उससे पहले टेक्स्ट चिपका लें।</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>क्लिपबोर्ड खाली कर दिया गया है। टेक्स्ट दोबारा कॉपी करने के लिए “कॉपी करें और Copilot खोलें” चुनें।</Copilot_Cleared_Text>
 		<Copilot_Error_Text>पाठ तैयार नहीं हो सका: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>विवरण में नाम, पासवर्ड या ग्राहक डेटा न लिखें। Copilot गलत हो सकता है: ऐसे कमांड न चलाएँ जिन्हें आप नहीं समझते।</Copilot_Warning_Text>
 		<Version_Text>संस्करण {0}</Version_Text>
@@ -635,6 +639,27 @@ SelfX कोई फ़ाइल नहीं हटाता या बदलत
 				<Name>इस पीसी पर आवाज़ नहीं आ रही</Name>
 				<Explanation>स्पीकर या हेडफ़ोन से आवाज़ नहीं आ रही, जबकि पहले सब ठीक था। हो सकता है आवाज़ बंद (म्यूट) हो या बहुत कम हो।</Explanation>
 				<Alerte_MSG>SelfX आपके मौजूदा प्लेबैक डिवाइस (स्पीकर या हेडफ़ोन) की आवाज़ फिर से चालू करता है। अगर वह म्यूट है, तो आवाज़ चालू हो जाती है; अगर वॉल्यूम 30 % से कम है, तो उसे 30 % तक बढ़ा दिया जाता है। ज़्यादा वॉल्यूम जस का तस रहता है। दूसरे डिवाइस, माइक्रोफ़ोन और ड्राइवर नहीं बदले जाते।
+
+क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Outlook की समस्या हल करें</Name>
+				<Explanation>आप Outlook में काम कर रहे हैं, लेकिन वह जवाब नहीं दे रहा, ईमेल भेज या प्राप्त नहीं कर रहा, या आपका मेलबॉक्स सही नहीं दिखा रहा।</Explanation>
+				<Alerte_MSG>Outlook बंद होकर फिर से शुरू होगा। जो ईमेल आप लिख रहे हैं और ड्राफ़्ट के रूप में सहेजे नहीं गए हैं, वे खो जाएँगे। शुरू होने के बाद Outlook को अपना डेटा जाँचने में कुछ समय लग सकता है। आपकी प्रोफ़ाइल और मेलबॉक्स नहीं बदले जाते। नया Outlook प्रभावित नहीं होता।
+
+क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>आपके डिवाइस का समय गलत है</Name>
+				<Explanation>साइन-इन या प्रमाणपत्र की त्रुटियाँ आ रही हैं, या आपके डिवाइस की घड़ी गलत समय दिखा रही है। यह कार्रवाई स्थानीय SelfX सेवा के माध्यम से व्यवस्थापक अधिकारों के साथ चलती है।</Explanation>
+				<Alerte_MSG>आपके डिवाइस की घड़ी आपके संगठन के समय स्रोत से सिंक की जाएगी। समय क्षेत्र नहीं बदला जाता। उसके बाद फिर कोशिश करें।
+
+क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: कैश साफ़ करें</Name>
+				<Explanation>Microsoft Edge में वेबसाइटें लोड नहीं हो रहीं या सही नहीं दिख रहीं। यह कार्रवाई केवल डिफ़ॉल्ट प्रोफ़ाइल का कैश साफ़ करती है।</Explanation>
+				<Alerte_MSG>Microsoft Edge तुरंत बंद हो जाएगा; वेबसाइटों पर सहेजी न गई प्रविष्टियाँ खो जाएँगी। फिर डिफ़ॉल्ट प्रोफ़ाइल का कैश साफ़ किया जाता है। कुकीज़, इतिहास, सहेजे गए पासवर्ड, बुकमार्क और अन्य प्रोफ़ाइल प्रभावित नहीं होते, इसलिए आप वेबसाइटों पर साइन इन रहते हैं।
 
 क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
 			</Action>

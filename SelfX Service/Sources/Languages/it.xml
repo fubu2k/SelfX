@@ -105,6 +105,7 @@ La visualizzazione dettagliata elenca diversi problemi specifici per prodotto ch
 		<SystemInfo_SyncCompliance_Text>Controlla la conformità</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Assistenza rapida</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Raccogli log MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Invia log al supporto</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Log del dispositivo {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Descrizione del problema:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Chiede a Intune di verificare ora se il dispositivo rispetta le regole aziendali.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Apre il Portale aziendale, dove è possibile installare le app aziendali.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Apre Assistenza rapida affinché una persona del supporto possa vedere lo schermo e aiutare – solo con il consenso dell’utente.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Apre Remote Help affinché una persona del supporto possa vedere lo schermo e aiutare – solo con il consenso dell’utente.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Raccoglie i log di gestione del dispositivo in una cartella per il supporto.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Raccoglie tutti i log del dispositivo e apre un’e-mail al supporto con il report in allegato.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Impostazioni (lingua, aspetto e icona di stato)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Descrizione del problema:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX copia il testo e apre {0}. Incolli il testo lì e lo invii tu stesso. SelfX non invia nulla.</Copilot_Target_Text>
 		<Copilot_Open_Button>Copia e apri Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>Il testo è negli appunti e Copilot Chat è stato aperto. Incollalo lì (Ctrl+V) e invialo.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>Gli Appunti vengono svuotati tra {0} secondi se nel frattempo non copia nient’altro. Incolli il testo prima.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Gli Appunti sono stati svuotati. Per copiare di nuovo il testo, scelga «Copia e apri Copilot».</Copilot_Cleared_Text>
 		<Copilot_Error_Text>Impossibile preparare il testo: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>Non scrivere nomi, password o dati dei clienti nella descrizione. Copilot può sbagliare: non eseguire comandi che non capisci.</Copilot_Warning_Text>
 		<Version_Text>Versione {0}</Version_Text>
@@ -637,6 +641,27 @@ Continuare?</Alerte_MSG>
 				<Alerte_MSG>SelfX riattiva l’audio del dispositivo di riproduzione attuale (altoparlanti o cuffie). Se è disattivato, l’audio viene attivato; se il volume è inferiore al 30 %, viene portato al 30 %. Un volume più alto resta invariato. Altri dispositivi, il microfono e i driver non vengono modificati.
 
 Continuare?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Risolvere un problema con Outlook</Name>
+				<Explanation>Sta lavorando in Outlook, ma non risponde più, non invia né riceve e-mail o non mostra correttamente la casella di posta.</Explanation>
+				<Alerte_MSG>Outlook verrà chiuso e riavviato. Le e-mail che sta scrivendo e che non sono salvate come bozza andranno perse. Dopo l’avvio Outlook potrebbe aver bisogno di tempo per controllare i propri dati. Il profilo e la casella di posta non vengono modificati. Il nuovo Outlook non è interessato.
+
+Desidera continuare?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>L’ora del dispositivo non è corretta</Name>
+				<Explanation>Si verificano errori di accesso o di certificato, oppure l’orologio del dispositivo mostra l’ora sbagliata. Questa azione viene eseguita con diritti di amministratore tramite il servizio SelfX locale.</Explanation>
+				<Alerte_MSG>L’orologio del dispositivo verrà sincronizzato con la fonte dell’ora della sua organizzazione. Il fuso orario non viene modificato. Riprovi dopo.
+
+Desidera continuare?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: svuotare la cache</Name>
+				<Explanation>I siti web non si caricano o non vengono visualizzati correttamente in Microsoft Edge. L’azione svuota solo la cache del profilo predefinito.</Explanation>
+				<Alerte_MSG>Microsoft Edge verrà chiuso immediatamente; i dati non salvati nei siti web andranno persi. Poi la cache del profilo predefinito viene svuotata. Cookie, cronologia, password salvate, preferiti e altri profili non sono interessati, quindi resta connesso ai siti web.
+
+Desidera continuare?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Raccogli i log del dispositivo e inviali al supporto via e-mail</Name>

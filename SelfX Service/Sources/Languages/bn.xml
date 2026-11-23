@@ -105,6 +105,7 @@
 		<SystemInfo_SyncCompliance_Text>সম্মতি পরীক্ষা করুন</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Quick Assist</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>MDM লগ সংগ্রহ করুন</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>সহায়তায় লগ পাঠান</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>{0}-এর ডিভাইস লগ</Report_Mail_Subject>
@@ -147,6 +148,7 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Tooltip_SyncCompliance>আপনার ডিভাইস কোম্পানির নিয়ম মানে কিনা এখনই পরীক্ষা করতে Intune-কে অনুরোধ করে।</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>কোম্পানি পোর্টাল খোলে, যেখানে আপনি কোম্পানির অ্যাপ ইনস্টল করতে পারেন।</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>কুইক অ্যাসিস্ট খোলে যাতে সহায়তাকর্মী আপনার স্ক্রিন দেখে সাহায্য করতে পারেন – শুধু আপনার সম্মতিতে।</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Remote Help খোলে যাতে সহায়তাকর্মী আপনার স্ক্রিন দেখে সাহায্য করতে পারেন – শুধু আপনার সম্মতিতে।</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>ডিভাইস ব্যবস্থাপনার লগ সহায়তা দলের জন্য একটি ফোল্ডারে সংগ্রহ করে।</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>আপনার ডিভাইসের সব লগ সংগ্রহ করে এবং রিপোর্ট সংযুক্ত করে সহায়তা দলের কাছে একটি ইমেল খোলে।</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>সেটিংস (ভাষা, চেহারা ও অবস্থা আইকন)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Copilot_Target_Text>SelfX লেখাটি কপি করে এবং {0} খোলে। আপনি সেখানে লেখাটি পেস্ট করে নিজে পাঠান। SelfX কিছু পাঠায় না।</Copilot_Target_Text>
 		<Copilot_Open_Button>কপি করুন ও Copilot খুলুন</Copilot_Open_Button>
 		<Copilot_Opened_Text>লেখাটি ক্লিপবোর্ডে আছে এবং Copilot Chat খোলা হয়েছে। সেখানে পেস্ট করুন (Ctrl+V) ও পাঠান।</Copilot_Opened_Text>
+		<Copilot_Clear_Text>এর মধ্যে আর কিছু কপি না করলে {0} সেকেন্ড পরে ক্লিপবোর্ড খালি হয়ে যাবে। তার আগে লেখাটি পেস্ট করুন।</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>ক্লিপবোর্ড খালি করা হয়েছে। লেখাটি আবার কপি করতে “কপি করুন ও Copilot খুলুন” বেছে নিন।</Copilot_Cleared_Text>
 		<Copilot_Error_Text>লেখা প্রস্তুত করা যায়নি: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>বিবরণে নাম, পাসওয়ার্ড বা গ্রাহকের তথ্য লিখবেন না। Copilot ভুল করতে পারে: যে কমান্ড বোঝেন না তা চালাবেন না।</Copilot_Warning_Text>
 		<Version_Text>সংস্করণ {0}</Version_Text>
@@ -635,6 +639,27 @@ SelfX কোনো ফাইল মোছে বা পরিবর্তন ক
 				<Name>এই পিসিতে শব্দ নেই</Name>
 				<Explanation>আগে সবকিছু ঠিক থাকলেও স্পিকার বা হেডফোন থেকে শব্দ আসছে না। শব্দ বন্ধ (মিউট) বা খুব কম করা থাকতে পারে।</Explanation>
 				<Alerte_MSG>SelfX আপনার বর্তমান প্লেব্যাক ডিভাইসের (স্পিকার বা হেডফোন) শব্দ আবার চালু করে। মিউট থাকলে শব্দ চালু হয়; ভলিউম ৩০ % এর নিচে হলে তা ৩০ % এ বাড়ানো হয়। বেশি ভলিউম যেমন আছে তেমনই থাকে। অন্য ডিভাইস, মাইক্রোফোন ও ড্রাইভার বদলানো হয় না।
+
+আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Outlook-এর সমস্যা সমাধান করুন</Name>
+				<Explanation>আপনি Outlook-এ কাজ করছেন, কিন্তু তা সাড়া দিচ্ছে না, ইমেল পাঠাচ্ছে বা পাচ্ছে না, অথবা আপনার মেলবক্স ঠিকভাবে দেখাচ্ছে না।</Explanation>
+				<Alerte_MSG>Outlook বন্ধ হয়ে আবার চালু হবে। আপনি যে ইমেল লিখছেন এবং খসড়া হিসেবে সংরক্ষিত নয়, তা হারিয়ে যাবে। চালু হওয়ার পর Outlook-এর নিজের ডেটা পরীক্ষা করতে কিছু সময় লাগতে পারে। আপনার প্রোফাইল ও মেলবক্স বদলানো হয় না। নতুন Outlook প্রভাবিত হয় না।
+
+আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>আপনার ডিভাইসের সময় ভুল</Name>
+				<Explanation>সাইন-ইন বা সার্টিফিকেটের ত্রুটি হচ্ছে, অথবা আপনার ডিভাইসের ঘড়ি ভুল সময় দেখাচ্ছে। এই কাজটি স্থানীয় SelfX সার্ভিসের মাধ্যমে অ্যাডমিনিস্ট্রেটর অধিকারে চলে।</Explanation>
+				<Alerte_MSG>আপনার ডিভাইসের ঘড়ি আপনার প্রতিষ্ঠানের সময়ের উৎসের সঙ্গে সিঙ্ক করা হবে। টাইম জোন বদলানো হয় না। এরপর আবার চেষ্টা করুন।
+
+আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: ক্যাশ মুছুন</Name>
+				<Explanation>Microsoft Edge-এ ওয়েবসাইট লোড হচ্ছে না বা ঠিকভাবে দেখাচ্ছে না। এই কাজটি শুধু ডিফল্ট প্রোফাইলের ক্যাশ মুছে দেয়।</Explanation>
+				<Alerte_MSG>Microsoft Edge সঙ্গে সঙ্গে বন্ধ হবে; ওয়েবসাইটে সংরক্ষণ না করা ইনপুট হারিয়ে যাবে। তারপর ডিফল্ট প্রোফাইলের ক্যাশ মুছে ফেলা হয়। কুকি, ইতিহাস, সংরক্ষিত পাসওয়ার্ড, বুকমার্ক ও অন্য প্রোফাইল প্রভাবিত হয় না, তাই ওয়েবসাইটে আপনি সাইন-ইন থাকবেন।
 
 আপনি কি চালিয়ে যেতে চান?</Alerte_MSG>
 			</Action>

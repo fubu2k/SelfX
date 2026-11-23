@@ -105,6 +105,7 @@ Recomendamos la vista detallada si la vista simplificada no resuelve su problema
 		<SystemInfo_SyncCompliance_Text>Comprobar cumplimiento</SystemInfo_SyncCompliance_Text>
 		<SystemInfo_CompanyPortal_Text>Company Portal</SystemInfo_CompanyPortal_Text>
 		<SystemInfo_QuickAssist_Text>Asistencia rápida</SystemInfo_QuickAssist_Text>
+		<SystemInfo_RemoteHelp_Text>Remote Help</SystemInfo_RemoteHelp_Text>
 		<SystemInfo_MdmDiagnostics_Text>Recopilar registros MDM</SystemInfo_MdmDiagnostics_Text>
 		<SystemInfo_SendLogs_Text>Enviar registros al soporte</SystemInfo_SendLogs_Text>
 		<Report_Mail_Subject>Registros del dispositivo {0}</Report_Mail_Subject>
@@ -147,6 +148,7 @@ Descripción del problema:</Report_Mail_Body>
 		<Tooltip_SyncCompliance>Pide a Intune que compruebe ahora si su dispositivo cumple las reglas de la empresa.</Tooltip_SyncCompliance>
 		<Tooltip_CompanyPortal>Abre el Portal de empresa, donde puede instalar aplicaciones de la empresa.</Tooltip_CompanyPortal>
 		<Tooltip_QuickAssist>Abre Asistencia rápida para que una persona de soporte pueda ver su pantalla y ayudarle, solo con su consentimiento.</Tooltip_QuickAssist>
+		<Tooltip_RemoteHelp>Abre Remote Help para que una persona de soporte pueda ver su pantalla y ayudarle, solo con su consentimiento.</Tooltip_RemoteHelp>
 		<Tooltip_MdmDiagnostics>Recopila los registros de administración del dispositivo en una carpeta para el soporte.</Tooltip_MdmDiagnostics>
 		<Tooltip_SendLogs>Recopila todos los registros de su dispositivo y abre un correo al soporte con el informe adjunto.</Tooltip_SendLogs>
 		<Settings_Button_ToolTip>Configuración (idioma, apariencia e icono de estado)</Settings_Button_ToolTip>
@@ -199,6 +201,8 @@ Descripción del problema:</Report_Mail_Body>
 		<Copilot_Target_Text>SelfX copia el texto y abre {0}. Usted pega el texto allí y lo envía. SelfX no envía nada.</Copilot_Target_Text>
 		<Copilot_Open_Button>Copiar y abrir Copilot</Copilot_Open_Button>
 		<Copilot_Opened_Text>El texto está en el portapapeles y Copilot Chat se ha abierto. Péguelo allí (Ctrl+V) y envíelo.</Copilot_Opened_Text>
+		<Copilot_Clear_Text>El portapapeles se vacía en {0} segundos si no copia nada más hasta entonces. Pegue el texto antes.</Copilot_Clear_Text>
+		<Copilot_Cleared_Text>Se ha vaciado el portapapeles. Para copiar el texto de nuevo, elija «Copiar y abrir Copilot».</Copilot_Cleared_Text>
 		<Copilot_Error_Text>No se pudo preparar el texto: {0}</Copilot_Error_Text>
 		<Copilot_Warning_Text>No escriba nombres, contraseñas ni datos de clientes en la descripción. Copilot puede equivocarse: no ejecute comandos que no entienda.</Copilot_Warning_Text>
 		<Version_Text>Versión {0}</Version_Text>
@@ -637,6 +641,27 @@ SelfX no elimina ni modifica ningún archivo. Si Defender encuentra una amenaza,
 				<Alerte_MSG>SelfX vuelve a activar el sonido de su dispositivo de reproducción actual (altavoces o auriculares). Si está silenciado, se activa el sonido; si el volumen es inferior al 30 %, se sube al 30 %. Un volumen más alto no se modifica. No se cambian otros dispositivos, el micrófono ni los controladores.
 
 ¿Quiere continuar?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Outlook">
+				<Name>Resolver un problema con Outlook</Name>
+				<Explanation>Está trabajando en Outlook, pero ha dejado de responder, ya no envía ni recibe correos o no muestra correctamente su buzón.</Explanation>
+				<Alerte_MSG>Outlook se cerrará y volverá a iniciarse. Los correos que está escribiendo y no están guardados como borrador se perderán. Tras el inicio, Outlook puede necesitar algo de tiempo para comprobar sus datos. Su perfil y su buzón no se modifican. El nuevo Outlook no se ve afectado.
+
+¿Desea continuar?</Alerte_MSG>
+			</Action>
+			<Action Id="Q_Device_SyncTime">
+				<Name>La hora de su dispositivo es incorrecta</Name>
+				<Explanation>Aparecen errores de inicio de sesión o de certificado, o el reloj de su dispositivo muestra una hora incorrecta. Esta acción se ejecuta con derechos de administrador a través del servicio local de SelfX.</Explanation>
+				<Alerte_MSG>El reloj de su dispositivo se sincronizará con el origen de hora de su organización. La zona horaria no se cambia. Inténtelo de nuevo después.
+
+¿Desea continuar?</Alerte_MSG>
+			</Action>
+			<Action Id="D_Edge_Cache">
+				<Name>Microsoft Edge: borrar la caché</Name>
+				<Explanation>Los sitios web no se cargan o no se muestran correctamente en Microsoft Edge. La acción borra solo la caché del perfil predeterminado.</Explanation>
+				<Alerte_MSG>Microsoft Edge se cerrará de inmediato; se perderán los datos no guardados en los sitios web. Después se borra la caché del perfil predeterminado. Las cookies, el historial, las contraseñas guardadas, los marcadores y otros perfiles no se ven afectados, por lo que seguirá con la sesión iniciada en los sitios web.
+
+¿Desea continuar?</Alerte_MSG>
 			</Action>
 			<Action Id="D_Device_SendLogs">
 				<Name>Recopilar los registros del dispositivo y enviarlos al soporte por correo electrónico</Name>
