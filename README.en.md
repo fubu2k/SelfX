@@ -49,6 +49,10 @@ each user can also choose *Dark* or *Light*.
 
 ![Troubleshooting page, light appearance](docs/images/selfx-troubleshooting-light.png)
 
+**Help in the navigation:** with `Ticket_Enabled` the button *Open a ticket with IT support* appears, with `Copilot_Enabled` also *Ask Copilot Chat* (both off by default).
+
+![Navigation with ticket and Copilot Chat buttons](docs/images/selfx-ticket-copilot-light.png)
+
 **Adaptive window:** in a narrow window the navigation shows only icons and the
 cards rearrange.
 
