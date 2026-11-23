@@ -18,6 +18,8 @@
     package that you deploy and deploy the new supplemental policy together with it. SelfX.Files.json (see
     docs\Installation.md) is created by the package build and does not replace this step.
 
+    The scan of the whole package takes a few minutes.
+
     Requirement: Windows PowerShell 5.1 on an administrator PC with the ConfigCI module (Windows 11 or Windows Server);
     the base policy must allow supplemental policies (rule option 17, "Allow Supplemental Policies"). Needs no
     administrator rights beyond reading the package folder; changes nothing on the PC.
@@ -115,19 +117,24 @@ try {
     $namespaces = New-Object Xml.XmlNamespaceManager($document.NameTable)
     $namespaces.AddNamespace('ci', 'urn:schemas-microsoft-com:sipolicy')
     $document.SelectSingleNode('/ci:SiPolicy/ci:PolicyID', $namespaces).InnerText = $SupplementalPolicyId
+    # New-CIPolicy adds rule options of a base policy (for example "Enabled:Audit Mode"). A supplemental policy sets none
+    # of them: the mode and the other options come from the base policy.
+    $rules = $document.SelectSingleNode('/ci:SiPolicy/ci:Rules', $namespaces)
+    if ($rules) { foreach ($rule in @($rules.SelectNodes('ci:Rule', $namespaces))) { [void]$rules.RemoveChild($rule) } }
     $document.Save($xmlPath)
 
     # Checks of the result: a supplemental policy, for the given base policy, with hash rules only, no mode option.
     $check = New-Object Xml.XmlDocument
     $check.XmlResolver = $null
     $check.Load($xmlPath)
-    if ($check.SelectSingleNode('/ci:SiPolicy/ci:PolicyType', $namespaces).InnerText -ne 'Supplemental Policy') { throw 'The policy is not a supplemental policy.' }
+    $policyType = $check.SelectSingleNode('/ci:SiPolicy/@PolicyType', $namespaces)
+    if ((-not $policyType) -or $policyType.Value -ne 'Supplemental Policy') { throw "The policy is not a supplemental policy (PolicyType '$(if ($policyType) { $policyType.Value })')." }
     if ($check.SelectSingleNode('/ci:SiPolicy/ci:BasePolicyID', $namespaces).InnerText.ToUpperInvariant() -ne $BasePolicyId.ToString('B').ToUpperInvariant()) { throw 'BasePolicyID does not match the given base policy.' }
     $hashRules = @($check.SelectNodes('/ci:SiPolicy/ci:FileRules/ci:Allow[@Hash]', $namespaces))
     $otherRules = @($check.SelectNodes('/ci:SiPolicy/ci:FileRules/*[not(self::ci:Allow[@Hash])]', $namespaces))
     if ($hashRules.Count -eq 0) { throw 'The policy has no hash rules.' }
     if ($otherRules.Count -gt 0) { Write-Warning "The policy has $($otherRules.Count) rule(s) that are not plain hash rules. Check '$xmlPath' before you deploy it." }
-    if ($check.SelectSingleNode('/ci:SiPolicy/ci:Rules/ci:Rule[ci:Option="Enabled:Audit Mode"]', $namespaces)) { throw 'The supplemental policy must not set the audit mode (the base policy decides).' }
+    if ($check.SelectNodes('/ci:SiPolicy/ci:Rules/ci:Rule', $namespaces).Count -gt 0) { throw 'The supplemental policy must not set rule options (the base policy decides, for example the audit mode).' }
 
     ConvertFrom-CIPolicy -XmlFilePath $xmlPath -BinaryFilePath $binaryPath | Out-Null
     Write-Output "Supplemental policy for base policy $($BasePolicyId.ToString('B')), SelfX $toolVersion, $($hashRules.Count) hash rules:"

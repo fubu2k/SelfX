@@ -51,7 +51,12 @@ else {
 		$out = Join-Path $root 'out'
 		New-Item -ItemType Directory -Path (Join-Path $package 'Bin') -Force | Out-Null
 		foreach ($name in 'Install.ps1', 'Detection.ps1', 'Uninstall.ps1') { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $package }
-		Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Sources') -Destination (Join-Path $package 'Sources') -Recurse
+		# A small part of the real files: the scan of the whole package takes minutes.
+		$sources = Join-Path $package 'Sources'
+		New-Item -ItemType Directory -Path (Join-Path $sources 'Scripts_to_run') -Force | Out-Null
+		Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Sources\Tool_Config.xml') -Destination $sources
+		foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Sources') -Filter '*.ps1' -File | Select-Object -First 6)) { Copy-Item -LiteralPath $file.FullName -Destination $sources }
+		foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Sources\Scripts_to_run') -Filter '*.ps1' -File | Select-Object -First 3)) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $sources 'Scripts_to_run') }
 		Set-Content -LiteralPath (Join-Path $package 'Bin\SelfX.Binaries.json') -Value '{}'
 		Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'System32\whoami.exe') -Destination (Join-Path $package 'Bin\SelfX.exe')
 		$base = [guid]::NewGuid()
@@ -64,8 +69,8 @@ else {
 			$text = Get-Content -LiteralPath $xmlFile[0].FullName -Raw
 			Assert-True ($text -match '1377A178-96F8-49DD-B277-80F0F10BB383') 'the XML has the fixed policy ID'
 			Assert-True ($text -match [regex]::Escape($base.ToString('B')) -or $text -match [regex]::Escape($base.ToString('B').ToUpperInvariant())) 'the XML supplements the given base policy'
-			Assert-True ($text -notmatch 'Enabled:Audit Mode') 'the supplemental policy sets no audit mode'
-			Assert-True ([regex]::Matches($text, '<Allow ID=[^>]*Hash=').Count -ge 5) 'the XML has hash rules'
+			Assert-True ($text -notmatch '<Option>') 'the supplemental policy sets no rule options (no audit mode)'
+			Assert-True ([regex]::Matches($text, '<Allow ID=[^>]*Hash=').Count -ge 8) 'the XML has hash rules'
 		}
 	}
 	finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue }
