@@ -87,6 +87,7 @@
     2.8.13   2026-11-23  fubu2k               Remote support tile: with Remote Help installed (signed RemoteHelp.exe) only Remote Help is offered, otherwise Quick Assist
     2.8.14   2026-11-23  fubu2k               Link actions (Context Link): confirmation, then an https address from Tool_Config.xml (Link_<Name>) is opened; not shown when the setting is empty, Off or invalid
     2.8.15   2026-11-23  fubu2k               Quick scan action: own result texts (no threats / Defender found threats, exit code 2)
+    2.8.16   2026-11-23  fubu2k               Copilot Chat: the copied text is kept out of the clipboard history and the cloud clipboard (CopilotClipboard.ps1)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -226,6 +227,7 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 # Optional hand-over to Copilot Chat (functions only, nothing runs when they are loaded)
 . "$Current_Folder\CopilotPrompt.ps1"
 . "$Current_Folder\CopilotFacts.ps1"
+. "$Current_Folder\CopilotClipboard.ps1"
 # Logging of the window to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1)
 . "$Current_Folder\SelfXLog.ps1"
 Initialize-SelfXLog -Component 'SelfX'
@@ -2202,11 +2204,12 @@ Function Show-SelfXCopilotDialog
 			If([string]::IsNullOrWhiteSpace($Text)) { return }
 			Try
 				{
-					[System.Windows.Clipboard]::SetText($Text)
+					# The text is kept out of the clipboard history (Win+V) and the cloud clipboard (CopilotClipboard.ps1).
+					$KeptOut = Set-SelfXClipboardPrivate -Text $Text
 					# Only the address from the configuration (checked when SelfX started) is opened.
 					If(-not (Test-SelfXCopilotUrl $Copilot_Url)) { Throw 'Copilot_Url' }
 					Start-Process $Copilot_Url
-					Write-SelfXLog "Copilot Chat opened (host $(Get-SelfXCopilotUrlHost $Copilot_Url)), prompt copied to the clipboard"
+					Write-SelfXLog "Copilot Chat opened (host $(Get-SelfXCopilotUrlHost $Copilot_Url)), prompt copied to the clipboard (kept out of the clipboard history: $KeptOut)"
 					$Result.Text = Get-SelfXString 'Copilot_Opened_Text'
 				}
 			Catch { $Result.Text = Get-SelfXString 'Copilot_Error_Text' $_.Exception.Message }
