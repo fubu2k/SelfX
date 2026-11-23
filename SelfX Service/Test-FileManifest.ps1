@@ -21,6 +21,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.1    2026-11-23  fubu2k               Initial version (security review finding N4).
+    2.8.2    2026-11-23  fubu2k               Also the DLLs of Bin\WinRT (WinRT load check).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -60,11 +61,15 @@ try {
 	New-Item -ItemType Directory -Path $pristine -Force | Out-Null
 	Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Sources') -Destination (Join-Path $pristine 'Sources') -Recurse
 	Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Uninstall.ps1') -Destination $pristine
+	# Stand-ins for the DLLs of Bin\WinRT (the real ones are built on the build machine); only their bytes matter here.
+	New-Item -ItemType Directory -Path (Join-Path $pristine 'Bin\WinRT') -Force | Out-Null
+	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\WinRT\SelfXWinRT.dll'), [byte[]](1, 2, 3, 4))
+	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\WinRT\Microsoft.Windows.SDK.NET.dll'), [byte[]](5, 6, 7, 8))
 	$expectedCount = @(Get-ChildItem -LiteralPath $pristine -Recurse -File).Count
 
 	# The generator lists every installed file and the check accepts the result.
 	$count = New-SelfXFileManifest -Stage $pristine -Version '9.9.9'
-	Assert-Equal $count $expectedCount 'generator: every file of Sources and Uninstall.ps1 is listed'
+	Assert-Equal $count $expectedCount 'generator: every file of Sources, Uninstall.ps1 and Bin\WinRT is listed'
 	$manifest = Get-Content -LiteralPath (Join-Path $pristine 'SelfX.Files.json') -Raw | ConvertFrom-Json
 	Assert-Equal $manifest.ManifestVersion 1 'manifest: format 1'
 	Assert-Equal $manifest.ToolVersion '9.9.9' 'manifest: version'
@@ -72,6 +77,10 @@ try {
 		Assert-Equal ($null -ne $manifest.Files.$name) $true "manifest lists $name"
 	}
 	Assert-Equal ($null -eq $manifest.Files.'SelfX.Files.json') $true 'manifest does not list itself'
+	foreach ($name in 'WinRT/SelfXWinRT.dll', 'WinRT/Microsoft.Windows.SDK.NET.dll') {
+		Assert-Equal ($null -ne $manifest.Files.$name) $true "manifest lists $name"
+	}
+	Assert-Equal $manifest.Files.'WinRT/SelfXWinRT.dll' (Get-FileHash -LiteralPath (Join-Path $pristine 'Bin\WinRT\SelfXWinRT.dll') -Algorithm SHA256).Hash 'manifest: SHA256 of the WinRT library'
 	# SelfX.Files.json is in the package folder, not in Sources: it must not count as an extra file.
 	Assert-Equal (Test-SelfXFileManifest -PackageFolder $pristine) ($count) 'check: the unchanged package is accepted'
 
@@ -87,6 +96,12 @@ try {
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'not listed' 'check: an extra file in Sources is refused'
 	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Sources\Issues_List.xml')
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' 'check: a missing file is refused'
+	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Bin\WinRT\SelfXWinRT.dll') -Value 'x'
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'WinRT/SelfXWinRT.dll does not match its SHA256' 'check: a changed WinRT library is refused'
+	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'Bin\WinRT\Extra.dll') -Value 'x'
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'WinRT/Extra.dll is in the package but not listed' 'check: an extra WinRT library is refused'
+	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Bin\WinRT\Microsoft.Windows.SDK.NET.dll')
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' 'check: a missing WinRT library is refused'
 	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Uninstall.ps1') -Value '# changed'
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'does not match its SHA256' 'check: a changed Uninstall.ps1 is refused'
 	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Sources\Health_Config.xml') -Value '<!-- changed -->'

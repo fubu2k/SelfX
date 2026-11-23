@@ -35,7 +35,7 @@
     Name    : SelfX_Updates_Install.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.6.10
+    Version : 2.8.14
 
     History:
     Version  Date        Author               Change
@@ -52,6 +52,8 @@
     2.6.10   2026-11-22  fubu2k               Windows 11 25H2 minimum: only the orchestrator (SelfXWinRT.dll, PowerShell 7);
                                               the Windows Update Agent API and the PowerShell 5.1 path are removed;
                                               a missing orchestrator API is an error (exit 1)
+    2.8.14   2026-11-23  fubu2k               The WinRT libraries are checked against SelfX.Files.json before they are loaded
+                                              (SelfXWinRT.ps1, finding N4); a difference = orchestrator API not available (exit 1)
 #>
 
 # Microsoft Store apps: update scan of the MDM bridge (asynchronous).
@@ -67,15 +69,19 @@ function Start-SelfXStoreUpdate {
 }
 
 # Windows Update orchestrator (Windows.Management.Update.WindowsUpdateManager, Windows 11 25H2 and newer) through
-# SelfXWinRT.dll in the folder WinRT of the install folder (Install.ps1 checked it against the manifest). PowerShell 7
-# cannot load the Windows Runtime type by name. Returns $null when the API is not available (replaced in tests).
+# SelfXWinRT.dll in the folder WinRT of the install folder. Import-SelfXWinRT (SelfXWinRT.ps1) checks the DLLs against
+# SelfX.Files.json and keeps them open while it loads them (finding N4). PowerShell 7 cannot load the Windows Runtime type
+# by name. Returns $null when the API is not available or a check fails (the reason is logged; replaced in tests).
 function Get-SelfXUpdateManager {
 	try {
-		$library = Join-Path (Split-Path -Parent $PSScriptRoot) 'WinRT\SelfXWinRT.dll'
-		if (-not (Test-Path -LiteralPath $library -PathType Leaf)) { return $null }
-		[void][Reflection.Assembly]::LoadFrom($library)
+		$installFolder = Split-Path -Parent $PSScriptRoot
+		. (Join-Path $installFolder 'SelfXWinRT.ps1')
+		Import-SelfXWinRT -InstallFolder $installFolder
 		return [SelfX.SelfXWinRT]::CreateUpdateManager('SelfX')
-	} catch { return $null }
+	} catch {
+		if (Get-Command -Name Write-SelfXLog -ErrorAction SilentlyContinue) { Write-SelfXLog "WinRT library not loaded: $($_.Exception.Message)" Warning }
+		return $null
+	}
 }
 
 # State of one orchestrator update: current action, progress and the reason why it waits.
@@ -180,7 +186,7 @@ if ($MyInvocation.InvocationName -ne '.') {
 	# and can conflict with the orchestrator).
 	$manager = Get-SelfXUpdateManager
 	if (-not $manager) {
-		$text = 'Windows Update orchestrator API not available (WinRT\SelfXWinRT.dll missing or not loadable). Reinstall SelfX Service.'
+		$text = 'Windows Update orchestrator API not available (WinRT libraries missing, changed or not loadable; see the SelfX log). Reinstall SelfX Service.'
 		$summary.Add($text)
 		Write-SelfXLog $text Error
 		$failed = $true

@@ -516,8 +516,8 @@ Use the package in Intune as follows:
 ## File list (SelfX.Files.json)
 
 `tools\New-SelfXIntuneWin.ps1` writes the file `SelfX.Files.json` into the package when it is built. It contains the
-SHA256 of every file that `Install.ps1` copies to the installation folder (everything below `Sources` and
-`Uninstall.ps1`). The list is created again at every package build: if you change a script or a configuration you do
+SHA256 of every file that `Install.ps1` copies to the installation folder (everything below `Sources`, `Uninstall.ps1`
+and the DLLs of `Bin\WinRT`, which are installed as `WinRT\...`). The list is created again at every package build: if you change a script or a configuration you do
 not maintain anything by hand, you build the package again. Before the installation `Install.ps1` checks that every
 file matches the list and that no file without an entry is in the package; otherwise the installation stops before
 anything is changed (the existing installation stays untouched). If the list is missing (older package) there is only a
@@ -527,6 +527,16 @@ the installation folder and that no link (junction, symbolic link) is in the way
 event 4005 and the details to the SelfX log; the installation itself is never affected (Autopilot runs unchanged). A
 missing list in the installation folder also counts as a mismatch. For the first rollout `Service_FileCheck` can be set
 to `Audit` (log only). `Bin` keeps its own list `SelfX.Binaries.json`.
+
+The DLLs in the folder `WinRT` (interface to the Windows Update orchestrator under PowerShell 7) are also checked when they
+are **loaded**: `HealthStatus.ps1` and `SelfX_Updates_Install.ps1` load them only through `Sources\SelfXWinRT.ps1`. The script
+compares every DLL with the entry `WinRT/<name>` in `SelfX.Files.json` and keeps the files open (read only) as long as
+the process runs, so the checked file cannot be replaced between the check and the load. A changed, missing or additional DLL,
+a sub folder or a link in the folder `WinRT` and a missing or invalid list mean that nothing is loaded (no restart information,
+the update action reports the interface as not available; the reason is in the SelfX log). The service counts `.dll`
+among the files that are refused without an entry in the list. The check is no replacement for a signature: whoever has
+administrator rights can change the DLL and the list together. While a SelfX process runs the DLLs are locked (as the
+loaded library was before); `Install.ps1` closes the status icon before the update.
 
 ## App Control for Business (WDAC), optional
 
