@@ -132,7 +132,7 @@ zuletzt bekannten Werte erscheinen sofort und werden im Hintergrund aktualisiert
 - Die Schaltflächen oben aktualisieren die Informationen, kopieren alles (zum
   Beispiel, um es in eine Support-Anfrage einzufügen) oder speichern es als Datei.
 - Die **Werkzeuge** unter den Informationen synchronisieren Ihre Intune-Apps,
-  prüfen die Compliance, öffnen das Unternehmensportal, starten Quick Assist (eine
+  prüfen die Compliance, öffnen das Unternehmensportal, starten Remote Help (oder Quick Assist, wenn Remote Help nicht installiert ist; eine
   Support-Person kann Ihren Bildschirm sehen, nur mit Ihrer Zustimmung), sammeln
   die Protokolle der Geräteverwaltung oder senden die Geräteprotokolle an den
   Support.

@@ -128,10 +128,11 @@
 	<Show_SystemInfo_Tab>True</Show_SystemInfo_Tab> <!-- Display the System information page: True or False -->
 	<SystemInfo_Internet_Test_Host>www.msftconnecttest.com</SystemInfo_Internet_Test_Host> <!-- Host used for the "Internet reachable" check -->
 	<SystemInfo_Internet_Test_Port>80</SystemInfo_Internet_Test_Port> <!-- TCP port used for the "Internet reachable" check -->
-	<Show_SystemInfo_Intune_Actions>True</Show_SystemInfo_Intune_Actions> <!-- Display the tools (Intune, Company Portal, Quick Assist, logs) on the page: True or False -->
+	<Show_SystemInfo_Intune_Actions>True</Show_SystemInfo_Intune_Actions> <!-- Display the tools (Intune, Company Portal, Remote Help or Quick Assist, logs) on the page: True or False -->
 
 	<!-- Tray icon (notification area). Install.ps1 starts it at sign-in for all users; each user can hide it -->
 	<Show_Tray_Icon>True</Show_Tray_Icon> <!-- Start the status icon at sign-in for all users: True or False -->
 	<Tray_Notifications>True</Tray_Notifications> <!-- Show a Windows notification once when a check changes to Error: True or False. True = each user can switch them off in SelfX > Settings or in the menu of the icon; False = off for all users -->
 	<Tray_Poll_Seconds>60</Tray_Poll_Seconds> <!-- How often the icon reads the cached status of the service (15-3600 seconds; no check is run) -->
+	<Tray_Pin_Icon>True</Tray_Pin_Icon> <!-- Windows 11: show the icon permanently next to the clock instead of the hidden icons flyout (sets IsPromoted for the user): True or False. Users can switch it off with HKCU\Software\SelfX\TrayPin = 0 -->
 </GUI_Config>

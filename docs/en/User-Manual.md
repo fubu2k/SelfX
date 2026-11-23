@@ -121,7 +121,7 @@ The last known values are shown immediately and updated in the background.
 - The buttons at the top refresh the information, copy everything (for example
   to paste it into a support request) or save it as a file.
 - The **Tools** below the information sync your Intune apps, check compliance,
-  open the Company Portal, start Quick Assist (a support person can see your
+  open the Company Portal, start Remote Help (or Quick Assist if Remote Help is not installed; a support person can see your
   screen, only with your consent), collect the device management logs or send
   the device logs to the support.
 
