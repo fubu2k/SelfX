@@ -276,13 +276,27 @@ value is missing or different, the user counts as a standard user.
 | `dsregcmd` | everything | only join and sign-in state, no tenant, device or user ids |
 | User profiles and registry hives | all | only their own |
 | AppX user entries | all | only their own |
+| Enrollment account (UPN), enrollment ids, FirstSync | yes | no (only type and state of the enrollment) |
+| Autopilot registry values (tenant, profile, policy cache) and the raw ESP tracking tree | yes | no (the profile name is missing; the ESP results per app of the device and the own phase remain) |
+| Process command lines | yes | no (name, id, start time, memory) |
+| Contents of the Intune Management Extension (IME) logs, the Teams installer logs and the crash reports (WER) | yes | no (only file names, size, time) |
+| Event message text (single events in sections 8 and 10) | yes | no (only time, id, level, provider) |
+| Win32Apps registry and ESP results of other users | yes | no (device and own user only) |
 | Names, SIDs and profile folders of other users | unchanged | replaced by `<other user>` |
+| E-mail addresses (UPN) anywhere in the report | unchanged | replaced by `<hidden>` |
 | SelfX device logs (`SelfXService.log`, script logs) | yes | no |
 | Own SelfX user logs | yes | yes |
 
 An administrator who starts SelfX **without** elevated rights counts as a standard
 user. Without `-UserView` (Intune Win32 app, remediation, manual run), the report is
 complete.
+
+In the user view, a **protection layer for the whole report text** applies in addition:
+e-mail addresses (UPN) and SIDs of other users are replaced before they are written, even if
+they appear in a section that is not trimmed explicitly. The omitted areas are noted in the
+report itself. The Windows servicing logs (CBS, DISM, `setupact.log`) stay in the report,
+because they belong to the device and not to a user; they pass through the same protection
+layer.
 
 **SelfX logs in the report:** two sides add them, each with its own rights:
 
