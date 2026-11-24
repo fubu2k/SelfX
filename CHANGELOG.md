@@ -12,40 +12,6 @@ Die Paketversion ist `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`.
 (das Paketierungsskript prüft das). Ein Release bekommt das Tag `v<Version>` (zum
 Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` übereinstimmen.
 
-## Unveröffentlicht
-
-- **Neue Schaltfläche „Firmen-Wiki“ (optional):** `Wiki_Enabled`, `Wiki_Url` (nur `https://`) und `Wiki_Name` (bis 40 Zeichen) in `Tool_Config.xml` blenden in der Navigation eine Schaltfläche im Stil der Copilot-Schaltfläche ein, die die Wiki-Adresse im Webbrowser öffnet. Standardmäßig aus; eine ungültige Adresse blendet die Schaltfläche aus und schreibt eine Warnung ins Protokoll. Läuft im Nutzerkontext. Texte in allen 24 Sprachen, neue Fragen im Paketassistenten, Tests in `Test-SupportLinks.ps1` und `Test-SelfXPackageWizard.ps1`.
-- **Paketassistent (geführte Konfiguration):** `tools\New-SelfXPackage.ps1` stellt Fragen mit
-  Empfehlung (Support, Branding, Ticket und Organisationen nach OU, Group Tag und Geräteklasse,
-  Copilot Chat, Verhalten), schreibt die Antworten in eine Kopie des Pakets, baut das Intune-Paket,
-  erzeugt die Plattformskripte für die Ticket-Zuordnung und eine Kurzanleitung für Intune.
-  Deutsch und Englisch, weitere Sprachen über `tools\Wizard\Wizard.<Kultur>.xml`. Siehe
-  [Paketassistent](docs/Assistent.md). `New-SelfXIntuneWin.ps1` 1.8.0 hat den neuen Parameter
-  `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (läuft in der CI).
-- **Neue Aktion „Excel öffnet alle Dateien im selben Fenster“** (Kategorie Office, Nutzerkontext):
-  startet eine zweite, unabhängige Excel-Instanz (`excel.exe /x`), zum Beispiel um zwei
-  Arbeitsmappen auf zwei Bildschirmen zu vergleichen. Es wird nichts geschlossen oder geändert;
-  der Programmpfad kommt aus `SelfXOffice.ps1` (unter Program Files, kein Link), das einzige
-  Argument ist der feste Schalter `/x`. Texte in allen 24 Sprachen, Tests in `Test-Scripts.ps1`.
-- **Neue Aktion „Ein Programmfenster liegt außerhalb des Bildschirms“** (Kategorie Gerät,
-  Nutzerkontext): holt Fenster des eigenen Benutzers, deren Titelleiste auf keinem Bildschirm
-  erreichbar ist (zum Beispiel nach dem Abstecken eines Monitors), auf den Hauptbildschirm.
-  Es wird nichts geschlossen, gespeichert oder an Einstellungen geändert; Fenster werden über
-  Microsoft UI Automation verschoben (kein kompilierter Code), Fenstertitel stehen nicht im
-  Log. Programme mit höheren Rechten werden übersprungen. Neuer Helfer `SelfXWindows.ps1`,
-  Test: `Test-WindowHelper.ps1`.
-- **Neue Aktion „Citrix Workspace reagiert nicht oder zeigt keine Anwendungen“** (Kategorie
-  Citrix, Nutzerkontext): beendet die Prozesse der Citrix-Workspace-App im eigenen Benutzerkonto
-  und startet die App neu. Offene Anwendungs- und Desktop-Sitzungen werden nicht beendet,
-  gespeicherte Anmeldung und Einstellungen bleiben unverändert. Der Programmpfad muss unter
-  Program Files liegen (kein Link); es gibt keine Nutzereingaben. Nur die aktuelle
-  Citrix Workspace App wird unterstützt, nicht der Receiver.
-- **Citrix Workspace in den Systeminformationen:** Ist die Citrix Workspace App installiert, zeigt
-  SelfX unter „Gerät“ die Zeile „Citrix Workspace“ mit der Version. Die Zeile steht auch in den
-  Geräteinformationen des Support-Tickets. Die Erreichbarkeit von StoreFront oder Gateway lässt sich
-  über ein Ziel in `Network_Test_Config.xml` messen (Beispiel in der Datei). Test:
-  `Test-CitrixInfo.ps1`.
-
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 
 Version 3.0.0 fasst alle Änderungen seit der Übernahme des Upstream-Stands 2.6.9 zusammen.
@@ -121,6 +87,25 @@ Einzelheiten: [Installationsanleitung](docs/Installation.md).
   Remote Help bleibt es bei Quick Assist.
 - Deutsch ist die Basissprache der Oberfläche (vorher Windows-Anzeigesprache); 24 Sprachen,
   fehlende Texte erscheinen auf Englisch. Zuletzt fehlende Übersetzungen wurden ergänzt.
+- **Neue Schaltfläche „Firmen-Wiki“ (optional):** `Wiki_Enabled`, `Wiki_Url` (nur `https://`) und `Wiki_Name` (bis 40 Zeichen) in `Tool_Config.xml` blenden in der Navigation eine Schaltfläche im Stil der Copilot-Schaltfläche ein, die die Wiki-Adresse im Webbrowser öffnet. Standardmäßig aus; eine ungültige Adresse blendet die Schaltfläche aus und schreibt eine Warnung ins Protokoll. Läuft im Nutzerkontext. Texte in allen 24 Sprachen, neue Fragen im Paketassistenten, Tests in `Test-SupportLinks.ps1` und `Test-SelfXPackageWizard.ps1`.
+- **Neue Aktion „Excel öffnet alle Dateien im selben Fenster“** (Kategorie Office, Nutzerkontext):
+  startet eine zweite, unabhängige Excel-Instanz (`excel.exe /x`), zum Beispiel um zwei
+  Arbeitsmappen auf zwei Bildschirmen zu vergleichen. Es wird nichts geschlossen oder geändert;
+  der Programmpfad kommt aus `SelfXOffice.ps1` (unter Program Files, kein Link), das einzige
+  Argument ist der feste Schalter `/x`. Texte in allen 24 Sprachen, Tests in `Test-Scripts.ps1`.
+- **Neue Aktion „Ein Programmfenster liegt außerhalb des Bildschirms“** (Kategorie Gerät,
+  Nutzerkontext): holt Fenster des eigenen Benutzers, deren Titelleiste auf keinem Bildschirm
+  erreichbar ist (zum Beispiel nach dem Abstecken eines Monitors), auf den Hauptbildschirm.
+  Es wird nichts geschlossen, gespeichert oder an Einstellungen geändert; Fenster werden über
+  Microsoft UI Automation verschoben (kein kompilierter Code), Fenstertitel stehen nicht im
+  Log. Programme mit höheren Rechten werden übersprungen. Neuer Helfer `SelfXWindows.ps1`,
+  Test: `Test-WindowHelper.ps1`.
+- **Neue Aktion „Citrix Workspace reagiert nicht oder zeigt keine Anwendungen“** (Kategorie
+  Citrix, Nutzerkontext): beendet die Prozesse der Citrix-Workspace-App im eigenen Benutzerkonto
+  und startet die App neu. Offene Anwendungs- und Desktop-Sitzungen werden nicht beendet,
+  gespeicherte Anmeldung und Einstellungen bleiben unverändert. Der Programmpfad muss unter
+  Program Files liegen (kein Link); es gibt keine Nutzereingaben. Nur die aktuelle
+  Citrix Workspace App wird unterstützt, nicht der Receiver.
 
 ### Neue Funktionen für Administratoren
 
@@ -149,6 +134,18 @@ Einzelheiten: [Installationsanleitung](docs/Installation.md).
   Der Dienst löscht Berichte nach 7 Tagen automatisch.
 - Voraussetzungsprüfung bei der Installation: Windows 11 25H2, sichere Ordnerrechte für
   PowerShell 7 (sonst Abbruch vor jeder Änderung).
+- **Paketassistent (geführte Konfiguration):** `tools\New-SelfXPackage.ps1` stellt Fragen mit
+  Empfehlung (Support, Branding, Ticket und Organisationen nach OU, Group Tag und Geräteklasse,
+  Copilot Chat, Verhalten), schreibt die Antworten in eine Kopie des Pakets, baut das Intune-Paket,
+  erzeugt die Plattformskripte für die Ticket-Zuordnung und eine Kurzanleitung für Intune.
+  Deutsch und Englisch, weitere Sprachen über `tools\Wizard\Wizard.<Kultur>.xml`. Siehe
+  [Paketassistent](docs/Assistent.md). `New-SelfXIntuneWin.ps1` 1.8.0 hat den neuen Parameter
+  `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (läuft in der CI).
+- **Citrix Workspace in den Systeminformationen:** Ist die Citrix Workspace App installiert, zeigt
+  SelfX unter „Gerät“ die Zeile „Citrix Workspace“ mit der Version. Die Zeile steht auch in den
+  Geräteinformationen des Support-Tickets. Die Erreichbarkeit von StoreFront oder Gateway lässt sich
+  über ein Ziel in `Network_Test_Config.xml` messen (Beispiel in der Datei). Test:
+  `Test-CitrixInfo.ps1`.
 
 ### Sicherheit
 
