@@ -38,6 +38,11 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
   the saved sign-in and the settings stay unchanged. The program path must be below Program
   Files (no link); there is no user input. Only the current Citrix Workspace app is
   supported, not the Receiver.
+- **Citrix Workspace in the system information:** when the Citrix Workspace app is installed,
+  SelfX shows the row "Citrix Workspace" with the version under "Device". The row is also part of
+  the device information of the support ticket. The reachability of StoreFront or the Gateway can be
+  measured with a target in `Network_Test_Config.xml` (example in the file). Test:
+  `Test-CitrixInfo.ps1`.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 
