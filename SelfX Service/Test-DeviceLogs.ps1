@@ -128,6 +128,23 @@ try {
         Assert-Equal (Invoke-Wrapper) 2 "Invalid caller SID '$bad'"
     }
 
+    # Only the SID of a user account may read the report: groups and well-known SIDs are refused (nothing is created).
+    foreach ($group in @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545', 'S-1-5-32-544', 'S-1-5-18', 'S-1-5-4', 'S-1-5-21-1-2-3', 'S-1-12-1-1-2-3')) {
+        $env:SELFX_CALLER_SID = $group
+        Assert-Equal (Invoke-Wrapper) 2 "Caller SID '$group' is not a user account"
+        Assert-Equal (Test-Path $root) $false "No folder for caller SID '$group'"
+    }
+    Assert-Equal (Test-SelfXReaderSid -Sid 'S-1-5-21-111-222-333-1001') $true 'Local/domain user SID is accepted'
+    Assert-Equal (Test-SelfXReaderSid -Sid 'S-1-12-1-1111111111-2222222222-333333333-444444444') $true 'Entra ID user SID is accepted'
+    Assert-Equal (Test-SelfXReaderSid -Sid '') $false 'Empty SID is refused'
+    Assert-Equal (Test-SelfXReaderSid -Sid 'S-1-5-21-111-222-333-1001; x') $false 'SID with a suffix is refused'
+    # The message must be the SID refusal (icacls is not reachable in the tests, so any call would throw otherwise).
+    foreach ($group in @('S-1-1-0', 'S-1-5-32-545', 'S-1-5-11')) {
+        $refusal = ''
+        try { & $realSetReportAcl -Path $temp -ReaderSid $group } catch { $refusal = $_.Exception.Message }
+        Assert-Equal ($refusal -like '*is not a user account SID*') $true "Set-ReportAcl refuses $group as reader before icacls runs"
+    }
+
     # --- Success with compression ----------------------------------------------------------
     $env:SELFX_CALLER_SID = $sid
     Set-TestConfig 14 True

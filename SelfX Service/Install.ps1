@@ -37,7 +37,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.8.5
+    Version : 2.8.6
 
     History:
     Version  Date        Author               Change
@@ -49,6 +49,8 @@
                                               time window between link check and delete); the Bin check runs before the data folder is prepared
     2.8.5    2026-11-23  fubu2k               Security (N4): SelfXSessionStarter.dll is read once, compared with the hash verified at the start and
                                               loaded from these bytes (no time between check and load in the Intune staging folder)
+    2.8.6    2026-11-24  fubu2k               Security: the PowerShell 7 rights check is the same as the service's (SID based, only SYSTEM,
+                                              Administrators and TrustedInstaller, folders above pwsh.exe included, unreadable rights refuse)
 #>
 
 [CmdletBinding()]
@@ -95,22 +97,43 @@ function Test-SelfXPowerShell7 {
 	#    (The Store version lives in a user-specific folder and is not usable for the service.)
 	param(
 		[string]$Executable = (Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'),
-		[version]$MinimumVersion = '7.6.0'
+		[version]$MinimumVersion = '7.6.0',
+		# Tests only: the first folder above the file that is no longer checked, and the SIDs that count as trusted.
+		[string]$StopBefore = '',
+		[string[]]$TrustedSids = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')
 	)
 	If(-not (Test-Path -LiteralPath $Executable -PathType Leaf)) { return [pscustomobject]@{ Ready = $false; Version = $null; Reason = "PowerShell 7 was not found at '$Executable'. Install PowerShell $MinimumVersion or newer (MSI, machine-wide); SelfX works as soon as it is there (docs\Installation.md)." } }
 	$Info = [Diagnostics.FileVersionInfo]::GetVersionInfo($Executable)
 	$Found = [version]('{0}.{1}.{2}' -f $Info.FileMajorPart, $Info.FileMinorPart, $Info.FileBuildPart)
 	If($Found -lt $MinimumVersion) { return [pscustomobject]@{ Ready = $false; Version = $Found; Reason = "PowerShell $Found was found at '$Executable'; version $MinimumVersion or newer is required." } }
-	# Everyone, Authenticated Users, Interactive and Users must not have rights to change files or permissions.
-	$UserSids = @('S-1-1-0', 'S-1-5-11', 'S-1-5-4', 'S-1-5-32-545')
-	$Dangerous = [Security.AccessControl.FileSystemRights]'WriteData, AppendData, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
-	ForEach($Item in @((Split-Path -Parent $Executable), $Executable))
+	# Same rule as the service before every start (SelfXService.cs, IsPathChainProtected): only SYSTEM, Administrators and
+	# TrustedInstaller may change pwsh.exe, its folder or (as far as removing or taking over the folder) the folders above it.
+	# Every other identity counts as a normal user (Everyone, Users, Authenticated Users, a domain group, a single account).
+	# The rules are read as SIDs, so an unknown or orphaned SID cannot slip through; when the rights cannot be read: refused.
+	$Direct = [Security.AccessControl.FileSystemRights]'WriteData, AppendData, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
+	$Above = [Security.AccessControl.FileSystemRights]'DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
+	$Checks = @(@((Split-Path -Parent $Executable), $Direct), @($Executable, $Direct))
+	$Limit = $(If($StopBefore) { [IO.Path]::GetFullPath($StopBefore).TrimEnd('\') } Else { $null })
+	$Parent = Split-Path -Parent (Split-Path -Parent $Executable)
+	While($Parent)
 	{
-		ForEach($Rule in (Get-Acl -LiteralPath $Item).Access)
+		If($Limit -and ($Parent.TrimEnd('\') -ieq $Limit)) { break }
+		$Checks += ,@($Parent, $Above)
+		$Parent = Split-Path -Parent $Parent
+	}
+	ForEach($Check in $Checks)
+	{
+		$Item = $Check[0]; $Dangerous = $Check[1]
+		Try { $Rules = (Get-Acl -LiteralPath $Item -ErrorAction Stop).GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]) }
+		Catch { throw "The rights of '$Item' could not be read ($($_.Exception.GetType().Name)). PowerShell 7 is not used." }
+		ForEach($Rule in $Rules)
 		{
 			If($Rule.AccessControlType -ne 'Allow') { continue }
-			Try { $Sid = $Rule.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } Catch { continue }
-			If(($UserSids -contains $Sid) -and ($Rule.FileSystemRights -band $Dangerous)) { throw "'$Item' can be changed by normal users ($($Rule.IdentityReference)). PowerShell 7 must be installed machine-wide in a folder that only administrators can change." }
+			# A rule that only applies to child items (for example CREATOR OWNER in Program Files) says nothing about this item.
+			If($Rule.PropagationFlags -band [Security.AccessControl.PropagationFlags]::InheritOnly) { continue }
+			If(-not ($Rule.FileSystemRights -band $Dangerous)) { continue }
+			If($TrustedSids -contains $Rule.IdentityReference.Value) { continue }
+			throw "'$Item' can be changed by normal users ($($Rule.IdentityReference.Value)). PowerShell 7 must be installed machine-wide in a folder that only administrators can change."
 		}
 	}
 	return [pscustomobject]@{ Ready = $true; Version = $Found; Reason = '' }
