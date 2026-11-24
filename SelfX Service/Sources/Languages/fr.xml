@@ -490,6 +490,15 @@ Si rien ne change : appuyez sur la touche Windows + P et choisissez « Écran du
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace ne répond pas ou n’affiche pas les applications</Name>
+				<Explanation>L’application Citrix Workspace se bloque, ne vous connecte pas ou n’affiche pas vos applications et bureaux.</Explanation>
+				<Alerte_MSG>L’application Citrix Workspace de votre compte utilisateur va se fermer puis redémarrer. Les sessions d’applications et de bureaux déjà ouvertes ne sont pas fermées par SelfX. Votre connexion enregistrée et les paramètres de l’application ne sont pas modifiés.
+
+Reconnectez-vous ensuite si l’application vous le demande.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Démarrer le client OneDrive</Name>
 				<Explanation>OneDrive n’est pas en cours d’exécution.</Explanation>

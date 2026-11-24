@@ -490,6 +490,15 @@ Jika tidak ada yang berubah: tekan tombol Windows + P dan pilih “Hanya layar P
 
 Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace tidak merespons atau tidak menampilkan aplikasi</Name>
+				<Explanation>Aplikasi Citrix Workspace macet, tidak masuk, atau tidak menampilkan aplikasi dan desktop Anda.</Explanation>
+				<Alerte_MSG>Aplikasi Citrix Workspace akun pengguna Anda akan ditutup dan dijalankan lagi. Sesi aplikasi dan desktop yang sudah terbuka tidak diakhiri oleh SelfX. Info masuk yang tersimpan dan pengaturan aplikasi tidak diubah.
+
+Masuk lagi setelahnya jika aplikasi memintanya.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Jalankan klien OneDrive</Name>
 				<Explanation>OneDrive tidak berjalan.</Explanation>

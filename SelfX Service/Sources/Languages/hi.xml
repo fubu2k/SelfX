@@ -490,6 +490,15 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 
 क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace जवाब नहीं दे रहा या ऐप्लिकेशन नहीं दिखा रहा</Name>
+				<Explanation>Citrix Workspace ऐप अटक गया है, साइन इन नहीं कर रहा या आपके ऐप्लिकेशन और डेस्कटॉप नहीं दिखा रहा।</Explanation>
+				<Alerte_MSG>आपके उपयोगकर्ता खाते का Citrix Workspace ऐप बंद होकर फिर से शुरू होगा। पहले से खुले ऐप्लिकेशन और डेस्कटॉप सत्र SelfX द्वारा बंद नहीं किए जाते। आपका सहेजा हुआ साइन-इन और ऐप की सेटिंग नहीं बदली जाती।
+
+अगर ऐप कहे तो इसके बाद फिर से साइन इन करें।
+
+क्या आप जारी रखना चाहते हैं?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive क्लाइंट प्रारंभ करें</Name>
 				<Explanation>OneDrive नहीं चल रहा है.</Explanation>

@@ -490,6 +490,15 @@ Jeśli nic się nie zmieni: naciśnij klawisz Windows + P i wybierz „Tylko ekr
 
 Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace nie odpowiada lub nie pokazuje aplikacji</Name>
+				<Explanation>Aplikacja Citrix Workspace zawiesza się, nie loguje lub nie pokazuje Twoich aplikacji i pulpitów.</Explanation>
+				<Alerte_MSG>Aplikacja Citrix Workspace Twojego konta użytkownika zostanie zamknięta i uruchomiona ponownie. Otwarte już sesje aplikacji i pulpitów nie są kończone przez SelfX. Zapisane logowanie i ustawienia aplikacji nie są zmieniane.
+
+Zaloguj się potem ponownie, jeśli aplikacja o to poprosi.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Uruchom klienta OneDrive</Name>
 				<Explanation>Usługa OneDrive nie jest uruchomiona.</Explanation>

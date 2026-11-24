@@ -490,6 +490,15 @@ Als er niets verandert: druk op de Windows-toets + P en kies “Alleen pc-scherm
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace reageert niet of toont geen toepassingen</Name>
+				<Explanation>De Citrix Workspace-app loopt vast, meldt u niet aan of toont uw toepassingen en desktops niet.</Explanation>
+				<Alerte_MSG>De Citrix Workspace-app van uw gebruikersaccount wordt afgesloten en opnieuw gestart. Sessies van toepassingen en desktops die al geopend zijn, worden niet door SelfX beëindigd. Uw opgeslagen aanmelding en de instellingen van de app worden niet gewijzigd.
+
+Meld u daarna opnieuw aan als de app daarom vraagt.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>De OneDrive-client starten</Name>
 				<Explanation>OneDrive wordt niet uitgevoerd.</Explanation>

@@ -490,6 +490,15 @@
 
 هل تريد المتابعة؟</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace لا يستجيب أو لا يعرض التطبيقات</Name>
+				<Explanation>تطبيق Citrix Workspace متوقف عن الاستجابة أو لا يسجّل دخولك أو لا يعرض تطبيقاتك وأجهزة سطح المكتب.</Explanation>
+				<Alerte_MSG>سيتم إغلاق تطبيق Citrix Workspace الخاص بحساب المستخدم الخاص بك ثم تشغيله من جديد. لا ينهي SelfX جلسات التطبيقات وسطح المكتب المفتوحة بالفعل. لا يتم تغيير تسجيل الدخول المحفوظ ولا إعدادات التطبيق.
+
+سجّل الدخول من جديد بعد ذلك إذا طلب التطبيق ذلك.
+
+هل تريد المتابعة؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>بدء تشغيل العميل OneDrive</Name>
 				<Explanation>OneDrive لا يعمل.</Explanation>

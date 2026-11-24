@@ -490,6 +490,15 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 
 続行しますか?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace が応答しない、またはアプリが表示されない</Name>
+				<Explanation>Citrix Workspace アプリが固まる、サインインできない、またはアプリケーションやデスクトップが表示されません。</Explanation>
+				<Alerte_MSG>お使いのユーザーアカウントの Citrix Workspace アプリを終了して、もう一度起動します。すでに開いているアプリケーションやデスクトップのセッションは、SelfX によって終了されません。保存されたサインイン情報とアプリの設定は変更されません。
+
+アプリから求められた場合は、その後もう一度サインインしてください。
+
+続行しますか?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive クライアントを起動する</Name>
 				<Explanation>OneDrive が実行されていません。</Explanation>

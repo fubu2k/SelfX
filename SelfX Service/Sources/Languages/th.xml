@@ -490,6 +490,15 @@
 
 ต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace ไม่ตอบสนองหรือไม่แสดงแอปพลิเคชัน</Name>
+				<Explanation>แอป Citrix Workspace ค้าง ลงชื่อเข้าใช้ไม่ได้ หรือไม่แสดงแอปพลิเคชันและเดสก์ท็อปของคุณ</Explanation>
+				<Alerte_MSG>แอป Citrix Workspace ของบัญชีผู้ใช้ของคุณจะถูกปิดและเริ่มใหม่ SelfX จะไม่ยุติเซสชันแอปพลิเคชันและเดสก์ท็อปที่เปิดอยู่แล้ว การลงชื่อเข้าใช้ที่บันทึกไว้และการตั้งค่าของแอปจะไม่ถูกเปลี่ยนแปลง
+
+หลังจากนั้นให้ลงชื่อเข้าใช้อีกครั้งหากแอปร้องขอ
+
+ต้องการดำเนินการต่อหรือไม่</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>เริ่มต้นไคลเอ็นต์ OneDrive</Name>
 				<Explanation>OneDrive ไม่ทำงาน</Explanation>
