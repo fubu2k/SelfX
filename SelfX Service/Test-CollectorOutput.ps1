@@ -120,8 +120,32 @@ try {
 		Assert-Equal (@($rules | ForEach-Object { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } | Sort-Object -Unique) -join ',') 'S-1-5-18,S-1-5-32-544' 'protected report: only SYSTEM and administrators'
 	}
 
+	# 7b. Sharing: a normal report may be read while it is written; a default report (-Protect) is opened without sharing, so
+	# nobody can hold a read handle before the access rights are set (needs administrator rights for -Protect).
+	$file7b = Join-Path $root 'share.log'
+	$open7b = Open-SelfXReportWriter -Path $file7b -TrustedOwnerSids @($me)
+	try {
+		$canRead = $false
+		try { $r = [IO.File]::Open($file7b, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite); $r.Dispose(); $canRead = $true } catch { }
+		Assert-Equal $canRead $true 'normal report: can be read while it is written'
+	}
+	finally { $open7b.Dispose() }
+	if ($isAdmin) {
+		$file7c = Join-Path $root 'noshare.log'
+		$open7c = Open-SelfXReportWriter -Path $file7c -TrustedOwnerSids @($me) -Protect
+		try {
+			$canRead = $false
+			try { $r = [IO.File]::Open($file7c, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite); $r.Dispose(); $canRead = $true } catch { }
+			Assert-Equal $canRead $false 'protected report: no other handle while it is written (sharing violation)'
+		}
+		finally { $open7c.Dispose() }
+	}
+
 	# 8. The collector uses the function and passes -Protect only for the default location.
 	$text = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Sources\Scripts_to_run\Collect-DeviceLogs.ps1'))
+	# Only a checked, kept file is overwritten; after a removal the report is created new (no gap in which a planted file is opened).
+	Assert-Equal ($definition.Extent.Text.Contains('$mode = if ($overwrite) { [IO.FileMode]::Truncate } else { [IO.FileMode]::CreateNew }')) $true 'writer: Truncate only for a checked, kept file'
+	Assert-Equal ($definition.Extent.Text.Contains('Test-Path -LiteralPath $Path) { [IO.FileMode]::Truncate }')) $false 'writer: the mode does not depend on a second look at the path'
 	Assert-Equal ($text.Contains('Open-SelfXReportWriter -Path $outFile -TrustedOwnerSids $trustedOwners -Protect:$defaultOutput')) $true 'collector opens the report with Open-SelfXReportWriter'
 	Assert-Equal ($text.Contains('New-Object System.IO.StreamWriter($outFile')) $false 'collector no longer opens the report with a plain StreamWriter'
 }

@@ -12,6 +12,15 @@ Die Paketversion ist `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`.
 (das Paketierungsskript prüft das). Ein Release bekommt das Tag `v<Version>` (zum
 Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` übereinstimmen.
 
+## Unveröffentlicht (SelfX Service)
+
+- **Sicherheit, Berichtsdatei (`Collect-DeviceLogs.ps1` 1.3.6):** Eine Berichtsdatei wird nur noch überschrieben, wenn sie vorhanden war
+  und als vertrauenswürdig geprüft wurde. Nach dem Entfernen einer untergeschobenen Datei wird immer neu angelegt (`CreateNew`), sodass
+  eine Datei, die ein Nutzer in der Lücke anlegt, nicht beschrieben wird. Ein Standardbericht (`-Protect`) wird ohne Freigabe geöffnet:
+  Bis die Zugriffsrechte gesetzt sind, kann niemand ein Lese-Handle halten. `-UserView` akzeptiert nur die SID eines Benutzerkontos.
+- **Export der Systeminformationen (`SystemInfo.ps1` 2.8.26):** Der Dateiname aus dem Speichern-Dialog wird wörtlich verwendet
+  (`-LiteralPath`). Ein Name mit `[` `]` schlug fehl oder konnte andere Dateien treffen.
+
 ## 3.0.2 - 2026-11-24 (SelfX Service)
 
 - **Sicherheit, Berichtsleser:** `SelfX_Device_CollectLogs.ps1` (2.8.21) gibt den Bericht nur noch dem Konto des anfragenden Nutzers
