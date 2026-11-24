@@ -712,6 +712,23 @@ try {
 	$outside = $false
 	try { [void](Reset-SelfXFailedApp -Report ([pscustomobject]@{ Id = $appId; AppKey = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Other\$appId"; UserKey = $userKey })) } catch { $outside = $true }
 	Assert-Equal $outside $true 'App retry: nothing outside the IME cache is deleted'
+	# The keys must have exactly the form of the IME cache: a prefix, a suffix, another hive or a foreign user key is refused.
+	$badKeys = @(
+		@{ Name = 'path prefix before the cache path'; App = "Registry::HKEY_CURRENT_USER\Evil\$($userKey.Substring(10))\$($appId)_7"; User = "Registry::HKEY_CURRENT_USER\Evil\$($userKey.Substring(10))" },
+		@{ Name = 'other hive'; App = "$($userKey -replace 'HKEY_LOCAL_MACHINE', 'HKEY_CURRENT_USER')\$($appId)_7"; User = ($userKey -replace 'HKEY_LOCAL_MACHINE', 'HKEY_CURRENT_USER') },
+		@{ Name = 'app key deeper than the app'; App = "$userKey\$($appId)_7\Sub"; User = $userKey },
+		@{ Name = 'app key with a suffix'; App = "$userKey\$($appId)_7x"; User = $userKey },
+		@{ Name = 'app key of another user key'; App = "$userKey\$($appId)_7"; User = "$($userKey)00" },
+		@{ Name = 'user key is the whole cache'; App = "$($userKey -replace '\\[^\\]+$', '')\$($appId)_7"; User = ($userKey -replace '\\[^\\]+$', '') },
+		@{ Name = 'user key with an extra level'; App = "$userKey\GRS\$($appId)_7"; User = "$userKey\GRS" }
+	)
+	foreach ($bad in $badKeys) {
+		$script:removed.Clear()
+		$refused = $false
+		try { [void](Reset-SelfXFailedApp -Report ([pscustomobject]@{ Id = $appId; AppKey = $bad.App; UserKey = $bad.User })) } catch { $refused = $true }
+		Assert-Equal ($refused -and $script:removed.Count -eq 0) $true "App retry: refused and nothing deleted ($($bad.Name))"
+	}
+	$script:removed.Clear()
 	Microsoft.PowerShell.Management\Remove-Item Function:\Test-Path, Function:\Remove-Item, Function:\Get-ChildItem, Function:\Get-ItemProperty
 
 	# App status: app id from the key <app id>_<revision> (not the user id), names from the IME logs, error codes.

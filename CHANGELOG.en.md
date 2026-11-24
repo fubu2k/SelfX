@@ -12,7 +12,7 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 (the packaging script checks this). A release gets the tag `v<version>` (for example
 `v3.0.0`); the release workflow checks that the tag and `Tool_Version` match.
 
-## Unreleased (SelfX Service)
+## 3.0.2 - 2026-11-24 (SelfX Service)
 
 - **Security, report reader:** `SelfX_Device_CollectLogs.ps1` (2.8.21) releases the report only to the account of the requesting
   user. Only user SIDs are allowed as reader (`S-1-5-21-...` local/domain, `S-1-12-1-...` Entra ID). Groups and well-known SIDs such
