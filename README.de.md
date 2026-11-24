@@ -257,7 +257,7 @@ Einzelheiten stehen im [Änderungsprotokoll](CHANGELOG.md) und im
 - **Automatische Prüfungen.** Jeder Pull Request kompiliert den Dienst und führt
   die Tests und eine Skriptanalyse aus.
 
-Melden Sie Sicherheitslücken vertraulich, wie in [security policy](SECURITY.md)
+Melden Sie Sicherheitslücken vertraulich, wie in [Sicherheitsrichtlinie](SECURITY.md)
 beschrieben.
 
 ## Dokumentation
