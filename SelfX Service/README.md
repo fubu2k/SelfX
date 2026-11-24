@@ -16,7 +16,7 @@ Netzwerkverbindung. Aktuelle Version: **3.0.0** (siehe das
   (standardmäßig alle 15 Minuten, pausiert im Akkubetrieb, verschoben bei hoher
   Prozessorlast) und behält das Ergebnis, sodass SelfX Status und
   Systeminformationen sofort anzeigt. Siehe
-  [Hintergrundprüfungen](../docs/Configuration.md#hintergrundprüfungen).
+  [Hintergrundprüfungen](../docs/Configuration.md#gerätestatus).
 - Statussymbol (2.5.0): ein Statussymbol neben der Uhr für jeden Nutzer (grün,
   gelb, rot) mit einer Benachrichtigung, wenn ein Problem gefunden wird, zum
   Beispiel wenig Speicherplatz. Jeder Nutzer kann es ausblenden. Siehe
@@ -217,5 +217,5 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
 Siehe [Installation](../docs/Installation.md#schritt-3-in-intune-einrichten),
-[Konfiguration](../docs/Configuration.md#selfx-service) und das
+[Konfiguration](../docs/Configuration.md#die-wichtigsten-einstellungen) und das
 [Benutzerhandbuch](../docs/User-Manual.md#selfx-öffnen).
