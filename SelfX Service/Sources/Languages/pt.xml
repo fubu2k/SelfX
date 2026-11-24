@@ -481,6 +481,15 @@ Abra o segundo livro na nova janela (Ficheiro > Abrir) e mova a janela para o se
 
 Deseja continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>A janela de um programa está fora do ecrã</Name>
+				<Explanation>Um programa está em execução, mas não vê a respetiva janela. Isto acontece muitas vezes depois de desligar um monitor externo, por exemplo ao passar do teletrabalho para o escritório.</Explanation>
+				<Alerte_MSG>As janelas de programas que estão fora do ecrã serão movidas para o seu ecrã principal. Nada é fechado nem guardado e as janelas que já vê não são alteradas.
+
+Se nada mudar: prima a tecla Windows + P e escolha “Apenas ecrã do PC”. Depois clique no programa na barra de tarefas.
+
+Deseja continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Iniciar o cliente do OneDrive</Name>
 				<Explanation>O OneDrive não está em execução.</Explanation>

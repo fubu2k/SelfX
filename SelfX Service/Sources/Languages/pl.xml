@@ -481,6 +481,15 @@ Otwórz drugi skoroszyt w nowym oknie (Plik > Otwórz) i przesuń okno na drugi 
 
 Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Okno programu znajduje się poza ekranem</Name>
+				<Explanation>Program działa, ale nie widzisz jego okna. Często zdarza się to po odłączeniu zewnętrznego monitora, na przykład przy przejściu z pracy zdalnej do biura.</Explanation>
+				<Alerte_MSG>Okna programów znajdujące się poza ekranem zostaną przeniesione na ekran główny. Nic nie jest zamykane ani zapisywane, a okna, które już widzisz, nie są zmieniane.
+
+Jeśli nic się nie zmieni: naciśnij klawisz Windows + P i wybierz „Tylko ekran komputera”. Następnie kliknij program na pasku zadań.
+
+Czy chcesz kontynuować?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Uruchom klienta OneDrive</Name>
 				<Explanation>Usługa OneDrive nie jest uruchomiona.</Explanation>

@@ -26,6 +26,13 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
   Arbeitsmappen auf zwei Bildschirmen zu vergleichen. Es wird nichts geschlossen oder geändert;
   der Programmpfad kommt aus `SelfXOffice.ps1` (unter Program Files, kein Link), das einzige
   Argument ist der feste Schalter `/x`. Texte in allen 24 Sprachen, Tests in `Test-Scripts.ps1`.
+- **Neue Aktion „Ein Programmfenster liegt außerhalb des Bildschirms“** (Kategorie Gerät,
+  Nutzerkontext): holt Fenster des eigenen Benutzers, deren Titelleiste auf keinem Bildschirm
+  erreichbar ist (zum Beispiel nach dem Abstecken eines Monitors), auf den Hauptbildschirm.
+  Es wird nichts geschlossen, gespeichert oder an Einstellungen geändert; Fenster werden über
+  Microsoft UI Automation verschoben (kein kompilierter Code), Fenstertitel stehen nicht im
+  Log. Programme mit höheren Rechten werden übersprungen. Neuer Helfer `SelfXWindows.ps1`,
+  Test: `Test-WindowHelper.ps1`.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 

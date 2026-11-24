@@ -481,6 +481,15 @@ Abra el segundo libro en la nueva ventana (Archivo > Abrir) y mueva la ventana a
 
 ¿Desea continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Una ventana de programa está fuera de la pantalla</Name>
+				<Explanation>Un programa está en ejecución, pero no ve su ventana. Suele ocurrir cuando se desconecta un monitor externo, por ejemplo al pasar del teletrabajo a la oficina.</Explanation>
+				<Alerte_MSG>Las ventanas de programas que están fuera de la pantalla se moverán a su pantalla principal. No se cierra ni se guarda nada, y las ventanas que ya ve no se modifican.
+
+Si no cambia nada: pulse la tecla Windows + P y elija “Solo pantalla del PC”. Después haga clic en el programa en la barra de tareas.
+
+¿Desea continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Iniciar el cliente de OneDrive</Name>
 				<Explanation>OneDrive no está en ejecución.</Explanation>

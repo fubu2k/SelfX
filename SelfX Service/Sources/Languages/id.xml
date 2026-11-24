@@ -481,6 +481,15 @@ Buka buku kerja kedua di jendela baru (File > Buka) lalu pindahkan jendela ke la
 
 Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Jendela program berada di luar layar</Name>
+				<Explanation>Sebuah program sedang berjalan, tetapi Anda tidak melihat jendelanya. Ini sering terjadi setelah monitor eksternal dicabut, misalnya saat berpindah dari kerja di rumah ke kantor.</Explanation>
+				<Alerte_MSG>Jendela program yang berada di luar layar akan dipindahkan ke layar utama Anda. Tidak ada yang ditutup atau disimpan, dan jendela yang sudah Anda lihat tidak diubah.
+
+Jika tidak ada yang berubah: tekan tombol Windows + P dan pilih “Hanya layar PC”. Lalu klik program di bilah tugas.
+
+Apakah Anda ingin melanjutkan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Jalankan klien OneDrive</Name>
 				<Explanation>OneDrive tidak berjalan.</Explanation>

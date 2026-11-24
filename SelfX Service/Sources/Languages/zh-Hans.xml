@@ -481,6 +481,15 @@
 
 是否继续？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>程序窗口在屏幕之外</Name>
+				<Explanation>某个程序正在运行，但您看不到它的窗口。拔掉外接显示器后经常出现这种情况，例如从居家办公回到办公室时。</Explanation>
+				<Alerte_MSG>位于屏幕之外的程序窗口将被移到主屏幕上。不会关闭或保存任何内容，您已经能看到的窗口也不会被更改。
+
+如果没有变化：按 Windows 键 + P，选择“仅电脑屏幕”，然后在任务栏中单击该程序。
+
+是否继续？</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>启动 OneDrive 客户端</Name>
 				<Explanation>OneDrive 当前未运行。</Explanation>

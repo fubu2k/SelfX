@@ -481,6 +481,15 @@ Apri la seconda cartella di lavoro nella nuova finestra (File > Apri) e sposta l
 
 Vuoi continuare?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>La finestra di un programma è fuori dallo schermo</Name>
+				<Explanation>Un programma è in esecuzione, ma non ne vedi la finestra. Succede spesso dopo aver scollegato un monitor esterno, ad esempio passando dallo smart working all’ufficio.</Explanation>
+				<Alerte_MSG>Le finestre dei programmi che si trovano fuori dallo schermo vengono spostate sullo schermo principale. Non viene chiuso né salvato nulla, e le finestre che già vedi non vengono modificate.
+
+Se non cambia nulla: premi il tasto Windows + P e scegli “Solo schermo PC”. Poi fai clic sul programma nella barra delle applicazioni.
+
+Vuoi continuare?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Avviare il client OneDrive</Name>
 				<Explanation>OneDrive non è in esecuzione.</Explanation>

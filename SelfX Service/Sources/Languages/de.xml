@@ -563,6 +563,15 @@ Möchten Sie fortfahren?</Alerte_MSG>
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Ein Programmfenster liegt außerhalb des Bildschirms</Name>
+				<Explanation>Ein Programm läuft, aber Sie sehen sein Fenster nicht. Das passiert oft, wenn ein externer Monitor abgesteckt wurde, zum Beispiel beim Wechsel vom Homeoffice ins Büro.</Explanation>
+				<Alerte_MSG>Programmfenster, die außerhalb des Bildschirms liegen, werden auf Ihren Hauptbildschirm geholt. Es wird nichts geschlossen oder gespeichert, und Fenster, die Sie schon sehen, werden nicht verändert.
+
+Wenn sich nichts ändert: Drücken Sie die Windows-Taste + P und wählen Sie „Nur PC-Bildschirm“. Klicken Sie danach das Programm in der Taskleiste an.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive starten</Name>
 				<Explanation>OneDrive läuft nicht.</Explanation>

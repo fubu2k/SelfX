@@ -349,6 +349,20 @@ Open the second workbook in the new window (File &gt; Open) and move the window 
 Do you want to continue?</Alerte_MSG>
 		</Action>
 
+		<Action Id="D_Device_BringWindowsBack">
+			<Name>A program window is outside the screen</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>A program is running, but you cannot see its window. This often happens after an external monitor was disconnected, for example when you move from the home office to the office.</Explanation>
+			<Script>SelfX_Device_BringWindowsBack.ps1</Script>
+			<Context>User</Context>
+			<Category>Device</Category>
+			<Alerte_MSG>Program windows that lie outside the screen are moved to your main screen. Nothing is closed or saved, and windows that you already see are not changed.
+
+If nothing changes: press the Windows key + P and choose "PC screen only". Then click the program in the taskbar.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
 		<Action Id="D_Office_ResetLicence">
 			<Name>Office asks to activate or reports an unlicensed product</Name>
 			<Buttons>Ok_Cancel</Buttons>

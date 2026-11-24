@@ -26,6 +26,12 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
   workbooks on two screens. Nothing is closed or changed; the program path comes from
   `SelfXOffice.ps1` (below Program Files, no link) and the only argument is the fixed switch
   `/x`. Texts in all 24 languages, tests in `Test-Scripts.ps1`.
+- **New action "A program window is outside the screen"** (category Device, user context):
+  moves windows of the own user whose title bar cannot be reached on any screen (for example
+  after a monitor was disconnected) to the primary screen. Nothing is closed, saved or
+  changed in the settings; windows are moved through Microsoft UI Automation (no compiled
+  code) and window titles are not written to the log. Programs with higher rights are
+  skipped. New helper `SelfXWindows.ps1`, test: `Test-WindowHelper.ps1`.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 

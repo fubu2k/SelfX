@@ -481,6 +481,15 @@ Fungua kitabu cha pili cha kazi kwenye dirisha jipya (Faili > Fungua) kisha hami
 
 Unataka kuendelea?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Dirisha la programu liko nje ya skrini</Name>
+				<Explanation>Programu inaendeshwa, lakini huoni dirisha lake. Hili hutokea mara nyingi baada ya kuondoa skrini ya nje, kwa mfano unapohama kutoka kazi ya nyumbani hadi ofisini.</Explanation>
+				<Alerte_MSG>Madirisha ya programu yaliyo nje ya skrini yatahamishiwa kwenye skrini yako kuu. Hakuna kinachofungwa wala kuhifadhiwa, na madirisha unayoyaona tayari hayabadilishwi.
+
+Ikiwa hakuna kinachobadilika: bonyeza kitufe cha Windows + P na uchague “Skrini ya Kompyuta tu”. Kisha bofya programu kwenye upau wa kazi.
+
+Unataka kuendelea?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Anzisha programu ya OneDrive</Name>
 				<Explanation>OneDrive haiendeshwi.</Explanation>

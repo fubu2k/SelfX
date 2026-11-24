@@ -481,6 +481,15 @@ Open de tweede werkmap in het nieuwe venster (Bestand > Openen) en verplaats het
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Een programmavenster staat buiten het scherm</Name>
+				<Explanation>Er draait een programma, maar u ziet het venster niet. Dat gebeurt vaak nadat een externe monitor is losgekoppeld, bijvoorbeeld bij de overstap van thuiswerken naar kantoor.</Explanation>
+				<Alerte_MSG>Programmavensters die buiten het scherm staan, worden naar uw hoofdscherm gehaald. Er wordt niets gesloten of opgeslagen en vensters die u al ziet, worden niet gewijzigd.
+
+Als er niets verandert: druk op de Windows-toets + P en kies “Alleen pc-scherm”. Klik daarna op het programma in de taakbalk.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>De OneDrive-client starten</Name>
 				<Explanation>OneDrive wordt niet uitgevoerd.</Explanation>
