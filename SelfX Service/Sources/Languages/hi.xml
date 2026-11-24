@@ -197,6 +197,8 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Ticket_Recipient_Text>ईमेल यहाँ भेजा जाएगा: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Copilot Chat से पूछें</Copilot_Row_Label>
 		<Copilot_Row_Text>इस पीसी के बारे में Microsoft 365 Copilot Chat के लिए एक छोटा पाठ तैयार करता है, ताकि वह समस्या को आसान भाषा में समझा सके।</Copilot_Row_Text>
+		<Wiki_Row_Label>संगठन का विकी</Wiki_Row_Label>
+		<Wiki_Row_Text>आपके संगठन का सुझावों और ट्रिक्स वाला विकी वेब ब्राउज़र में खोलता है।</Wiki_Row_Text>
 		<Copilot_Button>पाठ तैयार करें</Copilot_Button>
 		<Copilot_Window_Title>Copilot Chat से पूछें</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX, Copilot Chat के लिए एक छोटा पाठ तैयार करता है। इसमें आपका विवरण और डिवाइस की बुनियादी जानकारी होती है। नाम, ईमेल पते और नेटवर्क पते प्लेसहोल्डर से बदल दिए जाते हैं।</Copilot_Intro_Text>

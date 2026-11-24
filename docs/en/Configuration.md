@@ -23,11 +23,12 @@ administrators. You do not need programming skills. The installation itself is d
 9. [Device logs for support](#device-logs-for-support)
 10. [Network measurements](#network-measurements)
 11. [Ticket by e-mail](#ticket-by-e-mail)
-12. [Copilot Chat](#copilot-chat)
-13. [Logs and retention](#logs-and-retention)
-14. [Branding (company logo and colors)](#branding)
-15. [Languages](#languages)
-16. [Delivering changes safely](#delivering-changes-safely)
+12. [Company wiki](#company-wiki)
+13. [Copilot Chat](#copilot-chat)
+14. [Logs and retention](#logs-and-retention)
+15. [Branding (company logo and colors)](#branding)
+16. [Languages](#languages)
+17. [Delivering changes safely](#delivering-changes-safely)
 
 ## Where the settings are
 
@@ -72,6 +73,7 @@ SelfX is configured with XML files in the folder `SelfX Service\Sources`.
 | `Show_Tray_Icon` | `True` | Show the status icon next to the clock. See [Status icon](#status-icon). |
 | `Ticket_Enabled` | `False` | Switch on ticket by e-mail. See [Ticket by e-mail](#ticket-by-e-mail). |
 | `Copilot_Enabled` | `False` | Switch on Copilot Chat. See [Copilot Chat](#copilot-chat). |
+| `Wiki_Enabled` | `False` | Switch on the company wiki button. See [Company wiki](#company-wiki). |
 | `DeviceLogs_Days` | `7` | How many days of events are in the device logs (1 to 60). |
 
 **Support contacts** (in the help dialog):
@@ -460,6 +462,21 @@ every user. Addresses that not everyone should see belong in the registry values
 are cleaned: no line breaks in the subject and fixed lengths. Free text and device information are placed
 in code blocks, so that a ticket system does not run commands from them. Test before switching it on
 whether your ticket system handles this. The log records only the result, never the text.
+
+## Company wiki
+
+Optional and off by default (`Wiki_Enabled` = `False`). When the function is on and `Wiki_Url` is valid, SelfX
+shows a *Company wiki* button in the navigation. One click opens the address in the default web browser of the
+user, for example a page with tips and tricks of your company. SelfX sends no data.
+
+| Setting | Meaning |
+| --- | --- |
+| `Wiki_Enabled` | `False` (default) or `True`. |
+| `Wiki_Url` | Address of the wiki. `https://` only, no user name or password, at most 2000 characters. If it is invalid, the button is not shown and a warning is written to the log. |
+| `Wiki_Name` | Optional. Name on the button, up to 40 characters. Empty = the text "Company wiki" in the language of the user. |
+
+The button runs in the user context; the service is not involved. The wizard (`tools\New-SelfXPackage.ps1`)
+asks for the three values.
 
 ## Copilot Chat
 

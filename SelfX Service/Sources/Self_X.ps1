@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.18
+    Version : 2.8.26
 
     History:
     Version  Date        Author               Change
@@ -45,6 +45,7 @@
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX, http://www.systanddeploy.com)
     2.8.17   2026-11-23  fubu2k               Copilot Chat: optional clearing of the clipboard after a time (Copilot_Clear_Clipboard, Copilot_Clear_Clipboard_Seconds)
     2.8.18   2026-11-23  fubu2k               Calmer look: larger radii and spacing, three-step hint, status chips with icon, help buttons (ticket, Copilot) in the navigation
+    2.8.26   2026-11-24  fubu2k               Optional wiki button in the navigation (Wiki_Enabled, Wiki_Url, Wiki_Name)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -290,6 +291,9 @@ If($Ticket_Available)
 			}
 		Catch { Write-SelfXLog "Ticket_Config.xml could not be read: $($_.Exception.Message)" 'Warning' }
 	}
+# Company wiki (off by default): the button opens the configured https address in the web browser (SupportLinks.ps1)
+$Wiki = Get-SelfXWikiSettings -Enabled (Get-SelfXText "Wiki_Enabled" "False") -Url (Get-SelfXText "Wiki_Url" "") -Name (Get-SelfXText "Wiki_Name" "")
+foreach($Wiki_Warning in $Wiki.Warnings) { Write-SelfXLog $Wiki_Warning 'Warning' }
 # Hand-over to Copilot Chat (off by default): only an https address from the configuration is opened, the user pastes the text
 $Copilot_Url = (Get-SelfXText "Copilot_Url" "https://copilot.cloud.microsoft").Trim()
 $Copilot_Available = ((Get-SelfXText "Copilot_Enabled" "False") -eq 'True') -and (Test-SelfXCopilotUrl $Copilot_Url)
@@ -824,6 +828,12 @@ __TEMPLATES__
               <TextBlock Name="NavText6" Margin="10,0,0,0" TextWrapping="Wrap" MaxWidth="150"/>
             </StackPanel>
           </Button>
+          <Button Name="Btn_Wiki" Style="{StaticResource BaseButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,0,8" Padding="14,10" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Style="{StaticResource Glyph}" Text="&#xE736;" FontSize="16" Foreground="{DynamicResource AccentText}"/>
+              <TextBlock Name="NavText7" Margin="10,0,0,0" TextWrapping="Wrap" MaxWidth="150"/>
+            </StackPanel>
+          </Button>
           <Button Name="Btn_SendLogs" Style="{StaticResource BaseButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,0,10" Padding="12,8">
             <StackPanel Orientation="Horizontal">
               <TextBlock Style="{StaticResource Glyph}" Text="&#xE724;" FontSize="14"/>
@@ -1105,8 +1115,10 @@ $StepText2.Text = Get-SelfXString 'Step2_Text'
 $StepText3.Text = Get-SelfXString 'Step3_Text'
 $NavText5.Text = Get-SelfXString 'Help_Ticket_Text'
 $NavText6.Text = Get-SelfXString 'Copilot_Row_Label'
+$NavText7.Text = $(If($Wiki.Name) { $Wiki.Name } Else { Get-SelfXString 'Wiki_Row_Label' })
 $Btn_Ticket.ToolTip = Get-SelfXString 'Help_Ticket_Tooltip'
 $Btn_Copilot.ToolTip = Get-SelfXString 'Copilot_Row_Text'
+$Btn_Wiki.ToolTip = Get-SelfXString 'Wiki_Row_Text'
 $Btn_SendLogs.ToolTip = Get-SelfXString 'Tooltip_SendLogs'
 $VersionLabel.Text = Get-SelfXString 'Version_Text' $Tool_Version
 $Mode_Simple.Content = Get-SelfXString 'Solution_Mode_Simple'
@@ -1659,6 +1671,11 @@ If($Copilot_Available)
 	{
 		$Btn_Copilot.Visibility = 'Visible'
 		$Btn_Copilot.Add_Click({ Show-SelfXCopilotDialog })
+	}
+If($Wiki.Available)
+	{
+		$Btn_Wiki.Visibility = 'Visible'
+		$Btn_Wiki.Add_Click({ Open-SelfXUri $Wiki.Uri })
 	}
 
 #******************************************************************************
@@ -2595,7 +2612,7 @@ Function Update-SelfXLayout
 	{
 		$Narrow = $Form.ActualWidth -lt 900
 		$NavColumn.Width = [System.Windows.GridLength]::new($(If($Narrow) { 60 } Else { 220 }))
-		foreach($Element in $NavText1, $NavText2, $NavText3, $NavText4, $NavText5, $NavText6, $ServiceText) { $Element.Visibility = $(If($Narrow) { 'Collapsed' } Else { 'Visible' }) }
+		foreach($Element in $NavText1, $NavText2, $NavText3, $NavText4, $NavText5, $NavText6, $NavText7, $ServiceText) { $Element.Visibility = $(If($Narrow) { 'Collapsed' } Else { 'Visible' }) }
 		If($Brand_Logo_Image -ne $null) { $Brand_Logo.Visibility = $(If($Narrow) { 'Collapsed' } Else { 'Visible' }) }
 		$NavBadge.Margin = $(If($Narrow) { [System.Windows.Thickness]::new(0, -18, -6, 0) } Else { [System.Windows.Thickness]::new(0) })
 	}

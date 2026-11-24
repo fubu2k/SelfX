@@ -197,6 +197,8 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<Ticket_Recipient_Text>ইমেল পাঠানো হবে: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Copilot Chat-কে জিজ্ঞাসা করুন</Copilot_Row_Label>
 		<Copilot_Row_Text>এই পিসি সম্পর্কে Microsoft 365 Copilot Chat-এর জন্য একটি ছোট লেখা তৈরি করে, যাতে সে সমস্যাটি সহজ ভাষায় ব্যাখ্যা করতে পারে।</Copilot_Row_Text>
+		<Wiki_Row_Label>প্রতিষ্ঠানের উইকি</Wiki_Row_Label>
+		<Wiki_Row_Text>আপনার প্রতিষ্ঠানের টিপস ও ট্রিকস সহ উইকি ওয়েব ব্রাউজারে খোলে।</Wiki_Row_Text>
 		<Copilot_Button>লেখা প্রস্তুত করুন</Copilot_Button>
 		<Copilot_Window_Title>Copilot Chat-কে জিজ্ঞাসা করুন</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX Copilot Chat-এর জন্য একটি ছোট লেখা তৈরি করে। এতে আপনার বিবরণ ও ডিভাইসের মৌলিক তথ্য থাকে। নাম, ইমেল ঠিকানা ও নেটওয়ার্ক ঠিকানা প্লেসহোল্ডার দিয়ে বদলে দেওয়া হয়।</Copilot_Intro_Text>

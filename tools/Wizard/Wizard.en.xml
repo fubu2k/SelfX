@@ -20,7 +20,7 @@
 	<T Id="section.support">2/7 Support contacts</T>
 	<T Id="section.branding">3/7 Branding</T>
 	<T Id="section.ticket">4/7 Ticket by e-mail and organisations</T>
-	<T Id="section.copilot">5/7 Copilot Chat</T>
+	<T Id="section.copilot">5/7 Copilot Chat and company wiki</T>
 	<T Id="section.behavior">6/7 Behavior on the device</T>
 	<T Id="section.build">7/7 Build</T>
 	<T Id="ToolLanguage.ask">Default language of SelfX on the devices (de, en, fr, es ... or Auto)</T>
@@ -76,6 +76,12 @@
 	<T Id="UnitMore.rec">Yes until every mailbox is defined. The first matching rule wins: group tags are checked first, then OUs, then device classes.</T>
 	<T Id="CopilotEnabled.ask">Do you have Microsoft 365 Copilot Chat licensed and want to offer it in the help dialog?</T>
 	<T Id="CopilotEnabled.rec">Yes if your users have Copilot Chat. SelfX uses no interface and no token: it prepares a text, the user pastes it into Copilot.</T>
+	<T Id="WikiEnabled.ask">Do you want a button that opens the wiki or intranet page of your company in the web browser?</T>
+	<T Id="WikiEnabled.rec">Yes if you have a wiki with tips and tricks for your staff. The button is shown in the navigation of SelfX.</T>
+	<T Id="WikiUrl.ask">Address of the wiki (https://)</T>
+	<T Id="WikiUrl.rec">The page that opens on a click, for example https://wiki.contoso.example. Only https:// is accepted.</T>
+	<T Id="WikiName.ask">Name on the button (empty = Company wiki, up to 40 characters)</T>
+	<T Id="WikiName.rec">Optional, for example Contoso Wiki. Empty shows a text in the language of the user.</T>
 	<T Id="CopilotAudience.ask">Who is the answer for? User (plain language) or Admin (technical steps)</T>
 	<T Id="CopilotAudience.rec">User. Technical answers confuse most employees.</T>
 	<T Id="CopilotClearClipboard.ask">Empty the clipboard a few minutes after SelfX copied the text?</T>

@@ -41,7 +41,8 @@ preferably from the latest release tag). The wizard asks for the path of the fil
    SelfX runs on Windows 11 only. **SelfX cannot cover smartphones (iOS, Android).**
    The rules are written to `Ticket_Config.xml` in this order: group tags, then OUs, then device
    classes; the first matching rule wins.
-5. **Copilot Chat:** offer it only if it is licensed; audience of the answer, clear the clipboard.
+5. **Copilot Chat and company wiki:** offer Copilot only if it is licensed; audience of the answer, clear
+   the clipboard. Optionally a wiki button with an `https://` address and a name.
 6. **Behavior on the device:** status icon, shortcuts. In expert mode: log retention, file check
    (`Enforce` or `Audit`) and service rights. Without expert mode the secure defaults stay.
 7. **Build:** output folder and path of `IntuneWinAppUtil.exe`.

@@ -45,7 +45,8 @@ Wichtige Parameter:
    SelfX läuft nur unter Windows 11. **Smartphones (iOS, Android) kann SelfX nicht abdecken.**
    Die Regeln stehen in dieser Reihenfolge in `Ticket_Config.xml`: zuerst Group Tags, dann OUs,
    dann Geräteklassen; die erste passende Regel gewinnt.
-5. **Copilot Chat:** nur anbieten, wenn Sie es lizenziert haben; Zielgruppe der Antwort, Zwischenablage leeren.
+5. **Copilot Chat und Firmen-Wiki:** Copilot nur anbieten, wenn Sie es lizenziert haben; Zielgruppe der
+   Antwort, Zwischenablage leeren. Optional eine Wiki-Schaltfläche mit `https://`-Adresse und Namen.
 6. **Verhalten auf dem Gerät:** Statussymbol, Verknüpfungen. Im Expertenmodus: Protokoll-Aufbewahrung,
    Dateiprüfung (`Enforce` oder `Audit`) und Rechte des Dienstes. Ohne Expertenmodus bleiben die sicheren Standardwerte.
 7. **Bau:** Ausgabeordner und Pfad von `IntuneWinAppUtil.exe`.

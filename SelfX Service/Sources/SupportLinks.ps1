@@ -21,13 +21,14 @@
     Name    : SupportLinks.ps1
     Package : SelfX Service
     Context : Dot-sourced by Self_X.ps1 (user context); also loaded by Test-SupportLinks.ps1
-    Version : 2.8.14
+    Version : 2.8.26
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.0    2026-11-23  fubu2k               Initial version.
     2.8.14   2026-11-23  fubu2k               Resolve-SelfXCatalogLink (links of catalogue actions with Context Link).
+    2.8.26   2026-11-24  fubu2k               Get-SelfXWikiSettings (optional wiki button).
 #>
 
 function Get-SelfXSafeUri {
@@ -69,4 +70,23 @@ function Resolve-SelfXCatalogLink {
 	$uri = ConvertTo-SelfXSupportWebUri $text
 	if (-not $uri) { return [pscustomobject]@{ Uri = $null; State = 'Invalid' } }
 	return [pscustomobject]@{ Uri = $uri; State = 'Ok' }
+}
+
+function Get-SelfXWikiSettings {
+	# Settings of the optional wiki button: Enabled, Url and Name come from Tool_Config.xml (Wiki_Enabled, Wiki_Url,
+	# Wiki_Name). Result: Available ($true only when the button is on and the address is a valid https address), Uri (checked
+	# address), Name (text for the button, no control characters, at most 40 characters; empty = use the localized text) and
+	# Warnings (what was ignored or shortened, for the log).
+	param($Enabled, $Url, $Name)
+	$warnings = New-Object System.Collections.Generic.List[string]
+	$result = [pscustomobject]@{ Available = $false; Uri = $null; Name = ''; Warnings = $warnings }
+	if ("$Enabled".Trim() -cne 'True') { return $result }
+	$uri = ConvertTo-SelfXSupportWebUri $Url
+	if (-not $uri) { $warnings.Add('Wiki_Url is not a valid https address: the wiki button is not shown.'); return $result }
+	$text = ("$Name" -replace '[\x00-\x1F\x7F]', ' ').Trim()
+	if ($text.Length -gt 40) { $text = $text.Substring(0, 40).Trim(); $warnings.Add('Wiki_Name is longer than 40 characters and was shortened.') }
+	$result.Available = $true
+	$result.Uri = $uri
+	$result.Name = $text
+	return $result
 }

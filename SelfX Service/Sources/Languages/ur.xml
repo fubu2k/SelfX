@@ -195,6 +195,8 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<Ticket_Recipient_Text>ای میل اس پتے پر جاتی ہے: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Copilot Chat سے پوچھیں</Copilot_Row_Label>
 		<Copilot_Row_Text>اس کمپیوٹر کے بارے میں Microsoft 365 Copilot Chat کے لیے ایک مختصر متن تیار کرتا ہے تاکہ وہ مسئلے کو آسان زبان میں سمجھا سکے۔</Copilot_Row_Text>
+		<Wiki_Row_Label>ادارے کی وکی</Wiki_Row_Label>
+		<Wiki_Row_Text>آپ کے ادارے کی تجاویز اور ترکیبوں والی وکی ویب براؤزر میں کھولتا ہے۔</Wiki_Row_Text>
 		<Copilot_Button>متن تیار کریں</Copilot_Button>
 		<Copilot_Window_Title>Copilot Chat سے پوچھیں</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX، Copilot Chat کے لیے ایک مختصر متن تیار کرتا ہے۔ اس میں آپ کی وضاحت اور ڈیوائس کی بنیادی معلومات شامل ہوتی ہیں۔ نام، ای میل پتے اور نیٹ ورک پتے پلیس ہولڈرز سے بدل دیے جاتے ہیں۔</Copilot_Intro_Text>

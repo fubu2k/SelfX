@@ -105,6 +105,25 @@ foreach ($name in 'SelfX_Outlook_Reboot.ps1', 'SelfX_Outlook_TeamsAddIn.ps1', 'S
 	$text = [IO.File]::ReadAllText((Join-Path $PSScriptRoot "Sources\Scripts_to_run\$name"))
 	Assert-Equal ($text -match "Start-Process -FilePath '[A-Za-z]+\.exe'") $false "$name does not start the program by a bare name"
 }
+# Wiki button settings
+$w = Get-SelfXWikiSettings -Enabled 'True' -Url 'https://wiki.contoso.example/start' -Name '  Contoso Wiki  '
+Assert-Equal $w.Available $true 'wiki: valid https address is available'
+Assert-Equal $w.Uri 'https://wiki.contoso.example/start' 'wiki: address is kept'
+Assert-Equal $w.Name 'Contoso Wiki' 'wiki: name is trimmed'
+Assert-Equal (Get-SelfXWikiSettings -Enabled 'False' -Url 'https://wiki.contoso.example' -Name '').Available $false 'wiki: off by default value'
+Assert-Equal (Get-SelfXWikiSettings -Enabled '' -Url 'https://wiki.contoso.example' -Name '').Available $false 'wiki: empty switch is off'
+Assert-Equal (Get-SelfXWikiSettings -Enabled 'true' -Url 'https://wiki.contoso.example' -Name '').Available $false 'wiki: only exact True switches it on'
+foreach ($badUrl in '', 'http://wiki.contoso.example', 'javascript:alert(1)', 'file:///C:/x', '\\server\share', 'https://user:pw@wiki.contoso.example', 'wiki.contoso.example', "https://wiki.contoso.example/`r`nx", ('https://wiki.contoso.example/' + ('a' * 2000))) {
+	$bad = Get-SelfXWikiSettings -Enabled 'True' -Url $badUrl -Name 'x'
+	Assert-Equal $bad.Available $false "wiki: rejects '$($badUrl.Substring(0, [Math]::Min(30, $badUrl.Length)))'"
+	Assert-Equal ($bad.Warnings.Count -ge 1) $true 'wiki: invalid address gives a warning'
+}
+$long = Get-SelfXWikiSettings -Enabled 'True' -Url 'https://wiki.contoso.example' -Name ('N' * 60)
+Assert-Equal $long.Name.Length 40 'wiki: name is shortened to 40 characters'
+Assert-Equal ($long.Warnings.Count -eq 1) $true 'wiki: shortened name gives a warning'
+Assert-Equal (Get-SelfXWikiSettings -Enabled 'True' -Url 'https://wiki.contoso.example' -Name "A`tB`0C").Name 'A B C' 'wiki: control characters become spaces'
+Assert-Equal (Get-SelfXWikiSettings -Enabled 'True' -Url 'https://wiki.contoso.example' -Name $null).Name '' 'wiki: no name means localized text'
+
 $self = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Sources\SupportLinks.ps1'))
 foreach ($pattern in 'Start-Process', 'Invoke-Expression', '\biex\b', 'Set-ItemProperty', 'New-Item', 'Out-File', 'Set-Content', 'Invoke-WebRequest', 'Invoke-RestMethod', 'Get-ItemProperty') {
 	Assert-Equal ($self -match $pattern) $false "SupportLinks.ps1 does not use $pattern"

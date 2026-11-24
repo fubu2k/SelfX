@@ -197,6 +197,8 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Ticket_Recipient_Text>メールの宛先: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Copilot Chat に質問</Copilot_Row_Label>
 		<Copilot_Row_Text>この PC についての短いテキストを Microsoft 365 Copilot Chat 用に準備し、問題をわかりやすい言葉で説明してもらえるようにします。</Copilot_Row_Text>
+		<Wiki_Row_Label>社内 Wiki</Wiki_Row_Label>
+		<Wiki_Row_Text>組織の Wiki（ヒントとコツ）を Web ブラウザーで開きます。</Wiki_Row_Text>
 		<Copilot_Button>テキストを準備</Copilot_Button>
 		<Copilot_Window_Title>Copilot Chat に質問</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX は Copilot Chat 用の短いテキストを準備します。テキストには、あなたの説明とデバイスの基本情報が含まれます。名前、メールアドレス、ネットワークアドレスはプレースホルダーに置き換えられます。</Copilot_Intro_Text>

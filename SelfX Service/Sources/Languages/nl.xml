@@ -197,6 +197,8 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Ticket_Recipient_Text>De e-mail wordt verzonden naar: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Vraag het aan Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>Bereidt een korte tekst over deze pc voor voor Microsoft 365 Copilot Chat, zodat het probleem in eenvoudige taal kan worden uitgelegd.</Copilot_Row_Text>
+		<Wiki_Row_Label>Bedrijfswiki</Wiki_Row_Label>
+		<Wiki_Row_Text>Opent de wiki van uw organisatie met tips en trucs in uw webbrowser.</Wiki_Row_Text>
 		<Copilot_Button>Tekst voorbereiden</Copilot_Button>
 		<Copilot_Window_Title>Vraag het aan Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX bereidt een korte tekst voor Copilot Chat voor. De tekst bevat uw beschrijving en basisgegevens van het apparaat. Namen, e-mailadressen en netwerkadressen worden vervangen door tijdelijke aanduidingen.</Copilot_Intro_Text>

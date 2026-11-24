@@ -197,6 +197,8 @@
 		<Ticket_Recipient_Text>ترسل الرسالة إلى: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>اسأل Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>يُعدّ نصًا قصيرًا عن هذا الجهاز لـ Microsoft 365 Copilot Chat حتى يتمكن من شرح المشكلة بلغة بسيطة.</Copilot_Row_Text>
+		<Wiki_Row_Label>ويكي المؤسسة</Wiki_Row_Label>
+		<Wiki_Row_Text>يفتح ويكي مؤسستك التي تحتوي على نصائح وحيل في مستعرض الويب.</Wiki_Row_Text>
 		<Copilot_Button>إعداد النص</Copilot_Button>
 		<Copilot_Window_Title>اسأل Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>يُعدّ SelfX نصًا قصيرًا لـ Copilot Chat. يحتوي على وصفك وبيانات أساسية عن الجهاز. تُستبدل الأسماء وعناوين البريد الإلكتروني وعناوين الشبكة بعناصر نائبة.</Copilot_Intro_Text>

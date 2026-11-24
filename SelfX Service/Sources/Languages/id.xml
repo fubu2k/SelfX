@@ -197,6 +197,8 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Ticket_Recipient_Text>E-mail dikirim ke: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Tanya Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>Menyiapkan teks singkat tentang PC ini untuk Microsoft 365 Copilot Chat, agar masalahnya dapat dijelaskan dengan bahasa sederhana.</Copilot_Row_Text>
+		<Wiki_Row_Label>Wiki perusahaan</Wiki_Row_Label>
+		<Wiki_Row_Text>Membuka wiki organisasi Anda berisi tips dan trik di peramban web.</Wiki_Row_Text>
 		<Copilot_Button>Siapkan teks</Copilot_Button>
 		<Copilot_Window_Title>Tanya Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX menyiapkan teks singkat untuk Copilot Chat. Teks berisi deskripsi Anda dan data dasar perangkat. Nama, alamat email, dan alamat jaringan diganti dengan placeholder.</Copilot_Intro_Text>

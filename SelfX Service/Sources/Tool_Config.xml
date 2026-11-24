@@ -58,6 +58,11 @@
 	<Support_Website>https://support.example.com</Support_Website> <!-- Placeholder. Website or ticket system, must start with https:// (http:// is ignored) -->
 	<Support_Mail>support@example.com</Support_Mail> <!-- Placeholder. Support e-mail address. Also the recipient of the device logs e-mail (Post_Action MailReport). Empty = the user enters the recipient -->
 
+	<!-- Company wiki (optional button in the navigation of SelfX): one click opens the address in the web browser of the user, for example a page with tips and tricks of your company -->
+	<Wiki_Enabled>False</Wiki_Enabled> <!-- True or False (off by default). Needs a valid Wiki_Url -->
+	<Wiki_Url></Wiki_Url> <!-- Address of the wiki or start page. Must start with https:// (no user name or password in it, at most 2000 characters); http:// is ignored -->
+	<Wiki_Name></Wiki_Name> <!-- Optional name on the button, up to 40 characters, for example Contoso Wiki. Empty = the localized text "Company wiki" -->
+
 	<!-- Link actions of the catalogue (Issues_List.xml, Context Link): after the confirmation the address is opened in the browser of the user. Only https addresses (no user name or password in them). Empty or Off = the action is not shown -->
 	<Link_PasswordReset>https://passwordreset.microsoftonline.com/</Link_PasswordReset> <!-- Reset a forgotten or expired password (self-service password reset of Microsoft Entra ID). Replace it when your company uses another page -->
 	<Link_SecurityInfo>https://mysignins.microsoft.com/security-info</Link_SecurityInfo> <!-- Security info of the account (sign-in methods such as authenticator app and phone number) -->

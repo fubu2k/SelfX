@@ -14,6 +14,7 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
 
 ## Unveröffentlicht
 
+- **Neue Schaltfläche „Firmen-Wiki“ (optional):** `Wiki_Enabled`, `Wiki_Url` (nur `https://`) und `Wiki_Name` (bis 40 Zeichen) in `Tool_Config.xml` blenden in der Navigation eine Schaltfläche im Stil der Copilot-Schaltfläche ein, die die Wiki-Adresse im Webbrowser öffnet. Standardmäßig aus; eine ungültige Adresse blendet die Schaltfläche aus und schreibt eine Warnung ins Protokoll. Läuft im Nutzerkontext. Texte in allen 24 Sprachen, neue Fragen im Paketassistenten, Tests in `Test-SupportLinks.ps1` und `Test-SelfXPackageWizard.ps1`.
 - **Paketassistent (geführte Konfiguration):** `tools\New-SelfXPackage.ps1` stellt Fragen mit
   Empfehlung (Support, Branding, Ticket und Organisationen nach OU, Group Tag und Geräteklasse,
   Copilot Chat, Verhalten), schreibt die Antworten in eine Kopie des Pakets, baut das Intune-Paket,
