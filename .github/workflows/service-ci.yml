@@ -36,8 +36,8 @@ jobs:
           SELFX_TEST_TRACE: '1'
         run: |
           $failed = New-Object System.Collections.Generic.List[string]
-          $tests = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Where-Object { $_.Name -in 'Test-Compat51.ps1', 'Test-Detection.ps1', 'Test-FileManifest.ps1', 'Test-InstallBinaries.ps1', 'Test-Uninstall.ps1' } | Sort-Object Name
-          if (@($tests).Count -ne 5) { throw 'The five Windows PowerShell 5.1 tests were not found.' }
+          $tests = @(Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Where-Object { $_.Name -in 'Test-Compat51.ps1', 'Test-Detection.ps1', 'Test-FileManifest.ps1', 'Test-InstallBinaries.ps1', 'Test-Uninstall.ps1' }) + @(Get-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXPackageWizard.ps1')) | Sort-Object Name
+          if (@($tests).Count -ne 6) { throw 'The six Windows PowerShell 5.1 tests were not found.' }
           foreach ($test in $tests) {
             Write-Output "::group::$($test.Name)"
             # Each test in its own process, so mocks and globals of one test cannot affect the next.
@@ -105,7 +105,7 @@ jobs:
           $pwsh = (Get-Command pwsh).Source
           $rows = New-Object System.Collections.Generic.List[string]
           $failed = 0
-          $tests = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Sort-Object Name
+          $tests = @(Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1') + @(Get-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXPackageWizard.ps1')) | Sort-Object Name
           foreach ($test in $tests) {
             Write-Output "::group::$($test.Name)"
             $outFile = Join-Path $env:RUNNER_TEMP "pwsh7-$($test.BaseName).out.txt"

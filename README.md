@@ -262,6 +262,7 @@ beschrieben.
 
 ## Dokumentation
 
+- [Paketassistent](docs/Assistent.md): geführte Konfiguration bis zum Intune-Paket
 - [Installation](docs/Installation.md), mit der Release-Checkliste von SelfX Service
 - [Konfiguration](docs/Configuration.md)
 - [Benutzerhandbuch](docs/User-Manual.md)

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	SelfX-Paketassistent - Texte (Deutsch)
+
+	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
+	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
+-->
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.0.0">
+	<T Id="title">SelfX-Paketassistent</T>
+	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
+	<T Id="rec">Empfehlung: </T>
+	<T Id="yes">j</T>
+	<T Id="no">n</T>
+	<T Id="yesno">j = ja, n = nein</T>
+	<T Id="invalid">Dieser Wert ist nicht gültig: {0}</T>
+	<T Id="required">Dieser Wert ist erforderlich.</T>
+	<T Id="section.basics">1/7 Grundlagen</T>
+	<T Id="section.support">2/7 Support-Kontakte</T>
+	<T Id="section.branding">3/7 Branding</T>
+	<T Id="section.ticket">4/7 Ticket per E-Mail und Organisationen</T>
+	<T Id="section.copilot">5/7 Copilot Chat</T>
+	<T Id="section.behavior">6/7 Verhalten auf dem Gerät</T>
+	<T Id="section.build">7/7 Paket bauen</T>
+	<T Id="ToolLanguage.ask">Standardsprache von SelfX auf den Geräten (de, en, fr, es ... oder Auto)</T>
+	<T Id="ToolLanguage.rec">Auto folgt der Anzeigesprache von Windows. Wählen Sie Auto, wenn Ihre Nutzer mehrere Sprachen sprechen.</T>
+	<T Id="ShowLanguageSetting.ask">Dürfen Nutzer ihre Sprache in den Einstellungen selbst wählen?</T>
+	<T Id="ShowLanguageSetting.rec">Ja. Das kostet nichts und hilft mehrsprachigen Beschäftigten.</T>
+	<T Id="OrgName.ask">Name Ihrer Organisation (für den App-Namen in Intune und die Anleitung)</T>
+	<T Id="OrgName.rec">Der Kurzname Ihrer Firma oder Behörde, zum Beispiel Contoso.</T>
+	<T Id="ToolName.ask">Name des Werkzeugs in der Titelleiste und in den Verknüpfungen</T>
+	<T Id="ToolName.rec">Behalten Sie SelfX. Nutzer finden es schneller, wenn der Name überall gleich ist.</T>
+	<T Id="SupportMail.ask">E-Mail-Adresse des Supports (Funktionspostfach)</T>
+	<T Id="SupportMail.rec">Nehmen Sie ein Funktionspostfach, nie ein persönliches. Die Adresse ist auch der Empfänger der E-Mail mit den Geräteprotokollen.</T>
+	<T Id="SupportPhone.ask">Telefonnummer des Supports (leer = ausblenden)</T>
+	<T Id="SupportPhone.rec">Tragen Sie eine Nummer nur ein, wenn sie in den Servicezeiten besetzt ist.</T>
+	<T Id="SupportHours.ask">Servicezeiten (leer = ausblenden)</T>
+	<T Id="SupportHours.rec">Zum Beispiel Mo.-Fr. 08:00-17:00.</T>
+	<T Id="SupportWebsite.ask">Support-Webseite oder Ticketportal (https://, leer = ausblenden)</T>
+	<T Id="SupportWebsite.rec">Tragen Sie Ihr Self-Service-Portal ein, falls vorhanden. Nur https://-Adressen werden akzeptiert.</T>
+	<T Id="SupportTeams.ask">Teams-Kontakt (Adresse eines gemeinsamen Kontos oder https://-Link, leer = ausblenden)</T>
+	<T Id="SupportTeams.rec">Optional. Lassen Sie es leer, wenn der Service Desk in Teams nicht erreichbar ist.</T>
+	<T Id="LogoPath.ask">Pfad Ihrer Logo-Datei (png, jpg, ico, bmp oder gif, leer = kein Logo)</T>
+	<T Id="LogoPath.rec">Ein transparentes PNG, etwa 400 x 120 Pixel, sieht im hellen und im dunklen Design gut aus.</T>
+	<T Id="AccentColor.ask">Firmenfarbe als #RRGGBB (leer = SelfX-Blau #0072BC behalten)</T>
+	<T Id="AccentColor.rec">Nehmen Sie Ihre Hausfarbe. SelfX passt zu dunkle oder zu helle Farben an.</T>
+	<T Id="TicketEnabled.ask">Möchten Sie die Ticket-Funktion nutzen (der Nutzer beschreibt das Problem, SelfX öffnet eine vorbereitete E-Mail)?</T>
+	<T Id="TicketEnabled.rec">Ja, wenn Ihr Service Desk Tickets per E-Mail annimmt. Der Nutzer prüft und sendet die E-Mail immer selbst; SelfX sendet nichts.</T>
+	<T Id="TicketMail.ask">Standard-Empfänger der Ticket-E-Mails</T>
+	<T Id="TicketMail.rec">Das Postfach Ihres Service Desks. Es gilt, wenn keine Regel für eine Organisation passt.</T>
+	<T Id="TicketSubjectTag.ask">Kennzeichen am Anfang des Betreffs (für Mail-Filter)</T>
+	<T Id="TicketSubjectTag.rec">Behalten Sie SelfX oder nehmen Sie ein kurzes Kennzeichen, nach dem Ihr Ticketsystem filtert. Bis 20 Zeichen: Buchstaben, Ziffern . _ -</T>
+	<T Id="MultiOrg.ask">Müssen Tickets anderer Organisationen oder Standorte an andere Postfächer gehen?</T>
+	<T Id="MultiOrg.rec">Ja, wenn mehrere IT-Einheiten für verschiedene Geräte zuständig sind. Sie legen dann je Postfach eine Einheit an.</T>
+	<T Id="HybridJoin.ask">Sind Geräte Hybrid-Join (Active Directory)? Dann kann SelfX nach der OU zuordnen.</T>
+	<T Id="HybridJoin.rec">Ja, wenn Ihre Geräte in einer lokalen Domäne sind. Reine Cloud-Geräte (Entra Join) haben keine OU.</T>
+	<T Id="UseGroupTags.ask">Ordnen Sie nach dem Autopilot-Group-Tag (Entra ID) zu?</T>
+	<T Id="UseGroupTags.rec">Ja, wenn Ihre Autopilot-Geräte je Organisation einen Group Tag tragen. Für reine Cloud-Geräte ist das das zuverlässigste Merkmal.</T>
+	<T Id="UseDeviceClass.ask">Ordnen Sie nach Geräteklasse (Notebook, PC, Tablet) zu?</T>
+	<T Id="UseDeviceClass.rec">Ja, wenn ein anderes Team Tablets oder Kiosk-PCs betreut. SelfX läuft nur unter Windows 11: Smartphones (iOS, Android) kann SelfX nicht abdecken.</T>
+	<T Id="Unit.header">Organisation / Einheit {0}</T>
+	<T Id="UnitId.ask">Kurzname der Einheit (Buchstaben, Ziffern . _ -)</T>
+	<T Id="UnitId.rec">Zum Beispiel IT-Berlin. Der Name wird nur in der Konfiguration verwendet.</T>
+	<T Id="UnitMail.ask">Postfach dieser Einheit</T>
+	<T Id="UnitMail.rec">Genau eine einfache Adresse, nur Funktionspostfach. Die Datei Ticket_Config.xml kann jeder Nutzer auf dem Gerät lesen. Adressen, die verborgen bleiben sollen, gehören in den Registrywert TicketMail je Gerät.</T>
+	<T Id="UnitCc.ask">Kopie (Cc) dieser Einheit (leer = keine)</T>
+	<T Id="UnitCc.rec">Optional ein zweites Funktionspostfach.</T>
+	<T Id="UnitGroupTags.ask">Autopilot-Group-Tags dieser Einheit (durch Komma getrennt)</T>
+	<T Id="UnitGroupTags.rec">Genau wie in Entra ID, zum Beispiel DE-IT1-BER. Buchstaben, Ziffern, Leerzeichen . _ - bis 64 Zeichen.</T>
+	<T Id="UnitOUs.ask">OU-Namen dieser Einheit (durch Komma getrennt)</T>
+	<T Id="UnitOUs.rec">Teil des Distinguished Name, zum Beispiel OU=Berlin. SelfX sucht ihn in der OU des Computerkontos.</T>
+	<T Id="UnitCategories.ask">Geräteklassen dieser Einheit (durch Komma getrennt)</T>
+	<T Id="UnitCategories.rec">Freie Namen wie Notebook, Desktop, Tablet. Intune setzt den Wert je Gerätegruppe.</T>
+	<T Id="UnitMore.ask">Weitere Einheit anlegen?</T>
+	<T Id="UnitMore.rec">Ja, bis jedes Postfach angelegt ist. Die erste passende Regel gewinnt: zuerst Group Tags, dann OUs, dann Geräteklassen.</T>
+	<T Id="CopilotEnabled.ask">Haben Sie Microsoft 365 Copilot Chat lizenziert und möchten ihn im Hilfe-Dialog anbieten?</T>
+	<T Id="CopilotEnabled.rec">Ja, wenn Ihre Nutzer Copilot Chat haben. SelfX nutzt keine Schnittstelle und kein Token: Es bereitet einen Text vor, den der Nutzer in Copilot einfügt.</T>
+	<T Id="CopilotAudience.ask">Für wen ist die Antwort? User (einfache Sprache) oder Admin (technische Schritte)</T>
+	<T Id="CopilotAudience.rec">User. Technische Antworten überfordern die meisten Beschäftigten.</T>
+	<T Id="CopilotClearClipboard.ask">Zwischenablage einige Minuten nach dem Kopieren des Textes leeren?</T>
+	<T Id="CopilotClearClipboard.rec">Ja, wenn der Text nicht in der Zwischenablage bleiben soll. Der Text enthält ohnehin keine Namen oder Adressen.</T>
+	<T Id="TrayIcon.ask">Statussymbol neben der Uhr für alle Nutzer anzeigen?</T>
+	<T Id="TrayIcon.rec">Ja. Nutzer sehen Probleme früh und öffnen SelfX mit einem Klick.</T>
+	<T Id="ShortcutDesktop.ask">Verknüpfung auf dem öffentlichen Desktop anlegen?</T>
+	<T Id="ShortcutDesktop.rec">Ja zum Start, damit Nutzer SelfX finden. Später abschalten, wenn der Desktop leer bleiben soll.</T>
+	<T Id="ShortcutStartMenu.ask">Verknüpfung im Startmenü anlegen?</T>
+	<T Id="ShortcutStartMenu.rec">Ja.</T>
+	<T Id="Expert.ask">Möchten Sie Sicherheits- und Protokolleinstellungen ändern (Experte)?</T>
+	<T Id="Expert.rec">Nein. Die sicheren Standardwerte bleiben: Der Dienst startet nichts, wenn Dateien nicht stimmen (Enforce), und läuft mit reduzierten Rechten (Restricted).</T>
+	<T Id="LogRetention.ask">Tage, die Protokolldateien aufbewahrt werden (1-3650)</T>
+	<T Id="LogRetention.rec">90 Tage sind ein guter Ausgleich zwischen Supportbedarf und Datensparsamkeit.</T>
+	<T Id="FileCheck.ask">Dateiprüfung des Dienstes: Enforce oder Audit</T>
+	<T Id="FileCheck.rec">Enforce. Audit meldet nur und ist für einen kurzen Pilot gedacht.</T>
+	<T Id="Privileges.ask">Rechte des Dienstes: Restricted oder Default</T>
+	<T Id="Privileges.rec">Restricted. Default nur zur Fehlersuche.</T>
+	<T Id="Tool.ask">Pfad von IntuneWinAppUtil.exe (Win32 Content Prep Tool von Microsoft)</T>
+	<T Id="Tool.rec">Laden Sie es von https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool (Datei IntuneWinAppUtil.exe im Repository, nehmen Sie das neueste Release-Tag). Das Skript prüft die Microsoft-Signatur.</T>
+	<T Id="BuildBinaries.ask">Die Programme (Ordner Bin) fehlen oder sind veraltet. Jetzt mit dem .NET SDK 10 bauen?</T>
+	<T Id="BuildBinaries.rec">Ja. Der Bau braucht das .NET SDK 10 und einmalig Internet zu nuget.org.</T>
+	<T Id="Output.ask">Ausgabeordner</T>
+	<T Id="Output.rec">Der Ordner enthält Paket, Erkennungsskript, Intune-Skripte und Anleitung. Nicht einchecken.</T>
+	<T Id="summary.header">Zusammenfassung Ihrer Angaben</T>
+	<T Id="summary.ask">Paket mit diesen Einstellungen erstellen?</T>
+	<T Id="summary.rec">Ja, wenn die Zusammenfassung stimmt. Es wird nichts installiert oder gesendet; das Paket wird nur gebaut.</T>
+	<T Id="step.config">Einstellungen werden in eine Kopie des Pakets geschrieben ...</T>
+	<T Id="step.bin">Programme werden gebaut ...</T>
+	<T Id="step.pack">Intune-Paket wird erstellt ...</T>
+	<T Id="step.guide">Skripte und Anleitung werden geschrieben ...</T>
+	<T Id="done">Fertig. Ihre Dateien liegen in: {0}</T>
+	<T Id="done.config">Konfiguration geschrieben (kein Paket gebaut): {0}</T>
+	<T Id="aborted">Abgebrochen. Es wurde nichts gebaut.</T>
+	<T Id="guide.title">SelfX in Intune: Kurzanleitung für {0} (Version {1})</T>
+	<T Id="guide.intro">Öffnen Sie das Microsoft Intune Admin Center (intune.microsoft.com). Beginnen Sie immer mit einer kleinen Pilotgruppe.</T>
+	<T Id="guide.s1">1. App anlegen: Apps > Windows > Hinzufügen > Windows-App (Win32). Laden Sie {0} hoch. Name: {1}. Herausgeber: {2}.</T>
+	<T Id="guide.s2">2. Programm: Installationsbefehl: {0}</T>
+	<T Id="guide.s2b">   Deinstallationsbefehl: {0}</T>
+	<T Id="guide.s2c">   Installationsverhalten: System. Neustartverhalten: keine bestimmte Aktion.</T>
+	<T Id="guide.s3">3. Anforderungen: 64 Bit, Windows 11 25H2 (Build 26200 oder neuer). Bietet das Portal 25H2 nicht an, legen Sie eine Skript-Voraussetzung an: Ganzzahl, größer oder gleich 26200, Skript: [int](Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber)</T>
+	<T Id="guide.s4">4. Erkennungsregel: Benutzerdefiniertes Skript. Laden Sie {0} hoch (nicht die Datei im Repository). Skript als 32-Bit-Prozess ausführen: Nein. Skriptsignaturprüfung erzwingen: Nein.</T>
+	<T Id="guide.s5">5. Abhängigkeit: PowerShell 7.6 oder neuer als eigene Win32-App (MSI von Microsoft), Automatisch installieren: Ja. Einzelheiten: docs\Installation.md, Kapitel 3.2.</T>
+	<T Id="guide.s6">6. Zuweisung: Weisen Sie die App einer Pilot-Gerätegruppe als Erforderlich zu. Nehmen Sie weder SelfX noch PowerShell 7 in die blockierenden Apps der Autopilot-Statusseite (ESP) auf.</T>
+	<T Id="guide.s7">7. Ticket-Zuordnung: Legen Sie je Datei unten ein Plattformskript an (Geräte > Skripte und Fehlerbehebungen > Plattformskripts). Mit den Anmeldeinformationen des angemeldeten Benutzers ausführen: Nein. Skripthost in 64-Bit-PowerShell ausführen: Ja. Weisen Sie jedes Skript der passenden Entra-Gerätegruppe zu; die Gruppen sollten sich gegenseitig ausschließen.</T>
+	<T Id="guide.s7item">   {0}: Group Tags {1}; Geräteklassen {2}</T>
+	<T Id="guide.s7tag">   Tipp für eine dynamische Gerätegruppe zu einem Group Tag: (device.devicePhysicalIds -any (_ -eq "[OrderID]:TAG"))</T>
+	<T Id="guide.s8">{0}. Auf einem Pilotgerät testen: Das Startmenü zeigt SelfX, der Dienst SelfXService läuft, die Protokolle liegen in %ProgramData%\SelfX\Logs. Danach die Zuweisung erweitern.</T>
+	<T Id="guide.update">Update später: Tool_Version und ExpectedVersion im Repository erhöhen, den Assistenten mit Ihren gespeicherten Antworten erneut starten ({0}) und das neue Paket als neue Version der App hochladen.</T>
+	<T Id="guide.answers">Ihre Antworten sind in {0} gespeichert. Die Datei enthält Ihre Postfachadressen: nicht in Git einchecken.</T>
+	<T Id="guide.script.header">Set-SelfXSupportUnit-Skript für die Einheit {0}. Weisen Sie es der Entra-Gerätegruppe dieser Einheit zu.</T>
+</Wizard_Language>

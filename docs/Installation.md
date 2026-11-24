@@ -77,6 +77,9 @@ ein dunkles Design; SelfX folgt der Windows-Einstellung.*
 
 ## Schritt 2: Paket bauen
 
+> **Einfacher mit dem Assistenten:** `tools\New-SelfXPackage.ps1` stellt Fragen mit Empfehlungen, baut das Paket
+> und erklärt die Schritte in Intune. Siehe [Paketassistent](Assistent.md). Die folgenden Schritte zeigen den manuellen Weg.
+
 Wiederholen Sie diesen Schritt bei jeder neuen Version. Öffnen Sie PowerShell im Ordner
 des Repositorys.
 
