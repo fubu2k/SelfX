@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.8.9
+    Version : 2.8.25
 
     History:
     Version  Date        Author               Change
@@ -33,6 +33,7 @@
     2.8.8    2026-11-22  fubu2k               Optional latency measurements (default gateway, DNS lookup and connection time to configured targets;
                                               Network_Test_Config.xml, off by default)
     2.8.9    2026-11-23  fubu2k               CSV export: text cells starting with = + - @ tab CR LF get a leading apostrophe (CSV/formula injection, finding N7)
+    2.8.25   2026-11-24  fubu2k               Row "Citrix Workspace" (version of the app, only when installed; also in the support ticket)
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -130,6 +131,35 @@ function Get-SelfXUptimeInfo {
 		return [pscustomobject]@{ Value = ('{0} ({1})' -f $text, (Get-SelfXInfoText 'Uptime_Restart_Hint')); Status = 'Pending' }
 	}
 	return [pscustomobject]@{ Value = $text; Status = '' }
+}
+
+function ConvertTo-SelfXCitrixWorkspaceText {
+	# Version text of the Citrix Workspace app from the entries of the program list (objects with DisplayName and DisplayVersion),
+	# for example "24.9.10.64 (Citrix Workspace 2409)". $null when the app is not installed. Other Citrix products whose name
+	# starts with "Citrix Workspace" (Environment Management agent, browser) are ignored; the Receiver is not supported.
+	param($Entries)
+	$apps = @($Entries | Where-Object {
+		$_ -and "$($_.DisplayName)" -match '^Citrix Workspace' -and "$($_.DisplayName)" -notmatch 'Environment Management|Browser|Session Recording|Web Extension'
+	})
+	if (-not $apps.Count) { return $null }
+	$best = $apps | Sort-Object -Descending -Property @{ Expression = { $v = $null; if ([version]::TryParse("$($_.DisplayVersion)", [ref]$v)) { $v } else { [version]'0.0' } } } | Select-Object -First 1
+	$name = ("$($best.DisplayName)" -replace '[\x00-\x1F]', '').Trim()
+	$version = ("$($best.DisplayVersion)" -replace '[\x00-\x1F]', '').Trim()
+	if ($name.Length -gt 60) { $name = $name.Substring(0, 60) }
+	if ($version.Length -gt 30) { $version = $version.Substring(0, 30) }
+	if ($version) { return "$version ($name)" }
+	return $name
+}
+
+function Get-SelfXCitrixWorkspaceText {
+	# Reads the program list of the machine (64 bit and 32 bit view; the Workspace app is installed per machine, for example
+	# through Intune) and returns the version text, or $null when the app is not installed. Only reads.
+	$entries = foreach ($root in 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall') {
+		Get-ChildItem -LiteralPath $root -ErrorAction SilentlyContinue | ForEach-Object {
+			Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue | Select-Object DisplayName, DisplayVersion
+		}
+	}
+	return (ConvertTo-SelfXCitrixWorkspaceText -Entries @($entries))
 }
 
 function New-SelfXInfoItem {
@@ -698,6 +728,9 @@ function Get-SelfXSystemInfo {
 	if ($battery) {
 		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Battery') ("$($battery.EstimatedChargeRemaining)%")))
 	}
+	# Citrix Workspace app (only when installed); the row also goes into the support ticket (device information).
+	$citrixText = Invoke-SelfXSafe { Get-SelfXCitrixWorkspaceText }
+	if ($citrixText) { $items.Add((New-SelfXInfoItem $catDevice 'Citrix Workspace' $citrixText)) }
 
 	# Windows
 	$osName = "$($os.Caption)".Replace('Microsoft ', '')
