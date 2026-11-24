@@ -80,7 +80,7 @@ try {
     Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Everything' -Choices @('Enforce', 'Audit') } 'choice rejects unknown'
     Assert ((ConvertTo-WizardValue -Kind 'choice' -Value 'audit' -Choices @('Enforce', 'Audit')) -eq 'Audit') 'choice case insensitive'
     Assert-Throws { ConvertTo-WizardValue -Kind 'text' -Value "a`r`nb" -Max 40 } 'text rejects line breaks'
-    Assert ((@(ConvertTo-WizardValue -Kind 'list' -Value 'A, B ,,C')).Count -eq 3) 'list splits at commas'
+    Assert ((ConvertTo-WizardValue -Kind 'list' -Value 'A, B ,,C').Count -eq 3) 'list splits at commas'
     Assert-Throws { Test-WizardUnitValues -Unit ([pscustomobject]@{ GroupTags = @('x;y'); Categories = @(); OUs = @() }) } 'group tag rejects ;'
 
     # ---------------------------------------------------------- XML patching
