@@ -38,6 +38,8 @@ Die Leiste links hat drei Bereiche:
 | **Gerätestatus** | Prüfungen Ihres Geräts, zum Beispiel Speicherplatz oder Updates. Die Zahl zeigt, wie viele Punkte Ihre Aufmerksamkeit brauchen. |
 | **Systeminformationen** | Angaben zu Ihrem Gerät, die das Support-Team oft braucht |
 
+Ist das Firmen-Wiki eingeschaltet, zeigt die Leiste außerdem die Schaltfläche **Firmen-Wiki**. Sie öffnet das Wiki Ihres Unternehmens im Webbrowser.
+
 SelfX hat ein **neues Design**: ruhige Farben, große Schaltflächen und einen Hinweis oben,
 der die Schritte zeigt: **Problem auswählen – Bestätigen – Fertig**. Es gibt ein helles und
 ein dunkles Design. Standardmäßig folgt SelfX Windows.
@@ -59,6 +61,17 @@ ob es geklappt hat.
 
 Mit **Vereinfachte Ansicht** sehen Sie eine kurze Liste. Mit **Detaillierte Ansicht** sehen Sie
 alle einzelnen Probleme. Die Schaltfläche **?** erklärt den Unterschied.
+
+**Lösungen für Konto und Anmeldung:** Sie öffnen nur eine Webseite und ändern nichts auf Ihrem Gerät.
+
+- **Passwort vergessen oder abgelaufen:** öffnet die Seite, auf der Sie Ihr Kennwort selbst zurücksetzen.
+- **Anmeldemethoden verwalten:** öffnet die Sicherheitsinformationen Ihres Kontos, zum Beispiel für eine neue Telefonnummer oder eine neue Authenticator-App.
+
+**Neu in Version 3.0 (Beispiele):**
+
+- **Citrix Workspace reagiert nicht oder zeigt keine Anwendungen:** startet die Citrix-Workspace-App Ihres Benutzerkontos neu. Bereits geöffnete Anwendungen und Desktops werden nicht beendet.
+- **Ein Programmfenster liegt außerhalb des Bildschirms:** holt Fenster Ihres Benutzers, die nach dem Abstecken eines Monitors nicht mehr sichtbar sind, auf den Hauptbildschirm. Nichts wird geschlossen.
+- **Excel öffnet alle Dateien im selben Fenster:** startet eine zweite, unabhängige Excel-Instanz, damit Sie zwei Arbeitsmappen auf zwei Bildschirmen vergleichen können. Nichts wird geschlossen oder geändert.
 
 **Lösungen mit einem Schild** brauchen Administratorrechte. SelfX führt sie über seinen lokalen
 Dienst aus, Sie brauchen also kein Administratorkonto. Es läuft immer nur eine solche Lösung.
@@ -128,6 +141,8 @@ Netzwerk. Die letzten Werte stehen sofort da und werden im Hintergrund aktualisi
     Zustimmung.
   - Die Protokolle der Geräteverwaltung sammeln.
   - Die Geräteprotokolle an den Support senden.
+
+Ist die Citrix-Workspace-App installiert, steht ihre Version unter **Gerät**.
 
 Die Angaben enthalten Gerätename, Benutzername und Netzwerkadressen. Geben Sie sie nur an Ihr
 Support-Team weiter.

@@ -37,6 +37,8 @@ The bar on the left has three areas:
 | **Device status** | Checks of your device, for example disk space or updates. The number shows how many points need your attention. |
 | **System information** | Details about your device that the support team often needs |
 
+If the option is on for the device, the bar also shows the **Company wiki** button. It opens your company's wiki in the web browser.
+
 SelfX has a **new design**: calm colors, large buttons and a hint at the top that shows the steps:
 **Select problem – Confirm – Done**. There is a light and a dark design. By default SelfX follows
 Windows.
@@ -55,6 +57,17 @@ solution again during this time. Afterwards the message bar at the bottom shows 
 
 **Simplified view** shows a short list. **Detailed view** shows every single problem. The **?** button
 explains the difference.
+
+**Solutions for account and sign-in:** They only open a web page and change nothing on your device.
+
+- **Forgot or expired password:** opens the page where you can reset your password yourself.
+- **Manage sign-in methods:** opens the security info of your account, for example to add a new phone number or authenticator app.
+
+**New in version 3.0 (examples):**
+
+- **Citrix Workspace does not respond or does not show your apps:** restarts the Citrix Workspace app of your user account. Application and desktop sessions that are already open are not ended.
+- **A program window is outside the screen:** moves windows of your user account that you can no longer see (for example after a monitor was disconnected) to the main screen. Nothing is closed.
+- **Excel opens every file in the same window:** starts a second, independent Excel instance, so that you can compare two workbooks on two screens. Nothing is closed or changed.
 
 **Solutions with a shield** need administrator rights. SelfX runs them through its local service, so you
 do not need an administrator account. Only one such solution runs at a time.
@@ -115,6 +128,8 @@ last values appear at once and are updated in the background.
     Quick Assist. A person from support can then see your screen, but only with your consent.
   - Collect the device management logs.
   - Send the device logs to support.
+
+If the Citrix Workspace app is installed, its version appears under **Device**.
 
 The details contain your device name, your user name and network addresses. Share them only with your
 support team.
