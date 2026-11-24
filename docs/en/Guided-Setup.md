@@ -18,7 +18,7 @@ and `IntuneWinAppUtil.exe`. The wizard asks for the path of that file.
 
 | Parameter | Meaning |
 |---|---|
-| `-Language en` | Language of the wizard (`de`, `en`). Without it the wizard asks; the Windows language is preselected. |
+| `-Language en` | Language of the wizard (`de`, `en`). Without it the wizard asks first, in English; English is preselected and the other languages are a numbered list. |
 | `-AnswerFile <file>` | Uses saved answers and asks nothing (for updates and automation). |
 | `-OutputFolder <folder>` | Default: `build\SelfX-Guided`. |
 | `-ToolPath <file>` | Path of `IntuneWinAppUtil.exe`. |

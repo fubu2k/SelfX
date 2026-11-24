@@ -18,7 +18,7 @@
     Non-interactive: -AnswerFile selfx-answers.json uses the saved answers (and the defaults for missing ones).
 
 .PARAMETER Language
-    Language of the wizard (de, en ...). Default: asked, preselected from the Windows display language.
+    Language of the wizard (de, en ...). Default: the wizard asks first (in English; English is the default, other languages are a numbered list).
 
 .PARAMETER AnswerFile
     JSON file with answers (see selfx-answers.json of an earlier run). No questions are asked.
@@ -78,13 +78,21 @@ try {
     # ---- language of the wizard
     $languages = @(Get-WizardLanguages -Folder $WizardFolder)
     if (-not $Language) {
-        $system = [Globalization.CultureInfo]::CurrentUICulture.TwoLetterISOLanguageName
-        $Language = if ($languages.Culture -contains $system) { $system } else { 'en' }
+        # The first question is always in English: English is the default, the other languages are a numbered list.
+        $Language = 'en'
         if ($interactive) {
-            Write-Host 'Language / Sprache:' -ForegroundColor White
-            foreach ($entry in $languages) { Write-Host ("  {0}  {1}" -f $entry.Culture, $entry.Name) }
-            $typed = Read-Host "[$Language]"
-            if ($typed.Trim()) { $Language = $typed.Trim() }
+            $ordered = @($languages | Sort-Object @{ Expression = { $_.Culture -ne 'en' } }, Culture)
+            while ($true) {
+                Write-Host 'Select the language of this wizard:' -ForegroundColor White
+                for ($i = 0; $i -lt $ordered.Count; $i++) { Write-Host ("  {0}) {1} ({2})" -f ($i + 1), $ordered[$i].Name, $ordered[$i].Culture) }
+                $typed = (Read-Host 'Number or language code [1 = English]').Trim()
+                if ($typed -eq '') { $Language = 'en'; break }
+                $number = 0
+                if ([int]::TryParse($typed, [ref]$number) -and $number -ge 1 -and $number -le $ordered.Count) { $Language = $ordered[$number - 1].Culture; break }
+                $match = @($ordered | Where-Object { $_.Culture -ieq $typed })
+                if ($match.Count -eq 1) { $Language = $match[0].Culture; break }
+                Write-Host 'This choice is not valid.' -ForegroundColor Yellow
+            }
         }
     }
     Initialize-WizardTexts -Folder $WizardFolder -Culture $Language

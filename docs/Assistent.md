@@ -20,7 +20,7 @@ Wichtige Parameter:
 
 | Parameter | Bedeutung |
 |---|---|
-| `-Language de` | Sprache des Assistenten (`de`, `en`). Ohne Angabe fragt er; vorgewählt ist die Windows-Sprache. |
+| `-Language de` | Sprache des Assistenten (`de`, `en`). Ohne Angabe fragt der Assistent zuerst auf Englisch; Englisch ist vorgewählt, die anderen Sprachen stehen in einer Nummernliste. |
 | `-AnswerFile <Datei>` | Verwendet gespeicherte Antworten, stellt keine Fragen (für Updates und Automatisierung). |
 | `-OutputFolder <Ordner>` | Standard: `build\SelfX-Guided`. |
 | `-ToolPath <Datei>` | Pfad von `IntuneWinAppUtil.exe`. |
