@@ -257,7 +257,7 @@ Einzelheiten stehen im [Änderungsprotokoll](CHANGELOG.md) und im
 - **Automatische Prüfungen.** Jeder Pull Request kompiliert den Dienst und führt
   die Tests und eine Skriptanalyse aus.
 
-Melden Sie Sicherheitslücken vertraulich, wie in [SECURITY.md](SECURITY.md)
+Melden Sie Sicherheitslücken vertraulich, wie in [security policy](SECURITY.md)
 beschrieben.
 
 ## Dokumentation
@@ -307,7 +307,7 @@ seine Tests gäbe es diesen Fork nicht, und die Sicherheitsarbeit wäre nicht
 möglich gewesen. Die Sicherheitshärtung, die zusätzlichen Tests, die
 gebauten .NET-10-Programme und die CI wurden in diesem Fork ergänzt (siehe das
 [Änderungsprotokoll](CHANGELOG.md)). Die Lizenz des ursprünglichen Projekts
-bleibt in [LICENSE.md](LICENSE.md) erhalten; Urheber und Quellen stehen in [NOTICE.md](NOTICE.md).
+bleibt in [Lizenz](LICENSE.md) erhalten; Urheber und Quellen stehen in [Hinweise zu Autoren und Quellen](NOTICE.md).
 
 Die Seite Systeminformationen beruht auf der Idee und den Datenpunkten des
 [System Information Tool](https://github.com/JayRHa/windows-system-information)

@@ -235,7 +235,7 @@ November 2026 and hardened in versions 2.6.10 and 2.6.11; the details are in the
 - **Automatic checks.** Every pull request compiles the service and runs the
   tests and a script analysis.
 
-Report vulnerabilities privately as described in [SECURITY.md](SECURITY.en.md).
+Report vulnerabilities privately as described in [security policy](SECURITY.en.md).
 
 ## Documentation
 
@@ -278,7 +278,7 @@ fork would not exist without his SelfX Service, his clear structure, his
 documentation and his tests, which made the security work possible. The
 security hardening, the additional tests, the built .NET 10 programs and the CI were
 added in this fork (see the [Changelog](CHANGELOG.en.md)). The license of the
-original project is kept in [LICENSE.md](LICENSE.md); authors and sources are in [NOTICE.en.md](NOTICE.en.md).
+original project is kept in [license](LICENSE.md); authors and sources are in [notice of authors and sources](NOTICE.en.md).
 
 The System information tab is based on the idea and data points of the
 [System Information Tool](https://github.com/JayRHa/windows-system-information)
