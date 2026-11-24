@@ -54,7 +54,7 @@ The most important points:
 4. Replace existing **AppLocker rules**: the new programs have new hashes.
 5. The default language of the interface is now German (`Tool_Language` = `de`).
 
-Details: [Installation guide](docs/en/Installation.md).
+Details: [Installation guide](docs/Installation.md).
 
 ### New design
 
@@ -152,7 +152,7 @@ Details: [Installation guide](docs/en/Installation.md).
   Copilot Chat, behavior), writes the answers into a copy of the package, builds the Intune package,
   creates the platform scripts for the ticket routing and short Intune instructions. German and
   English; more languages via `tools\Wizard\Wizard.<culture>.xml`. See
-  [Package wizard](docs/en/Guided-Setup.md). `New-SelfXIntuneWin.ps1` 1.8.0 has the new parameter
+  [Package wizard](docs/Guided-Setup.md). `New-SelfXIntuneWin.ps1` 1.8.0 has the new parameter
   `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (runs in CI).
 - **Citrix Workspace in the system information:** when the Citrix Workspace app is installed,
   SelfX shows the row "Citrix Workspace" with the version under "Device". The row is also part of

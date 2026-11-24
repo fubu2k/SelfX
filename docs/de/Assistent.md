@@ -1,6 +1,6 @@
 # Paketassistent (geführte Konfiguration)
 
-[English](en/Guided-Setup.md) | **Deutsch**
+[English](../Guided-Setup.md) | **Deutsch**
 
 Der Assistent `tools\New-SelfXPackage.ps1` führt Sie mit Fragen durch die Einstellungen von SelfX
 und baut daraus das Intune-Paket. Zu jeder Frage zeigt er eine **Empfehlung**. Am Ende erklärt er in

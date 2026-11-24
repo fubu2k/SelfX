@@ -1,239 +1,220 @@
-# SelfX Benutzerhandbuch
+# SelfX User Manual
 
-[English](en/User-Manual.md) | **Deutsch**
+**English** | [Deutsch](de/User-Manual.md)
 
-SelfX hilft Ihnen, häufige Probleme an Ihrem Computer selbst zu lösen. Bevor Sie das
-Support-Team anrufen oder schreiben, können Sie es hier versuchen. Welche Lösungen zur
-Verfügung stehen, legt Ihr Support-Team fest.
+SelfX helps you solve common problems on your computer yourself. Before you call or write to the
+support team, you can try it here. Your support team decides which solutions are available.
 
-![Seite Fehlerbehebung im hellen Design](images/selfx-troubleshooting-light.png)
+![Troubleshooting page in the light design](images/selfx-troubleshooting-light.png)
 
-## Inhalt
+## Contents
 
-1. [SelfX öffnen](#selfx-öffnen)
-2. [Die Oberfläche](#die-oberfläche)
-3. [Ein Problem lösen](#ein-problem-lösen)
-4. [Gerätestatus](#gerätestatus)
-5. [Systeminformationen](#systeminformationen)
-6. [Support anfragen und Protokolle senden](#support-anfragen-und-protokolle-senden)
-7. [Das SelfX-Symbol neben der Uhr](#das-selfx-symbol-neben-der-uhr)
-8. [Einstellungen: Sprache und Design](#einstellungen-sprache-und-design)
-9. [Wichtige Hinweise](#wichtige-hinweise)
+1. [Open SelfX](#open-selfx)
+2. [The interface](#the-interface)
+3. [Solve a problem](#solve-a-problem)
+4. [Device status](#device-status)
+5. [System information](#system-information)
+6. [Contact support and send logs](#contact-support-and-send-logs)
+7. [The SelfX icon next to the clock](#the-selfx-icon-next-to-the-clock)
+8. [Settings: language and design](#settings-language-and-design)
+9. [Important notes](#important-notes)
 
-## SelfX öffnen
+## Open SelfX
 
-Starten Sie **SelfX** über das Symbol auf dem Desktop, über das Startmenü oder über das
-SelfX-Symbol neben der Uhr. Sie brauchen dafür keine Administratorrechte.
+Start **SelfX** from the desktop icon, from the Start menu or from the SelfX icon next to the clock.
+You do not need administrator rights for this.
 
-Das Fenster lässt sich in der Größe ändern und maximieren. SelfX merkt sich die Größe.
-Ist SelfX schon geöffnet, kommt das Fenster nach vorn.
+You can resize and maximize the window. SelfX remembers the size. If SelfX is already open, the window
+comes to the front.
 
-## Die Oberfläche
+## The interface
 
-Die Leiste links hat drei Bereiche:
+The bar on the left has three areas:
 
-| Bereich | Was Sie dort finden |
+| Area | What you find there |
 |---|---|
-| **Fehlerbehebung** | Lösungen für häufige Probleme |
-| **Gerätestatus** | Prüfungen Ihres Geräts, zum Beispiel Speicherplatz oder Updates. Die Zahl zeigt, wie viele Punkte Ihre Aufmerksamkeit brauchen. |
-| **Systeminformationen** | Angaben zu Ihrem Gerät, die das Support-Team oft braucht |
+| **Troubleshooting** | Solutions for common problems |
+| **Device status** | Checks of your device, for example disk space or updates. The number shows how many points need your attention. |
+| **System information** | Details about your device that the support team often needs |
 
-Ist das Firmen-Wiki eingeschaltet, zeigt die Leiste außerdem die Schaltfläche **Firmen-Wiki**. Sie öffnet das Wiki Ihres Unternehmens im Webbrowser.
+If the option is on for the device, the bar also shows the **Company wiki** button. It opens your company's wiki in the web browser.
 
-SelfX hat ein **neues Design**: ruhige Farben, große Schaltflächen und einen Hinweis oben,
-der die Schritte zeigt: **Problem auswählen – Bestätigen – Fertig**. Es gibt ein helles und
-ein dunkles Design. Standardmäßig folgt SelfX Windows.
+SelfX has a **new design**: calm colors, large buttons and a hint at the top that shows the steps:
+**Select problem – Confirm – Done**. There is a light and a dark design. By default SelfX follows
+Windows.
 
-Bewegen Sie die Maus über eine Schaltfläche, um zu sehen, was sie tut. **Ohne Ihre
-Bestätigung geschieht nichts.**
+Move the mouse over a button to see what it does. **Nothing happens without your confirmation.**
 
-## Ein Problem lösen
+## Solve a problem
 
-1. Öffnen Sie **Fehlerbehebung**.
-2. Geben Sie ein Wort in das Suchfeld ein, zum Beispiel *Teams* oder *langsam*. Oder klicken Sie
-   auf eine Kategorie.
-3. Klicken Sie auf **i**, um zu lesen, was die Lösung macht.
-4. Klicken Sie auf **Start**, lesen Sie die Meldung und bestätigen Sie.
+1. Open **Troubleshooting**.
+2. Type a word into the search field, for example *Teams* or *slow*. Or click a category.
+3. Click **i** to read what the solution does.
+4. Click **Start**, read the message and confirm.
 
-Während eine Lösung läuft, zeigt ihre Schaltfläche einen drehenden Pfeil und **Läuft…**. Dieselbe
-Lösung können Sie in dieser Zeit nicht noch einmal starten. Danach zeigt die Meldungsleiste unten,
-ob es geklappt hat.
+While a solution runs, its button shows a turning arrow and **Running…**. You cannot start the same
+solution again during this time. Afterwards the message bar at the bottom shows whether it worked.
 
-Mit **Vereinfachte Ansicht** sehen Sie eine kurze Liste. Mit **Detaillierte Ansicht** sehen Sie
-alle einzelnen Probleme. Die Schaltfläche **?** erklärt den Unterschied.
+**Simplified view** shows a short list. **Detailed view** shows every single problem. The **?** button
+explains the difference.
 
-**Lösungen für Konto und Anmeldung:** Sie öffnen nur eine Webseite und ändern nichts auf Ihrem Gerät.
+**Solutions for account and sign-in:** They only open a web page and change nothing on your device.
 
-- **Passwort vergessen oder abgelaufen:** öffnet die Seite, auf der Sie Ihr Kennwort selbst zurücksetzen.
-- **Anmeldemethoden verwalten:** öffnet die Sicherheitsinformationen Ihres Kontos, zum Beispiel für eine neue Telefonnummer oder eine neue Authenticator-App.
+- **Forgot or expired password:** opens the page where you can reset your password yourself.
+- **Manage sign-in methods:** opens the security info of your account, for example to add a new phone number or authenticator app.
 
-**Neu in Version 3.0 (Beispiele):**
+**New in version 3.0 (examples):**
 
-- **Citrix Workspace reagiert nicht oder zeigt keine Anwendungen:** startet die Citrix-Workspace-App Ihres Benutzerkontos neu. Bereits geöffnete Anwendungen und Desktops werden nicht beendet.
-- **Ein Programmfenster liegt außerhalb des Bildschirms:** holt Fenster Ihres Benutzers, die nach dem Abstecken eines Monitors nicht mehr sichtbar sind, auf den Hauptbildschirm. Nichts wird geschlossen.
-- **Excel öffnet alle Dateien im selben Fenster:** startet eine zweite, unabhängige Excel-Instanz, damit Sie zwei Arbeitsmappen auf zwei Bildschirmen vergleichen können. Nichts wird geschlossen oder geändert.
+- **Citrix Workspace does not respond or does not show your apps:** restarts the Citrix Workspace app of your user account. Application and desktop sessions that are already open are not ended.
+- **A program window is outside the screen:** moves windows of your user account that you can no longer see (for example after a monitor was disconnected) to the main screen. Nothing is closed.
+- **Excel opens every file in the same window:** starts a second, independent Excel instance, so that you can compare two workbooks on two screens. Nothing is closed or changed.
 
-**Lösungen mit einem Schild** brauchen Administratorrechte. SelfX führt sie über seinen lokalen
-Dienst aus, Sie brauchen also kein Administratorkonto. Es läuft immer nur eine solche Lösung.
+**Solutions with a shield** need administrator rights. SelfX runs them through its local service, so you
+do not need an administrator account. Only one such solution runs at a time.
 
-**Wenn eine andere Person am selben Gerät angemeldet ist** (zum Beispiel an einem gemeinsam
-genutzten PC), führt SelfX keine Lösungen aus, die diese Person stören würden. Dazu gehören der
-Neustart, Updates, die Festplattenprüfung und der Neustart der Netzwerkadapter. SelfX sagt Ihnen
-dann Bescheid. Versuchen Sie es später noch einmal oder fragen Sie das Support-Team.
+**If another person is signed in** on the same device (for example on a shared PC), SelfX does not run
+solutions that would disturb that person. These include the restart, updates, the disk check and the
+restart of network adapters. SelfX tells you so. Try again later or ask the support team.
 
-**Unten links** sehen Sie, ob der SelfX-Dienst läuft (grüner Punkt). Bei einem roten Punkt sind
-Lösungen mit Schild und der Gerätestatus nicht verfügbar. Starten Sie Ihren Computer neu oder
-wenden Sie sich an das Support-Team.
+**At the bottom left** you see whether the SelfX service is running (green dot). With a red dot, solutions
+with a shield and the device status are not available. Restart your computer or contact the support team.
 
-## Gerätestatus
+## Device status
 
-Der Bereich **Gerätestatus** zeigt eine Karte für jede Prüfung. Dazu gehören zum Beispiel die
-Verwaltung durch das Unternehmen, Microsoft Defender, die Compliance, Apps, der Speicherplatz,
-BitLocker, ein ausstehender Neustart und Updates. Probleme stehen oben.
+The **Device status** area shows one card for each check. These include company management, Microsoft
+Defender, compliance, apps, disk space, BitLocker, a pending restart and updates. Problems are at the top.
 
-| Farbe | Bedeutung |
+| Color | Meaning |
 |---|---|
-| Grün (**In Ordnung**) | Alles ist gut. |
-| Gelb (**Bald erledigen**) | Bald sollte etwas getan werden, zum Beispiel Updates. Das ist eine Warnung, kein Fehler. |
-| Rot (**Fehler**) | Es gibt ein Problem. Der Text auf der Karte sagt, was. |
-| Grau (**Unbekannt**) | SelfX kann es nicht sagen. Das heißt **nicht**, dass alles in Ordnung ist. |
+| Green (**OK**) | Everything is fine. |
+| Yellow (**Pending**) | Something should be done soon, for example updates. This is a warning, not an error. |
+| Red (**Error**) | There is a problem. The text on the card says what. |
+| Grey (**Unknown**) | SelfX cannot tell. This does **not** mean that everything is fine. |
 
-SelfX prüft den Status im Hintergrund, meist alle 15 Minuten. Im Akkubetrieb pausiert die
-Prüfung. Die Zeile unter dem Titel zeigt, wann zuletzt geprüft wurde.
+SelfX checks the status in the background, usually every 15 minutes. On battery the check pauses. The line
+under the title shows when the last check ran.
 
-**Was die Schaltflächen auf den Karten tun:**
+**What the buttons on the cards do:**
 
-- **Beheben** (Schraubenschlüssel): Repariert das Problem automatisch. Speichern Sie vorher Ihre
-  Arbeit, bestätigen Sie und warten Sie. Das kann einige Minuten dauern. Danach prüft SelfX den
-  Status erneut. Die Schaltfläche gibt es nur, wenn Ihr Support-Team eine Reparatur vorbereitet
-  hat. Zum Beispiel bei **Zu installierende Updates**: SelfX sucht, lädt und installiert Updates.
-- **Jetzt neu starten** (bei **Neustart ausstehend**): Startet den Computer neu, damit Updates
-  fertig werden. Speichern Sie vorher Ihre Arbeit und schließen Sie alle Programme. Nach Ihrer
-  Bestätigung beginnt der Neustart nach etwa 30 Sekunden. **Abbrechen** ändert nichts. *Alle
-  Probleme beheben* startet den Computer **nie** neu.
-- **Erneut versuchen** (bei **Unternehmens-Apps**): Eine App Ihres Unternehmens konnte nicht
-  installiert werden. SelfX startet die Installation sofort neu. Den Fortschritt sehen Sie im
-  Unternehmensportal. Schlägt sie wieder fehl, senden Sie die Protokolle an den Support.
-- **Pfeil** auf einer Karte: Prüft nur diesen Status erneut. Oben: prüft alles erneut.
-- **Alle Probleme beheben**: Führt alle möglichen Reparaturen nacheinander aus. Speichern Sie
-  vorher Ihre Arbeit.
+- **Fix** (wrench): repairs the problem automatically. Save your work first, confirm and wait. This can take
+  several minutes. Afterwards SelfX checks the status again. The button appears only if your support team
+  has prepared a repair. For example for **Updates to install**: SelfX searches, downloads and installs
+  updates.
+- **Restart now** (for **Pending restart**): restarts the computer so that updates can finish. Save your work
+  and close all programs first. After your confirmation the restart starts after about 30 seconds. **Cancel**
+  changes nothing. *Fix all problems* **never** restarts the computer.
+- **Retry** (for **Company apps**): a company app could not be installed. SelfX restarts the installation at
+  once. You can follow the progress in the company portal. If it fails again, send the logs to support.
+- **Arrow** on a card: checks only this status again. At the top: checks everything again.
+- **Fix all problems**: runs all possible repairs one after another. Save your work first.
 
-**Beispiele:**
+**Examples:**
 
-- **Neustart ausstehend (rot):** Klicken Sie auf **Jetzt neu starten** oder starten Sie den
-  Computer selbst neu.
-- **Zu installierende Updates (gelb):** Klicken Sie auf **Beheben**. Oder installieren Sie Updates
-  unter **Einstellungen > Windows Update**.
+- **Pending restart (red):** click **Restart now** or restart the computer yourself.
+- **Updates to install (yellow):** click **Fix**. Or install updates under **Settings > Windows Update**.
 
-## Systeminformationen
+## System information
 
-Der Bereich **Systeminformationen** zeigt Angaben über Gerät, Windows, Nutzer, Verwaltung und
-Netzwerk. Die letzten Werte stehen sofort da und werden im Hintergrund aktualisiert.
+The **System information** area shows details about device, Windows, user, management and network. The
+last values appear at once and are updated in the background.
 
-- **Doppelklick** auf eine Zeile kopiert den Wert.
-- Die Schaltflächen oben aktualisieren die Angaben, kopieren alles oder speichern es als Datei.
-- Unter den Angaben finden Sie **Werkzeuge**:
-  - Intune synchronisieren: die Verwaltung des Geräts neu abgleichen.
-  - Compliance prüfen.
-  - Das Unternehmensportal öffnen.
-  - **Fernwartung**: Startet **Remote Help**, wenn es auf Ihrem Gerät installiert ist. Sonst startet
-    es Quick Assist. Eine Person vom Support kann dann Ihren Bildschirm sehen, aber nur mit Ihrer
-    Zustimmung.
-  - Die Protokolle der Geräteverwaltung sammeln.
-  - Die Geräteprotokolle an den Support senden.
+- **Double-click** a row to copy its value.
+- The buttons at the top update the details, copy everything or save it as a file.
+- Under the details you find **Tools**:
+  - Synchronize Intune: re-sync the device management.
+  - Check compliance.
+  - Open the company portal.
+  - **Remote support**: starts **Remote Help** if it is installed on your device. Otherwise it starts
+    Quick Assist. A person from support can then see your screen, but only with your consent.
+  - Collect the device management logs.
+  - Send the device logs to support.
 
-Ist die Citrix-Workspace-App installiert, steht ihre Version unter **Gerät**.
+If the Citrix Workspace app is installed, its version appears under **Device**.
 
-Die Angaben enthalten Gerätename, Benutzername und Netzwerkadressen. Geben Sie sie nur an Ihr
-Support-Team weiter.
+The details contain your device name, your user name and network addresses. Share them only with your
+support team.
 
-## Support anfragen und Protokolle senden
+## Contact support and send logs
 
-SelfX bietet zwei Wege, das Support-Team zu erreichen.
+SelfX offers two ways to reach the support team.
 
-**Kontakt anzeigen:** Klicken Sie oben rechts auf **?**. Dort stehen Servicezeiten, Telefonnummer,
-E-Mail-Adresse, Teams-Adresse und Website. Schaltflächen öffnen direkt eine E-Mail, einen Teams-Chat
-oder die Website.
+**Show contact details:** Click **?** at the top right. You will find support hours, phone number, e-mail
+address, Teams address and website. Buttons open an e-mail, a Teams chat or the website directly.
 
-**Problem melden (Ticket per E-Mail):** Ist diese Funktion eingeschaltet, zeigt der Hilfe-Dialog die
-Zeile **Problem melden**. So geht es:
+**Report a problem (ticket by e-mail):** If this function is switched on, the help dialog shows the row
+**Report a problem**. Here is how it works:
 
-1. Klicken Sie auf **Ticket erstellen** und beschreiben Sie das Problem.
-2. SelfX fügt die Angaben zu Ihrem Gerät automatisch hinzu. Das können Sie nicht abwählen.
-3. Sie sehen die E-Mail vor dem Senden. Der Empfänger steht im Dialog.
-4. Sie senden die E-Mail selbst. **SelfX sendet nie von selbst.**
+1. Click **Create ticket** and describe the problem.
+2. SelfX adds the details about your device automatically. You cannot deselect them.
+3. You see the e-mail before it is sent. The recipient is shown in the dialog.
+4. You send the e-mail yourself. **SelfX never sends anything by itself.**
 
-Öffnet sich Ihr E-Mail-Programm nicht mit der Datei, markiert SelfX die Datei im Explorer. Hängen
-Sie sie dann selbst an.
+If your mail program does not open with the file, SelfX marks the file in Explorer. Then attach it yourself.
 
-**Copilot Chat fragen:** Ist diese Funktion eingeschaltet, zeigt der Hilfe-Dialog **Copilot Chat
-fragen**:
+**Ask Copilot Chat:** If this function is switched on, the help dialog shows **Ask Copilot Chat**:
 
-1. Beschreiben Sie das Problem mit eigenen Worten (optional) und klicken Sie auf **Text erstellen**.
-2. Sie sehen eine Vorschau. Lesen oder ändern Sie den Text.
-3. Klicken Sie auf **Kopieren und Copilot öffnen**. Fügen Sie den Text in Copilot Chat ein (Strg+V)
-   und senden Sie ihn selbst ab.
+1. Describe the problem in your own words (optional) and click **Create text**.
+2. You see a preview. Read or change the text.
+3. Click **Copy and open Copilot**. Paste the text into Copilot Chat (Ctrl+V) and send it yourself.
 
-Der Text enthält keine Namen, E-Mail-Adressen oder IP-Adressen. Prüfen Sie ihn trotzdem vor dem
-Senden. Schreiben Sie keine Passwörter oder Kundendaten hinein. Der Text bleibt nach dem Kopieren
-kurz in der Zwischenablage. Ist die Funktion so eingestellt, leert SelfX sie nach einigen Minuten.
+The text contains no names, e-mail addresses or IP addresses. Still check it before sending. Do not write
+passwords or customer data into it. After copying, the text stays in the clipboard for a short time. If
+SelfX is set up that way, it clears the clipboard after a few minutes.
 
-**Geräteprotokolle an den Support senden:** Klicken Sie unten links, in den Systeminformationen oder im
-Menü des SelfX-Symbols auf **Protokolle an Support senden**.
+**Send device logs to support:** Click **Send logs to support** at the bottom left, in the system information
+or in the menu of the SelfX icon.
 
-1. Bestätigen Sie. SelfX sammelt die Protokolle über seinen Dienst. Das dauert einige Minuten.
-   Auf Ihrem Gerät wird nichts verändert.
-2. Danach öffnet sich eine E-Mail an den Support mit dem Bericht als `.zip`-Datei im Anhang. Der
-   Bericht enthält auch die Protokolle von SelfX, damit der Support sieht, was Sie schon versucht haben.
-3. Beschreiben Sie Ihr Problem und senden Sie die E-Mail ab.
+1. Confirm. SelfX collects the logs through its service. This takes a few minutes. Nothing on your device
+   is changed.
+2. Then an e-mail to support opens with the report as a `.zip` file attached. The report also contains the
+   SelfX logs, so that support can see what you have already tried.
+3. Describe your problem and send the e-mail.
 
-Der Bericht enthält Gerätename, Benutzername und Protokolle. Nur Sie und Administratoren können ihn auf
-dem Gerät lesen. Senden Sie ihn nur an Ihr Support-Team.
+The report contains your device name, your user name and logs. Only you and administrators can read it on the
+device. Send it only to your support team.
 
-## Das SelfX-Symbol neben der Uhr
+## The SelfX icon next to the clock
 
-Das Symbol neben der Uhr zeigt den Gerätestatus auf einen Blick:
+The icon next to the clock shows the device status at a glance:
 
-- **grün**: alles in Ordnung
-- **gelb**: Warnung
-- **rot**: Problem
-- **grau**: noch kein Ergebnis
+- **green**: everything is fine
+- **yellow**: warning
+- **red**: problem
+- **grey**: no result yet
 
-Bewegen Sie die Maus darüber, um eine Zusammenfassung zu sehen. Das Symbol bleibt unter Windows 11
-dauerhaft neben der Uhr. Es verschwindet also nicht im Überlaufmenü (Pfeil).
+Move the mouse over it to see a summary. On Windows 11 the icon stays permanently next to the clock. It does
+not disappear into the overflow menu (arrow).
 
-Wird ein Problem gefunden, zeigt Windows einmal eine Benachrichtigung. Ein Klick darauf öffnet den
-Gerätestatus. Möchten Sie keine Benachrichtigungen, schalten Sie sie mit dem **Zahnrad** oder im Menü
-des Symbols aus. Das farbige Symbol zeigt den Status trotzdem.
+When a problem is found, Windows shows a notification once. Clicking it opens the device status. If you do not
+want notifications, switch them off with the **gear icon** or in the menu of the icon. The colored icon still
+shows the status.
 
-**Rechtsklick auf das Symbol:** SelfX öffnen, Status jetzt prüfen, Protokolle senden oder das Symbol
-verbergen. Wieder anzeigen können Sie es über das Zahnrad in SelfX.
+**Right-click the icon:** open SelfX, check the status now, send logs or hide the icon. To show it again, use
+the gear icon in SelfX.
 
-## Einstellungen: Sprache und Design
+## Settings: language and design
 
-Klicken Sie auf das **Zahnrad** in SelfX:
+Click the **gear icon** in SelfX:
 
-- **Sprache:** Wählen Sie Ihre Sprache. Jede Sprache steht unter ihrem eigenen Namen, zum Beispiel
-  *Deutsch* oder *français*. SelfX startet danach neu und merkt sich die Wahl. Auch das Symbol neben
-  der Uhr nutzt die neue Sprache. **Automatisch** nimmt die Sprache von Windows. Ist sie nicht
-  verfügbar, zeigt SelfX Deutsch. Texte, die es in Ihrer Sprache nicht gibt, erscheinen auf Englisch.
-  Manche Unternehmen legen die Sprache fest. Dann fehlt diese Auswahl.
-- **Design:** *Automatisch* folgt Windows, *Dunkel* und *Hell* stellen Sie fest ein.
-- **Symbol neben der Uhr** anzeigen oder verbergen.
-- **Benachrichtigungen über Probleme** ein- oder ausschalten.
+- **Language:** choose your language. Each language is shown under its own name, for example *Deutsch* or
+  *English*. SelfX restarts afterwards and remembers your choice. The icon next to the clock also uses the new
+  language. **Automatic** uses the language of Windows. If that is not available, SelfX shows German. Texts that
+  do not exist in your language appear in English. Some companies fix the language. Then this choice is missing.
+- **Design:** *Automatic* follows Windows, *Dark* and *Light* set it permanently.
+- **Show or hide** the icon next to the clock.
+- **Switch notifications about problems** on or off.
 
-Unter **i** finden Sie die Version von SelfX.
+Under **i** you find the version of SelfX.
 
-## Wichtige Hinweise
+## Important notes
 
-- **Speichern Sie Ihre Arbeit**, bevor Sie eine Lösung starten. Manche Lösungen starten Programme neu
-  oder beenden sie. Neustarts betreffen alle offenen Programme.
-- **Festplattenprüfung (chkdsk):** Die Prüfung wird für den nächsten Neustart geplant. Sie kann lange
-  dauern. Starten Sie den Computer danach neu.
-- **Netzwerk-Neustart:** Während die Netzwerkadapter neu starten, ist die Verbindung kurz unterbrochen.
-- **Speicher aufräumen:** Löscht temporäre Dateien und leert den Papierkorb Ihres Benutzers.
-- **Zeit korrigieren:** Gleicht die Uhr Ihres Geräts mit der Zeitquelle ab.
-- **Datenschutz:** SelfX sendet nichts von selbst. Protokolle, Berichte und Texte gehen nur an Ihr
-  Support-Team, wenn Sie es bestätigen. Protokolle enthalten keine Passwörter. Sie werden nach 90 Tagen
-  automatisch gelöscht.
-- Wenden Sie sich an Ihr Support-Team, wenn eine Lösung fehlschlägt oder das Problem bleibt.
+- **Save your work** before you start a solution. Some solutions restart or close programs. A restart affects all
+  open programs.
+- **Disk check (chkdsk):** the check is scheduled for the next restart. It can take a long time. Restart the
+  computer afterwards.
+- **Network restart:** while the network adapters restart, the connection is briefly interrupted.
+- **Free up disk space:** deletes temporary files and empties the recycle bin of your user.
+- **Correct the time:** synchronizes the clock of your device with the time source.
+- **Privacy:** SelfX sends nothing by itself. Logs, reports and texts go only to your support team, and only when
+  you confirm it. Logs do not contain passwords. They are deleted automatically after 90 days.
+- Contact your support team if a solution fails or the problem remains.

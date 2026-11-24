@@ -1,120 +1,118 @@
-# Konfiguration
+# Configuration
 
-[English](en/Configuration.md) | **Deutsch**
+**English** | [Deutsch](de/Configuration.md)
 
-Diese Anleitung erklärt, welche Einstellungen es gibt und wo Sie sie ändern. Sie ist für
-Administratoren geschrieben. Programmierkenntnisse brauchen Sie nicht. Die Installation
-selbst steht in der [Installationsanleitung](Installation.md).
+This guide explains which settings exist and where you change them. It is written for
+administrators. You do not need programming skills. The installation itself is described in the
+[installation guide](Installation.md).
 
-![Seite Gerätestatus im neuen Design](images/selfx-device-status-dark.png)
+![Device status page in the new design](images/selfx-device-status-dark.png)
 
-*Der Gerätestatus in SelfX 3.0. Die Oberfläche hat ein helles und ein dunkles Design.*
+*The device status in SelfX 3.0. The interface has a light and a dark design.*
 
-## Inhalt
+## Contents
 
-1. [Wo die Einstellungen liegen](#wo-die-einstellungen-liegen)
-2. [Die wichtigsten Einstellungen](#die-wichtigsten-einstellungen)
-3. [Aktionen (Fehlerbehebung)](#aktionen-fehlerbehebung)
-4. [Oberfläche und Design](#benutzeroberfläche)
-5. [Fernwartung: Remote Help](#fernwartung-remote-help-oder-quick-assist)
-6. [Statussymbol](#statussymbol)
-7. [Gerätestatus und Hintergrundprüfung](#gerätestatus)
-8. [Reparaturen](#reparaturen)
-9. [Geräteprotokolle für den Support](#geräteprotokolle-für-den-support)
-10. [Netzwerk-Messungen](#netzwerk-messungen)
-11. [Ticket per E-Mail](#ticket-per-e-mail)
-12. [Firmen-Wiki](#firmen-wiki)
+1. [Where the settings are](#where-the-settings-are)
+2. [The most important settings](#the-most-important-settings)
+3. [Actions (troubleshooting)](#actions-troubleshooting)
+4. [User interface and design](#user-interface)
+5. [Remote support: Remote Help or Quick Assist](#remote-support-remote-help-or-quick-assist)
+6. [Status icon](#status-icon)
+7. [Device status and background checks](#device-status)
+8. [Repairs](#repairs)
+9. [Device logs for support](#device-logs-for-support)
+10. [Network measurements](#network-measurements)
+11. [Ticket by e-mail](#ticket-by-e-mail)
+12. [Company wiki](#company-wiki)
 13. [Copilot Chat](#copilot-chat)
-14. [Protokolle und Aufbewahrung](#protokolle-und-aufbewahrung)
-15. [Branding (Firmenlogo und Farben)](#branding)
-16. [Sprachen](#sprachen)
-17. [Änderungen sicher ausliefern](#änderungen-sicher-ausliefern)
+14. [Logs and retention](#logs-and-retention)
+15. [Branding (company logo and colors)](#branding)
+16. [Languages](#languages)
+17. [Delivering changes safely](#delivering-changes-safely)
 
-## Wo die Einstellungen liegen
+## Where the settings are
 
-SelfX wird über XML-Dateien im Ordner `SelfX Service\Sources` eingestellt.
+SelfX is configured with XML files in the folder `SelfX Service\Sources`.
 
-- Sie ändern die Dateien **im Paket, vor der Installation**.
-- Nach der Installation liegen sie in `%ProgramFiles%\SelfX`. Nur Administratoren können
-  sie dort ändern.
-- SelfX lädt keine Einstellungen aus dem Netzwerk nach. Neue Einstellungen kommen mit einer
-  neuen Paketversion.
+- You change the files **in the package, before installation**.
+- After installation they are in `%ProgramFiles%\SelfX`. Only administrators can change them there.
+- SelfX does not download settings from the network. New settings come with a new package version.
 
-| Datei | Wofür |
+| File | Purpose |
 |---|---|
-| `Tool_Config.xml` | Allgemeine Einstellungen, Kontakte, Branding, Funktionen ein oder aus |
-| `Issues_List.xml` | Aktionen für die Fehlerbehebung |
-| `Health_Config.xml` | Gerätestatus: Prüfungen, Reparaturen, Hintergrundprüfung |
-| `Network_Test_Config.xml` | Netzwerk-Messungen (optional, standardmäßig aus) |
-| `Ticket_Config.xml` | Zuordnung von Tickets zu Ihren IT-Einheiten (optional) |
-| `Languages\<Sprache>.xml` | Alle Texte, je Sprache |
+| `Tool_Config.xml` | General settings, contacts, branding, switch features on or off |
+| `Issues_List.xml` | Actions for troubleshooting |
+| `Health_Config.xml` | Device status: checks, repairs, background check |
+| `Network_Test_Config.xml` | Network measurements (optional, off by default) |
+| `Ticket_Config.xml` | Assignment of tickets to your IT units (optional) |
+| `Languages\<language>.xml` | All texts, per language |
 
-## Die wichtigsten Einstellungen
+## The most important settings
 
-Die Datei `Tool_Config.xml` enthält nur Einstellungen, keine Texte. Die Texte stehen in den
-Sprachdateien (siehe [Sprachen](#sprachen)).
+`Tool_Config.xml` contains only settings, no texts. The texts are in the language files (see
+[Languages](#languages)).
 
-| Einstellung | Standard | Was sie bewirkt |
+| Setting | Default | What it does |
 |---|---|---|
-| `Tool_Version` | (Ihre Version) | Die Versionsnummer. Sie muss bei jedem Release gleich `$ExpectedVersion` in `Detection.ps1` sein. |
-| `Tool_Language` | `de` | Standardsprache. `Auto` nimmt die Anzeigesprache von Windows. Sie können auch `en`, `fr-CH` oder `zh-Hans` schreiben. |
-| `Show_Language_Setting` | `True` | Nutzer können die Sprache selbst wählen. `False`: immer `Tool_Language`. |
-| `Tool_Name` | SelfX | Name in der Titelleiste. |
-| `Tool_Theme` | `Auto` | Standardfarbe: `Auto` (folgt Windows), `Dark` oder `Light`. |
-| `Show_Theme_Button` | `True` | Nutzer können das Design selbst wählen. |
-| `Default_Solution_Mode` | `Simplified` | Startansicht der Fehlerbehebung: `Simplified` (einfach) oder `Detailed` (ausführlich). |
-| `Show_Status_Page` | `True` | Seite *Gerätestatus* anzeigen. |
-| `Show_SystemInfo_Tab` | `True` | Seite *Systeminformationen* anzeigen. |
-| `Show_Support_Button` | `True` | Hilfe-Schaltfläche (?) mit Ihren Kontakten anzeigen. |
-| `Show_Reboot_Warning` | `True` | Erinnerung an einen ausstehenden Neustart anzeigen. |
-| `Show_Computer_Name_MainGUI` | — | Computername im Fenster anzeigen. |
-| `Show_Computer_Name_title_bar` | `False` | Computername in der Titelleiste anzeigen. |
-| `Show_About_Button` | `True` | Info-Schaltfläche (i) in der Titelleiste anzeigen. |
-| `About_Logo` | `logo.png` | Logo im Info-Dialog. |
-| `Show_SystemInfo_Intune_Actions` | `True` | Werkzeuge (Intune, Company Portal, Fernwartung, Protokolle) auf der Seite *Systeminformationen* anzeigen. |
-| `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | `www.msftconnecttest.com`, `80` | Ziel der Prüfung „Internet erreichbar“ auf der Seite *Systeminformationen*. |
-| `Ticket_Subject_Tag` | `SelfX` | Kennzeichen am Anfang des Betreffs einer Ticket-Mail. Erlaubt sind Buchstaben, Ziffern, `.`, `_`, `-` und höchstens 20 Zeichen, sonst `SelfX`. |
-| `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Verknüpfungen, die die Installation für alle Nutzer anlegt. |
-| `Log_Retention_Days` | `90` | Wie lange Protokolle aufbewahrt werden (1 bis 3650 Tage). |
-| `Service_FileCheck` | `Enforce` | `Enforce`: Der Dienst startet nichts, wenn Dateien nicht stimmen. `Audit`: Der Dienst meldet das nur. Siehe [Installationsanleitung](Installation.md#die-dateiliste-selfxfilesjson). |
-| `Service_Privileges` | `Restricted` | Begrenzt die Rechte des Dienstes. `Default` nur zur Fehlersuche. Siehe [Installationsanleitung](Installation.md#rechte-des-dienstes). |
-| `Show_Tray_Icon` | `True` | Statussymbol neben der Uhr anzeigen. Siehe [Statussymbol](#statussymbol). |
-| `Ticket_Enabled` | `False` | Ticket per E-Mail einschalten. Siehe [Ticket per E-Mail](#ticket-per-e-mail). |
-| `Copilot_Enabled` | `False` | Copilot Chat einschalten. Siehe [Copilot Chat](#copilot-chat). |
-| `Wiki_Enabled` | `False` | Schaltfläche für das Firmen-Wiki einschalten. Siehe [Firmen-Wiki](#firmen-wiki). |
-| `DeviceLogs_Days` | `7` | Wie viele Tage Ereignisse in den Geräteprotokollen stehen (1 bis 60). |
+| `Tool_Version` | (your version) | The version number. It must equal `$ExpectedVersion` in `Detection.ps1` for every release. |
+| `Tool_Language` | `de` | Default language. `Auto` takes the display language of Windows. You can also write `en`, `fr-CH` or `zh-Hans`. |
+| `Show_Language_Setting` | `True` | Users can choose the language. `False`: always `Tool_Language`. |
+| `Tool_Name` | SelfX | Name in the title bar. |
+| `Tool_Theme` | `Auto` | Default color scheme: `Auto` (follows Windows), `Dark` or `Light`. |
+| `Show_Theme_Button` | `True` | Users can choose the design themselves. |
+| `Default_Solution_Mode` | `Simplified` | Start view of troubleshooting: `Simplified` (easy) or `Detailed`. |
+| `Show_Status_Page` | `True` | Show the *Device status* page. |
+| `Show_SystemInfo_Tab` | `True` | Show the *System information* page. |
+| `Show_Support_Button` | `True` | Show the help button (?) with your contacts. |
+| `Show_Reboot_Warning` | `True` | Show a reminder about a pending restart. |
+| `Show_Computer_Name_MainGUI` | — | Show the computer name in the window. |
+| `Show_Computer_Name_title_bar` | `False` | Show the computer name in the title bar. |
+| `Show_About_Button` | `True` | Show the info button (i) in the title bar. |
+| `About_Logo` | `logo.png` | Logo in the info dialog. |
+| `Show_SystemInfo_Intune_Actions` | `True` | Show the tools (Intune, Company Portal, remote support, logs) on the *System information* page. |
+| `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | `www.msftconnecttest.com`, `80` | Target of the "Internet reachable" check on the *System information* page. |
+| `Ticket_Subject_Tag` | `SelfX` | Marker at the start of the subject of a ticket e-mail. Letters, digits, `.`, `_`, `-` and at most 20 characters, otherwise `SelfX`. |
+| `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Shortcuts that the installation creates for all users. |
+| `Log_Retention_Days` | `90` | How long logs are kept (1 to 3650 days). |
+| `Service_FileCheck` | `Enforce` | `Enforce`: the service starts nothing if files do not match. `Audit`: the service only reports it. See the [installation guide](Installation.md#the-file-list-selfxfilesjson). |
+| `Service_Privileges` | `Restricted` | Limits the rights of the service. `Default` only for troubleshooting. See the [installation guide](Installation.md#service-privileges). |
+| `Show_Tray_Icon` | `True` | Show the status icon next to the clock. See [Status icon](#status-icon). |
+| `Ticket_Enabled` | `False` | Switch on ticket by e-mail. See [Ticket by e-mail](#ticket-by-e-mail). |
+| `Copilot_Enabled` | `False` | Switch on Copilot Chat. See [Copilot Chat](#copilot-chat). |
+| `Wiki_Enabled` | `False` | Switch on the company wiki button. See [Company wiki](#company-wiki). |
+| `DeviceLogs_Days` | `7` | How many days of events are in the device logs (1 to 60). |
 
-**Support-Kontakte** (im Hilfe-Dialog):
+**Support contacts** (in the help dialog):
 
-| Einstellung | Beispiel |
+| Setting | Example |
 |---|---|
-| `Support_Hours` | `Mo.–Fr. 08:00–17:00` |
+| `Support_Hours` | `Mon–Fri 08:00–17:00` |
 | `Support_Phone_number` | `+49 000 0000` |
-| `Support_Mail` | `it-support@ihre-firma.example` |
-| `Support_Teams` | Teams-Adresse oder `https://`-Link |
-| `Support_Website` | `https://support.ihre-firma.example` (nur `https://`) |
+| `Support_Mail` | `it-support@your-company.example` |
+| `Support_Teams` | Teams address or `https://` link |
+| `Support_Website` | `https://support.your-company.example` (`https://` only) |
 
-`Support_Mail` ist auch der Empfänger der E-Mail mit den Geräteprotokollen. Tragen Sie
-**ein Funktionspostfach** ein, kein persönliches.
+`Support_Mail` is also the recipient of the e-mail with the device logs. Enter **a shared
+mailbox**, not a personal one.
 
-## Aktionen (Fehlerbehebung)
+## Actions (troubleshooting)
 
-In `Issues_List.xml` steht jede Aktion, die Nutzer auf der Seite *Fehlerbehebung* sehen. Jede
-Aktion hat eine eindeutige `Id`. Die Übersetzungen werden über diese `Id` zugeordnet.
+`Issues_List.xml` contains every action that users see on the *Troubleshooting* page. Each action
+has a unique `Id`. The translations are linked through this `Id`.
 
-| Element | Bedeutung |
+| Element | Meaning |
 |---|---|
-| `Id` (Attribut) | Eindeutiger Name, zum Beispiel `D_Teams_SoundCuts`. |
-| `Name`, `Explanation`, `Alerte_MSG` | Titel, Erklärung und Bestätigungstext. Der Basistext ist Englisch. |
-| `Category` | Kategorie, zum Beispiel `Teams`, `Outlook`, `Intune`, `Device`. Der Anzeigename kommt aus der Sprachdatei. |
-| `Context` | `User`: Das Skript läuft als angemeldeter Nutzer. `System`: Der Dienst führt es als SYSTEM aus. `Link`: Es öffnet nur eine Internetadresse aus `Tool_Config.xml`. Fehlt das Element, gilt `User`. |
-| `Script` | Name des Skripts in `Scripts_to_run`. Bei `Link` nicht nötig. |
-| `Link` | Nur bei `Link`: Name der Einstellung (`Link_<Name>`) in `Tool_Config.xml`. |
-| `TimeoutSeconds` | Nur bei `System`: Zeitlimit von 1 bis 7200 Sekunden, Standard 900. |
-| `OtherSessions` | Nur bei `System`: `Block` verhindert die Aktion für normale Nutzer, solange ein anderer Nutzer angemeldet ist. Administratoren sind nicht betroffen. |
-| `Post_Action` | Nur bei `System`: `MailReport` öffnet nach einem erfolgreichen Lauf eine E-Mail an den Support mit dem Bericht. |
+| `Id` (attribute) | Unique name, for example `D_Teams_SoundCuts`. |
+| `Name`, `Explanation`, `Alerte_MSG` | Title, explanation and confirmation text. The base text is English. |
+| `Category` | Category, for example `Teams`, `Outlook`, `Intune`, `Device`. The display name comes from the language file. |
+| `Context` | `User`: the script runs as the signed-in user. `System`: the service runs it as SYSTEM. `Link`: it only opens an internet address from `Tool_Config.xml`. If the element is missing, `User` applies. |
+| `Script` | Name of the script in `Scripts_to_run`. Not needed for `Link`. |
+| `Link` | Only for `Link`: name of the setting (`Link_<Name>`) in `Tool_Config.xml`. |
+| `TimeoutSeconds` | Only for `System`: time limit from 1 to 7200 seconds, default 900. |
+| `OtherSessions` | Only for `System`: `Block` prevents the action for normal users while another user is signed in. Administrators are not affected. |
+| `Post_Action` | Only for `System`: `MailReport` opens an e-mail to support with the report after a successful run. |
 
-Beispiel:
+Example:
 
 ```xml
 <Action Id="D_Intune_RestartService">
@@ -131,145 +129,141 @@ Do you want to continue?</Alerte_MSG>
 </Action>
 ```
 
-**Sicherheitsregeln für Aktionen mit `System`:**
+**Security rules for `System` actions:**
 
-- `Script` ist nur ein Dateiname (Buchstaben, Ziffern, `_`, `-`, `.`), endet auf `.ps1` und liegt
-  in `Scripts_to_run`. Alles andere weist der Dienst ab.
-- Nutzer können dem Dienst keine Pfade, Argumente oder Code übergeben.
-- Jeder angemeldete Nutzer kann jede `System`-Aktion starten. Nehmen Sie deshalb nur Aktionen
-  auf, die für jeden Nutzer sicher sind.
-- Das Skript läuft ohne Profil, ohne Desktop und ohne Eingabeaufforderung. Exitcode `0`
-  bedeutet Erfolg. Ausgaben werden protokolliert.
-- Der Dienst übergibt die Kennung des anfragenden Nutzers in `SELFX_CALLER_SID`. Nutzen Sie sie
-  nur, um einem Nutzer ein Ergebnis zu schicken, nie um über eine Erlaubnis zu entscheiden.
+- `Script` is only a file name (letters, digits, `_`, `-`, `.`), ends in `.ps1` and is in
+  `Scripts_to_run`. The service rejects anything else.
+- Users cannot pass paths, arguments or code to the service.
+- Every signed-in user can start every `System` action. Therefore only add actions that are safe
+  for every user.
+- The script runs without a profile, without a desktop and without a command prompt. Exit code `0`
+  means success. Output is logged.
+- The service passes the identifier of the requesting user in `SELFX_CALLER_SID`. Use it only to
+  send a result to that user, never to decide whether something is allowed.
 
-**Neue Aktion anlegen:** Geben Sie ihr eine neue `Id` und ergänzen Sie die Texte in den
-Sprachdateien. Ohne Übersetzung erscheint der englische Text.
+**Add a new action:** Give it a new `Id` and add the texts to the language files. Without a
+translation, the English text appears.
 
-**Konto-Aktionen mit Internetadresse (`Context` = `Link`):** Sie öffnen eine Adresse aus
-`Tool_Config.xml` im Webbrowser. Mitgeliefert sind zwei Konto-Aktionen:
+**Account actions with a web address (`Context` = `Link`):** They open an address from
+`Tool_Config.xml` in the web browser. Two account actions are included:
 
-| Aktion | Einstellung | Standard |
+| Action | Setting | Default |
 |---|---|---|
-| Passwort vergessen oder abgelaufen (`D_Account_PasswordReset`) | `Link_PasswordReset` | `https://passwordreset.microsoftonline.com/` |
-| Anmeldemethoden verwalten (`D_Account_SecurityInfo`) | `Link_SecurityInfo` | `https://mysignins.microsoft.com/security-info` |
+| Forgot or expired password (`D_Account_PasswordReset`) | `Link_PasswordReset` | `https://passwordreset.microsoftonline.com/` |
+| Manage sign-in methods (`D_Account_SecurityInfo`) | `Link_SecurityInfo` | `https://mysignins.microsoft.com/security-info` |
 
-- Ersetzen Sie die Adresse, wenn Ihr Unternehmen eine eigene Seite nutzt.
-- Leer oder `Off` blendet die Aktion aus.
-- Eine Adresse, die nicht mit `https://` beginnt, ist ungültig. Die Aktion wird dann nicht angezeigt, und SelfX schreibt eine Warnung ins Protokoll.
-- Die Aktion läuft im Nutzerkontext, der Dienst ist nicht beteiligt. Der Nutzer bestätigt vorher im Dialog.
+- Replace the address if your company uses its own page.
+- An empty value or `Off` hides the action.
+- An address that does not start with `https://` is invalid. The action is then not shown, and SelfX writes a warning to the log.
+- The action runs in the user context; the service is not involved. The user confirms in the dialog first.
 
-Mitgelieferte Skripte für `System`-Aktionen:
+Bundled scripts for `System` actions:
 
-| Skript | Zweck |
+| Script | Purpose |
 |---|---|
-| `SelfX_Intune_RestartService.ps1` | Dienst der Intune Management Extension neu starten |
-| `SelfX_Device_AirePlaneMode.ps1` | Alle aktiven Netzwerkadapter neu starten |
-| `SelfX_Device_SyncTime.ps1` | Uhr mit der Zeitquelle abgleichen (die Zeit-Konfiguration bleibt unverändert) |
-| `SelfX_OneDrive_CHKDSK.ps1` | Festplattenprüfung für das Systemlaufwerk beim nächsten Neustart planen |
-| `SelfX_Device_CollectLogs.ps1` | Geräteprotokolle sammeln und eine E-Mail mit dem Bericht öffnen |
+| `SelfX_Intune_RestartService.ps1` | Restart the Intune Management Extension service |
+| `SelfX_Device_AirePlaneMode.ps1` | Restart all active network adapters |
+| `SelfX_Device_SyncTime.ps1` | Synchronize the clock with the time source (the time configuration stays unchanged) |
+| `SelfX_OneDrive_CHKDSK.ps1` | Schedule a disk check for the system drive at the next restart |
+| `SelfX_Device_CollectLogs.ps1` | Collect device logs and open an e-mail with the report |
 
-## Benutzeroberfläche
+## User interface
 
-Das Fenster ist für Nutzer ohne Fachwissen gebaut. Es lässt sich in der Größe ändern
-(mindestens 640 × 480). Größe, Position, Design, Sprache und das Statussymbol speichert SelfX
-für jeden Nutzer getrennt. Pro Nutzer läuft nur ein Fenster.
+The window is built for users without technical knowledge. You can resize it (at least 640 × 480).
+SelfX stores size, position, design, language and the status icon setting for each user separately.
+Only one window runs per user.
 
-**Das neue Design (SelfX 3.0):**
+**The new design (SelfX 3.0):**
 
-- Ruhigere Optik mit größeren Abständen, runden Karten und großen Schaltflächen.
-- Ein Drei-Schritte-Hinweis unter dem Titel: „Problem auswählen – Bestätigen – Fertig“.
-- Statusmarken mit Symbol, nicht nur mit Farbe.
-- Ein helles und ein dunkles Design. `Tool_Theme` legt den Standard fest. Mit
-  `Show_Theme_Button` = `True` kann jeder Nutzer *Automatisch*, *Dunkel* oder *Hell* wählen.
-- Neues App-Icon für Fenster, Taskleiste und Statussymbol.
+- Calmer look with larger spacing, rounded cards and large buttons.
+- A three-step hint under the title: "Select problem – Confirm – Done".
+- Status marks with a symbol, not only with color.
+- A light and a dark design. `Tool_Theme` sets the default. With `Show_Theme_Button` = `True`, every
+  user can choose *Automatic*, *Dark* or *Light*.
+- New app icon for the window, the taskbar and the status icon.
 
-**Bereiche des Fensters:**
+**Parts of the window:**
 
-- **Navigation (links):** *Fehlerbehebung*, *Gerätestatus* (mit Zähler für Probleme und
-  Warnungen), *Systeminformationen*, das Firmenlogo und unten *Protokolle an Support senden*.
-- **Fehlerbehebung:** Suche, Kategorien und eine Karte je Aktion. Ein Info-Symbol erklärt
-  die Aktion. Läuft eine Aktion über den Dienst, zeigt die Karte ein Schild. Während einer
-  Aktion ist ihre Schaltfläche gesperrt. Das Ergebnis erscheint in der Meldungsleiste und wird
-  protokolliert.
-- **Gerätestatus:** Eine Karte je Prüfung, Probleme zuerst. Siehe [Gerätestatus](#gerätestatus).
-- **Systeminformationen:** Eine Karte je Bereich (Gerät, Windows, Nutzer und Verwaltung,
-  Netzwerk, Bericht). Ein Doppelklick kopiert einen Wert. Die letzten Werte erscheinen sofort
-  und werden im Hintergrund aktualisiert. Export als TXT, HTML, CSV oder JSON.
-- **Titelleiste:** Hilfe (?), Einstellungen (Sprache, Design, Statussymbol) und Info (i).
-- **Hilfe-Dialog:** Zeigt nur die Kontakte, die Sie eingetragen haben. Fehlt ein Kontakt, bittet
-  der Dialog, die IT-Abteilung zu kontaktieren.
+- **Navigation (left):** *Troubleshooting*, *Device status* (with a counter for problems and warnings),
+  *System information*, the company logo and at the bottom *Send logs to support*.
+- **Troubleshooting:** search, categories and one card per action. An info symbol explains the action.
+  If an action runs through the service, the card shows a shield. While an action runs, its button is
+  locked. The result appears in the message bar and is logged.
+- **Device status:** one card per check, problems first. See [Device status](#device-status).
+- **System information:** one card per area (device, Windows, user and management, network, report).
+  A double-click copies a value. The last values appear immediately and are refreshed in the background.
+  Export as TXT, HTML, CSV or JSON.
+- **Title bar:** help (?), settings (language, design, status icon) and info (i).
+- **Help dialog:** shows only the contacts you entered. If a contact is missing, the dialog asks the
+  user to contact the IT department.
 
-## Fernwartung: Remote Help oder Quick Assist
+## Remote support: Remote Help or Quick Assist
 
-Die Kachel für Fernwartung in den Werkzeugen startet **Remote Help**, wenn es installiert ist.
-Sonst startet sie Quick Assist. Ist Remote Help da, bietet SelfX Quick Assist nicht an. So gilt
-im Unternehmen ein einheitlicher Standard.
+The remote support tile in the tools starts **Remote Help** if it is installed. Otherwise it starts
+Quick Assist. If Remote Help is present, SelfX does not offer Quick Assist. This gives the company
+one uniform standard.
 
-- **Erkennung:** SelfX prüft, ob `%ProgramFiles%\Remote Help\RemoteHelp.exe` als normale
-  Datei (kein Link) mit gültiger Signatur von „Microsoft Corporation“ vorhanden ist. Eine
-  Datei ohne gültige Signatur zählt als nicht installiert. Die Prüfung läuft beim Start des
-  Fensters.
-- **Verteilung:** Remote Help ist ein Intune-Zusatz mit eigener Lizenz. Verteilen Sie es als
-  Win32-App mit dem Installationsbefehl `remotehelpinstaller.exe /quiet acceptTerms=1`.
-  Ob ein Nutzer lizenziert ist, kann SelfX nicht prüfen. Die Regel lautet: App installiert =
-  Remote Help.
-- **Grenze:** SelfX steuert nur die eigene Kachel. Quick Assist selbst sperren Sie über Ihre
-  Richtlinien (zum Beispiel Intune, AppLocker oder App Control).
-- Eine Einstellung dafür gibt es nicht.
+- **Detection:** SelfX checks whether `%ProgramFiles%\Remote Help\RemoteHelp.exe` exists as a normal
+  file (not a link) with a valid signature from "Microsoft Corporation". A file without a valid
+  signature counts as not installed. The check runs when the window starts.
+- **Deployment:** Remote Help is an Intune add-on with its own license. Deploy it as a Win32 app with
+  the install command `remotehelpinstaller.exe /quiet acceptTerms=1`. SelfX cannot check whether a
+  user is licensed. The rule is: app installed = Remote Help.
+- **Limit:** SelfX controls only its own tile. Block Quick Assist itself through your policies (for
+  example Intune, AppLocker or App Control).
+- There is no setting for this.
 
-## Statussymbol
+## Status icon
 
-Das SelfX-Symbol im Infobereich zeigt mit einem farbigen Punkt den Zustand:
-grün (in Ordnung), gelb (Warnung), rot (Problem) oder grau (noch kein Ergebnis). Die Kurzinfo
-nennt die Zahl der Probleme und Warnungen. Wechselt eine Prüfung auf *Fehler*, erscheint einmal
-eine Windows-Benachrichtigung. Ein Klick darauf öffnet den Gerätestatus. Das Rechtsklick-Menü
-öffnet SelfX, prüft den Status, sendet Protokolle oder verbirgt das Symbol.
+The SelfX icon in the notification area shows the state with a colored dot: green (OK), yellow
+(warning), red (problem) or grey (no result yet). The tooltip shows the number of problems and warnings.
+When a check changes to *Error*, a Windows notification appears once. A click opens the device status.
+The right-click menu opens SelfX, checks the status, sends logs or hides the icon.
 
-| Einstellung in `Tool_Config.xml` | Standard | Bedeutung |
+| Setting in `Tool_Config.xml` | Default | Meaning |
 |---|---|---|
-| `Show_Tray_Icon` | `True` | Das Symbol startet bei jeder Anmeldung. `False` entfernt diesen Start. |
-| `Tray_Notifications` | `True` | Benachrichtigung bei einem Fehler. `False` schaltet sie für alle aus. |
-| `Tray_Poll_Seconds` | `60` | Wie oft das Symbol den Zwischenspeicher liest (15 bis 3600). Es führt selbst keine Prüfung aus. |
-| `Tray_Pin_Icon` | `True` | Windows 11 blendet neue Symbole im Überlauf (Pfeil) aus. `True` setzt das Symbol dauerhaft neben die Uhr. Ein Nutzer kann das mit `HKCU\Software\SelfX\TrayPin = 0` abschalten. |
+| `Show_Tray_Icon` | `True` | The icon starts at every sign-in. `False` removes this start. |
+| `Tray_Notifications` | `True` | Notification on an error. `False` switches them off for everyone. |
+| `Tray_Poll_Seconds` | `60` | How often the icon reads the cache (15 to 3600). It runs no check itself. |
+| `Tray_Pin_Icon` | `True` | Windows 11 hides new icons in the overflow (arrow). `True` keeps the icon permanently next to the clock. A user can switch this off with `HKCU\Software\SelfX\TrayPin = 0`. |
 
-**Pro Nutzer:** Jeder Nutzer kann Benachrichtigungen ausschalten
-(`HKCU\Software\SelfX\TrayNotifications`) und das Symbol verbergen (`HKCU\Software\SelfX\TrayIcon`).
-Probleme werden trotzdem gemerkt. Antworten auf eigene Aktionen erscheinen immer.
+**Per user:** Each user can switch notifications off (`HKCU\Software\SelfX\TrayNotifications`) and hide
+the icon (`HKCU\Software\SelfX\TrayIcon`). Problems are still remembered. Replies to the user's own
+actions always appear.
 
-Das Symbol braucht keine Administratorrechte. Es liest nur den Zwischenspeicher des Dienstes.
-Bei einer Installation über Intune startet die neue Version in jeder angemeldeten Sitzung.
+The icon needs no administrator rights. It only reads the service cache. When Intune installs or
+updates SelfX, the new version starts in every signed-in session.
 
-## Gerätestatus
+## Device status
 
-Die Seite *Gerätestatus* zeigt das Ergebnis der Gesundheitsprüfungen. Sie liest den Zwischenspeicher
-der Hintergrundprüfung. Mit dem Knopf für erneutes Prüfen startet sie eine neue Prüfung.
+The *Device status* page shows the result of the health checks. It reads the cache of the background
+check. The button for checking again starts a new check.
 
-| Status | Bedeutung |
+| Status | Meaning |
 |---|---|
-| **In Ordnung** (grün) | Alles passt. |
-| **Bald erledigen** (gelb) | Eine Aktion steht aus, zum Beispiel Updates. Das ist eine Warnung, kein Fehler. |
-| **Fehler** (rot) | Die Prüfung ist fehlgeschlagen. |
-| **Unbekannt** (grau) | Daten fehlen oder die Quelle ist nicht verfügbar. Das ist **keine** bestandene Prüfung. |
+| **OK** (green) | Everything matches. |
+| **Pending** (yellow) | An action is open, for example updates. This is a warning, not an error. |
+| **Error** (red) | The check failed. |
+| **Unknown** (grey) | Data is missing or the source is not available. This is **not** a passed check. |
 
-Stellen Sie `Sources\Health_Config.xml` vor dem Paketieren ein. Nutzer können sie nicht ändern.
+Set `Sources\Health_Config.xml` before packaging. Users cannot change it.
 
-**Die Prüfungen:**
+**The checks:**
 
-| Prüfung | Was geprüft wird |
+| Check | What is checked |
 |---|---|
-| IME | Läuft der Dienst `IntuneManagementExtension`? Fehlt er oder ist er gestoppt, ist das ein Fehler. |
-| Defender | Dienst, Virenschutz und Echtzeitschutz aktiv, Signaturen höchstens 7 Tage alt. Ein Drittanbieter-Virenschutz kann hier einen Fehler auslösen. |
-| Compliance | Intune bewertet Compliance in der Cloud. Mit `<Compliance Script="Check-Compliance.ps1" />` prüft SelfX die lokalen Kriterien einer typischen Richtlinie: Registrierung, BitLocker, Secure Boot, TPM, Firewall, Defender und optional eine Mindestversion von Windows. Gleichen Sie `$Require` im Skript mit Ihrer Richtlinie ab. Maßgeblich bleibt das Unternehmensportal. |
-| Anwendungen | Die Win32-Apps aus dem Intune-Bericht. Eine Installation mit Fehler zeigt den Fehlercode. Bei eigenen Prüfungen für Apps gilt: Ausgeschlossene Apps werden nicht geprüft. |
-| Datenträger | Je festes Laufwerk ein Fehler, wenn es zu 90 % belegt ist **oder** weniger als 20 GB frei sind. Beides ist einstellbar. |
-| BitLocker | Jedes Systemlaufwerk und jedes feste Datenlaufwerk muss verschlüsselt und geschützt sein. Schlüssel werden nicht erfasst. |
-| Neustart ausstehend | Fehler, wenn Windows einen Neustart verlangt. Die Ursache steht im Detail. |
-| Zu installierende Updates | Prüft nur den lokalen Cache von Windows Update, ohne Suche und ohne Download. Offene Updates ergeben *Bald erledigen*. |
-| Zusätzliche Dienste | Ein Dienst mit dem erwarteten Zustand (`Running` oder `Stopped`). |
-| Skriptprüfungen | Exitcode `0` = In Ordnung, `1` = Fehler. Alles andere ist ebenfalls ein Fehler. |
+| IME | Is the service `IntuneManagementExtension` running? If it is missing or stopped, that is an error. |
+| Defender | Service, antivirus and real-time protection active, signatures at most 7 days old. A third-party antivirus can cause an error here. |
+| Compliance | Intune evaluates compliance in the cloud. With `<Compliance Script="Check-Compliance.ps1" />` SelfX checks the local criteria of a typical policy: registration, BitLocker, Secure Boot, TPM, firewall, Defender and optionally a minimum Windows version. Align `$Require` in the script with your policy. The company portal remains authoritative. |
+| Applications | The Win32 apps from the Intune report. A failed installation shows the error code. Excluded apps are not checked. |
+| Disks | Each fixed drive is an error if it is 90 % used **or** has less than 20 GB free. Both values are adjustable. |
+| BitLocker | Every system drive and every fixed data drive must be encrypted and protected. Keys are not collected. |
+| Pending restart | Error when Windows requires a restart. The detail names the cause. |
+| Updates to install | Checks only the local Windows Update cache, without a scan and without download. Open updates lead to *Pending*. |
+| Additional services | A service with the expected state (`Running` or `Stopped`). |
+| Script checks | Exit code `0` = OK, `1` = error. Anything else is also an error. |
 
-**Beispiel `Health_Config.xml`:**
+**Example `Health_Config.xml`:**
 
 ```xml
 <HealthConfig>
@@ -289,36 +283,35 @@ Stellen Sie `Sources\Health_Config.xml` vor dem Paketieren ein. Nutzer können s
 </HealthConfig>
 ```
 
-**Hintergrundprüfung:** Der Dienst führt die Prüfungen regelmäßig im Hintergrund aus. Das
-Ergebnis steht in `%ProgramData%\SelfX\Cache\Health.json`. Nur SYSTEM und Administratoren
-können diese Datei lesen. Einstellungen im Element `Background` von `Health_Config.xml`:
+**Background check:** The service runs the checks regularly in the background. The result is stored in
+`%ProgramData%\SelfX\Cache\Health.json`. Only SYSTEM and administrators can read this file. Settings in
+the element `Background` of `Health_Config.xml`:
 
 ```xml
 <Background Enabled="true" IntervalMinutes="15" PauseOnBattery="true" MaxCpuPercent="75" StartDelaySeconds="120" />
 ```
 
-| Attribut | Standard | Bedeutung |
+| Attribute | Default | Meaning |
 |---|---|---|
-| `Enabled` | `true` | `false`: keine Hintergrundprüfung. SelfX prüft dann beim Öffnen. |
-| `IntervalMinutes` | `15` | Abstand zwischen zwei Prüfungen (5 bis 1440). |
-| `PauseOnBattery` | `true` | Im Akkubetrieb wird nicht geprüft. |
-| `MaxCpuPercent` | `75` | Ist die Last höher, wird die Prüfung um 2 Minuten verschoben (10 bis 100; 100 = kein Limit). |
-| `StartDelaySeconds` | `120` | Wartezeit nach dem Start des Dienstes, damit die Anmeldung nicht langsamer wird (0 bis 3600). |
+| `Enabled` | `true` | `false`: no background check. SelfX then checks when it is opened. |
+| `IntervalMinutes` | `15` | Time between two checks (5 to 1440). |
+| `PauseOnBattery` | `true` | No checks while on battery. |
+| `MaxCpuPercent` | `75` | If the load is higher, the check is postponed by 2 minutes (10 to 100; 100 = no limit). |
+| `StartDelaySeconds` | `120` | Waiting time after the service starts, so that sign-in is not slowed down (0 to 3600). |
 
-**Eigene Prüfskripte:** Legen Sie sie in `Sources\HealthChecks` ab. Erlaubt sind nur einfache
-Dateinamen, keine Unterordner und keine Pfade. Prüfskripte dürfen **nur lesen**. Sie dürfen nie
-neu starten, abmelden, Einstellungen ändern, Eingaben abfragen oder Prozesse im Hintergrund
-starten. Prüfen und signieren Sie sie vor der Verteilung. Schreiben Sie keine Zugangsdaten
-hinein. Der Exitcode bestimmt den Status. Timeout: 1 bis 30 Sekunden je Skript.
+**Own check scripts:** Store them in `Sources\HealthChecks`. Only simple file names are allowed, no
+subfolders and no paths. Check scripts may **only read**. They must never restart, sign out, change
+settings, ask for input or start processes in the background. Review and sign them before deployment.
+Do not put credentials into them. The exit code determines the status. Time limit: 1 to 30 seconds per
+script.
 
-**Hinweis zu Apps:** Der Intune-Zwischenspeicher ist ein internes Detail und kein offizielles
-Inventar. Er kann veraltet sein. Eine erfolgreiche Installation beweist nicht, dass eine App
-funktioniert. Für wichtige Apps sollten Sie eigene Prüfungen anlegen.
+**Note on apps:** The Intune cache is an internal detail, not an official inventory. It can be outdated.
+A successful installation does not prove that an app works. For important apps, create your own checks.
 
-## Reparaturen
+## Repairs
 
-Die Prüfungen lesen nur. Damit eine Zeile die Schaltfläche *Beheben* zeigt, legen Sie ein
-Reparaturskript in `Sources\Scripts_to_run` ab und tragen es in `Health_Config.xml` ein:
+The checks only read. For a row to show the *Fix* button, store a repair script in
+`Sources\Scripts_to_run` and add it to `Health_Config.xml`:
 
 ```xml
 <Remediations>
@@ -328,88 +321,82 @@ Reparaturskript in `Sources\Scripts_to_run` ab und tragen es in `Health_Config.x
 </Remediations>
 ```
 
-| Attribut | Bedeutung |
+| Attribute | Meaning |
 |---|---|
-| `Id` | Art der Prüfung, zum Beispiel `IME`, `Defender`, `Disk`, `Updates`, `PendingReboot`. |
-| `Name` | Optional. Der genaue technische Name der Zeile. Ohne `Name` gilt die Reparatur für alle Zeilen dieser Art. |
-| `Script` | Skript in `Scripts_to_run`. |
-| `When` | `NotOK`: nur anbieten, solange die Zeile nicht in Ordnung ist. `Always` (Standard): immer anbieten. |
-| `TimeoutSeconds` | Zeitlimit, 1 bis 7200 Sekunden. Standard 900. |
-| `OtherSessions` | `Block` wie bei Aktionen. Die mitgelieferte Konfiguration setzt es für `Updates` und `PendingReboot`. |
+| `Id` | Kind of check, for example `IME`, `Defender`, `Disk`, `Updates`, `PendingReboot`. |
+| `Name` | Optional. The exact technical name of the row. Without `Name` the repair applies to all rows of this kind. |
+| `Script` | Script in `Scripts_to_run`. |
+| `When` | `NotOK`: offer only while the row is not OK. `Always` (default): always offer. |
+| `TimeoutSeconds` | Time limit, 1 to 7200 seconds. Default 900. |
+| `OtherSessions` | `Block` as for actions. The bundled configuration sets it for `Updates` and `PendingReboot`. |
 
-**So läuft eine Reparatur:** Der Nutzer bestätigt. Der Dienst prüft, ob das Skript in der
-geschützten Liste steht, und führt es als SYSTEM aus. Nutzer können keine eigenen Skripte,
-Pfade oder Argumente übergeben. Nach der Reparatur prüft SelfX nur die betroffene Zeile
-erneut. Das Ergebnis dieser Prüfung zählt, nicht der Exitcode des Skripts.
+**How a repair runs:** The user confirms. The service checks whether the script is in the protected list
+and runs it as SYSTEM. Users cannot pass their own scripts, paths or arguments. After the repair, SelfX
+checks only the affected row again. The result of that check counts, not the exit code of the script.
 
-**Mitgelieferte Reparaturen:**
+**Bundled repairs:**
 
-- **Defender-Signaturen** (`SelfX_Defender_UpdateSignature.ps1`): aktualisiert die
-  Virenschutz-Signaturen. Braucht eine erreichbare Update-Quelle.
-- **Updates** (`SelfX_Updates_Install.ps1`): startet die Suche und Installation über den
-  Windows-Update-Orchestrator. Das Skript startet Windows **nie** selbst neu. Ein Neustart
-  erscheint danach in der Zeile *Neustart ausstehend*. Die Protokolle liegen in
-  `%ProgramData%\SelfX\Logs`.
-- **Neustart** (`SelfX_Device_Restart.ps1`): Der Nutzer bekommt eine Warnung. Windows startet
-  etwa 30 Sekunden nach der Bestätigung neu. Der Neustart ist nie Teil von *Alle Probleme
-  beheben*.
-- **App-Wiederholung** (`SelfX_Apps_RetryInstall.ps1`): setzt den Wiederholungsplan einer
-  fehlgeschlagenen Intune-App zurück. Es wird keine App deinstalliert.
+- **Defender signatures** (`SelfX_Defender_UpdateSignature.ps1`): updates the antivirus signatures.
+  Needs a reachable update source.
+- **Updates** (`SelfX_Updates_Install.ps1`): starts the search and installation through the Windows
+  Update orchestrator. The script **never** restarts Windows itself. A required restart then appears in
+  the row *Pending restart*. The logs are in `%ProgramData%\SelfX\Logs`.
+- **Restart** (`SelfX_Device_Restart.ps1`): the user gets a warning. Windows restarts about 30 seconds
+  after confirmation. The restart is never part of *Fix all problems*.
+- **App retry** (`SelfX_Apps_RetryInstall.ps1`): resets the retry plan of a failed Intune app. No app is
+  uninstalled.
 
-## Geräteprotokolle für den Support
+## Device logs for support
 
-Mit *Geräteprotokolle an den Support senden* sammelt SelfX alle Protokolle, die für eine
-Fehleranalyse nötig sind. Danach öffnet sich eine E-Mail an den Support mit dem Bericht im
-Anhang. **Nichts wird automatisch gesendet.** Der Nutzer beschreibt das Problem und sendet die
-E-Mail selbst.
+With *Send device logs to support*, SelfX collects all logs needed to analyze a device problem. Then an
+e-mail to support opens with the report attached. **Nothing is sent automatically.** The user describes
+the problem and sends the e-mail themselves.
 
-**Ablauf:**
+**Process:**
 
-1. Der Nutzer bestätigt. Der Dienst führt `SelfX_Device_CollectLogs.ps1` als SYSTEM aus.
-2. Das Skript erstellt den Bericht in `%ProgramData%\SelfX\Reports\<Nutzer-SID>`, als `.zip`
-   (Standard) oder `.txt` (`DeviceLogs_Compress`).
-3. Der Ordner ist geschützt: Vollzugriff für SYSTEM und Administratoren, Lesen nur für den
-   anfragenden Nutzer. Berichte, die älter als 7 Tage sind, löscht der Dienst einmal am Tag.
-4. Die Oberfläche kopiert den Bericht und öffnet die E-Mail. Empfänger ist `Support_Mail`.
+1. The user confirms. The service runs `SelfX_Device_CollectLogs.ps1` as SYSTEM.
+2. The script creates the report in `%ProgramData%\SelfX\Reports\<user SID>`, as `.zip` (default) or `.txt`
+   (`DeviceLogs_Compress`).
+3. The folder is protected: full control for SYSTEM and administrators, read only for the requesting user.
+   The service deletes reports older than 7 days once a day.
+4. The user interface copies the report and opens the e-mail. The recipient is `Support_Mail`.
 
-**Was ein normaler Nutzer sieht:** Der Bericht wird pro Nutzer gekürzt. Administratoren mit
-erhöhten Rechten erhalten den vollständigen Bericht. Normale Nutzer sehen:
+**What a normal user sees:** The report is shortened per user. Administrators with elevated rights get the
+complete report. Normal users see:
 
-| Bereich | Administrator | Normaler Nutzer |
+| Area | Administrator | Normal user |
 |---|---|---|
-| Sitzungen, Profile, Prozesse | alle | nur die eigenen |
-| Konto der Geräteregistrierung, Kennungen | ja | nein (nur Typ und Status) |
-| Befehlszeilen von Prozessen | ja | nein (nur Name und Startzeit) |
-| Inhalt der Intune- und Windows-Update-Protokolle | ja | nein (nur Dateiname, Größe, Zeit) |
-| Text der Ereignisse | ja | nein (nur Zeit, Kennung, Stufe, Anbieter) |
-| E-Mail-Adressen und Namen anderer Nutzer | unverändert | ersetzt |
-| SelfX-Geräteprotokolle | ja | nein |
-| Eigene SelfX-Nutzerprotokolle | ja | ja |
+| Sessions, profiles, processes | all | only their own |
+| Device registration account, identifiers | yes | no (only type and status) |
+| Process command lines | yes | no (only name and start time) |
+| Content of Intune and Windows Update logs | yes | no (only file name, size, time) |
+| Text of events | yes | no (only time, ID, level, provider) |
+| E-mail addresses and names of other users | unchanged | replaced |
+| SelfX device logs | yes | no |
+| Own SelfX user logs | yes | yes |
 
-Im Nutzermodus werden E-Mail-Adressen und fremde SIDs vor dem Schreiben ersetzt, auch an
-Stellen, die nicht ausdrücklich gekürzt werden. Die ausgelassenen Bereiche sind im Bericht
-selbst vermerkt.
+In user mode, e-mail addresses and foreign SIDs are replaced before writing, also in places that are not
+explicitly shortened. The omitted areas are noted in the report.
 
-**Die Zusammenfassung der Ereignisprotokolle** (Abschnitt 8) zeigt Fehler und Warnungen der
-letzten `DeviceLogs_Days` Tage, gezählt nach Anbieter und Ereignis-Kennung. Der Meldungstext
-fehlt bewusst, weil er Namen, Pfade und Adressen enthalten kann.
+**The event log summary** (section 8) shows errors and warnings of the last `DeviceLogs_Days` days,
+counted by provider and event ID. The message text is deliberately left out, because it may contain
+names, paths and addresses.
 
-**SelfX-Protokolle im Bericht:** Der Dienst fügt als SYSTEM die Protokolle aus
-`%ProgramData%\SelfX\Logs` hinzu (nur für Administratoren, ohne Nutzerordner). SelfX fügt im
-Fenster die Protokolle des eigenen Nutzers hinzu. Die Nutzerordner werden nie als SYSTEM
-gelesen. Ein Nutzer könnte sie sonst über Verknüpfungen auf geschützte Dateien umlenken.
+**SelfX logs in the report:** The service adds, as SYSTEM, the logs from `%ProgramData%\SelfX\Logs`
+(only for administrators, without user folders). SelfX adds the logs of the signed-in user in the window.
+User folders are never read as SYSTEM. Otherwise a user could redirect reads to protected files through
+links.
 
-**Exitcodes des Sammelskripts:** `0` Bericht erstellt, `1` Fehler, `2` anfragender Nutzer
-unbekannt.
+**Exit codes of the collection script:** `0` report created, `1` error, `2` requesting user unknown.
 
-## Netzwerk-Messungen
+## Network measurements
 
-Optional und standardmäßig aus. Die Datei `Network_Test_Config.xml` zeigt auf der Seite
-*Systeminformationen* zusätzliche Zeilen im Bereich Netzwerk:
+Optional and off by default. The file `Network_Test_Config.xml` adds rows to the *System information*
+page in the network area:
 
-- Antwortzeit zum Standardgateway,
-- Dauer einer Namensauflösung (DNS),
-- Dauer eines Verbindungsaufbaus (TCP).
+- response time to the default gateway,
+- duration of a name resolution (DNS),
+- duration of a connection setup (TCP).
 
 ```xml
 <Network_Test_Config>
@@ -421,60 +408,57 @@ Optional und standardmäßig aus. Die Datei `Network_Test_Config.xml` zeigt auf 
 </Network_Test_Config>
 ```
 
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 |---|---|
-| `Enabled` | `True` schaltet die Messungen ein. Standard: `False`. |
-| `Gateway` | `True`: Antwortzeit zum Gateway messen. |
-| `Samples` | Messungen je Wert (1 bis 5, Standard 3). |
-| `TimeoutMs` | Wartezeit je Messung (200 bis 5000 ms, Standard 2000). |
-| `Target` | Bis zu 5 Ziele. `Label` ist der Anzeigename. `Host` ist ein Name oder eine IPv4-Adresse. `Port` ist optional. |
+| `Enabled` | `True` switches the measurements on. Default: `False`. |
+| `Gateway` | `True`: measure the response time to the gateway. |
+| `Samples` | Measurements per value (1 to 5, default 3). |
+| `TimeoutMs` | Waiting time per measurement (200 to 5000 ms, default 2000). |
+| `Target` | Up to 5 targets. `Label` is the display name. `Host` is a name or an IPv4 address. `Port` is optional. |
 
-**Ziele wählen:** Legen Sie fest, was gemessen wird. Ein **interner Name** zeigt die Qualität
-im Firmennetz. Ein **Name aus dem Internet** zeigt, wie ein mobiles Gerät ohne VPN arbeitet.
-Nehmen Sie dafür eine Adresse, die Ihre Organisation betreibt.
+**Choosing targets:** You decide what is measured. An **internal name** shows the quality inside the
+company network. A **name from the internet** shows how a mobile device without VPN performs. For that,
+use an address your organization operates.
 
-**Sicherheit:** Ziele kommen nur aus der Datei, die nur Administratoren ändern können. `Host`
-wird streng geprüft: nur Buchstaben, Ziffern, Bindestrich und Punkte. Das Gerät sendet nur
-eine Namensabfrage, Ping-Pakete zum Gateway und den Verbindungsaufbau zu den Zielen. Es werden
-keine Daten übertragen und kein Durchsatz gemessen.
+**Security:** Targets come only from the file, which only administrators can change. `Host` is checked
+strictly: only letters, digits, hyphens and dots. The device only sends a name query, ping packets to
+the gateway and connection attempts to the targets. No data is transferred and no throughput is measured.
 
-**Vor der Verteilung prüfen:** `tools\Test-SelfXNetworkMeasure.ps1` zeigt die Einstellungen und
-ungültige Einträge. Mit `-Run` führt es die Messungen einmal auf dem aktuellen Gerät aus.
+**Check before deployment:** `tools\Test-SelfXNetworkMeasure.ps1` shows the settings and invalid entries.
+With `-Run` it performs the measurements once on the current device.
 
-## Ticket per E-Mail
+## Ticket by e-mail
 
-Optional und standardmäßig aus (`Ticket_Enabled` = `False`). Ist die Funktion an, zeigt der
-Hilfe-Dialog die Zeile *Problem melden* mit der Schaltfläche *Ticket erstellen*.
+Optional and off by default (`Ticket_Enabled` = `False`). When the function is on, the help dialog shows
+the row *Report a problem* with the button *Create ticket*.
 
-**Ablauf (ohne erhöhte Rechte):**
+**Process (without elevated rights):**
 
-1. Der Nutzer beschreibt das Problem (bis 3000 Zeichen).
-2. SelfX fügt **immer** die Geräteinformationen hinzu: Gerätename, Windows-Version, SelfX-Version
-   und die Angaben aus Systeminformationen und Gerätestatus. Der Nutzer kann sie nicht abwählen.
-3. Die E-Mail wird **nur angezeigt**. Der Nutzer prüft sie und sendet sie selbst.
+1. The user describes the problem (up to 3000 characters).
+2. SelfX **always** adds the device information: device name, Windows version, SelfX version and the
+   details from System information and Device status. The user cannot deselect them.
+3. The e-mail is **only shown**. The user checks it and sends it themselves.
 
-**Übergabe an das Mailprogramm:**
+**Handover to the mail program:**
 
-- *Klassisches Outlook:* Empfänger, Betreff, Text und die Datei `TicketInfo-<Gerät>-<Zeit>.txt`
-  als Anhang.
-- *Neues Outlook oder anderes Mailprogramm:* Empfänger, Betreff und Text. Der Text ist begrenzt
-  und wird bei Bedarf gekürzt. Die vollständige Datei markiert SelfX im Explorer. Der Nutzer
-  hängt sie selbst an.
+- *Classic Outlook:* recipient, subject, text and the file `TicketInfo-<device>-<time>.txt` as attachment.
+- *New Outlook or another mail program:* recipient, subject and text. The text is length-limited and
+  shortened if needed. SelfX marks the complete file in Explorer. The user attaches it themselves.
 
-**Aufbau des Betreffs:** `[<Ticket_Subject_Tag>][<Art>] <Gerät>`. Das hilft bei Filtern.
+**Subject structure:** `[<Ticket_Subject_Tag>][<type>] <device>`. This helps with filters.
 
-**Wer die E-Mail erhält.** Die Reihenfolge, von der höchsten Priorität:
+**Who receives the e-mail.** The order, from highest priority:
 
-1. **Registrywerte pro Gerät:** `TicketMail` (und optional `TicketCc`) in
-   `HKLM\SOFTWARE\SelfX\Support`. Intune kann sie pro Gerätegruppe setzen (siehe
-   [Installationsanleitung](Installation.md#ticket-zuordnung-per-intune)).
-2. **Regeln in `Ticket_Config.xml`.**
-3. **`Ticket_Mail`** in `Tool_Config.xml`, sonst **`Support_Mail`**.
+1. **Registry values per device:** `TicketMail` (and optionally `TicketCc`) in
+   `HKLM\SOFTWARE\SelfX\Support`. Intune can set them per device group (see the
+   [installation guide](Installation.md#ticket-routing-with-intune)).
+2. **Rules in `Ticket_Config.xml`.**
+3. **`Ticket_Mail`** in `Tool_Config.xml`, otherwise **`Support_Mail`**.
 
-Jede Adresse muss genau eine einfache Adresse sein. Ungültige Werte werden übersprungen. Der
-Empfänger steht im Dialog. Der Nutzer kann ihn nicht ändern.
+Every address must be exactly one plain address. Invalid values are skipped. The recipient is shown in the
+dialog. The user cannot change it.
 
-**Regeln in `Ticket_Config.xml`:**
+**Rules in `Ticket_Config.xml`:**
 
 ```xml
 <Unit Id="IT1" Mail="it1-service@example.com" Cc="" />
@@ -482,143 +466,136 @@ Empfänger steht im Dialog. Der Nutzer kann ihn nicht ändern.
 <Rule Source="OU" Regex="OU=Berlin" Unit="IT1" />
 ```
 
-- `Unit` legt eine Einheit mit Empfänger und optionaler Kopie fest.
-- `Rule` weist einen Wert einer Einheit zu. `Source` ist `GroupTag`, `OU` oder `Category`.
-  `Match` ist ein exakter Wert. Statt `Match` können Sie einen `Regex`-Ausdruck verwenden.
-- Regeln werden von oben nach unten geprüft. **Die erste passende Regel gewinnt.**
-- Ungültige Einträge werden übersprungen und im SelfX-Protokoll vermerkt.
-- **Vor der Verteilung prüfen:** `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ... -OU ...`
-  zeigt, welche Einheit herauskommt. Das Skript sendet nichts.
+- `Unit` defines a unit with recipient and optional copy.
+- `Rule` assigns a value to a unit. `Source` is `GroupTag`, `OU` or `Category`. `Match` is an exact value.
+  Instead of `Match` you can use a `Regex` expression.
+- Rules are checked from top to bottom. **The first matching rule wins.**
+- Invalid entries are skipped and noted in the SelfX log.
+- **Check before deployment:** `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ... -OU ...` shows
+  which unit results. The script sends nothing.
 
-**Postfächer:** Verwenden Sie nur gemeinsame Funktionspostfächer. `Ticket_Config.xml` liegt auf
-jedem Gerät und kann von jedem Nutzer gelesen werden. Adressen, die nicht jeder sehen soll,
-gehören in die Registrywerte pro Gerät.
+**Mailboxes:** Use only shared functional mailboxes. `Ticket_Config.xml` is on every device and can be read by
+every user. Addresses that not everyone should see belong in the registry values per device.
 
-**Sicherheit:** Empfänger und Kopie kommen nur aus den Administrator-Dateien und der Registry.
-Felder werden bereinigt: keine Zeilenumbrüche im Betreff und feste Längen. Freitext und
-Geräteinformationen stehen in Codeblöcken, damit ein Ticketsystem daraus keine Befehle ausführt.
-Testen Sie vor dem Einschalten, ob Ihr Ticketsystem das so behandelt. Das Protokoll nennt nur
-das Ergebnis, nie den Text.
+**Security:** Recipient and copy come only from the administrator-controlled files and the registry. Fields
+are cleaned: no line breaks in the subject and fixed lengths. Free text and device information are placed
+in code blocks, so that a ticket system does not run commands from them. Test before switching it on
+whether your ticket system handles this. The log records only the result, never the text.
 
-## Firmen-Wiki
+## Company wiki
 
-Optional und standardmäßig aus (`Wiki_Enabled` = `False`). Ist die Funktion an und `Wiki_Url` gültig, zeigt
-SelfX in der Navigation die Schaltfläche *Firmen-Wiki*. Ein Klick öffnet die Adresse im Standard-Webbrowser
-des Nutzers, zum Beispiel eine Seite mit Tipps und Tricks Ihrer Firma. SelfX sendet dabei keine Daten.
+Optional and off by default (`Wiki_Enabled` = `False`). When the function is on and `Wiki_Url` is valid, SelfX
+shows a *Company wiki* button in the navigation. One click opens the address in the default web browser of the
+user, for example a page with tips and tricks of your company. SelfX sends no data.
 
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 | --- | --- |
-| `Wiki_Enabled` | `False` (Standard) oder `True`. |
-| `Wiki_Url` | Adresse des Wikis. Nur `https://`, ohne Benutzername und Kennwort, höchstens 2000 Zeichen. Ist sie ungültig, wird die Schaltfläche nicht angezeigt und eine Warnung ins Protokoll geschrieben. |
-| `Wiki_Name` | Optional. Name auf der Schaltfläche, bis 40 Zeichen. Leer = Text „Firmen-Wiki“ in der Sprache des Nutzers. |
+| `Wiki_Enabled` | `False` (default) or `True`. |
+| `Wiki_Url` | Address of the wiki. `https://` only, no user name or password, at most 2000 characters. If it is invalid, the button is not shown and a warning is written to the log. |
+| `Wiki_Name` | Optional. Name on the button, up to 40 characters. Empty = the text "Company wiki" in the language of the user. |
 
-Die Schaltfläche läuft im Nutzerkontext, der Dienst ist nicht beteiligt. Der Assistent (`tools\New-SelfXPackage.ps1`)
-fragt die drei Werte ab.
+The button runs in the user context; the service is not involved. The wizard (`tools\New-SelfXPackage.ps1`)
+asks for the three values.
 
 ## Copilot Chat
 
-Optional und standardmäßig aus (`Copilot_Enabled` = `False`). Ist die Funktion an, zeigt der
-Hilfe-Dialog die Zeile *Copilot Chat fragen* mit der Schaltfläche *Text vorbereiten*.
-Copilot Chat ist die Chat-Funktion in Microsoft 365. **SelfX nutzt keine Schnittstelle und kein
-Token.** Der Nutzer fügt den Text selbst in Copilot Chat ein.
+Optional and off by default (`Copilot_Enabled` = `False`). When the function is on, the help dialog shows
+the row *Ask Copilot Chat* with the button *Prepare text*. Copilot Chat is the chat function in Microsoft 365.
+**SelfX uses no interface and no token.** The user pastes the text into Copilot Chat themselves.
 
-**Ablauf:**
+**Process:**
 
-1. Der Nutzer beschreibt das Problem mit eigenen Worten (optional, bis 1000 Zeichen) und wählt
-   *Text erstellen*.
-2. SelfX zeigt den fertigen Text in einer Vorschau. Der Nutzer kann ihn lesen und ändern.
-3. *Kopieren und Copilot öffnen* kopiert den Text und öffnet die Adresse aus `Copilot_Url`.
-   Der Nutzer fügt den Text mit Strg+V ein und sendet ihn selbst ab.
+1. The user describes the problem in their own words (optional, up to 1000 characters) and chooses
+   *Create text*.
+2. SelfX shows the finished text in a preview. The user can read and change it.
+3. *Copy and open Copilot* copies the text and opens the address from `Copilot_Url`. The user pastes the
+   text with Ctrl+V and sends it themselves.
 
-**Was im Text steht:** Windows-Version und Build, SelfX-Version und Sprache, Tage seit dem
-letzten Neustart, Laufwerke (belegt in Prozent, frei in GB), der Gerätestatus und die Art der
-Netzwerkverbindung (LAN, WLAN, Mobilfunk, VPN) sowie die Art des Proxys.
+**What the text contains:** Windows version and build, SelfX version and language, days since the last restart,
+drives (percent used, GB free), the device status and the type of network connection (LAN, Wi-Fi, mobile,
+VPN) as well as the type of proxy.
 
-**Was nicht im Text steht:** Gerätename, Nutzername, Domäne, E-Mail-Adressen, IP- und
-MAC-Adressen, Seriennummern, Protokolle. Taucht so etwas in der Beschreibung auf, ersetzt SelfX
-es durch Platzhalter (zum Beispiel `<email>`). Die Erkennung ist nicht vollständig. Deshalb
-sieht der Nutzer den Text vor dem Kopieren. Der Text ist auf 6000 Zeichen begrenzt.
+**What the text does not contain:** device name, user name, domain, e-mail addresses, IP and MAC addresses,
+serial numbers, logs. If such data appears in the description, SelfX replaces it with placeholders (for
+example `<email>`). Detection is not complete. Therefore the user sees the text before copying. The text is
+limited to 6000 characters.
 
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 |---|---|
-| `Copilot_Enabled` | `False` (Standard) oder `True`. |
-| `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://copilot.cloud.microsoft`. Muss mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. |
-| `Copilot_Audience` | `User` (Standard): einfache Antworten. `Admin`: technische Antworten für IT-Personal. |
-| `Copilot_Include_AppNames` | `True` (Standard): Namen fehlerhafter Firmen-Apps dürfen im Text stehen. `False`: nur ohne Namen und Fehlercodes. |
-| `Copilot_Clear_Clipboard` | `False` (Standard) oder `True`: SelfX leert die Zwischenablage später. Siehe unten. |
-| `Copilot_Clear_Clipboard_Seconds` | 30 bis 600, Standard 180. |
+| `Copilot_Enabled` | `False` (default) or `True`. |
+| `Copilot_Url` | Address that is opened. Default `https://copilot.cloud.microsoft`. Must start with `https://`, must not contain credentials and may have at most 500 characters. |
+| `Copilot_Audience` | `User` (default): simple answers. `Admin`: technical answers for IT staff. |
+| `Copilot_Include_AppNames` | `True` (default): names of faulty company apps may appear in the text. `False`: only without names and error codes. |
+| `Copilot_Clear_Clipboard` | `False` (default) or `True`: SelfX clears the clipboard later. See below. |
+| `Copilot_Clear_Clipboard_Seconds` | 30 to 600, default 180. |
 
-**Zwischenablage leeren (optional):** Mit `Copilot_Clear_Clipboard` = `True` startet SelfX beim
-Kopieren einen Zeitgeber. Nach Ablauf leert SelfX die Zwischenablage, aber nur, wenn der Text
-dieses Kopiervorgangs noch darin steht. SelfX liest dafür keinen anderen Inhalt. Hat der Nutzer
-inzwischen etwas anderes kopiert, bleibt es unverändert.
+**Clear the clipboard (optional):** With `Copilot_Clear_Clipboard` = `True`, SelfX starts a timer when copying.
+After it expires, SelfX clears the clipboard, but only if the text of this copy operation is still in it.
+SelfX reads no other content for this. If the user has copied something else in the meantime, it stays unchanged.
 
-Grenzen, die Sie kennen sollten:
+Limits you should know:
 
-- SelfX kann nicht erkennen, ob der Nutzer den Text eingefügt hat. Deshalb ist die Zeit mit
-  180 Sekunden so gewählt, dass auch Anmeldung und Bestätigung in Copilot Chat Platz haben.
-- Schließt der Nutzer SelfX früher, bleibt der Text in der Zwischenablage. SelfX leert dann
-  nicht, weil der Text vielleicht noch nicht eingefügt ist.
-- Der Verlauf der Zwischenablage (Win+V) wird nicht geleert. Dorthin gelangt der Text laut
-  Windows-Bitte gar nicht erst. Das ersetzt keine DLP-Lösung.
+- SelfX cannot detect whether the user has pasted the text. Therefore the time of 180 seconds leaves room for
+  sign-in and verification in Copilot Chat.
+- If the user closes SelfX earlier, the text stays in the clipboard. SelfX then does not clear it, because the
+  text may not have been pasted yet.
+- The clipboard history (Win+V) is not cleared. Per Windows request the text does not get there in the first
+  place. This does not replace a DLP solution.
 
-**Anweisung an Copilot anpassen:** Die Anweisung steht in den Sprachdateien unter
-`Copilot_Prompt_User` (für Nutzer) und `Copilot_Prompt_Admin` (für IT-Personal). Der Platzhalter
-`{DATA}` muss genau einmal vorkommen. Der Text darf höchstens 3000 Zeichen haben. Hält er sich
-nicht daran, nimmt SelfX den eingebauten Text.
+**Adjust the instruction to Copilot:** The instruction is in the language files under `Copilot_Prompt_User` (for
+users) and `Copilot_Prompt_Admin` (for IT staff). The placeholder `{DATA}` must appear exactly once. The text may
+have at most 3000 characters. If it does not follow this, SelfX uses the built-in text.
 
-**Sicherheit:** Die Adresse kommt nur aus `Tool_Config.xml`, die nur Administratoren ändern können.
-SelfX stellt keine Netzwerkverbindung her und ruft keinen Dienst auf. Der Text wird aus lokalen
-Werten erstellt. Das Protokoll nennt nur Zielgruppe, Länge und Host, nie den Text. Entscheiden
-Sie vor dem Einschalten, ob Ihre Richtlinien erlauben, Text aus SelfX in Copilot Chat einzufügen.
+**Security:** The address comes only from `Tool_Config.xml`, which only administrators can change. SelfX makes no
+network connection and calls no service. The text is created from local values. The log records only audience,
+length and host, never the text. Decide before switching it on whether your policies allow users to paste text
+from SelfX into Copilot Chat.
 
-## Protokolle und Aufbewahrung
+## Logs and retention
 
-SelfX schreibt Protokolle nach `%ProgramData%\SelfX\Logs`. Es gibt pro Skript und Tag eine Datei
-`<Skript>_<Datum>.log`. Jede Zeile hat die Ortszeit des Geräts:
+SelfX writes logs to `%ProgramData%\SelfX\Logs`. There is one file per script and day, `<script>_<date>.log`.
+Each line has the local time of the device:
 
 ```text
 2026-11-06 13:29:56.522 | Info    |  52068 | SelfX 3.0.0 opened: language de (setting de), page ''.
 2026-11-06 13:30:04.426 | Warning |  52068 | Message (Warning): Windows restarts in about 30 seconds. ...
 ```
 
-| Ordner | Inhalt | Lesbar für |
+| Folder | Content | Readable by |
 |---|---|---|
-| `Logs` | Skripte als SYSTEM, `SelfXService.log`, `Install.log`, `Uninstall.log` | SYSTEM und Administratoren |
-| `Logs\Users\<SID>` | Skripte des Nutzers: Fenster, Statussymbol, Nutzeraktionen | der Nutzer, SYSTEM und Administratoren |
+| `Logs` | Scripts as SYSTEM, `SelfXService.log`, `Install.log`, `Uninstall.log` | SYSTEM and administrators |
+| `Logs\Users\<SID>` | Scripts of the user: window, status icon, user actions | the user, SYSTEM and administrators |
 
-Das Fenster protokolliert seinen Start, jede Aktion und jede angezeigte Meldung. Protokolliert
-werden auch das Ergebnis jeder Aktion und Sprachwechsel. Die Protokolle enthalten keine
-Passwörter und keine Geheimnisse.
+The window logs its start, every action and every message shown. The result of every action and language
+changes are logged too. The logs contain no passwords and no secrets.
 
-**Aufbewahrung:** Dateien, die älter sind als `Log_Retention_Days` (Standard **90** Tage), werden
-gelöscht:
+**Retention:** Files older than `Log_Retention_Days` (default **90** days) are deleted:
 
-- Der Dienst löscht alte Protokolle in `Logs` einmal am Tag.
-- Jeder Nutzer löscht alte Dateien in seinem eigenen Ordner, höchstens einmal am Tag. Der Dienst
-  löscht dort nie. Ein Löschen als SYSTEM dürfte keinem Link folgen, den ein Nutzer angelegt hat.
+- The service deletes old logs in `Logs` once a day.
+- Each user deletes old files in their own folder, at most once a day. The service never deletes there,
+  because a deletion as SYSTEM must not follow a link that a user created.
 
-`Uninstall.ps1` behält die Protokolle. Mit `-RemoveLogs` werden sie gelöscht.
+`Uninstall.ps1` keeps the logs. With `-RemoveLogs` they are deleted.
 
 ## Branding
 
-Firmenlogo, Symbol und Farben stehen im Bereich `Branding` von `Tool_Config.xml`. Kopieren Sie die
-Bilder vor dem Paketieren nach `SelfX Service\Sources` oder in einen Unterordner wie
-`Sources\Branding`. Pfade sind relativ zum Installationsordner. Alle Schlüssel sind optional.
+The company logo, icon and colors are in the section `Branding` of `Tool_Config.xml`. Copy the images before
+packaging to `SelfX Service\Sources` or to a subfolder such as `Sources\Branding`. Paths are relative to the
+installation folder. All keys are optional.
 
-Die mitgelieferte `Tool_Config.xml` enthält **Platzhalter**: das Logo „YOUR LOGO“, die Farbe
-`#0072BC` und die Kontakte `support@example.com` und `+1 555 0100`. Ersetzen Sie sie vor dem
-Paketieren durch Ihre Werte, oder leeren Sie sie, um sie auszublenden.
+The bundled `Tool_Config.xml` contains **placeholders**: the logo "YOUR LOGO", the color `#0072BC` and the
+contacts `support@example.com` and `+1 555 0100`. Replace them with your values before packaging, or empty them
+to hide them.
 
-| Schlüssel | Standard | Bedeutung |
+| Key | Default | Meaning |
 |---|---|---|
-| `Brand_Logo` | leer (kein Logo) | Logo oben in der Navigation. PNG, JPG, BMP, GIF oder ICO. Ein transparentes PNG passt zu beiden Designs am besten. |
-| `Brand_Logo_Height` | `40` | Höhe in der Navigation (16 bis 120 Pixel). |
-| `Brand_Icon` | `Repair.ico` | Symbol von Fenster, Taskleiste und Statussymbol. Eine 256 × 256-Pixel-`.ico` ergibt ein scharfes Bild. |
-| `Brand_Accent_Color` | leer (nutzt `Tool_Color`) | Firmenfarbe als `#RRGGBB` für Schaltflächen und Auswahl. Die Textfarbe wählt SelfX automatisch. |
-| `Brand_TitleBar_Color` | Fensterhintergrund | Hintergrund der Titelleiste als `#RRGGBB`. |
-| `Brand_Run_Button_Color` | Akzentfarbe | Farbe der Start-Schaltflächen und von *Beheben*. |
-| `Brand_Info_Button_Color` | Akzentfarbe | Farbe der Symbole „Mehr Informationen“. |
+| `Brand_Logo` | empty (no logo) | Logo at the top of the navigation. PNG, JPG, BMP, GIF or ICO. A transparent PNG suits both designs best. |
+| `Brand_Logo_Height` | `40` | Height in the navigation (16 to 120 pixels). |
+| `Brand_Icon` | `Repair.ico` | Icon of the window, the taskbar and the status icon. A 256 × 256 pixel `.ico` gives a sharp image. |
+| `Brand_Accent_Color` | empty (uses `Tool_Color`) | Company color as `#RRGGBB` for buttons and selection. SelfX chooses the text color automatically. |
+| `Brand_TitleBar_Color` | window background | Background of the title bar as `#RRGGBB`. |
+| `Brand_Run_Button_Color` | accent color | Color of the start buttons and of *Fix*. |
+| `Brand_Info_Button_Color` | accent color | Color of the "More information" symbols. |
 
 ```xml
 <Brand_Logo>Branding\contoso.png</Brand_Logo>
@@ -628,64 +605,60 @@ Paketieren durch Ihre Werte, oder leeren Sie sie, um sie auszublenden.
 <Brand_TitleBar_Color>#3A0021</Brand_TitleBar_Color>
 ```
 
-SelfX passt sehr dunkle oder sehr helle Farben an, damit sie in beiden Designs lesbar bleiben.
+SelfX adjusts very dark or very light colors so that they stay readable in both designs.
 
-## Sprachen
+## Languages
 
-Die Basissprache ist Deutsch. Mit `Tool_Language` = `Auto` folgt SelfX der Anzeigesprache von
-Windows. Nutzer können unter den Einstellungen (Zahnrad) selbst eine Sprache wählen. Die Texte
-stehen in `Sources\Languages\<Sprache>.xml`. Es gibt Dateien für 24 Sprachen, darunter Deutsch,
-Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Polnisch, Türkisch, Arabisch
-(rechts nach links) und Chinesisch.
+The base language is German. With `Tool_Language` = `Auto`, SelfX follows the display language of Windows.
+Users can choose a language themselves under the settings (gear icon). The texts are in
+`Sources\Languages\<language>.xml`. There are files for 24 languages, among them German, English, French, Spanish,
+Italian, Dutch, Polish, Turkish, Arabic (right to left) and Chinese.
 
-Englisch ist die Referenz und der Rückfall. Die übrigen Sprachen wurden maschinell übersetzt.
-**Lassen Sie sie vor einem Rollout von Muttersprachlern prüfen.**
+English is the reference and the fallback. The other languages were machine-translated.
+**Have them checked by native speakers before a rollout.**
 
-**Welche Sprache gilt?** SelfX prüft der Reihe nach:
+**Which language applies?** SelfX checks in this order:
 
-1. Die Wahl des Nutzers. *Automatisch* heißt: weiter mit Schritt 2. Die Wahl wird ignoriert, wenn
-   `Show_Language_Setting` = `False` ist.
+1. The user's choice. *Automatic* means: continue with step 2. The choice is ignored if
+   `Show_Language_Setting` = `False`.
 2. `Tool_Language` in `Tool_Config.xml`.
-3. Die übergeordnete Sprache. `de-CH` nutzt `de.xml`, `pt-BR` nutzt `pt.xml`.
-4. Passt nichts, gilt `de.xml`.
+3. The parent language. `de-CH` uses `de.xml`, `pt-BR` uses `pt.xml`.
+4. If nothing matches, `de.xml` applies.
 
-Fehlt ein Text in der gewählten Sprache, erscheint er auf Englisch. Eine Beschriftung bleibt
-also nie leer.
+If a text is missing in the chosen language, it appears in English. A label therefore never stays empty.
 
-**Aufbau einer Sprachdatei:**
+**Structure of a language file:**
 
-| Abschnitt | Inhalt |
+| Section | Content |
 |---|---|
-| `UI` | Texte von Fenster, Dialogen, Meldungen, Gerätestatus und Statussymbol. `{0}` und `{1}` sind Platzhalter. |
-| `SystemInfo` | Beschriftungen der Systeminformationen. |
-| `Catalog/Categories` | Namen der Kategorien. |
-| `Catalog/Actions` | `Name`, `Explanation` und `Alerte_MSG` je Aktions-`Id`. |
+| `UI` | Texts of the window, dialogs, messages, device status and status icon. `{0}` and `{1}` are placeholders. |
+| `SystemInfo` | Labels of the system information. |
+| `Catalog/Categories` | Names of the categories. |
+| `Catalog/Actions` | `Name`, `Explanation` and `Alerte_MSG` for each action `Id`. |
 
-**Neue Sprache hinzufügen:**
+**Add a new language:**
 
-1. Kopieren Sie `en.xml` nach `<Sprache>.xml`, zum Beispiel `cs.xml`.
-2. Setzen Sie `Culture`, `Name` und `NativeName` am Wurzelelement. Für Schriften von rechts nach
-   links setzen Sie `FlowDirection="RightToLeft"`.
-3. Übersetzen Sie die Texte. Behalten Sie Element-Namen, Kennungen und Platzhalter bei.
-4. Prüfen Sie die Datei:
+1. Copy `en.xml` to `<language>.xml`, for example `cs.xml`.
+2. Set `Culture`, `Name` and `NativeName` on the root element. For right-to-left scripts set
+   `FlowDirection="RightToLeft"`.
+3. Translate the texts. Keep element names, identifiers and placeholders.
+4. Check the file:
 
    ```powershell
    & '.\SelfX Service\Test-LanguageFiles.ps1' -Culture cs
    ```
 
-   Die Prüfung meldet fehlende Schlüssel, defekte Platzhalter und unbekannte Katalogeinträge.
+   The check reports missing keys, broken placeholders and unknown catalog entries.
 
-Um einen Text für Ihr Unternehmen zu ändern, zum Beispiel den Haupttitel, bearbeiten Sie nur
-die Sprachdatei. Dafür ist keine Programmierung nötig.
+To change a text for your company, for example the main title, edit only the language file. No programming is needed.
 
-## Änderungen sicher ausliefern
+## Delivering changes safely
 
-1. Sichern Sie die aktuellen XML-Dateien und Skripte.
-2. Prüfen Sie, dass alle XML-Dateien gültig bleiben.
-3. Prüfen Sie, dass jedes Skript, das Sie eintragen, im Paket liegt.
-4. Testen Sie Aktionen und Bestätigungstexte auf einem Testgerät, als Standardnutzer.
-5. Führen Sie die Tests aus (siehe [Installationsanleitung](Installation.md#schritt-4-testen)).
-6. Liefern Sie Änderungen nur als **neue Paketversion** aus (siehe
-   [Installationsanleitung](Installation.md#schritt-2-paket-bauen)).
+1. Back up the current XML files and scripts.
+2. Check that all XML files remain valid.
+3. Check that every script you add is in the package.
+4. Test actions and confirmation texts on a test device, as a standard user.
+5. Run the tests (see the [installation guide](Installation.md#step-4-test)).
+6. Deliver changes only as a **new package version** (see the [installation guide](Installation.md#step-2-build-the-package)).
 
-SelfX lädt keine Konfiguration aus dem Netzwerk nach. Jede Änderung ist im Paket nachvollziehbar.
+SelfX does not download configuration from the network. Every change is traceable in the package.

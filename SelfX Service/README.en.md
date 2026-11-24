@@ -10,16 +10,16 @@ SelfX Service is installed machine-wide and works without any network connection
   **System information**, icon buttons with explaining tooltips, dark and
   light theme, help dialog with the support contacts (hours, phone, mail,
   Teams chat, website / ticket system). See
-  [User interface](../docs/en/Configuration.md#user-interface).
+  [User interface](../docs/Configuration.md#user-interface).
 - Background checks (2.5.0): the service checks the device status regularly
   (default every 15 minutes, paused on battery, postponed under high processor
   load) and keeps the result, so SelfX shows status and system information
   immediately. See
-  [Background checks](../docs/en/Configuration.md#device-status).
+  [Background checks](../docs/Configuration.md#device-status).
 - Tray icon (2.5.0): a status icon next to the clock for every user (green,
   yellow, red) with a notification when a problem is found, for example low
   disk space. Each user can hide it. See
-  [Tray icon](../docs/en/Configuration.md#status-icon).
+  [Tray icon](../docs/Configuration.md#status-icon).
 - **Fix all problems** and user time zone (2.5.3): one button on the Device
   status page runs all prepared repairs one after another; all times are shown
   in the current time zone of the user. SelfX and the status icon start
@@ -35,40 +35,40 @@ SelfX Service is installed machine-wide and works without any network connection
   still need the network to have an effect, for example Intune sync.
 - Branding: you can set a company logo, an icon and the colors in
   `Tool_Config.xml`. See
-  [Configuration](../docs/en/Configuration.md#branding).
+  [Configuration](../docs/Configuration.md#branding).
 - Multilingual user interface: German is the base language (2.6.12); with
   `Tool_Language` set to `Auto`, SelfX uses the Windows display language of the
   user, and German if it is not available. Texts that are missing in a language
   are shown in English. Users can choose another language in the settings
   (saved per user, 2.5.9). 24 languages are included in
   `Sources\Languages`. To add a language, add one XML file. See
-  [Configuration](../docs/en/Configuration.md#languages).
+  [Configuration](../docs/Configuration.md#languages).
 - Every script starts with a description and a version history.
 - Status cards with an administrator-configured remediation offer a localized
   **Fix** button. Repairs run through the local service after confirmation,
   then re-check that status. Every card has a **check again** button that only
   re-checks that status. By default
   Defender (always) and Compliance (when not OK) offer a signature update
-  (`Update-MpSignature`); the Defender row shows signature version and last update. See [Health remediation](../docs/en/Configuration.md#repairs).
+  (`Update-MpSignature`); the Defender row shows signature version and last update. See [Health remediation](../docs/Configuration.md#repairs).
 - Local health results on the Device status page: IME, Defender, disk space,
   BitLocker, pending reboot, updates to install (offline Windows Update cache),
   a best-effort cached app summary with exclusions, configurable
   services and script probes. Cloud compliance is not inferred offline.
-  See [Health status](../docs/en/Configuration.md#device-status).
+  See [Health status](../docs/Configuration.md#device-status).
 - **Send logs to support** (2.4.0): the action *Send the device logs to the
   support* and a button in System information run `Collect-DeviceLogs.ps1`
   with administrator rights through the service. Then they open a new e-mail
   (Outlook) to `Support_Mail` with the report attached; the user describes the
   issue and sends it. See
-  [Device logs for the support](../docs/en/Configuration.md#device-logs-for-support).
+  [Device logs for the support](../docs/Configuration.md#device-logs-for-support).
 - Logging and repairs (2.6.0): every script logs to `%ProgramData%\SelfX\Logs`
   (users to `Logs\Users\<SID>`), old logs are deleted after `Log_Retention_Days`
   (default 90). **Restart now** on *Restart pending* (with a restart warning),
   **Try again** for failed company apps, and the update repair installs the pending Windows updates
   (2.6.3). All action scripts were checked and
   fixed (for example Word, Teams, OneDrive and the disk check). See
-  [Logging](../docs/en/Configuration.md#logs-and-retention)
-  and [Health remediation](../docs/en/Configuration.md#repairs).
+  [Logging](../docs/Configuration.md#logs-and-retention)
+  and [Health remediation](../docs/Configuration.md#repairs).
 
 ## Package layout
 
@@ -97,7 +97,7 @@ SelfX Service is installed machine-wide and works without any network connection
 | `Sources\SelfX_Tray.ps1` | Status icon in the notification area (started at sign-in through the HKLM Run entry `SelfXTray`, and right after the installation for signed-in users). |
 | `Sources\Scripts_to_run\Collect-DeviceLogs.ps1`, `Sources\Scripts_to_run\SelfX_Device_CollectLogs.ps1`, `Sources\SupportReport.ps1` | Device logs: read-only collector, System wrapper and the GUI e-mail helper. |
 | `Sources\HealthStatus.ps1`, `Sources\Health_Config.xml` | Service-side collector and administrator-controlled health settings. Optional scripts go in `Sources\HealthChecks`. |
-| `Service\SelfXService.cs` | Source of the Windows service. Built once as a .NET 10 program with `tools\Build-SelfXBinaries.ps1` (since 2.7.0, see [Installation](../docs/en/Installation.md#step-2-build-the-package)). |
+| `Service\SelfXService.cs` | Source of the Windows service. Built once as a .NET 10 program with `tools\Build-SelfXBinaries.ps1` (since 2.7.0, see [Installation](../docs/Installation.md#step-2-build-the-package)). |
 | `Service\SelfXLauncher.cs` | Source of `SelfX.exe` (2.5.3), the starter without console window used by the shortcuts and the status icon autostart. Built like the service as a .NET 10 program (since 2.7.0). |
 | `Service\SelfXSessionStarter.cs` | Used by `Install.ps1` (2.5.8; since 2.7.0 as `SelfXSessionStarter.dll` from `Bin`, netstandard2.0): starts the status icon right after the installation in the sessions of the signed-in users, with their normal rights. |
 | `Bin\` (required, not in Git) | Built `SelfXService.exe`, `SelfX.exe`, `SelfXSessionStarter.dll` and the manifest `SelfX.Binaries.json` from `tools\Build-SelfXBinaries.ps1`. `Install.ps1` checks the files before anything else and installs them; without `Bin` the installation stops (F9, required since 2.7.0). |
@@ -157,7 +157,7 @@ user, for example the device logs report.
 - Multi-user devices (2.6.10): the device logs report contains only the own
   data of the requesting user. Only an elevated administrator (token read by the
   service, `SELFX_CALLER_ADMIN=1`) gets the complete report. See
-  [Configuration](../docs/en/Configuration.md).
+  [Configuration](../docs/Configuration.md).
 - Blocked actions on multi-user devices (2.6.10): for actions with
   `OtherSessions=Block` (restart, Windows updates, disk check, restart of the
   network adapters and of the Intune service) a normal user gets a notice
@@ -181,7 +181,7 @@ user, for example the device logs report.
   that are built once on a build machine (folder `Bin`). The installation checks
   them against the SHA256 manifest before it changes anything; they are allowed
   with AppLocker hash rules. Nothing is compiled on the device. See
-  [Installation](../docs/en/Installation.md#step-2-build-the-package).
+  [Installation](../docs/Installation.md#step-2-build-the-package).
 - Text from requests is cleaned before it is logged (control characters and line
   separators become `?`, long text is shortened), and rejected requests are
   logged at most 20 times per minute, so a user cannot forge log lines or push
@@ -204,6 +204,6 @@ Set-Location 'C:\Path\To\SelfX Service'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
-See [Installation](../docs/en/Installation.md#step-3-set-up-in-intune),
-[Configuration](../docs/en/Configuration.md#the-most-important-settings) and the
-[User manual](../docs/en/User-Manual.md#open-selfx).
+See [Installation](../docs/Installation.md#step-3-set-up-in-intune),
+[Configuration](../docs/Configuration.md#the-most-important-settings) and the
+[User manual](../docs/User-Manual.md#open-selfx).
