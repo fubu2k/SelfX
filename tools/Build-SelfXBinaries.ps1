@@ -12,16 +12,20 @@
       SelfX Service\Bin\SelfXSessionStarter.dll   used by Install.ps1 only (Service\SelfXSessionStarter.cs)
       SelfX Service\Bin\SelfX.Binaries.json       manifest: SHA256 of the three sources and the three files
 
-    The project files are in SelfX Service\Service\Projects. The only NuGet package is pinned by a lock file
-    (packages.lock.json) and restored in locked mode. The build is reproducible: the same sources and the same
-    SDK give the same files. The files are not signed (decision 2026-11-22: allow them by hash, no certificate).
+    The project files are in SelfX Service\Service\Projects. The build works OFFLINE: NuGet.config in the repository root
+    allows only the folder offline-feed as package source (no nuget.org). Before every build the script checks the folder
+    against offline-feed\SelfX.OfflineFeed.json (SHA512 of every package; a missing, changed or additional file stops the
+    build) and restores into a fresh package cache inside the repository (.nuget-cache), so no package of the user profile
+    is used. The packages of the lock files (packages.lock.json) are restored in locked mode. The folder is filled by
+    tools\Export-SelfXOfflineFeed.ps1 (online, once per SDK or package change). The build is reproducible: the same sources,
+    the same packages and the same SDK give the same files. The files are not signed (decision 2026-11-22: allow them by hash, no certificate).
     When the AppLocker cmdlets are available, the script also writes build\SelfX.AppLocker.xml with hash rules
     for the three files (AppLocker uses its own Authenticode SHA256, not the file SHA256 of the manifest). The
     rules are not part of the package; merge them into the AppLocker policy before the package is deployed.
     Install.ps1 requires the Bin folder and checks it (see docs\Installation.md).
 
-    Requirement on the build machine: .NET SDK 10 (command dotnet, https://dotnet.microsoft.com/download),
-    internet access to nuget.org for the restore. Run in Windows PowerShell 5.1 or PowerShell 7:
+    Requirement on the build machine: .NET SDK 10 (command dotnet, installed from your own software distribution), the
+    folder offline-feed. No internet access. Run in Windows PowerShell 5.1 or PowerShell 7:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
 
 .PARAMETER OutputFolder
@@ -31,7 +35,7 @@
     Name    : Build-SelfXBinaries.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 2.8.18
+    Version : 2.8.19
     Exit code: 0 = built, an exception otherwise
 
     History:
@@ -39,6 +43,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.11   2026-11-22  fubu2k               Initial version.
     2.8.18   2026-11-23  fubu2k               Also builds Bin\Audio\SelfXAudio.dll (Service\SelfXAudio.cs)
+    2.8.19   2026-11-24  fubu2k               Offline build: packages only from offline-feed (checked against its manifest), own package cache
 #>
 
 [CmdletBinding()]
@@ -53,6 +58,10 @@ $RepositoryRoot = Split-Path -Parent $ScriptFolder
 $PackageFolder = Join-Path $RepositoryRoot 'SelfX Service'
 $ProjectsFolder = Join-Path $PackageFolder 'Service\Projects'
 if (-not $OutputFolder) { $OutputFolder = Join-Path $PackageFolder 'Bin' }
+$FeedFolder = Join-Path $RepositoryRoot 'offline-feed'
+$NuGetConfig = Join-Path $RepositoryRoot 'NuGet.config'
+$PackageCache = Join-Path $RepositoryRoot '.nuget-cache'
+. (Join-Path $ScriptFolder 'SelfXOfflineFeed.Common.ps1')
 
 # Source file, project and the file that is taken over into Bin.
 $Programs = [ordered]@{
@@ -79,6 +88,21 @@ if ($sdkExit -ne 0 -or $sdkVersion -notmatch '^10\.') { throw "The .NET SDK 10 i
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 
+# Offline: the feed must be complete and unchanged, and NuGet.config must allow nothing else. Both are checked before anything is built.
+$feedManifest = Test-SelfXOfflineFeed -FeedFolder $FeedFolder
+# The version of the runtime pack in the feed belongs to the SDK that exported it: another SDK version may ask for another runtime pack.
+if ("$($feedManifest.SdkVersion)" -ne $sdkVersion) { throw "The offline feed was exported with .NET SDK $($feedManifest.SdkVersion), this computer has $sdkVersion. Install the same SDK version or run tools\Export-SelfXOfflineFeed.ps1 again with this SDK." }
+if (-not (Test-Path -LiteralPath $NuGetConfig -PathType Leaf)) { throw 'NuGet.config is missing in the repository root (the only package source must be offline-feed).' }
+$nugetSources = New-Object System.Xml.XmlDocument
+$nugetSources.XmlResolver = $null
+$nugetSources.Load($NuGetConfig)
+$sourceKeys = @($nugetSources.SelectNodes('/configuration/packageSources/add') | ForEach-Object { $_.GetAttribute('key') })
+if ($sourceKeys.Count -ne 1 -or $sourceKeys[0] -ne 'SelfXOffline' -or $nugetSources.SelectNodes('/configuration/packageSources/clear').Count -ne 1) { throw 'NuGet.config must clear all sources and contain only the source SelfXOffline (offline-feed).' }
+# A fresh package cache inside the repository: a package that is not in the feed cannot be hidden by an old cache of the user profile.
+if (Test-Path -LiteralPath $PackageCache) { Remove-Item -LiteralPath $PackageCache -Recurse -Force }
+New-Item -ItemType Directory -Path $PackageCache | Out-Null
+$env:NUGET_PACKAGES = $PackageCache
+
 # A fresh output folder, so no file of an older build survives.
 if (Test-Path -LiteralPath $OutputFolder) { Remove-Item -LiteralPath $OutputFolder -Recurse -Force }
 New-Item -ItemType Directory -Path $OutputFolder -Force | Out-Null
@@ -93,8 +117,8 @@ try {
         $definition = $Programs[$relative]
         $project = Join-Path $ProjectsFolder ("{0}\{0}.csproj" -f $definition.Project)
         $publishFolder = Join-Path $publishRoot $definition.Project
-        & $dotnet.Source publish $project -c Release -o $publishFolder --nologo -v minimal
-        if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $($definition.Project) (exit code $LASTEXITCODE)." }
+        & $dotnet.Source publish $project -c Release -o $publishFolder --nologo -v minimal "-p:RestoreConfigFile=$NuGetConfig"
+        if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $($definition.Project) (exit code $LASTEXITCODE). Restore errors (NU1101, NU1102): the package is missing in offline-feed; run tools\Export-SelfXOfflineFeed.ps1 online." }
         $built = Join-Path $publishFolder $definition.Output
         if (-not (Test-Path -LiteralPath $built -PathType Leaf)) { throw "dotnet publish did not create $($definition.Output)." }
         $sourcePath = Join-Path $PackageFolder $relative.Replace('/', '\')
@@ -117,6 +141,7 @@ try {
 finally {
     Pop-Location
     Remove-Item -LiteralPath $publishRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $PackageCache -Recurse -Force -ErrorAction SilentlyContinue
     # dotnet leaves obj and bin next to the project files; they are not needed and must not end up in a package.
     Get-ChildItem -LiteralPath $ProjectsFolder -Directory -ErrorAction SilentlyContinue | ForEach-Object {
         foreach ($name in 'obj', 'bin') { Remove-Item -LiteralPath (Join-Path $_.FullName $name) -Recurse -Force -ErrorAction SilentlyContinue }

@@ -101,7 +101,7 @@
 	<T Id="Tool.ask">Pfad von IntuneWinAppUtil.exe (Win32 Content Prep Tool von Microsoft)</T>
 	<T Id="Tool.rec">Laden Sie es von https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool (Datei IntuneWinAppUtil.exe im Repository, nehmen Sie das neueste Release-Tag). Das Skript prüft die Microsoft-Signatur.</T>
 	<T Id="BuildBinaries.ask">Die Programme (Ordner Bin) fehlen oder sind veraltet. Jetzt mit dem .NET SDK 10 bauen?</T>
-	<T Id="BuildBinaries.rec">Ja. Der Bau braucht das .NET SDK 10 und einmalig Internet zu nuget.org.</T>
+	<T Id="BuildBinaries.rec">Ja. Der Bau braucht das .NET SDK 10, aber kein Internet: Die Pakete kommen aus dem Ordner offline-feed.</T>
 	<T Id="Output.ask">Ausgabeordner</T>
 	<T Id="Output.rec">Der Ordner enthält Paket, Erkennungsskript, Intune-Skripte und Anleitung. Nicht einchecken.</T>
 	<T Id="summary.header">Zusammenfassung Ihrer Angaben</T>

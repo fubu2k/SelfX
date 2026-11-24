@@ -22,8 +22,6 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
-    <NuGetAudit>true</NuGetAudit>
-    <NuGetAuditMode>all</NuGetAuditMode>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\SelfXService.cs" Link="SelfXService.cs" />

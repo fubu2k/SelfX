@@ -1,0 +1,13 @@
+{
+  "ManifestVersion": 1,
+  "SdkVersion": "10.0.404",
+  "Packages": {
+    "microsoft.net.illink.tasks.10.0.15.nupkg": "q/cuZxi8XPwa4dpK+7y9t3KoL7T6qQZUtIqqN96YKx1Kcgr/bhD0K3U+OaLlrWVn6R23UrsEr8FARqKYVuE3Zg==",
+    "microsoft.netcore.app.runtime.win-x64.10.0.15.nupkg": "MEGAkRGHrAXYA2t/Lo0mDxH+/O5NLqgWTcVh70iOZJTpoOCL/jKfOgDqYoDi3W9WcnviL4DhMl+5lWC8cxttSw==",
+    "microsoft.netcore.platforms.1.1.0.nupkg": "a/iSwnRZb+LHFk49hQOyThh/ZNC3vsbZsF65XwQIb863qF6msmhdQtxGXFL28Ob2NsCz/drEj28BJd/YPpLRBg==",
+    "microsoft.windows.sdk.net.ref.10.0.26100.57.nupkg": "BG2X8tqoPJu7Lde8hlg/3bF9QwOW3VsxI7MGPEQM5+i4YG0WgNeesIeia2VTRkVEnoC9SdxpFGJtdGQHHIBwcA==",
+    "netstandard.library.2.0.3.nupkg": "548M6mnBSJWxsIlkQHfbzoYxpiYFXZZSL00p4GHYv8PkiqFBnnT68mW5mGEsA/ch9fDO9GkPgkFQpWiXZN7mAQ==",
+    "system.diagnostics.eventlog.10.0.15.nupkg": "7fnFtAuSZ6UFipm59+5ZW9f/1nzV2V2NVsvF1qu6FTLwcvmydv4hduRfaX/Pa2aI1ffXcFyiOpEcgdKU3k9XaQ==",
+    "system.serviceprocess.servicecontroller.10.0.15.nupkg": "tQfKtF9TWY8uhPMCgUbI99GPBdkFqWPDJOv2aJQqQA6M5UR7WX6J4eMsUi0x/TjG8aQPolX6SPYcGkQUbHySMg=="
+  }
+}

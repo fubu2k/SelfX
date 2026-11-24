@@ -10,6 +10,7 @@ updates:
   # NuGet: the .NET projects under "SelfX Service/Service/Projects" (the folder with the project file is the directory).
   # Versions are fixed in the .csproj files; packages.lock.json (SelfXService, SelfXWinRT) is checked in and the build restores in
   # locked mode, so an update that does not also update the lock file fails the build job "Build with .NET 10 (self-contained)".
+  # The build is offline (NuGet.config): after accepting an update, run tools\Export-SelfXOfflineFeed.ps1 and commit the folder offline-feed too.
   - package-ecosystem: nuget
     directories:
       - "/SelfX Service/Service/Projects/*"
