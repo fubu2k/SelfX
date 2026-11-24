@@ -18,12 +18,12 @@
     Name    : SelfX_Excel_NewInstance.ps1
     Package : SelfX Service
     Context : User
-    Version : 3.0.1
+    Version : 2.8.23
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
-    3.0.1    2026-11-24  fubu2k               Initial version
+    2.8.23   2026-11-24  fubu2k               Initial version
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
