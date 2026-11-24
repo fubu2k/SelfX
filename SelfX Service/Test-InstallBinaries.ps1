@@ -193,7 +193,8 @@ try {
 	function Test-PowerShell7Result {
 		param([string]$Path, [string]$Minimum = '7.6.0')
 		# accepted = ready; not ready = missing or too old (the installation goes on with a warning); refused = unsafe rights (stops).
-		try { $check = Test-SelfXPowerShell7 -Executable $Path -MinimumVersion $Minimum; if ($check.Ready) { return 'accepted' } else { return 'not ready: ' + $check.Reason } }
+		# The test folder lies below %TEMP%: the folders above are not judged (StopBefore) and the current user counts as trusted.
+		try { $check = Test-SelfXPowerShell7 -Executable $Path -MinimumVersion $Minimum -StopBefore $root -TrustedSids @('S-1-5-18', 'S-1-5-32-544', $currentUser); if ($check.Ready) { return 'accepted' } else { return 'not ready: ' + $check.Reason } }
 		catch { return 'refused: ' + $_.Exception.Message }
 	}
 	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'PowerShell 7 check accepts a protected folder with a new enough version'
@@ -204,6 +205,23 @@ try {
 	& icacls.exe $ps7Folder /remove:g '*S-1-5-32-545' | Out-Null
 	& icacls.exe $ps7Folder /grant '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'Users may read and run the folder'
+	# Not only Users: Everyone (S-1-1-0), Authenticated Users (S-1-5-11) and any other identity that may write are refused.
+	foreach ($group in @('S-1-1-0', 'S-1-5-11', 'S-1-5-4', 'S-1-5-32-547')) {
+		& icacls.exe $ps7Folder /grant "*$($group):(OI)(CI)W" | Out-Null
+		Assert-Equal ((Test-PowerShell7Result $fakeExe '1.0.0') -like 'refused*can be changed by normal users*') $true "Write for $group on the folder is refused"
+		& icacls.exe $ps7Folder /remove:g "*$group" | Out-Null
+	}
+	# pwsh.exe itself: Modify for Everyone only on the file.
+	& icacls.exe $fakeExe /grant '*S-1-1-0:M' | Out-Null
+	Assert-Equal ((Test-PowerShell7Result $fakeExe '1.0.0') -like 'refused*can be changed by normal users*') $true 'Everyone may change pwsh.exe: refused'
+	& icacls.exe $fakeExe /remove:g '*S-1-1-0' | Out-Null
+	# The folder above (Program Files\PowerShell): whoever may delete or take over it can replace the folder below. The folder
+	# 'ps7' lies in $root; $root itself is the checked "parent" here (StopBefore = the folder above it).
+	& icacls.exe $root /grant '*S-1-1-0:(DC)' | Out-Null
+	$parentCheck = try { $null = Test-SelfXPowerShell7 -Executable $fakeExe -MinimumVersion '1.0.0' -StopBefore (Split-Path -Parent $root) -TrustedSids @('S-1-5-18', 'S-1-5-32-544', $currentUser); 'accepted' } catch { 'refused: ' + $_.Exception.Message }
+	Assert-Equal ($parentCheck -like 'refused*can be changed by normal users*') $true 'Everyone may delete subfolders of the folder above: refused'
+	& icacls.exe $root /remove:g '*S-1-1-0' | Out-Null
+	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'After removing the extra rights the folder is accepted again'
 
 	# Windows 11 25H2 (build 26200) is the minimum; older builds stop the installation (hard abort).
 	function Test-WindowsBuildResult {

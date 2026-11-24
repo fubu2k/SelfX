@@ -12,6 +12,17 @@ Die Paketversion ist `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`.
 (das Paketierungsskript prüft das). Ein Release bekommt das Tag `v<Version>` (zum
 Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` übereinstimmen.
 
+## 3.0.2 - 2026-11-24 (SelfX Service)
+
+- **Sicherheit, Berichtsleser:** `SelfX_Device_CollectLogs.ps1` (2.8.21) gibt den Bericht nur noch dem Konto des anfragenden Nutzers
+  frei. Als Leser sind nur Nutzer-SIDs erlaubt (`S-1-5-21-…` lokal/Domäne, `S-1-12-1-…` Entra ID). Gruppen und bekannte SIDs wie
+  Jeder (`S-1-1-0`), Authentifizierte Benutzer (`S-1-5-11`) oder Benutzer (`S-1-5-32-545`) werden abgelehnt (Exitcode 2, kein
+  Bericht), zusätzlich in `Set-ReportAcl` als zweite Sicherung.
+- **Sicherheit, PowerShell-7-Prüfung bei der Installation:** `Install.ps1` (2.8.6) prüft pwsh.exe wie der Dienst vor jedem Start:
+  nur SYSTEM, Administratoren und TrustedInstaller dürfen pwsh.exe, den Ordner und die Ordner darüber ändern oder übernehmen.
+  Die Rechte werden als SID gelesen (eine unbekannte SID wird nicht mehr übersprungen); sind sie nicht lesbar, bricht die
+  Installation ab. Tests in `Test-DeviceLogs.ps1` und `Test-InstallBinaries.ps1` ergänzt.
+
 ## 3.0.1 - 2026-11-24 (SelfX Service)
 
 - **AppLocker-Hashregeln:** `tools\Build-SelfXBinaries.ps1` (2.8.20) schreibt `build\SelfX.AppLocker.xml` auch auf deutschem und

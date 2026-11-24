@@ -57,13 +57,14 @@
     Name    : SelfX_Device_CollectLogs.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.6.10
+    Version : 2.8.21
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.4.0    2026-11-02  Wolfgang Baeck       Initial version: device logs for the support by e-mail
     2.6.10   2026-11-22  fubu2k               Normal users get the reduced report of their own data (-UserView); user logs are added by the GUI
+    2.8.21   2026-11-24  fubu2k               Security: only a user account SID (S-1-5-21-*, S-1-12-1-*) may be the report reader; groups (Everyone, Users, ...) are refused
 #>
 
 [CmdletBinding()]
@@ -108,9 +109,18 @@ function New-SafeFolder {
     }
 }
 
+# True only for the SID of a user account: local or domain account (S-1-5-21-a-b-c-rid) or Entra ID account
+# (S-1-12-1-a-b-c-d). Groups and well-known SIDs (Everyone S-1-1-0, Authenticated Users S-1-5-11, Users S-1-5-32-545,
+# SYSTEM, Administrators, ...) are refused: a report must never become readable for more than one person.
+function Test-SelfXReaderSid {
+    param([string]$Sid)
+    return ($Sid -match '^S-1-5-21-\d+-\d+-\d+-\d+$' -or $Sid -match '^S-1-12-1-\d+-\d+-\d+-\d+$')
+}
+
 # Replaces the ACL of a folder: SYSTEM and administrators full control, optional reader SID read only.
 function Set-ReportAcl {
     param([string]$Path, [string]$ReaderSid)
+    if ($ReaderSid -and -not (Test-SelfXReaderSid -Sid $ReaderSid)) { throw "The report reader '$ReaderSid' is not a user account SID." }
     $grants = @('*S-1-5-18:(OI)(CI)F', '*S-1-5-32-544:(OI)(CI)F')
     if ($ReaderSid) { $grants += "*$($ReaderSid):(OI)(CI)RX" }
     $icacls = Join-Path $env:SystemRoot 'System32\icacls.exe'
@@ -183,6 +193,10 @@ function Invoke-SelfXCollectLogs {
         $callerSid = ([Security.Principal.SecurityIdentifier]::new("$env:SELFX_CALLER_SID")).Value
     } catch {
         Write-Output 'Requesting user unknown (SELFX_CALLER_SID missing or invalid). The SelfX service must be version 2.4.0 or later.'
+        return 2
+    }
+    if (-not (Test-SelfXReaderSid -Sid $callerSid)) {
+        Write-Output 'Requesting user is not a user account (SELFX_CALLER_SID is a group or a well-known SID). No report was created.'
         return 2
     }
 

@@ -24,12 +24,13 @@
     Name    : SelfX_Apps_RetryInstall.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.6.0
+    Version : 2.8.22
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.0    2026-11-06  Wolfgang Baeck       Initial version: retry failed Win32 app installations (Applications row)
+    2.8.22   2026-11-24  fubu2k               Security: the registry keys must match the exact IME Win32Apps form (anchored, app key below the user key)
 #>
 
 # Removes the cached result and the retry schedule (GRS) of one failed app. Returns the number of removed keys.
@@ -37,11 +38,15 @@ function Reset-SelfXFailedApp {
 	param([Parameter(Mandatory = $true)]$Report)
 	$id = "$($Report.Id)"
 	if ($id -notmatch '^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$') { throw "Invalid app id '$id'." }
-	# Never delete anything outside the IME Win32Apps cache.
-	foreach ($path in @($Report.AppKey, $Report.UserKey)) {
-		if ("$path" -notmatch '\\SOFTWARE\\Microsoft\\IntuneManagementExtension\\Win32Apps\\') { throw "Unexpected registry path '$path'." }
-	}
-	if ("$($Report.AppKey)" -notmatch [regex]::Escape($id)) { throw "Registry path '$($Report.AppKey)' does not belong to app $id." }
+	# Never delete anything outside the IME Win32Apps cache. Both keys must have exactly the form that HealthStatus.ps1 builds
+	# (anchored at the start and the end, no other hive, no deeper or additional path parts):
+	#   user key: Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps\<user GUID or SID>
+	#   app key : <user key>\<app id>[_<n>]
+	$cache = '^Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\IntuneManagementExtension\\Win32Apps\\'
+	$userKey = "$($Report.UserKey)"
+	$appKey = "$($Report.AppKey)"
+	if ($userKey -notmatch ($cache + '[0-9A-Za-z-]+$')) { throw "Unexpected registry path '$userKey'." }
+	if ($appKey -notmatch ('^' + [regex]::Escape($userKey) + '\\' + [regex]::Escape($id) + '(_\d+)?$')) { throw "Registry path '$appKey' does not belong to app $id." }
 	$removed = 0
 	if (Test-Path -LiteralPath $Report.AppKey) { Remove-Item -LiteralPath $Report.AppKey -Recurse -Force -ErrorAction Stop; $removed++ }
 	$grs = Join-Path $Report.UserKey 'GRS'
