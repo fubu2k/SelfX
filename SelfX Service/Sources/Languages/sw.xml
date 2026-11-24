@@ -490,6 +490,15 @@ Ikiwa hakuna kinachobadilika: bonyeza kitufe cha Windows + P na uchague “Skrin
 
 Unataka kuendelea?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace haijibu au haionyeshi programu</Name>
+				<Explanation>Programu ya Citrix Workspace imekwama, haikuingizi, au haionyeshi programu na kompyuta za mezani zako.</Explanation>
+				<Alerte_MSG>Programu ya Citrix Workspace ya akaunti yako ya mtumiaji itafungwa na kuanzishwa upya. Vipindi vya programu na kompyuta za mezani vilivyo wazi tayari havimalizwi na SelfX. Kuingia kulikohifadhiwa na mipangilio ya programu havibadilishwi.
+
+Ingia tena baadaye ikiwa programu itakuomba.
+
+Unataka kuendelea?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Anzisha programu ya OneDrive</Name>
 				<Explanation>OneDrive haiendeshwi.</Explanation>

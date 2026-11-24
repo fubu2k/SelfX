@@ -363,6 +363,20 @@ If nothing changes: press the Windows key + P and choose "PC screen only". Then 
 Do you want to continue?</Alerte_MSG>
 		</Action>
 
+		<Action Id="D_Citrix_RestartWorkspace">
+			<Name>Citrix Workspace does not respond or does not show your apps</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>The Citrix Workspace app hangs, does not sign in or does not show your applications and desktops.</Explanation>
+			<Script>SelfX_Citrix_RestartWorkspace.ps1</Script>
+			<Context>User</Context>
+			<Category>Citrix</Category>
+			<Alerte_MSG>The Citrix Workspace app of your user account will close and start again. Application and desktop sessions that are already open are not ended by SelfX. Your saved sign-in and the settings of the app are not changed.
+
+Sign in again afterwards if the app asks you to.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
 		<Action Id="D_Office_ResetLicence">
 			<Name>Office asks to activate or reports an unlicensed product</Name>
 			<Buttons>Ok_Cancel</Buttons>

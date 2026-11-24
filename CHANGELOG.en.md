@@ -32,6 +32,12 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
   changed in the settings; windows are moved through Microsoft UI Automation (no compiled
   code) and window titles are not written to the log. Programs with higher rights are
   skipped. New helper `SelfXWindows.ps1`, test: `Test-WindowHelper.ps1`.
+- **New action "Citrix Workspace does not respond or does not show your apps"** (category
+  Citrix, user context): closes the Citrix Workspace app processes of the own user account and
+  starts the app again. Application and desktop sessions that are already open are not ended;
+  the saved sign-in and the settings stay unchanged. The program path must be below Program
+  Files (no link); there is no user input. Only the current Citrix Workspace app is
+  supported, not the Receiver.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 

@@ -490,6 +490,15 @@
 
 Продовжити?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace не відповідає або не показує програми</Name>
+				<Explanation>Застосунок Citrix Workspace зависає, не виконує вхід або не показує ваші програми та робочі столи.</Explanation>
+				<Alerte_MSG>Застосунок Citrix Workspace вашого облікового запису буде закрито й запущено знову. Уже відкриті сеанси програм і робочих столів SelfX не завершує. Збережений вхід і налаштування застосунку не змінюються.
+
+Після цього увійдіть знову, якщо застосунок цього попросить.
+
+Продовжити?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Запустити клієнт OneDrive</Name>
 				<Explanation>OneDrive не запущено.</Explanation>

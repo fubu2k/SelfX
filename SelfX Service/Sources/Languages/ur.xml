@@ -476,6 +476,15 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 
 کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace جواب نہیں دے رہا یا ایپلیکیشنز نہیں دکھا رہا</Name>
+				<Explanation>Citrix Workspace ایپ رک گئی ہے، سائن اِن نہیں کر رہی یا آپ کی ایپلیکیشنز اور ڈیسک ٹاپ نہیں دکھا رہی۔</Explanation>
+				<Alerte_MSG>آپ کے صارف اکاؤنٹ کی Citrix Workspace ایپ بند ہو کر دوبارہ شروع ہوگی۔ پہلے سے کھلے ایپلیکیشن اور ڈیسک ٹاپ سیشنز کو SelfX ختم نہیں کرتا۔ آپ کا محفوظ شدہ سائن اِن اور ایپ کی ترتیبات تبدیل نہیں ہوتیں۔
+
+اگر ایپ کہے تو اس کے بعد دوبارہ سائن اِن کریں۔
+
+کیا آپ جاری رکھنا چاہتے ہیں؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive کلائنٹ شروع کریں۔</Name>
 				<Explanation>OneDrive نہیں چل رہا ہے۔</Explanation>

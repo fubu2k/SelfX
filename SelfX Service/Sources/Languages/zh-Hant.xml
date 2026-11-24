@@ -490,6 +490,15 @@
 
 是否繼續？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace 沒有回應或不顯示應用程式</Name>
+				<Explanation>Citrix Workspace 應用程式當住、無法登入，或不顯示您的應用程式和桌面。</Explanation>
+				<Alerte_MSG>將關閉並重新啟動您使用者帳戶的 Citrix Workspace 應用程式。已經開啟的應用程式和桌面工作階段不會被 SelfX 結束。已儲存的登入資訊和應用程式設定不會被變更。
+
+如果應用程式要求，請在之後重新登入。
+
+是否繼續？</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>啟動 OneDrive 客戶端</Name>
 				<Explanation>OneDrive 當前未執行。</Explanation>

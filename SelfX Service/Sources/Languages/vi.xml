@@ -490,6 +490,15 @@ Nếu không có gì thay đổi: nhấn phím Windows + P và chọn “Chỉ m
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace không phản hồi hoặc không hiển thị ứng dụng</Name>
+				<Explanation>Ứng dụng Citrix Workspace bị treo, không đăng nhập hoặc không hiển thị các ứng dụng và máy tính để bàn của bạn.</Explanation>
+				<Alerte_MSG>Ứng dụng Citrix Workspace của tài khoản người dùng của bạn sẽ được đóng và khởi động lại. SelfX không kết thúc các phiên ứng dụng và máy tính để bàn đã mở. Thông tin đăng nhập đã lưu và cài đặt của ứng dụng không bị thay đổi.
+
+Sau đó hãy đăng nhập lại nếu ứng dụng yêu cầu.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Khởi động ứng dụng OneDrive</Name>
 				<Explanation>OneDrive hiện không chạy.</Explanation>

@@ -572,6 +572,15 @@ Wenn sich nichts ändert: Drücken Sie die Windows-Taste + P und wählen Sie „
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace reagiert nicht oder zeigt keine Anwendungen</Name>
+				<Explanation>Die Citrix-Workspace-App hängt, meldet Sie nicht an oder zeigt Ihre Anwendungen und Desktops nicht an.</Explanation>
+				<Alerte_MSG>Die Citrix-Workspace-App Ihres Benutzerkontos wird beendet und neu gestartet. Bereits geöffnete Anwendungs- und Desktop-Sitzungen werden von SelfX nicht beendet. Ihre gespeicherte Anmeldung und die Einstellungen der App werden nicht verändert.
+
+Melden Sie sich danach neu an, falls die App Sie dazu auffordert.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive starten</Name>
 				<Explanation>OneDrive läuft nicht.</Explanation>

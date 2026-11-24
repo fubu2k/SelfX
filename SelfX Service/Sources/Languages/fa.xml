@@ -490,6 +490,15 @@
 
 می‌خواهید ادامه دهید؟</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace پاسخ نمی‌دهد یا برنامه‌ها را نشان نمی‌دهد</Name>
+				<Explanation>برنامه Citrix Workspace قفل کرده است، وارد نمی‌شود یا برنامه‌ها و دسکتاپ‌های شما را نشان نمی‌دهد.</Explanation>
+				<Alerte_MSG>برنامه Citrix Workspace حساب کاربری شما بسته و دوباره راه‌اندازی می‌شود. نشست‌های برنامه و دسکتاپ که از قبل باز هستند توسط SelfX پایان داده نمی‌شوند. ورود ذخیره‌شده و تنظیمات برنامه تغییر نمی‌کنند.
+
+در صورت درخواست برنامه، پس از آن دوباره وارد شوید.
+
+می‌خواهید ادامه دهید؟</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>کلاینت OneDrive را راه اندازی کنید</Name>
 				<Explanation>OneDrive اجرا نمی شود.</Explanation>

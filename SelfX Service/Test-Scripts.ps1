@@ -382,6 +382,39 @@ try {
 		Assert-Equal ((Get-SandboxLog 'SelfX_Excel_NewInstance') -match 'Error.*Classic Excel was not found') $true 'Excel new instance: failure logged'
 		$global:FakeProcesses.Clear()
 
+		# Citrix Workspace restart (SelfX_Citrix_RestartWorkspace.ps1): only the Workspace app processes of the own session are closed,
+		# open sessions (wfica32) are not; the program path must pass the check (below Program Files, no link).
+		$citrixScript = 'SelfX_Citrix_RestartWorkspace.ps1'
+		$selfService = Join-Path $pf86 'Citrix\ICA Client\SelfServicePlugin\SelfService.exe'
+		$run = Invoke-TestScript $citrixScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '0|0' 'Citrix: not installed and not running, nothing to do'
+		New-SandboxFile $selfService
+		$run = Invoke-TestScript $citrixScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $selfService" 'Citrix: installed but not running, only started'
+		New-FakeProcess 'SelfService' $selfService
+		New-FakeProcess 'AuthManSvr' (Join-Path $pf86 'Citrix\ICA Client\Authentication\AuthManSvr.exe')
+		New-FakeProcess 'wfica32' (Join-Path $pf86 'Citrix\ICA Client\wfica32.exe')
+		New-FakeProcess 'chrome' 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+		$run = Invoke-TestScript $citrixScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Stop-Process SelfService;Stop-Process AuthManSvr;Start-Process $selfService" 'Citrix: Workspace processes closed and the app started again'
+		Assert-Equal @($global:FakeProcesses | Where-Object { $_.ProcessName -in 'wfica32', 'chrome' }).Count 2 'Citrix: open session (wfica32) and other programs keep running'
+		$global:FakeProcesses.Clear()
+
+		# A Workspace process that does not close: error, no start.
+		New-FakeProcess 'SelfService' $selfService
+		$global:StopIgnored = $true
+		$run = Invoke-TestScript $citrixScript
+		$global:StopIgnored = $false
+		Assert-Equal "$($run.ExitCode)|$(@($script:calls | Where-Object { $_ -like 'Start-Process*' }).Count)" '1|0' 'Citrix: app that does not close, no start'
+		$global:FakeProcesses.Clear()
+
+		# Untrusted program path and no installation below Program Files: nothing is closed, nothing is started.
+		Remove-Item -LiteralPath $selfService -Force
+		New-FakeProcess 'SelfService' 'C:\Users\Public\SelfService.exe'
+		$run = Invoke-TestScript $citrixScript
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)|$($global:FakeProcesses.Count)" '1|0|1' 'Citrix: untrusted program path, nothing closed or started'
+		$global:FakeProcesses.Clear()
+
 		# Teams meeting add-in: registry values are set, Outlook is restarted only if it runs.
 		New-FakeProcess 'OUTLOOK' $out64
 		$run = Invoke-TestScript 'SelfX_Outlook_TeamsAddIn.ps1'

@@ -490,6 +490,15 @@ Hiçbir şey değişmezse: Windows tuşu + P tuşlarına basın ve “Yalnızca 
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace yanıt vermiyor veya uygulamaları göstermiyor</Name>
+				<Explanation>Citrix Workspace uygulaması donuyor, oturum açmıyor veya uygulamalarınızı ve masaüstlerinizi göstermiyor.</Explanation>
+				<Alerte_MSG>Kullanıcı hesabınızın Citrix Workspace uygulaması kapatılıp yeniden başlatılacak. Zaten açık olan uygulama ve masaüstü oturumları SelfX tarafından sonlandırılmaz. Kayıtlı oturum açma bilgileriniz ve uygulama ayarları değiştirilmez.
+
+Uygulama isterse bundan sonra yeniden oturum açın.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive istemcisini başlatın</Name>
 				<Explanation>OneDrive çalışmıyor.</Explanation>

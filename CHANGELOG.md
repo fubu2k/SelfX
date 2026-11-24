@@ -33,6 +33,12 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
   Microsoft UI Automation verschoben (kein kompilierter Code), Fenstertitel stehen nicht im
   Log. Programme mit höheren Rechten werden übersprungen. Neuer Helfer `SelfXWindows.ps1`,
   Test: `Test-WindowHelper.ps1`.
+- **Neue Aktion „Citrix Workspace reagiert nicht oder zeigt keine Anwendungen“** (Kategorie
+  Citrix, Nutzerkontext): beendet die Prozesse der Citrix-Workspace-App im eigenen Benutzerkonto
+  und startet die App neu. Offene Anwendungs- und Desktop-Sitzungen werden nicht beendet,
+  gespeicherte Anmeldung und Einstellungen bleiben unverändert. Der Programmpfad muss unter
+  Program Files liegen (kein Link); es gibt keine Nutzereingaben. Nur die aktuelle
+  Citrix Workspace App wird unterstützt, nicht der Receiver.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 

@@ -490,6 +490,15 @@ Se non cambia nulla: premi il tasto Windows + P e scegli “Solo schermo PC”. 
 
 Vuoi continuare?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Citrix_RestartWorkspace">
+				<Name>Citrix Workspace non risponde o non mostra le applicazioni</Name>
+				<Explanation>L’app Citrix Workspace si blocca, non effettua l’accesso o non mostra le tue applicazioni e i tuoi desktop.</Explanation>
+				<Alerte_MSG>L’app Citrix Workspace del tuo account utente verrà chiusa e riavviata. Le sessioni di applicazioni e desktop già aperte non vengono terminate da SelfX. L’accesso salvato e le impostazioni dell’app non vengono modificati.
+
+Accedi di nuovo dopo, se l’app lo richiede.
+
+Vuoi continuare?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Avviare il client OneDrive</Name>
 				<Explanation>OneDrive non è in esecuzione.</Explanation>
