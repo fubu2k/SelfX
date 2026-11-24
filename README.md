@@ -229,7 +229,7 @@ November 2026 and hardened in versions 2.6.10 and 2.6.11; the details are in the
 - **Careful file handling.** SYSTEM does not read logs from folders that users
   can change, and the uninstallation does not follow junctions.
 - **Controlled build and deployment.** The .NET 10 programs are built once
-  (reproducible, the NuGet package fixed by a lock file), checked by hash during
+  (reproducible, built offline from a hash-checked package folder), checked by hash during
   installation and allowed with AppLocker hash rules. No compiler runs on the
   device.
 - **Automatic checks.** Every pull request compiles the service and runs the
@@ -253,6 +253,7 @@ Report vulnerabilities privately as described in [security policy](SECURITY.en.m
 |---|---|
 | `SelfX Service` | The package: installer, local Windows service (C# source), action catalogue with User and System actions, WPF application, scripts and tests |
 | `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/en/Installation.md#step-2-build-the-package)), and `Build-SelfXBinaries.ps1`, which builds the .NET 10 programs of SelfX Service (see [Building the programs](docs/en/Installation.md#step-2-build-the-package)) |
+| `offline-feed` | NuGet packages for the offline build with `SelfX.OfflineFeed.json` (SHA512 of each file); created by `tools\Export-SelfXOfflineFeed.ps1`. `NuGet.config` in the root allows only this folder. |
 | `.github` | GitHub Actions workflow (compile, tests, script analysis), `CODEOWNERS`, Dependabot configuration |
 | `build` | Not committed. Output of `New-SelfXIntuneWin.ps1`: `SelfX-Service-<version>.intunewin`; and of `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 

@@ -12,6 +12,17 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 (the packaging script checks this). A release gets the tag `v<version>` (for example
 `v3.0.0`); the release workflow checks that the tag and `Tool_Version` match.
 
+## Unreleased (SelfX Service)
+
+- **Offline build:** building the programs needs no internet any more. `NuGet.config` in the repository root allows only the
+  folder `offline-feed` (NuGet packages with the manifest `SelfX.OfflineFeed.json`, SHA512 of each file).
+  `tools\Build-SelfXBinaries.ps1` (2.8.19) checks the folder against the manifest and against the SDK version of the export before
+  every build, restores into a fresh package cache inside the repository and stops when a package is missing, changed or
+  additional. The new `tools\Export-SelfXOfflineFeed.ps1` is the only script that talks to nuget.org: it fills the folder, runs the
+  NuGet vulnerability audit (the audit is off for the offline build) and proves the folder with an offline restore. The runtime
+  packs of WindowsDesktop and AspNetCore are no longer requested (`DisableTransitiveFrameworkReferenceDownloads`). New test
+  `tools\Test-SelfXOfflineFeed.ps1`. Before the first offline build run the export once (see the installation guide, "Offline build").
+
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 
 Version 3.0.0 combines all changes since the upstream state 2.6.9 was taken over.

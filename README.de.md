@@ -251,7 +251,7 @@ Einzelheiten stehen im [Änderungsprotokoll](CHANGELOG.md) und im
   Ordnern, die Nutzer ändern können, und die Deinstallation folgt keinen
   Junctions.
 - **Kontrollierter Bau und Rollout.** Die .NET-10-Programme werden einmal gebaut
-  (reproduzierbar, NuGet-Paket per Lock-Datei festgelegt), bei der Installation
+  (reproduzierbar, offline aus einem per Hash geprüften Paketordner gebaut), bei der Installation
   per Hash geprüft und mit AppLocker-Hashregeln zugelassen. Auf dem Gerät läuft
   kein Compiler.
 - **Automatische Prüfungen.** Jeder Pull Request kompiliert den Dienst und führt
@@ -279,6 +279,7 @@ beschrieben.
 |---|---|
 | `SelfX Service` | Das Paket: Installer, lokaler Windows-Dienst (C#-Quelltext), Aktionskatalog mit Nutzer- und Systemaktionen, WPF-Anwendung, Skripte und Tests |
 | `tools` | `New-SelfXIntuneWin.ps1`, das das Intune-Paket mit dem signierten Win32 Content Prep Tool von Microsoft erstellt (siehe [Intune-Paket erstellen](docs/Installation.md#schritt-2-paket-bauen)), und `Build-SelfXBinaries.ps1`, das die .NET-10-Programme von SelfX Service baut (siehe [Programme bauen](docs/Installation.md#schritt-2-paket-bauen)) |
+| `offline-feed` | NuGet-Pakete für den Offline-Bau mit `SelfX.OfflineFeed.json` (SHA512 je Datei); erzeugt von `tools\Export-SelfXOfflineFeed.ps1`. `NuGet.config` im Hauptordner erlaubt nur diesen Ordner. |
 | `docs` | Installation, Konfiguration und Benutzerhandbuch (Deutsch); `docs/en` enthält die englischen Fassungen, `docs/images` die Bildschirmfotos |
 | `.github` | GitHub-Actions-Workflow (Kompilieren, Tests, Skriptanalyse), `CODEOWNERS`, Dependabot-Konfiguration |
 | `build` | Nicht eingecheckt. Ausgabe von `New-SelfXIntuneWin.ps1`: `SelfX-Service-<Version>.intunewin`; und von `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |

@@ -6,3 +6,6 @@
 # dotnet build output of SelfX Service
 SelfX Service/Service/Projects/**/obj/
 SelfX Service/Service/Projects/**/bin/
+
+# Offline build: the package cache of the build (tools\Build-SelfXBinaries.ps1 recreates it from offline-feed for every build)
+/.nuget-cache/

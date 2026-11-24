@@ -54,10 +54,10 @@ ein dunkles Design; SelfX folgt der Windows-Einstellung.*
 
 | Voraussetzung | Einzelheiten |
 |---|---|
-| Windows-Rechner mit Internet | Ein normaler Administrator-Arbeitsplatz reicht. |
-| .NET SDK 10 | „SDK“, nicht nur „Runtime“. |
+| Windows-Rechner | Ein normaler Administrator-Arbeitsplatz reicht. **Kein Internet nötig** (siehe „Offline-Build“). |
+| .NET SDK 10 | „SDK“, nicht nur „Runtime“. Dieselbe Version wie beim Export des Ordners `offline-feed`. |
 | `IntuneWinAppUtil.exe` | Das Win32 Content Prep Tool von Microsoft. |
-| Das SelfX-Repository | `git clone` oder ZIP von GitHub. |
+| Das SelfX-Repository | `git clone` oder ZIP von GitHub, einschließlich des Ordners `offline-feed` (NuGet-Pakete mit Hashliste). |
 
 ## Schritt 1: Build-Rechner einmal vorbereiten
 
@@ -97,8 +97,9 @@ des Repositorys.
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
    ```
 
-   Am Ende zeigt das Skript die gebauten Dateien mit ihrem Hash. Der erste Lauf lädt
-   ein Microsoft-NuGet-Paket; Version und Hash sind festgelegt und werden geprüft.
+   Am Ende zeigt das Skript die gebauten Dateien mit ihrem Hash. Der Bau braucht kein
+   Internet: Alle NuGet-Pakete kommen aus dem Ordner `offline-feed` und werden vorher gegen
+   `SelfX.OfflineFeed.json` geprüft (siehe „Offline-Build“ unten).
 4. **AppLocker anpassen** (nur wenn Sie AppLocker nutzen). Das Skript schreibt
    `build\SelfX.AppLocker.xml`. Übernehmen Sie diese Regeln und löschen Sie die Regeln der
    vorherigen Version, bevor das Paket die Geräte erreicht.
@@ -125,6 +126,37 @@ Programme, `.intunewin`, eine Stückliste (SBOM) und `SHA256SUMS.txt` und legt e
 **Entwurf** unter *Releases* an. Er veröffentlicht nichts. Prüfen Sie die Hashes und
 veröffentlichen Sie den Entwurf erst danach. Der Workflow bricht ab, wenn Tag und
 `Tool_Version` nicht übereinstimmen.
+
+### Offline-Build: Paketordner erneuern
+
+Der Bau lädt **nichts** aus dem Internet. `NuGet.config` im Repository erlaubt nur den Ordner `offline-feed` als
+Paketquelle. `Build-SelfXBinaries.ps1` prüft den Ordner vor jedem Bau gegen `offline-feed\SelfX.OfflineFeed.json`
+(SHA512 je Paket), baut mit einem frischen Paketcache `.nuget-cache` im Repository und bricht ab, wenn ein Paket fehlt,
+verändert wurde oder zusätzlich im Ordner liegt. Der Build-Rechner braucht deshalb nur das .NET SDK 10 (aus Ihrer
+Softwareverteilung), `IntuneWinAppUtil.exe` und das Repository **mit** dem Ordner `offline-feed`.
+
+Den Ordner erneuern Sie nur bei einer **neuen SDK-Version** (das Runtime-Paket gehört zur SDK-Version; der Bau meldet es,
+wenn die Versionen nicht passen) oder bei einem **neuen oder aktualisierten Paket**:
+
+1. Öffnen Sie einen Rechner **mit Internet** und **demselben .NET SDK 10** wie der Build-Rechner.
+2. Führen Sie aus:
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Export-SelfXOfflineFeed.ps1
+   ```
+
+   Das Skript lädt die Pakete von nuget.org in einen leeren Zwischenordner, lässt die NuGet-Schwachstellenprüfung laufen
+   (bei einer Meldung bricht es ab; nach eigener Prüfung geht `-AllowVulnerabilities`), prüft, dass alle Pakete der
+   `packages.lock.json` vorhanden sind, schreibt `offline-feed` neu und stellt zur Kontrolle alle Projekte nur aus diesem Ordner
+   wieder her (ohne Internet, leerer Cache, Lock-Dateien erzwungen).
+3. **Beim ersten Mal:** Die Pakete, die in keiner Lock-Datei stehen (Runtime-Paket, Windows-SDK-Projektion), sind nur durch
+   die Hashliste festgelegt. Führen Sie den Export zur Kontrolle auf einem zweiten Rechner aus; die Hashes in
+   `SelfX.OfflineFeed.json` müssen übereinstimmen.
+4. Prüfen Sie `git diff`, checken Sie den Ordner ein und kopieren Sie das Repository auf den Build-Rechner.
+5. **Test ohne Internet:** Trennen Sie den Build-Rechner vom Netz und führen Sie Schritt 2.3 aus. Der Bau muss ohne
+   Fehlermeldung durchlaufen.
+
+Dependabot-Vorschläge für NuGet-Pakete ändern den Ordner nicht: Nach einer Übernahme den Export wiederholen.
 
 ## Schritt 3: In Intune einrichten
 
@@ -475,6 +507,10 @@ einmal auf einem Testgerät.
 |---|---|
 | `The command dotnet was not found` | Das .NET SDK 10 fehlt, oder das PowerShell-Fenster ist älter als die Installation. SDK installieren und ein neues Fenster öffnen. |
 | `The .NET SDK 10 is required, found '…'` | Es ist kein SDK 10 installiert. Bei mehreren SDKs wählt die `global.json` im Repository automatisch SDK 10. |
+| `The offline feed folder … does not exist` oder `SelfX.OfflineFeed.json is missing` | Der Ordner `offline-feed` fehlt oder ist leer. Export auf einem Rechner mit Internet ausführen (Abschnitt „Offline-Build“) und den Ordner kopieren. |
+| `… does not match its SHA512` oder `… not listed in SelfX.OfflineFeed.json` | Ein Paket im Ordner `offline-feed` wurde verändert oder ergänzt. Ordner aus dem Repository wiederherstellen oder den Export wiederholen. |
+| `The offline feed was exported with .NET SDK …` | Auf dem Build-Rechner ist eine andere SDK-Version installiert als beim Export. Dieselbe Version installieren oder den Export mit dieser Version wiederholen. |
+| `NU1101` oder `NU1102` beim Bau | Ein Paket fehlt im Ordner `offline-feed`. Export wiederholen. |
 | `The folder Bin is missing …` | Schritt 2.3 fehlt oder wurde vor dem Paketbau nicht ausgeführt. Schritt 2.3 und 2.5 wiederholen. |
 | `Bin was not built from the current …` | Ein Quelltext wurde nach dem Bauen geändert. Schritt 2.3 und 2.5 wiederholen. |
 | Installation endet mit Exitcode 1 | Den Grund nennt die letzte Zeile von `Install.log`. Die bisherige Installation bleibt unverändert. |

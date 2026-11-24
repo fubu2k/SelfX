@@ -1,0 +1,12 @@
+<Project>
+  <!-- Offline build (2.8.19): the packages come from the folder offline-feed of the repository (NuGet.config in the repository root),
+       so nothing is loaded from the internet while the programs are built.
+       - NuGetAudit asks a vulnerability database on the internet during the restore. It is switched off here; the check
+         runs once in tools\Export-SelfXOfflineFeed.ps1 (online), which fills the feed.
+       - DisableTransitiveFrameworkReferenceDownloads: a self-contained build only needs the runtime pack of Microsoft.NETCore.App.
+         Without this setting the restore also asks for the runtime packs of WindowsDesktop and AspNetCore, which no project uses. -->
+  <PropertyGroup>
+    <NuGetAudit>false</NuGetAudit>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+  </PropertyGroup>
+</Project>

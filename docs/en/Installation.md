@@ -52,10 +52,10 @@ Windows setting.*
 
 | Requirement | Details |
 |---|---|
-| Windows computer with internet | A normal administrator workstation is enough. |
-| .NET SDK 10 | "SDK", not only "Runtime". |
+| Windows computer | A normal administrator workstation is enough. **No internet needed** (see "Offline build"). |
+| .NET SDK 10 | "SDK", not only "Runtime". The same version as at the export of the folder `offline-feed`. |
 | `IntuneWinAppUtil.exe` | The Win32 Content Prep Tool from Microsoft. |
-| The SelfX repository | `git clone` or ZIP from GitHub. |
+| The SelfX repository | `git clone` or ZIP from GitHub, including the folder `offline-feed` (NuGet packages with hash list). |
 
 ## Step 1: Prepare the build machine once
 
@@ -92,8 +92,9 @@ Repeat this step for every new version. Open PowerShell in the folder of the rep
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
    ```
 
-   At the end the script shows the built files with their hash. The first run downloads a
-   Microsoft NuGet package; version and hash are fixed and checked.
+   At the end the script shows the built files with their hash. The build needs no internet:
+   all NuGet packages come from the folder `offline-feed` and are checked against
+   `SelfX.OfflineFeed.json` first (see "Offline build" below).
 4. **Adjust AppLocker** (only if you use AppLocker). The script writes
    `build\SelfX.AppLocker.xml`. Take over these rules and delete the rules of the previous
    version before the package reaches the devices.
@@ -119,6 +120,36 @@ signature. It uploads nothing to Intune.
 `.intunewin`, a bill of materials (SBOM) and `SHA256SUMS.txt` and creates a **draft** under
 *Releases*. It publishes nothing. Check the hashes and publish the draft only afterwards. The
 workflow stops if the tag and `Tool_Version` do not match.
+
+### Offline build: renew the package folder
+
+The build loads **nothing** from the internet. `NuGet.config` in the repository allows only the folder `offline-feed` as
+package source. Before every build `Build-SelfXBinaries.ps1` checks the folder against `offline-feed\SelfX.OfflineFeed.json`
+(SHA512 of every package), builds with a fresh package cache `.nuget-cache` inside the repository and stops when a package
+is missing, changed or additional in the folder. The build machine therefore needs only the .NET SDK 10 (from your software
+distribution), `IntuneWinAppUtil.exe` and the repository **with** the folder `offline-feed`.
+
+Renew the folder only for a **new SDK version** (the runtime package belongs to the SDK version; the build reports it when the
+versions differ) or a **new or updated package**:
+
+1. Use a computer **with internet** and **the same .NET SDK 10** as the build machine.
+2. Run:
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Export-SelfXOfflineFeed.ps1
+   ```
+
+   The script downloads the packages from nuget.org into an empty temporary folder, runs the NuGet vulnerability audit (it
+   stops on a finding; after your own check use `-AllowVulnerabilities`), checks that all packages of `packages.lock.json` are
+   present, rewrites `offline-feed` and, as a proof, restores all projects from this folder only (no internet, empty cache,
+   lock files enforced).
+3. **The first time:** the packages that no lock file lists (runtime package, Windows SDK projection) are fixed only by the
+   hash list. Run the export on a second computer as a check; the hashes in `SelfX.OfflineFeed.json` must be identical.
+4. Check `git diff`, commit the folder and copy the repository to the build machine.
+5. **Test without internet:** disconnect the build machine from the network and run step 2.3. The build must finish without
+   an error.
+
+Dependabot proposals for NuGet packages do not change the folder: repeat the export after you accept one.
 
 ## Step 3: Set up in Intune
 
@@ -454,6 +485,10 @@ deployment.
 |---|---|
 | `The command dotnet was not found` | The .NET SDK 10 is missing, or the PowerShell window is older than the installation. Install the SDK and open a new window. |
 | `The .NET SDK 10 is required, found '…'` | No SDK 10 is installed. With several SDKs, the `global.json` in the repository selects SDK 10 automatically. |
+| `The offline feed folder … does not exist` or `SelfX.OfflineFeed.json is missing` | The folder `offline-feed` is missing or empty. Run the export on a computer with internet (section "Offline build") and copy the folder. |
+| `… does not match its SHA512` or `… not listed in SelfX.OfflineFeed.json` | A package in the folder `offline-feed` was changed or added. Restore the folder from the repository or repeat the export. |
+| `The offline feed was exported with .NET SDK …` | The build machine has another SDK version than the export. Install the same version or repeat the export with this version. |
+| `NU1101` or `NU1102` during the build | A package is missing in the folder `offline-feed`. Repeat the export. |
 | `The folder Bin is missing …` | Step 2.3 was not run before building the package. Repeat steps 2.3 and 2.5. |
 | `Bin was not built from the current …` | A source file was changed after building. Repeat steps 2.3 and 2.5. |
 | Installation ends with exit code 1 | The last line of `Install.log` names the reason. The existing installation stays unchanged. |
