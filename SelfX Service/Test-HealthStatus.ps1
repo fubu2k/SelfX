@@ -490,6 +490,13 @@ try {
     Assert-Equal $csvRows[0].Value "'=HYPERLINK(`"http://x.example`",`"Click`")" 'CSV export: formula in value is neutralized'
     Assert-Equal $csvRows[0].Category "'=cmd|calc" 'CSV export: formula in category is neutralized'
     Assert-Equal $csvRows[1].Value '192.168.0.1' 'CSV export: normal value unchanged'
+    # A file name with wildcard characters (save dialog: "SystemInfo [PC].csv") is written literally and no other file matches.
+    $bracketFile = Join-Path $temp 'info [PC] 1.csv'
+    $otherFile = Join-Path $temp 'info P 1.csv'
+    Set-Content -LiteralPath $otherFile -Value 'other file stays'
+    Export-SelfXSystemInfo -Items $csvItems -Path $bracketFile
+    Assert-Equal (Test-Path -LiteralPath $bracketFile) $true 'Export: file name with [ ] is written'
+    Assert-Equal ([IO.File]::ReadAllText($otherFile).Trim()) 'other file stays' 'Export: a file name with [ ] does not touch another file'
     Assert-Equal $csvItems[0].Value '=HYPERLINK("http://x.example","Click")' 'CSV export: original items are not modified'
     Assert-Equal ((Get-Content -Raw -Path "$temp\report.csv") -match '(?m)^"?[=+@-]') $false 'CSV export: no line starts with a formula character'
     & {

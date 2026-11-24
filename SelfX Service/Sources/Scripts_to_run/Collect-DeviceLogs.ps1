@@ -98,6 +98,10 @@
     1.3.5    fubu2k                    Teams installer logs (section 10) are only listed and read when the file is trusted: no link or
                                        hard link, no link in the folder path, owner SYSTEM, administrators, TrustedInstaller or the
                                        running account (Test-TrustedLogFile); other files are only counted (finding N9).
+    1.3.6    fubu2k                    Security: the report file is only overwritten when it existed and was checked as trusted; in every other
+                                       case (also right after a planted file was removed) it is created new (CreateNew), so a file that a user
+                                       creates in the gap is never written. A default report (-Protect) is opened without sharing, so nobody can
+                                       hold a read handle before the access rights are set. -UserView accepts only the SID of a user account.
 #>
 
 [CmdletBinding()]
@@ -126,9 +130,11 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.3.5'
+$ScriptVersion = '1.3.6'
 if ($UserView) {
     try { $null = [Security.Principal.SecurityIdentifier]::new("$CallerSid") } catch { Write-Error 'The user view needs a valid -CallerSid.'; exit 2 }
+    # Only the SID of a user account (local/domain S-1-5-21-..., Entra ID S-1-12-1-...), never a group or a well-known SID.
+    if ("$CallerSid" -notmatch '^S-1-5-21-\d+-\d+-\d+-\d+$' -and "$CallerSid" -notmatch '^S-1-12-1-\d+-\d+-\d+-\d+$') { Write-Error 'The user view needs the SID of a user account as -CallerSid.'; exit 2 }
 }
 $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
@@ -152,17 +158,22 @@ function Open-SelfXReportWriter {
     if ($item) {
         if ($item.PSIsContainer) { throw "The report path '$Path' is a folder." }
         $remove = $false
+        $overwrite = $false
         if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { $remove = $true }
         elseif ("$($item.LinkType)" -eq 'HardLink') { $remove = $true }
         else {
             try { $owner = (Get-Acl -LiteralPath $Path -ErrorAction Stop).GetOwner([Security.Principal.SecurityIdentifier]).Value } catch { $owner = '' }
             if ($TrustedOwnerSids -notcontains $owner) { $remove = $true }
         }
-        if ($remove) { [IO.File]::Delete($Path) }
+        if ($remove) { [IO.File]::Delete($Path) } else { $overwrite = $true }
     }
-    # CreateNew fails when someone creates the file between the check and now; the report is then not written (fail closed).
-    $mode = if (Test-Path -LiteralPath $Path) { [IO.FileMode]::Truncate } else { [IO.FileMode]::CreateNew }
-    $stream = New-Object System.IO.FileStream($Path, $mode, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+    # Only a file that existed and was checked above is overwritten. In every other case (no file, or a planted file that was
+    # just removed) the report is created new: CreateNew fails when someone creates the file between the check and now, and the
+    # report is then not written (fail closed). A default report is opened without sharing: nobody can hold a read handle on it
+    # before the access rights below are set (the rights are only checked when a file is opened).
+    $mode = if ($overwrite) { [IO.FileMode]::Truncate } else { [IO.FileMode]::CreateNew }
+    $share = if ($Protect) { [IO.FileShare]::None } else { [IO.FileShare]::Read }
+    $stream = New-Object System.IO.FileStream($Path, $mode, [IO.FileAccess]::Write, $share)
     try {
         if ($Protect) {
             $security = New-Object System.Security.AccessControl.FileSecurity

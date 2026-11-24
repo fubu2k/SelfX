@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.8.25
+    Version : 2.8.26
 
     History:
     Version  Date        Author               Change
@@ -34,6 +34,7 @@
                                               Network_Test_Config.xml, off by default)
     2.8.9    2026-11-23  fubu2k               CSV export: text cells starting with = + - @ tab CR LF get a leading apostrophe (CSV/formula injection, finding N7)
     2.8.25   2026-11-24  fubu2k               Row "Citrix Workspace" (version of the app, only when installed; also in the support ticket)
+    2.8.26   2026-11-24  fubu2k               Export: the file name is used literally (-LiteralPath); a name with [ ] from the save dialog no longer fails or matches other files
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -855,12 +856,12 @@ function Export-SelfXSystemInfo {
 		[string]$Title = 'System information'
 	)
 	switch ([IO.Path]::GetExtension($Path).ToLowerInvariant()) {
-		'.csv'  { ConvertTo-SelfXCsvSafeItems -Items $Items | Export-Csv -Path $Path -NoTypeInformation -Encoding UTF8 }
-		'.json' { $Items | ConvertTo-Json -Depth 3 | Set-Content -Path $Path -Encoding UTF8 }
+		'.csv'  { ConvertTo-SelfXCsvSafeItems -Items $Items | Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8 }
+		'.json' { $Items | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $Path -Encoding UTF8 }
 		'.html' {
 			$Items | ConvertTo-Html -Title "$Title - $env:COMPUTERNAME" -PreContent ("<h2>{0} - {1}</h2>" -f [System.Net.WebUtility]::HtmlEncode($Title), $env:COMPUTERNAME) |
-				Set-Content -Path $Path -Encoding UTF8
+				Set-Content -LiteralPath $Path -Encoding UTF8
 		}
-		default { ConvertTo-SelfXSystemInfoText -Items $Items | Set-Content -Path $Path -Encoding UTF8 }
+		default { ConvertTo-SelfXSystemInfoText -Items $Items | Set-Content -LiteralPath $Path -Encoding UTF8 }
 	}
 }

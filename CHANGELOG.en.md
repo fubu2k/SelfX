@@ -12,6 +12,15 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 (the packaging script checks this). A release gets the tag `v<version>` (for example
 `v3.0.0`); the release workflow checks that the tag and `Tool_Version` match.
 
+## Unreleased (SelfX Service)
+
+- **Security, report file (`Collect-DeviceLogs.ps1` 1.3.6):** A report file is only overwritten when it existed and was checked as
+  trusted. After a planted file was removed the report is always created new (`CreateNew`), so a file that a user creates in the gap
+  is never written. A default report (`-Protect`) is opened without sharing: until the access rights are set nobody can hold a read
+  handle. `-UserView` accepts only the SID of a user account.
+- **System information export (`SystemInfo.ps1` 2.8.26):** The file name from the save dialog is used literally (`-LiteralPath`).
+  A name with `[` `]` failed or could match other files.
+
 ## 3.0.2 - 2026-11-24 (SelfX Service)
 
 - **Security, report reader:** `SelfX_Device_CollectLogs.ps1` (2.8.21) releases the report only to the account of the requesting
