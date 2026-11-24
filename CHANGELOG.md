@@ -12,8 +12,12 @@ Die Paketversion ist `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`.
 (das Paketierungsskript prüft das). Ein Release bekommt das Tag `v<Version>` (zum
 Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` übereinstimmen.
 
-## Unveröffentlicht (SelfX Service)
+## 3.0.1 - 2026-11-24 (SelfX Service)
 
+- **AppLocker-Hashregeln:** `tools\Build-SelfXBinaries.ps1` (2.8.20) schreibt `build\SelfX.AppLocker.xml` auch auf deutschem und
+  anderem lokalisiertem Windows wieder: Die Regeln gelten für die SID `S-1-1-0` statt für den Namen „Everyone“, der dort nicht
+  aufgelöst werden kann. In PowerShell 7 entstehen die Regeln über Windows PowerShell 5.1 (neu `tools\New-SelfXAppLockerRules.ps1`),
+  weil die AppLocker-Cmdlets dort keine Pfadliste annehmen. Das Skript prüft, dass jedes Programm genau eine Allow-Regel hat.
 - **Offline-Bau:** Der Bau der Programme braucht kein Internet mehr. `NuGet.config` im Hauptordner erlaubt nur den Ordner
   `offline-feed` (NuGet-Pakete mit der Hashliste `SelfX.OfflineFeed.json`, SHA512 je Datei).
   `tools\Build-SelfXBinaries.ps1` (2.8.19) prüft den Ordner vor jedem Bau gegen die Hashliste und gegen die SDK-Version des

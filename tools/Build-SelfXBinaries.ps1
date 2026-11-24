@@ -35,7 +35,7 @@
     Name    : Build-SelfXBinaries.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 2.8.19
+    Version : 2.8.20
     Exit code: 0 = built, an exception otherwise
 
     History:
@@ -44,6 +44,7 @@
     2.6.11   2026-11-22  fubu2k               Initial version.
     2.8.18   2026-11-23  fubu2k               Also builds Bin\Audio\SelfXAudio.dll (Service\SelfXAudio.cs)
     2.8.19   2026-11-24  fubu2k               Offline build: packages only from offline-feed (checked against its manifest), own package cache
+    2.8.20   2026-11-24  fubu2k               AppLocker rules: SID S-1-1-0 instead of the name Everyone (German Windows), also from PowerShell 7 (New-SelfXAppLockerRules.ps1)
 #>
 
 [CmdletBinding()]
@@ -166,25 +167,35 @@ $manifestPath = Join-Path $OutputFolder 'SelfX.Binaries.json'
 Write-Output "Built with .NET SDK $sdkVersion in $OutputFolder (not signed):"
 foreach ($name in $manifestBinaries.Keys) { Write-Output ('  {0}  {1}' -f $manifestBinaries[$name], $name) }
 
-# AppLocker hash rules for exactly these files (Everyone; exe rules for the two programs, a DLL rule for the library).
-if (@(Get-Command -Name Get-AppLockerFileInformation, New-AppLockerPolicy -ErrorAction SilentlyContinue).Count -eq 2) {
-    $buildFolder = Join-Path $RepositoryRoot 'build'
-    New-Item -ItemType Directory -Path $buildFolder -Force | Out-Null
-    $policyPath = Join-Path $buildFolder 'SelfX.AppLocker.xml'
-    $paths = @($manifestBinaries.Keys | ForEach-Object { Join-Path $OutputFolder $_.Replace('/', '\') })
-    # The rules are a convenience: a problem here must not fail the build (PowerShell 7 reaches the AppLocker
-    # cmdlets only through a compatibility layer; use Windows PowerShell 5.1 for the rules in that case).
-    try {
-        $policy = Get-AppLockerFileInformation -Path $paths |
-            New-AppLockerPolicy -RuleType Hash -User Everyone -RuleNamePrefix ("SelfX " + $manifest.ToolVersion) -Xml
-        [IO.File]::WriteAllText($policyPath, $policy, (New-Object System.Text.UTF8Encoding($false)))
-        Write-Output "AppLocker hash rules: $policyPath (merge into your policy; replace the rules of the previous build)."
+# AppLocker hash rules for exactly these files (everyone, SID S-1-1-0; exe rules for the programs, DLL rules for the libraries).
+# tools\New-SelfXAppLockerRules.ps1 needs Windows PowerShell 5.1; in PowerShell 7 it is started in powershell.exe.
+# The rules are a convenience: a problem here must not fail the build.
+$buildFolder = Join-Path $RepositoryRoot 'build'
+New-Item -ItemType Directory -Path $buildFolder -Force | Out-Null
+$policyPath = Join-Path $buildFolder 'SelfX.AppLocker.xml'
+$rulesScript = Join-Path $ScriptFolder 'New-SelfXAppLockerRules.ps1'
+$pathList = (@($manifestBinaries.Keys | ForEach-Object { Join-Path $OutputFolder $_.Replace('/', '\') })) -join '|'
+$rulePrefix = 'SelfX ' + $manifest.ToolVersion
+$rulesOutput = $null
+$rulesExit = 1
+try {
+    if ($PSVersionTable.PSEdition -eq 'Desktop') {
+        $rulesOutput = & $rulesScript -PathList $pathList -OutputFile $policyPath -RuleNamePrefix $rulePrefix 2>&1 | Out-String
+        $rulesExit = $LASTEXITCODE
     }
-    catch {
-        Write-Warning "The AppLocker hash rules could not be created: $($_.Exception.Message) Run the script in Windows PowerShell 5.1 (powershell.exe) or create the rules from the files in Bin."
+    else {
+        $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+        if (-not (Test-Path -LiteralPath $windowsPowerShell -PathType Leaf)) { throw 'Windows PowerShell 5.1 was not found.' }
+        $rulesOutput = & $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File $rulesScript -PathList $pathList -OutputFile $policyPath -RuleNamePrefix $rulePrefix 2>&1 | Out-String
+        $rulesExit = $LASTEXITCODE
     }
 }
+catch { $rulesOutput = $_.Exception.Message }
+if ($rulesExit -eq 0 -and (Test-Path -LiteralPath $policyPath -PathType Leaf)) {
+    Write-Output "AppLocker hash rules: $policyPath (merge into your policy; replace the rules of the previous build)."
+}
 else {
-    Write-Warning 'AppLocker cmdlets not available: no build\SelfX.AppLocker.xml. Create the hash rules from the files in Bin on a machine with the AppLocker module.'
+    Remove-Item -LiteralPath $policyPath -Force -ErrorAction SilentlyContinue
+    Write-Warning "The AppLocker hash rules could not be created: $("$rulesOutput".Trim()) Create the rules from the files in Bin on a computer with the AppLocker module."
 }
 Write-Output 'Package the folder with tools\New-SelfXIntuneWin.ps1; Install.ps1 then installs these files instead of compiling.'
