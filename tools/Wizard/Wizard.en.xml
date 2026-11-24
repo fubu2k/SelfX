@@ -95,7 +95,7 @@
 	<T Id="Privileges.ask">Rights of the service: Restricted or Default</T>
 	<T Id="Privileges.rec">Restricted. Default is only for troubleshooting.</T>
 	<T Id="Tool.ask">Path of IntuneWinAppUtil.exe (Win32 Content Prep Tool of Microsoft)</T>
-	<T Id="Tool.rec">Download it from github.com/microsoft/Microsoft-Win32-Content-Prep-Tool. The script checks the Microsoft signature.</T>
+	<T Id="Tool.rec">Download it from https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool (file IntuneWinAppUtil.exe in the repository, use the latest release tag). The script checks the Microsoft signature.</T>
 	<T Id="BuildBinaries.ask">The programs (folder Bin) are missing or outdated. Build them now with the .NET SDK 10?</T>
 	<T Id="BuildBinaries.rec">Yes. The build needs the .NET SDK 10 and internet access to nuget.org once.</T>
 	<T Id="Output.ask">Output folder</T>

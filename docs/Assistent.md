@@ -14,7 +14,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXPackage
 ```
 
 Voraussetzungen wie in der [Installationsanleitung](Installation.md#voraussetzungen): .NET SDK 10
-(nur zum Bau der Programme) und `IntuneWinAppUtil.exe`. Der Assistent fragt nach dem Pfad der Datei.
+(nur zum Bau der Programme) und `IntuneWinAppUtil.exe`. Die Datei laden Sie von Microsoft herunter:
+<https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool> (Datei `IntuneWinAppUtil.exe` im Repository, am besten
+vom neuesten Release-Tag). Der Assistent fragt nach dem Pfad der Datei und prüft die Microsoft-Signatur.
 
 Wichtige Parameter:
 
