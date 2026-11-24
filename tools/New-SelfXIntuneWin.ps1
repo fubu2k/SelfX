@@ -46,7 +46,7 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.7.0
+    Version : 1.8.0
 
     History:
     Version  Date        Author               Change
@@ -55,6 +55,7 @@
     1.6.1    2026-11-23  fubu2k               SelfX.Files.json also lists SelfXService.exe and SelfX.exe from Bin
     1.7.0    2026-11-23  fubu2k               Security (M2): also writes build\SelfX-Service-<version>.Detection.ps1 with the digest of
                                               SelfX.Files.json (changed files are detected without a version change)
+    1.8.0    2026-11-24  fubu2k               New parameter -SourceFolder: build from a configured copy of the package (New-SelfXPackage.ps1)
 #>
 
 [CmdletBinding()]
@@ -62,7 +63,9 @@ param(
     [ValidateSet('Service')]
     [string[]]$Product = @('Service'),
     [string]$OutputFolder,
-    [string]$ToolPath
+    [string]$ToolPath,
+    # Package folder to build from instead of the folder of the repository (used by New-SelfXPackage.ps1: a configured copy).
+    [string]$SourceFolder
 )
 
 $ErrorActionPreference = 'Stop'
@@ -238,7 +241,7 @@ $results = New-Object System.Collections.Generic.List[object]
 try {
     foreach ($name in $Product) {
         $definition = $Definitions[$name]
-        $sourceFolder = Join-Path $RepositoryRoot $definition.Folder
+        $sourceFolder = if ($SourceFolder) { $SourceFolder } else { Join-Path $RepositoryRoot $definition.Folder }
         $stage = Join-Path $workRoot "$name\source"
         $toolOutput = Join-Path $workRoot "$name\output"
         $version = $null

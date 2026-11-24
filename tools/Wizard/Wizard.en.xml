@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	SelfX package wizard - texts (English, base language)
+
+	Add a language: copy this file to Wizard.<culture>.xml (de, fr, pt-BR ...), set Culture and Name, translate the
+	element texts. Do not change the Id attributes. Keep placeholders such as {0} and {1}. A text that is missing in a
+	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
+	the same placeholders.
+-->
+<Wizard_Language Culture="en" Name="English" Version="1.0.0">
+	<T Id="title">SelfX package wizard</T>
+	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
+	<T Id="rec">Recommendation: </T>
+	<T Id="yes">y</T>
+	<T Id="no">n</T>
+	<T Id="yesno">y = yes, n = no</T>
+	<T Id="invalid">This value is not valid: {0}</T>
+	<T Id="required">This value is required.</T>
+	<T Id="section.basics">1/7 Basics</T>
+	<T Id="section.support">2/7 Support contacts</T>
+	<T Id="section.branding">3/7 Branding</T>
+	<T Id="section.ticket">4/7 Ticket by e-mail and organisations</T>
+	<T Id="section.copilot">5/7 Copilot Chat</T>
+	<T Id="section.behavior">6/7 Behavior on the device</T>
+	<T Id="section.build">7/7 Build</T>
+	<T Id="ToolLanguage.ask">Default language of SelfX on the devices (de, en, fr, es ... or Auto)</T>
+	<T Id="ToolLanguage.rec">Auto follows the display language of Windows. Choose Auto if your users speak several languages.</T>
+	<T Id="ShowLanguageSetting.ask">May users choose their language in the settings?</T>
+	<T Id="ShowLanguageSetting.rec">Yes. It costs nothing and helps multilingual staff.</T>
+	<T Id="OrgName.ask">Name of your organisation (used for the Intune app name and the instructions)</T>
+	<T Id="OrgName.rec">The short name of your company or authority, for example Contoso.</T>
+	<T Id="ToolName.ask">Name of the tool in the title bar and the shortcuts</T>
+	<T Id="ToolName.rec">Keep SelfX. Users find it faster when the name is the same everywhere.</T>
+	<T Id="SupportMail.ask">Support e-mail address (shared mailbox)</T>
+	<T Id="SupportMail.rec">Use a shared (functional) mailbox, never a personal one. The address is also the recipient of the device logs e-mail.</T>
+	<T Id="SupportPhone.ask">Support phone number (empty = hide)</T>
+	<T Id="SupportPhone.rec">Enter a number only if somebody answers it during the support hours.</T>
+	<T Id="SupportHours.ask">Support hours (empty = hide)</T>
+	<T Id="SupportHours.rec">For example Mon-Fri 08:00-17:00.</T>
+	<T Id="SupportWebsite.ask">Support website or ticket portal (https://, empty = hide)</T>
+	<T Id="SupportWebsite.rec">Enter your self-service portal if you have one. Only https:// addresses are accepted.</T>
+	<T Id="SupportTeams.ask">Teams contact (address of a shared account or https:// link, empty = hide)</T>
+	<T Id="SupportTeams.rec">Optional. Leave it empty if the Service Desk is not reachable in Teams.</T>
+	<T Id="LogoPath.ask">Path of your logo file (png, jpg, ico, bmp or gif, empty = no logo)</T>
+	<T Id="LogoPath.rec">A transparent PNG, about 400 x 120 pixels, looks good in the light and the dark design.</T>
+	<T Id="AccentColor.ask">Company color as #RRGGBB (empty = keep SelfX blue #0072BC)</T>
+	<T Id="AccentColor.rec">Use your corporate color. SelfX adjusts colors that are too dark or too light.</T>
+	<T Id="TicketEnabled.ask">Do you want the ticket function (the user describes the problem, SelfX opens a prepared e-mail)?</T>
+	<T Id="TicketEnabled.rec">Yes, if your Service Desk accepts tickets by e-mail. The user always checks and sends the e-mail; SelfX sends nothing itself.</T>
+	<T Id="TicketMail.ask">Default recipient of ticket e-mails</T>
+	<T Id="TicketMail.rec">Your Service Desk mailbox. It is used when no organisation rule matches.</T>
+	<T Id="TicketSubjectTag.ask">Marker at the start of the subject line (for mail filters)</T>
+	<T Id="TicketSubjectTag.rec">Keep SelfX, or use a short tag your ticket system filters on. Up to 20 characters: letters, digits . _ -</T>
+	<T Id="MultiOrg.ask">Do tickets of other organisations or locations have to go to other mailboxes?</T>
+	<T Id="MultiOrg.rec">Answer yes if several IT units are responsible for different devices. You then define one unit per mailbox.</T>
+	<T Id="HybridJoin.ask">Are devices hybrid joined (Active Directory)? Then SelfX can route by OU.</T>
+	<T Id="HybridJoin.rec">Yes, if your devices are in an on-premises domain. Cloud-only (Entra joined) devices have no OU.</T>
+	<T Id="UseGroupTags.ask">Do you route by the Autopilot group tag (Entra ID)?</T>
+	<T Id="UseGroupTags.rec">Yes, if your Autopilot devices carry a group tag per organisation. It is the most reliable criterion for cloud-only devices.</T>
+	<T Id="UseDeviceClass.ask">Do you route by device class (notebook, PC, tablet)?</T>
+	<T Id="UseDeviceClass.rec">Yes, if another team handles tablets or kiosk PCs. SelfX runs on Windows 11 only: smartphones (iOS, Android) cannot be covered by SelfX.</T>
+	<T Id="Unit.header">Organisation / unit {0}</T>
+	<T Id="UnitId.ask">Short name of the unit (letters, digits . _ -)</T>
+	<T Id="UnitId.rec">For example IT-Berlin. The name is only used inside the configuration.</T>
+	<T Id="UnitMail.ask">Mailbox of this unit</T>
+	<T Id="UnitMail.rec">One plain address, shared mailbox only. The file Ticket_Config.xml can be read by every user on the device. Addresses that must stay hidden belong into the per-device registry value TicketMail.</T>
+	<T Id="UnitCc.ask">Copy (Cc) of this unit (empty = none)</T>
+	<T Id="UnitCc.rec">Optional second shared mailbox.</T>
+	<T Id="UnitGroupTags.ask">Autopilot group tags of this unit (comma separated)</T>
+	<T Id="UnitGroupTags.rec">Exactly as in Entra ID, for example DE-IT1-BER. Letters, digits, space . _ - up to 64 characters.</T>
+	<T Id="UnitOUs.ask">OU names of this unit (comma separated)</T>
+	<T Id="UnitOUs.rec">Part of the distinguished name, for example OU=Berlin. SelfX searches it in the OU of the computer account.</T>
+	<T Id="UnitCategories.ask">Device classes of this unit (comma separated)</T>
+	<T Id="UnitCategories.rec">Free names such as Notebook, Desktop, Tablet. Intune sets the value per device group.</T>
+	<T Id="UnitMore.ask">Add another unit?</T>
+	<T Id="UnitMore.rec">Yes until every mailbox is defined. The first matching rule wins: group tags are checked first, then OUs, then device classes.</T>
+	<T Id="CopilotEnabled.ask">Do you have Microsoft 365 Copilot Chat licensed and want to offer it in the help dialog?</T>
+	<T Id="CopilotEnabled.rec">Yes if your users have Copilot Chat. SelfX uses no interface and no token: it prepares a text, the user pastes it into Copilot.</T>
+	<T Id="CopilotAudience.ask">Who is the answer for? User (plain language) or Admin (technical steps)</T>
+	<T Id="CopilotAudience.rec">User. Technical answers confuse most employees.</T>
+	<T Id="CopilotClearClipboard.ask">Empty the clipboard a few minutes after SelfX copied the text?</T>
+	<T Id="CopilotClearClipboard.rec">Yes if the text should not stay in the clipboard. The text already contains no names or addresses.</T>
+	<T Id="TrayIcon.ask">Show the status icon next to the clock for all users?</T>
+	<T Id="TrayIcon.rec">Yes. Users see problems early and open SelfX with one click.</T>
+	<T Id="ShortcutDesktop.ask">Create a shortcut on the public desktop?</T>
+	<T Id="ShortcutDesktop.rec">Yes for the start, so that users find SelfX. Switch it off later if desktops should stay empty.</T>
+	<T Id="ShortcutStartMenu.ask">Create a shortcut in the Start menu?</T>
+	<T Id="ShortcutStartMenu.rec">Yes.</T>
+	<T Id="Expert.ask">Do you want to change security and log settings (expert)?</T>
+	<T Id="Expert.rec">No. The secure defaults stay: the service starts nothing when files do not match (Enforce) and runs with reduced rights (Restricted).</T>
+	<T Id="LogRetention.ask">Days to keep log files (1-3650)</T>
+	<T Id="LogRetention.rec">90 days is a good balance between support needs and data minimisation.</T>
+	<T Id="FileCheck.ask">File check of the service: Enforce or Audit</T>
+	<T Id="FileCheck.rec">Enforce. Audit only reports and is meant for a short pilot.</T>
+	<T Id="Privileges.ask">Rights of the service: Restricted or Default</T>
+	<T Id="Privileges.rec">Restricted. Default is only for troubleshooting.</T>
+	<T Id="Tool.ask">Path of IntuneWinAppUtil.exe (Win32 Content Prep Tool of Microsoft)</T>
+	<T Id="Tool.rec">Download it from github.com/microsoft/Microsoft-Win32-Content-Prep-Tool. The script checks the Microsoft signature.</T>
+	<T Id="BuildBinaries.ask">The programs (folder Bin) are missing or outdated. Build them now with the .NET SDK 10?</T>
+	<T Id="BuildBinaries.rec">Yes. The build needs the .NET SDK 10 and internet access to nuget.org once.</T>
+	<T Id="Output.ask">Output folder</T>
+	<T Id="Output.rec">The folder receives the package, the detection script, the scripts for Intune and the instructions. Do not commit it.</T>
+	<T Id="summary.header">Summary of your answers</T>
+	<T Id="summary.confirm">Create the package with these settings?</T>
+	<T Id="step.config">Writing the settings into a copy of the package ...</T>
+	<T Id="step.bin">Building the programs ...</T>
+	<T Id="step.pack">Creating the Intune package ...</T>
+	<T Id="step.guide">Writing scripts and instructions ...</T>
+	<T Id="done">Done. Your files are in: {0}</T>
+	<T Id="done.config">Configuration written (no package built): {0}</T>
+	<T Id="aborted">Aborted. Nothing was built.</T>
+	<T Id="guide.title">SelfX in Intune: short instructions for {0} (version {1})</T>
+	<T Id="guide.intro">Open the Microsoft Intune admin center (intune.microsoft.com). Always start with a small pilot group.</T>
+	<T Id="guide.s1">1. Create the app: Apps > Windows > Add > Windows app (Win32). Upload {0}. Name: {1}. Publisher: {2}.</T>
+	<T Id="guide.s2">2. Program: install command: {0}</T>
+	<T Id="guide.s2b">   Uninstall command: {0}</T>
+	<T Id="guide.s2c">   Install behavior: System. Device restart behavior: no specific action.</T>
+	<T Id="guide.s3">3. Requirements: 64-bit, Windows 11 25H2 (build 26200 or newer). If the portal does not offer 25H2, add a script requirement: integer, greater than or equal to 26200, script: [int](Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber)</T>
+	<T Id="guide.s4">4. Detection rule: custom script. Upload {0} (not the file in the repository). Run script as 32-bit process: No. Enforce script signature check: No.</T>
+	<T Id="guide.s5">5. Dependency: PowerShell 7.6 or newer as its own Win32 app (MSI of Microsoft), Automatically install: Yes. Details: docs\Installation.md, chapter 3.2.</T>
+	<T Id="guide.s6">6. Assignment: assign the app as Required to a pilot device group. Do not add SelfX or PowerShell 7 to the blocking apps of the Autopilot status page (ESP).</T>
+	<T Id="guide.s7">7. Ticket routing: create one platform script per file below (Devices > Scripts and remediations > Platform scripts). Run this script using the logged on credentials: No. Run script in 64-bit PowerShell: Yes. Assign each script to the matching Entra device group; the groups should exclude each other.</T>
+	<T Id="guide.s7item">   {0}: group tags {1}; device classes {2}</T>
+	<T Id="guide.s7tag">   Tip for a dynamic device group of a group tag: (device.devicePhysicalIds -any (_ -eq "[OrderID]:TAG"))</T>
+	<T Id="guide.s8">8. Test on a pilot device: the Start menu shows SelfX, the service SelfXService runs, the logs are in %ProgramData%\SelfX\Logs. Then widen the assignment.</T>
+	<T Id="guide.update">Update later: raise Tool_Version and ExpectedVersion in the repository, run the wizard again with your saved answers ({0}), and upload the new package as a new version of the app.</T>
+	<T Id="guide.answers">Your answers are saved in {0}. It contains your mailbox addresses: keep it out of Git.</T>
+	<T Id="guide.script.header">Set-SelfXSupportUnit script for the unit {0}. Assign it to the Entra device group of this unit.</T>
+</Wizard_Language>
