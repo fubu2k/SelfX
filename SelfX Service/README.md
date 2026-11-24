@@ -218,4 +218,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 
 Siehe [Installation](../docs/Installation.md#schritt-3-in-intune-einrichten),
 [Konfiguration](../docs/Configuration.md#die-wichtigsten-einstellungen) und das
-[Benutzerhandbuch](../docs/User-Manual.md#selfx).
+[Benutzerhandbuch](../docs/User-Manual.md#selfx-öffnen).

@@ -1,191 +1,205 @@
-# SelfX user manual
+# SelfX User Manual
 
 **English** | [Deutsch](../User-Manual.md)
 
-SelfX is a self-service interface for selected troubleshooting tasks. The
-available actions depend on the XML catalogue configured by your support team.
+SelfX helps you solve common problems on your computer yourself. Before you call or write to the
+support team, you can try it here. Your support team decides which solutions are available.
 
-## SelfX
+![Troubleshooting page in the light design](../images/selfx-troubleshooting-light.png)
 
-SelfX helps you solve common problems on your device yourself. It is installed
-on your device and also works without a network connection.
+## Contents
 
-Start **SelfX (Self fix)** from the Desktop, the Start menu or the SelfX icon
-next to the clock. The window can be resized and maximized; SelfX remembers its
-size. If SelfX is already open, it comes to the front.
+1. [Open SelfX](#open-selfx)
+2. [The interface](#the-interface)
+3. [Solve a problem](#solve-a-problem)
+4. [Device status](#device-status)
+5. [System information](#system-information)
+6. [Contact support and send logs](#contact-support-and-send-logs)
+7. [The SelfX icon next to the clock](#the-selfx-icon-next-to-the-clock)
+8. [Settings: language and design](#settings-language-and-design)
+9. [Important notes](#important-notes)
+
+## Open SelfX
+
+Start **SelfX** from the desktop icon, from the Start menu or from the SelfX icon next to the clock.
+You do not need administrator rights for this.
+
+You can resize and maximize the window. SelfX remembers the size. If SelfX is already open, the window
+comes to the front.
+
+## The interface
 
 The bar on the left has three areas:
 
 | Area | What you find there |
 |---|---|
 | **Troubleshooting** | Solutions for common problems |
-| **Device status** | Checks of your device, for example disk space or updates. The number shows how many items need your attention. |
-| **System information** | Information about your device for the support team |
+| **Device status** | Checks of your device, for example disk space or updates. The number shows how many points need your attention. |
+| **System information** | Details about your device that the support team often needs |
 
-Move the mouse over a button to see what it does. Nothing happens without your
-confirmation.
+SelfX has a **new design**: calm colors, large buttons and a hint at the top that shows the steps:
+**Select problem – Confirm – Done**. There is a light and a dark design. By default SelfX follows
+Windows.
 
-### Solve a problem
+Move the mouse over a button to see what it does. **Nothing happens without your confirmation.**
+
+## Solve a problem
 
 1. Open **Troubleshooting**.
-2. Type a word in the search field (for example *Teams* or *slow*) or click a
-   category.
-3. Click the **i** button to read more about a solution.
-4. Click the round **play** button, read the message and confirm.
+2. Type a word into the search field, for example *Teams* or *slow*. Or click a category.
+3. Click **i** to read what the solution does.
+4. Click **Start**, read the message and confirm.
 
-While a solution runs, its play button turns into a rotating arrow and
-**Running…** is shown next to it; you cannot start the same solution a second
-time. As soon as it has finished, the button is a play button again and the
-message bar at the bottom shows whether it worked. The **Fix** button on the
-**Device status** page shows the same while its repair runs.
+While a solution runs, its button shows a turning arrow and **Running…**. You cannot start the same
+solution again during this time. Afterwards the message bar at the bottom shows whether it worked.
 
-Use **Simplified view** for a short list by product, or **Detailed view** for
-specific problems. The **?** button next to it explains the difference.
+**Simplified view** shows a short list. **Detailed view** shows every single problem. The **?** button
+explains the difference.
 
-Solutions with a **shield** need administrator rights. SelfX runs them for you
-through the local SelfX service, so you do not need an administrator account.
-Only one shield solution can run at a time.
+**Solutions with a shield** need administrator rights. SelfX runs them through its local service, so you
+do not need an administrator account. Only one such solution runs at a time.
 
-If another person is signed in to the same device (for example on a shared PC
-or in a remote session), SelfX does not run solutions that would disturb that
-person, such as restarting the device, installing updates, the disk check or
-restarting the network adapters. SelfX tells you so. Try again when you are the
-only user, or ask your support team.
+**If another person is signed in** on the same device (for example on a shared PC), SelfX does not run
+solutions that would disturb that person. These include the restart, updates, the disk check and the
+restart of network adapters. SelfX tells you so. Try again later or ask the support team.
 
-At the bottom left you see whether the SelfX service is running (green dot). If
-it is not running (red dot), solutions with a shield and the device status are
-not available. Restart your device or contact your support team.
+**At the bottom left** you see whether the SelfX service is running (green dot). With a red dot, solutions
+with a shield and the device status are not available. Restart your computer or contact the support team.
 
-### Device status
+## Device status
 
-The **Device status** area shows one card per check: Windows management (IME),
-Microsoft Defender, compliance, applications, disk space, BitLocker, pending
-restart and updates to install. Your support team may add further checks.
-Problems are shown first.
+The **Device status** area shows one card for each check. These include company management, Microsoft
+Defender, compliance, apps, disk space, BitLocker, a pending restart and updates. Problems are at the top.
 
-- **Green / OK:** everything is fine.
-- **Yellow / Pending:** something should be done soon, for example updates to
-  install. This is a warning, not an error.
-- **Red / Error:** there is a problem. Read the text on the card.
-- **Gray / Unknown:** SelfX cannot tell, for example because the information is
-  not available. This does not mean that everything is fine.
+| Color | Meaning |
+|---|---|
+| Green (**OK**) | Everything is fine. |
+| Yellow (**Pending**) | Something should be done soon, for example updates. This is a warning, not an error. |
+| Red (**Error**) | There is a problem. The text on the card says what. |
+| Grey (**Unknown**) | SelfX cannot tell. This does **not** mean that everything is fine. |
 
-The status is checked automatically in the background (usually every 15
-minutes, not while the device runs on battery), so it is shown immediately.
-The line under the title shows when it was last checked.
+SelfX checks the status in the background, usually every 15 minutes. On battery the check pauses. The line
+under the title shows when the last check ran.
 
-- **Fix** (wrench): repairs the problem automatically. Save your work, click
-  the button and confirm. Afterwards SelfX checks this status again. The button
-  appears only where your support team has prepared a repair, for example on
-  **Microsoft Defender** (updates the virus definitions), on **Compliance**
-  while your device is not compliant and on **Updates to install**: SelfX
-  searches, downloads and installs the updates. This can take several minutes;
-  the button shows **Running…** until it is finished, and you can keep working.
-  Afterwards SelfX checks the device status again; if a restart is needed, the
-  **Restart pending** card shows it.
-- **Restart now** on **Restart pending**: restarts the device to complete
-  updates and changes. SelfX asks first. Save your work and close all programs;
-  the restart begins about 30 seconds after you confirm. **Cancel** changes
-  nothing. *Fix all problems* never restarts the device.
-- **Try again** on **Company apps (Intune)**: an app from your company could not
-  be installed (the card shows its name). SelfX starts the installation again at
-  once instead of waiting until the next day; follow it in the **Company Portal**.
-  If it fails again, the cause is in the app or its distribution: send the logs to
-  the support (button **Send logs to support**).
-- **Arrows** on a card: checks only this status again, for example after you
-  fixed something yourself. Nothing is changed on your device.
-- **Arrows** at the top: checks everything again. This can take up to a minute.
-- **Fix all problems**: appears at the top when at least one problem can be
-  repaired automatically. After you confirm the list, SelfX runs the repairs one
-  after another and then checks everything again. Save your work first.
+**What the buttons on the cards do:**
 
-All times (for example *last checked* or the last Defender update) are shown in
-the time zone of your device, also right after the time zone changed, for
-example during the first setup of a new device.
+- **Fix** (wrench): repairs the problem automatically. Save your work first, confirm and wait. This can take
+  several minutes. Afterwards SelfX checks the status again. The button appears only if your support team
+  has prepared a repair. For example for **Updates to install**: SelfX searches, downloads and installs
+  updates.
+- **Restart now** (for **Pending restart**): restarts the computer so that updates can finish. Save your work
+  and close all programs first. After your confirmation the restart starts after about 30 seconds. **Cancel**
+  changes nothing. *Fix all problems* **never** restarts the computer.
+- **Retry** (for **Company apps**): a company app could not be installed. SelfX restarts the installation at
+  once. You can follow the progress in the company portal. If it fails again, send the logs to support.
+- **Arrow** on a card: checks only this status again. At the top: checks everything again.
+- **Fix all problems**: runs all possible repairs one after another. Save your work first.
 
-Examples: **Restart pending (red)**: click **Restart now** or restart the device
-yourself. **Updates to install (yellow)**: click **Fix**, or install them in
-**Settings** > **Windows Update**, or wait for the automatic installation.
+**Examples:**
 
-SelfX logs what it does (for example which action you started and its result)
-on your device, so your support team can follow a problem. The logs contain no
-passwords and are deleted automatically after 90 days.
+- **Pending restart (red):** click **Restart now** or restart the computer yourself.
+- **Updates to install (yellow):** click **Fix**. Or install updates under **Settings > Windows Update**.
 
-### System information
+## System information
 
-The **System information** area shows details about your device that the
-support team often asks for: device, Windows, user and management, network.
-The last known values are shown immediately and updated in the background.
+The **System information** area shows details about device, Windows, user, management and network. The
+last values appear at once and are updated in the background.
 
-- Double-click a line to copy its value.
-- The buttons at the top refresh the information, copy everything (for example
-  to paste it into a support request) or save it as a file.
-- The **Tools** below the information sync your Intune apps, check compliance,
-  open the Company Portal, start Remote Help (or Quick Assist if Remote Help is not installed; a support person can see your
-  screen, only with your consent), collect the device management logs or send
-  the device logs to the support.
+- **Double-click** a row to copy its value.
+- The buttons at the top update the details, copy everything or save it as a file.
+- Under the details you find **Tools**:
+  - Synchronize Intune: re-sync the device management.
+  - Check compliance.
+  - Open the company portal.
+  - **Remote support**: starts **Remote Help** if it is installed on your device. Otherwise it starts
+    Quick Assist. A person from support can then see your screen, but only with your consent.
+  - Collect the device management logs.
+  - Send the device logs to support.
 
-The information contains your device name, your user name and network
-addresses. Share it only with your support team.
+The details contain your device name, your user name and network addresses. Share them only with your
+support team.
 
-### Send the device logs to the support
+## Contact support and send logs
 
-If the support team asks for the logs of your device, click **Send logs to
-support** (bottom left, in System information or in the menu of the SelfX icon
-next to the clock).
+SelfX offers two ways to reach the support team.
 
-1. Confirm. SelfX collects the logs with administrator rights through the
-   local SelfX service; you do not need an administrator account. This can take
-   several minutes. Nothing on your device is changed.
-2. When the logs are ready, a new e-mail to the support opens with the report
-   attached (a `.zip` file). It also contains the logs of SelfX itself (what
-   SelfX did on your device and your own SelfX actions), so the support can see
-   which solutions you already tried.
-3. Describe your issue in the e-mail and send it. SelfX never sends anything by
-   itself.
+**Show contact details:** Click **?** at the top right. You will find support hours, phone number, e-mail
+address, Teams address and website. Buttons open an e-mail, a Teams chat or the website directly.
 
-If Outlook cannot be opened automatically (for example with the new Outlook),
-SelfX opens a new e-mail in your default mail app and an Explorer window with
-the report selected. Attach that file to the e-mail. The report contains the
-name of your device, your user name and the logs of the device. Only you and
-the administrators can read it on the device. Send it only to your support team.
+**Report a problem (ticket by e-mail):** If this function is switched on, the help dialog shows the row
+**Report a problem**. Here is how it works:
 
-### Help, settings and the SelfX icon
+1. Click **Create ticket** and describe the problem.
+2. SelfX adds the details about your device automatically. You cannot deselect them.
+3. You see the e-mail before it is sent. The recipient is shown in the dialog.
+4. You send the e-mail yourself. **SelfX never sends anything by itself.**
 
-- **?** (top right): how to reach your support team, for example support
-  hours, phone number, e-mail, Teams chat or the website / ticket system.
-  Buttons start an e-mail, a Teams chat or open the website.
-- **Gear**: choose the language of SelfX, choose the appearance (*Automatic*,
-  the default, uses the same dark or light mode as Windows, or always *Dark* or *Light*),
-  show or hide the SelfX icon next to the clock and switch the
-  notifications about problems on or off.
-- **i**: version of SelfX.
+If your mail program does not open with the file, SelfX marks the file in Explorer. Then attach it yourself.
 
-The **SelfX icon** next to the clock shows the device status at a glance: a
-green, yellow or red dot (gray = not known yet). Move the mouse over it to see
-a summary. When a problem is found, for example low disk space, Windows shows a
-notification once; click it to open the device status. If you do not want
-these notifications, switch off **Show notifications about problems** with the
-gear button or **Show notifications** in the menu of the icon; the colored icon
-still shows the status. Right-click the icon to
-open SelfX, check the status now, send the logs to the support or hide the
-icon. You can show it again in SelfX with the gear button.
+**Ask Copilot Chat:** If this function is switched on, the help dialog shows **Ask Copilot Chat**:
 
-SelfX is shown in the display language of Windows. To use another language,
-click the **gear** and choose your language under **Language**. The languages
-are listed in their own name, for example *Deutsch* or *français*. SelfX
-restarts in the selected language and remembers your choice. The SelfX icon
-next to the clock also uses it. **Automatic** goes back to the language of
-Windows. If your language is not available, SelfX is shown in English. Your
-support team can hide the choice and set a fixed language.
+1. Describe the problem in your own words (optional) and click **Create text**.
+2. You see a preview. Read or change the text.
+3. Click **Copy and open Copilot**. Paste the text into Copilot Chat (Ctrl+V) and send it yourself.
 
-## Important cautions
+The text contains no names, e-mail addresses or IP addresses. Still check it before sending. Do not write
+passwords or customer data into it. After copying, the text stays in the clipboard for a short time. If
+SelfX is set up that way, it clears the clipboard after a few minutes.
 
-- Save open documents before actions that restart or terminate applications.
-- The OneDrive CHKDSK action runs `chkdsk /r /f` on the system drive. It is scheduled for the next restart; restart the device afterwards.
-  The check can take a long time.
-- The network-adapter action interrupts network connectivity while adapters
-  restart.
-- The device-cleanup action empties the Recycle Bin and removes files from the
-  current user's temporary directory.
-- Contact your support team if an action fails or the issue remains.
+**Send device logs to support:** Click **Send logs to support** at the bottom left, in the system information
+or in the menu of the SelfX icon.
+
+1. Confirm. SelfX collects the logs through its service. This takes a few minutes. Nothing on your device
+   is changed.
+2. Then an e-mail to support opens with the report as a `.zip` file attached. The report also contains the
+   SelfX logs, so that support can see what you have already tried.
+3. Describe your problem and send the e-mail.
+
+The report contains your device name, your user name and logs. Only you and administrators can read it on the
+device. Send it only to your support team.
+
+## The SelfX icon next to the clock
+
+The icon next to the clock shows the device status at a glance:
+
+- **green**: everything is fine
+- **yellow**: warning
+- **red**: problem
+- **grey**: no result yet
+
+Move the mouse over it to see a summary. On Windows 11 the icon stays permanently next to the clock. It does
+not disappear into the overflow menu (arrow).
+
+When a problem is found, Windows shows a notification once. Clicking it opens the device status. If you do not
+want notifications, switch them off with the **gear icon** or in the menu of the icon. The colored icon still
+shows the status.
+
+**Right-click the icon:** open SelfX, check the status now, send logs or hide the icon. To show it again, use
+the gear icon in SelfX.
+
+## Settings: language and design
+
+Click the **gear icon** in SelfX:
+
+- **Language:** choose your language. Each language is shown under its own name, for example *Deutsch* or
+  *English*. SelfX restarts afterwards and remembers your choice. The icon next to the clock also uses the new
+  language. **Automatic** uses the language of Windows. If that is not available, SelfX shows German. Texts that
+  do not exist in your language appear in English. Some companies fix the language. Then this choice is missing.
+- **Design:** *Automatic* follows Windows, *Dark* and *Light* set it permanently.
+- **Show or hide** the icon next to the clock.
+- **Switch notifications about problems** on or off.
+
+Under **i** you find the version of SelfX.
+
+## Important notes
+
+- **Save your work** before you start a solution. Some solutions restart or close programs. A restart affects all
+  open programs.
+- **Disk check (chkdsk):** the check is scheduled for the next restart. It can take a long time. Restart the
+  computer afterwards.
+- **Network restart:** while the network adapters restart, the connection is briefly interrupted.
+- **Free up disk space:** deletes temporary files and empties the recycle bin of your user.
+- **Correct the time:** synchronizes the clock of your device with the time source.
+- **Privacy:** SelfX sends nothing by itself. Logs, reports and texts go only to your support team, and only when
+  you confirm it. Logs do not contain passwords. They are deleted automatically after 90 days.
+- Contact your support team if a solution fails or the problem remains.

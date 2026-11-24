@@ -2,209 +2,223 @@
 
 [English](en/User-Manual.md) | **Deutsch**
 
-SelfX ist eine Selbsthilfe-Oberfläche für ausgewählte Fehlerbehebungen. Welche
-Aktionen verfügbar sind, hängt vom XML-Katalog ab, den Ihr Support-Team
-konfiguriert hat.
+SelfX hilft Ihnen, häufige Probleme an Ihrem Computer selbst zu lösen. Bevor Sie das
+Support-Team anrufen oder schreiben, können Sie es hier versuchen. Welche Lösungen zur
+Verfügung stehen, legt Ihr Support-Team fest.
 
-## SelfX
+![Seite Fehlerbehebung im hellen Design](images/selfx-troubleshooting-light.png)
 
-SelfX hilft Ihnen, häufige Probleme auf Ihrem Gerät selbst zu lösen. Es ist auf
-Ihrem Gerät installiert und funktioniert auch ohne Netzwerkverbindung.
+## Inhalt
 
-Starten Sie **SelfX (Self fix)** über den Desktop, das Startmenü oder das
-SelfX-Symbol neben der Uhr. Die Größe des Fensters lässt sich ändern, es kann
-maximiert werden; SelfX merkt sich die Größe. Ist SelfX schon geöffnet, kommt es
-in den Vordergrund.
+1. [SelfX öffnen](#selfx-öffnen)
+2. [Die Oberfläche](#die-oberfläche)
+3. [Ein Problem lösen](#ein-problem-lösen)
+4. [Gerätestatus](#gerätestatus)
+5. [Systeminformationen](#systeminformationen)
+6. [Support anfragen und Protokolle senden](#support-anfragen-und-protokolle-senden)
+7. [Das SelfX-Symbol neben der Uhr](#das-selfx-symbol-neben-der-uhr)
+8. [Einstellungen: Sprache und Design](#einstellungen-sprache-und-design)
+9. [Wichtige Hinweise](#wichtige-hinweise)
+
+## SelfX öffnen
+
+Starten Sie **SelfX** über das Symbol auf dem Desktop, über das Startmenü oder über das
+SelfX-Symbol neben der Uhr. Sie brauchen dafür keine Administratorrechte.
+
+Das Fenster lässt sich in der Größe ändern und maximieren. SelfX merkt sich die Größe.
+Ist SelfX schon geöffnet, kommt das Fenster nach vorn.
+
+## Die Oberfläche
 
 Die Leiste links hat drei Bereiche:
 
 | Bereich | Was Sie dort finden |
 |---|---|
-| **Probleme lösen** | Lösungen für häufige Probleme |
+| **Fehlerbehebung** | Lösungen für häufige Probleme |
 | **Gerätestatus** | Prüfungen Ihres Geräts, zum Beispiel Speicherplatz oder Updates. Die Zahl zeigt, wie viele Punkte Ihre Aufmerksamkeit brauchen. |
-| **Systeminformationen** | Informationen über Ihr Gerät für das Support-Team |
+| **Systeminformationen** | Angaben zu Ihrem Gerät, die das Support-Team oft braucht |
 
-Bewegen Sie die Maus über eine Schaltfläche, um zu sehen, was sie macht. Ohne Ihre
-Bestätigung geschieht nichts.
+SelfX hat ein **neues Design**: ruhige Farben, große Schaltflächen und einen Hinweis oben,
+der die Schritte zeigt: **Problem auswählen – Bestätigen – Fertig**. Es gibt ein helles und
+ein dunkles Design. Standardmäßig folgt SelfX Windows.
 
-### Ein Problem lösen
+Bewegen Sie die Maus über eine Schaltfläche, um zu sehen, was sie tut. **Ohne Ihre
+Bestätigung geschieht nichts.**
 
-1. Öffnen Sie **Probleme lösen**.
-2. Geben Sie ein Wort in das Suchfeld ein (zum Beispiel *Teams* oder *langsam*)
-   oder klicken Sie auf eine Kategorie.
-3. Klicken Sie auf die Schaltfläche **i**, um mehr über eine Lösung zu lesen.
-4. Klicken Sie auf die runde Schaltfläche **Start**, lesen Sie die Meldung und
-   bestätigen Sie.
+## Ein Problem lösen
 
-Solange eine Lösung läuft, wird ihre Start-Schaltfläche zu einem rotierenden Pfeil
-und daneben steht **Läuft…**; dieselbe Lösung können Sie nicht ein zweites Mal
-starten. Sobald sie fertig ist, ist die Schaltfläche wieder ein Startknopf, und die
-Meldungsleiste unten zeigt, ob es geklappt hat. Die Schaltfläche **Beheben** auf der
-Seite **Gerätestatus** zeigt dasselbe, solange ihre Reparatur läuft.
+1. Öffnen Sie **Fehlerbehebung**.
+2. Geben Sie ein Wort in das Suchfeld ein, zum Beispiel *Teams* oder *langsam*. Oder klicken Sie
+   auf eine Kategorie.
+3. Klicken Sie auf **i**, um zu lesen, was die Lösung macht.
+4. Klicken Sie auf **Start**, lesen Sie die Meldung und bestätigen Sie.
 
-Mit **Vereinfachte Ansicht** erhalten Sie eine kurze Liste nach Produkt, mit
-**Detaillierte Ansicht** die einzelnen Probleme. Die Schaltfläche **?** daneben
-erklärt den Unterschied.
+Während eine Lösung läuft, zeigt ihre Schaltfläche einen drehenden Pfeil und **Läuft…**. Dieselbe
+Lösung können Sie in dieser Zeit nicht noch einmal starten. Danach zeigt die Meldungsleiste unten,
+ob es geklappt hat.
 
-Lösungen mit einem **Schild** brauchen Administratorrechte. SelfX führt sie für Sie
-über den lokalen SelfX-Dienst aus, Sie brauchen also kein Administratorkonto. Es
-kann nur eine Lösung mit Schild gleichzeitig laufen.
+Mit **Vereinfachte Ansicht** sehen Sie eine kurze Liste. Mit **Detaillierte Ansicht** sehen Sie
+alle einzelnen Probleme. Die Schaltfläche **?** erklärt den Unterschied.
 
-Ist an demselben Gerät eine andere Person angemeldet (zum Beispiel an einem
-gemeinsam genutzten PC oder in einer Remotesitzung), führt SelfX keine Lösungen
-aus, die diese Person stören würden, etwa den Neustart des Geräts, die Installation
-von Updates, die Datenträgerprüfung oder den Neustart der Netzwerkadapter. SelfX
-weist Sie darauf hin. Versuchen Sie es erneut, wenn Sie allein angemeldet sind,
-oder fragen Sie Ihr Support-Team.
+**Lösungen mit einem Schild** brauchen Administratorrechte. SelfX führt sie über seinen lokalen
+Dienst aus, Sie brauchen also kein Administratorkonto. Es läuft immer nur eine solche Lösung.
 
-Unten links sehen Sie, ob der SelfX-Dienst läuft (grüner Punkt). Läuft er nicht
-(roter Punkt), sind Lösungen mit Schild und der Gerätestatus nicht verfügbar.
-Starten Sie Ihr Gerät neu oder wenden Sie sich an Ihr Support-Team.
+**Wenn eine andere Person am selben Gerät angemeldet ist** (zum Beispiel an einem gemeinsam
+genutzten PC), führt SelfX keine Lösungen aus, die diese Person stören würden. Dazu gehören der
+Neustart, Updates, die Festplattenprüfung und der Neustart der Netzwerkadapter. SelfX sagt Ihnen
+dann Bescheid. Versuchen Sie es später noch einmal oder fragen Sie das Support-Team.
 
-### Gerätestatus
+**Unten links** sehen Sie, ob der SelfX-Dienst läuft (grüner Punkt). Bei einem roten Punkt sind
+Lösungen mit Schild und der Gerätestatus nicht verfügbar. Starten Sie Ihren Computer neu oder
+wenden Sie sich an das Support-Team.
 
-Der Bereich **Gerätestatus** zeigt eine Karte pro Prüfung: Firmenverwaltung
-(Intune-Dienst), Microsoft Defender, Compliance, Anwendungen, Speicherplatz, BitLocker,
-ausstehender Neustart und zu installierende Updates. Ihr Support-Team kann weitere
-Prüfungen ergänzen. Probleme stehen zuerst.
+## Gerätestatus
 
-- **Grün / In Ordnung:** Alles ist gut.
-- **Gelb / Bald erledigen:** Bald sollte etwas getan werden, zum Beispiel
-  Updates installieren. Das ist eine Warnung, kein Fehler.
-- **Rot / Fehler:** Es gibt ein Problem. Lesen Sie den Text auf der Karte.
-- **Grau / Unbekannt:** SelfX kann es nicht sagen, zum Beispiel weil die
-  Information nicht verfügbar ist. Das bedeutet nicht, dass alles in Ordnung ist.
+Der Bereich **Gerätestatus** zeigt eine Karte für jede Prüfung. Dazu gehören zum Beispiel die
+Verwaltung durch das Unternehmen, Microsoft Defender, die Compliance, Apps, der Speicherplatz,
+BitLocker, ein ausstehender Neustart und Updates. Probleme stehen oben.
 
-Der Status wird automatisch im Hintergrund geprüft (meist alle 15 Minuten, nicht
-im Akkubetrieb) und deshalb sofort angezeigt. Die Zeile unter dem Titel zeigt, wann
-zuletzt geprüft wurde.
+| Farbe | Bedeutung |
+|---|---|
+| Grün (**In Ordnung**) | Alles ist gut. |
+| Gelb (**Bald erledigen**) | Bald sollte etwas getan werden, zum Beispiel Updates. Das ist eine Warnung, kein Fehler. |
+| Rot (**Fehler**) | Es gibt ein Problem. Der Text auf der Karte sagt, was. |
+| Grau (**Unbekannt**) | SelfX kann es nicht sagen. Das heißt **nicht**, dass alles in Ordnung ist. |
 
-- **Beheben** (Schraubenschlüssel): Repariert das Problem automatisch. Speichern
-  Sie Ihre Arbeit, klicken Sie auf die Schaltfläche und bestätigen Sie. Danach
-  prüft SelfX diesen Status erneut. Die Schaltfläche erscheint nur dort, wo Ihr
-  Support-Team eine Reparatur vorbereitet hat, zum Beispiel bei **Microsoft
-  Defender** (aktualisiert die Virendefinitionen), bei **Compliance**, solange Ihr
-  Gerät nicht konform ist, und bei **Zu installierende Updates**: SelfX sucht,
-  lädt und installiert die Updates. Das kann einige Minuten dauern; die
-  Schaltfläche zeigt **Läuft…**, bis sie fertig ist, und Sie können weiterarbeiten.
-  Danach prüft SelfX den Gerätestatus erneut; ist ein Neustart nötig, zeigt ihn die
-  Karte **Neustart ausstehend**.
-- **Jetzt neu starten** bei **Neustart ausstehend**: Startet das Gerät neu, um
-  Updates und Änderungen abzuschließen. SelfX fragt vorher. Speichern Sie Ihre
-  Arbeit und schließen Sie alle Programme; der Neustart beginnt etwa 30 Sekunden
-  nach Ihrer Bestätigung. **Abbrechen** ändert nichts. *Alle Probleme beheben*
-  startet das Gerät nie neu.
-- **Erneut versuchen** bei **Unternehmens-Apps (Intune)**: Eine App Ihres
-  Unternehmens konnte nicht installiert werden (die Karte zeigt ihren Namen).
-  SelfX startet die Installation sofort neu, statt bis zum nächsten Tag zu warten;
-  verfolgen Sie sie im **Unternehmensportal**. Schlägt sie erneut fehl, liegt die
-  Ursache in der App oder ihrer Verteilung: Senden Sie die Protokolle an den
-  Support (Schaltfläche **Protokolle an Support senden**).
-- **Pfeile** auf einer Karte: Prüfen nur diesen Status erneut, zum Beispiel nachdem
-  Sie selbst etwas behoben haben. Auf Ihrem Gerät wird nichts verändert.
-- **Pfeile** oben: Prüfen alles erneut. Das kann bis zu einer Minute dauern.
-- **Alle Probleme beheben**: Erscheint oben, wenn mindestens ein Problem
-  automatisch repariert werden kann. Nachdem Sie die Liste bestätigt haben, führt
-  SelfX die Reparaturen nacheinander aus und prüft dann alles erneut. Speichern Sie
+SelfX prüft den Status im Hintergrund, meist alle 15 Minuten. Im Akkubetrieb pausiert die
+Prüfung. Die Zeile unter dem Titel zeigt, wann zuletzt geprüft wurde.
+
+**Was die Schaltflächen auf den Karten tun:**
+
+- **Beheben** (Schraubenschlüssel): Repariert das Problem automatisch. Speichern Sie vorher Ihre
+  Arbeit, bestätigen Sie und warten Sie. Das kann einige Minuten dauern. Danach prüft SelfX den
+  Status erneut. Die Schaltfläche gibt es nur, wenn Ihr Support-Team eine Reparatur vorbereitet
+  hat. Zum Beispiel bei **Zu installierende Updates**: SelfX sucht, lädt und installiert Updates.
+- **Jetzt neu starten** (bei **Neustart ausstehend**): Startet den Computer neu, damit Updates
+  fertig werden. Speichern Sie vorher Ihre Arbeit und schließen Sie alle Programme. Nach Ihrer
+  Bestätigung beginnt der Neustart nach etwa 30 Sekunden. **Abbrechen** ändert nichts. *Alle
+  Probleme beheben* startet den Computer **nie** neu.
+- **Erneut versuchen** (bei **Unternehmens-Apps**): Eine App Ihres Unternehmens konnte nicht
+  installiert werden. SelfX startet die Installation sofort neu. Den Fortschritt sehen Sie im
+  Unternehmensportal. Schlägt sie wieder fehl, senden Sie die Protokolle an den Support.
+- **Pfeil** auf einer Karte: Prüft nur diesen Status erneut. Oben: prüft alles erneut.
+- **Alle Probleme beheben**: Führt alle möglichen Reparaturen nacheinander aus. Speichern Sie
   vorher Ihre Arbeit.
 
-Alle Zeiten (zum Beispiel *zuletzt geprüft* oder das letzte Defender-Update) werden
-in der Zeitzone Ihres Geräts angezeigt, auch direkt nach einer Änderung der
-Zeitzone, zum Beispiel bei der Ersteinrichtung eines neuen Geräts.
+**Beispiele:**
 
-Beispiele: **Neustart ausstehend (rot)**: Klicken Sie auf **Jetzt neu starten**
-oder starten Sie das Gerät selbst neu. **Zu installierende Updates (gelb)**:
-Klicken Sie auf **Beheben**, installieren Sie sie in den **Einstellungen** >
-**Windows Update** oder warten Sie auf die automatische Installation.
+- **Neustart ausstehend (rot):** Klicken Sie auf **Jetzt neu starten** oder starten Sie den
+  Computer selbst neu.
+- **Zu installierende Updates (gelb):** Klicken Sie auf **Beheben**. Oder installieren Sie Updates
+  unter **Einstellungen > Windows Update**.
 
-SelfX protokolliert auf Ihrem Gerät, was es tut (zum Beispiel welche Aktion Sie
-gestartet haben und mit welchem Ergebnis), damit Ihr Support-Team ein Problem
-nachvollziehen kann. Die Protokolle enthalten keine Kennwörter und werden nach 90
-Tagen automatisch gelöscht.
+## Systeminformationen
 
-### Systeminformationen
+Der Bereich **Systeminformationen** zeigt Angaben über Gerät, Windows, Nutzer, Verwaltung und
+Netzwerk. Die letzten Werte stehen sofort da und werden im Hintergrund aktualisiert.
 
-Der Bereich **Systeminformationen** zeigt Angaben zu Ihrem Gerät, nach denen das
-Support-Team oft fragt: Gerät, Windows, Nutzer und Verwaltung, Netzwerk. Die
-zuletzt bekannten Werte erscheinen sofort und werden im Hintergrund aktualisiert.
+- **Doppelklick** auf eine Zeile kopiert den Wert.
+- Die Schaltflächen oben aktualisieren die Angaben, kopieren alles oder speichern es als Datei.
+- Unter den Angaben finden Sie **Werkzeuge**:
+  - Intune synchronisieren: die Verwaltung des Geräts neu abgleichen.
+  - Compliance prüfen.
+  - Das Unternehmensportal öffnen.
+  - **Fernwartung**: Startet **Remote Help**, wenn es auf Ihrem Gerät installiert ist. Sonst startet
+    es Quick Assist. Eine Person vom Support kann dann Ihren Bildschirm sehen, aber nur mit Ihrer
+    Zustimmung.
+  - Die Protokolle der Geräteverwaltung sammeln.
+  - Die Geräteprotokolle an den Support senden.
 
-- Doppelklicken Sie auf eine Zeile, um ihren Wert zu kopieren.
-- Die Schaltflächen oben aktualisieren die Informationen, kopieren alles (zum
-  Beispiel, um es in eine Support-Anfrage einzufügen) oder speichern es als Datei.
-- Die **Werkzeuge** unter den Informationen synchronisieren Ihre Intune-Apps,
-  prüfen die Compliance, öffnen das Unternehmensportal, starten Remote Help (oder Quick Assist, wenn Remote Help nicht installiert ist; eine
-  Support-Person kann Ihren Bildschirm sehen, nur mit Ihrer Zustimmung), sammeln
-  die Protokolle der Geräteverwaltung oder senden die Geräteprotokolle an den
-  Support.
+Die Angaben enthalten Gerätename, Benutzername und Netzwerkadressen. Geben Sie sie nur an Ihr
+Support-Team weiter.
 
-Die Informationen enthalten Ihren Gerätenamen, Ihren Benutzernamen und
-Netzwerkadressen. Geben Sie sie nur an Ihr Support-Team weiter.
+## Support anfragen und Protokolle senden
 
-### Geräteprotokolle an den Support senden
+SelfX bietet zwei Wege, das Support-Team zu erreichen.
 
-Wenn das Support-Team die Protokolle Ihres Geräts anfordert, klicken Sie auf
-**Protokolle an Support senden** (unten links, in den Systeminformationen oder im
-Menü des SelfX-Symbols neben der Uhr).
+**Kontakt anzeigen:** Klicken Sie oben rechts auf **?**. Dort stehen Servicezeiten, Telefonnummer,
+E-Mail-Adresse, Teams-Adresse und Website. Schaltflächen öffnen direkt eine E-Mail, einen Teams-Chat
+oder die Website.
 
-1. Bestätigen Sie. SelfX sammelt die Protokolle mit Administratorrechten über den
-   lokalen SelfX-Dienst; Sie brauchen kein Administratorkonto. Das kann einige
-   Minuten dauern. Auf Ihrem Gerät wird nichts verändert.
-2. Sind die Protokolle fertig, öffnet sich eine neue E-Mail an den Support mit dem
-   Bericht im Anhang (eine `.zip`-Datei). Er enthält auch die Protokolle von SelfX
-   selbst (was SelfX auf Ihrem Gerät getan hat und Ihre eigenen SelfX-Aktionen),
-   sodass der Support sehen kann, welche Lösungen Sie schon versucht haben.
-3. Beschreiben Sie Ihr Problem in der E-Mail und senden Sie sie ab. SelfX sendet
-   nie von selbst etwas.
+**Problem melden (Ticket per E-Mail):** Ist diese Funktion eingeschaltet, zeigt der Hilfe-Dialog die
+Zeile **Problem melden**. So geht es:
 
-Lässt sich Outlook nicht automatisch öffnen (zum Beispiel beim neuen Outlook),
-öffnet SelfX eine neue E-Mail in Ihrer Standard-Mail-App und ein Explorer-Fenster
-mit dem markierten Bericht. Hängen Sie diese Datei an die E-Mail an. Der Bericht
-enthält den Namen Ihres Geräts, Ihren Benutzernamen und die Protokolle des Geräts.
-Auf dem Gerät können nur Sie und die Administratoren ihn lesen. Senden Sie ihn nur
-an Ihr Support-Team.
+1. Klicken Sie auf **Ticket erstellen** und beschreiben Sie das Problem.
+2. SelfX fügt die Angaben zu Ihrem Gerät automatisch hinzu. Das können Sie nicht abwählen.
+3. Sie sehen die E-Mail vor dem Senden. Der Empfänger steht im Dialog.
+4. Sie senden die E-Mail selbst. **SelfX sendet nie von selbst.**
 
-### Hilfe, Einstellungen und das SelfX-Symbol
+Öffnet sich Ihr E-Mail-Programm nicht mit der Datei, markiert SelfX die Datei im Explorer. Hängen
+Sie sie dann selbst an.
 
-- **?** (oben rechts): So erreichen Sie Ihr Support-Team, zum Beispiel
-  Servicezeiten, Telefonnummer, E-Mail, Teams-Chat oder Website / Ticketsystem.
-  Schaltflächen starten eine E-Mail, einen Teams-Chat oder öffnen die Website.
-- **Zahnrad**: Wählen Sie die Sprache von SelfX, das Erscheinungsbild
-  (*Automatisch*, die Voreinstellung, nutzt den dunklen oder hellen Modus von
-  Windows, oder immer *Dunkel* oder *Hell*), zeigen oder verbergen Sie das
-  SelfX-Symbol neben der Uhr und schalten Sie die Benachrichtigungen über Probleme
-  ein oder aus.
-- **i**: Version von SelfX.
+**Copilot Chat fragen:** Ist diese Funktion eingeschaltet, zeigt der Hilfe-Dialog **Copilot Chat
+fragen**:
 
-Das **SelfX-Symbol** neben der Uhr zeigt den Gerätestatus auf einen Blick: ein
-grüner, gelber oder roter Punkt (grau = noch nicht bekannt). Bewegen Sie die Maus
-darüber, um eine Zusammenfassung zu sehen. Wird ein Problem gefunden, zum Beispiel
-wenig Speicherplatz, zeigt Windows einmal eine Benachrichtigung; klicken Sie
-darauf, um den Gerätestatus zu öffnen. Möchten Sie diese Benachrichtigungen nicht,
-schalten Sie **Benachrichtigungen über Probleme anzeigen** mit dem Zahnrad oder
-**Benachrichtigungen anzeigen** im Menü des Symbols aus; das farbige Symbol zeigt
-den Status weiterhin. Mit einem Rechtsklick auf das Symbol öffnen Sie SelfX,
-prüfen den Status jetzt, senden die Protokolle an den Support oder verbergen das
-Symbol. Mit dem Zahnrad in SelfX können Sie es wieder anzeigen.
+1. Beschreiben Sie das Problem mit eigenen Worten (optional) und klicken Sie auf **Text erstellen**.
+2. Sie sehen eine Vorschau. Lesen oder ändern Sie den Text.
+3. Klicken Sie auf **Kopieren und Copilot öffnen**. Fügen Sie den Text in Copilot Chat ein (Strg+V)
+   und senden Sie ihn selbst ab.
 
-SelfX erscheint standardmäßig auf Deutsch. Um eine andere Sprache zu nutzen,
-klicken Sie auf das **Zahnrad** und wählen Ihre Sprache unter **Sprache**. Die
-Sprachen stehen unter ihrem eigenen Namen, zum Beispiel *Deutsch* oder
-*français*. SelfX startet in der gewählten Sprache neu und merkt sich Ihre Wahl.
-Das SelfX-Symbol neben der Uhr verwendet sie ebenfalls. **Automatisch** wechselt
-zur Sprache von Windows; ist sie nicht verfügbar, erscheint SelfX auf Deutsch.
-Texte, die es in Ihrer Sprache nicht gibt, erscheinen auf Englisch. Ihr
-Support-Team kann die Auswahl ausblenden und eine feste Sprache vorgeben.
+Der Text enthält keine Namen, E-Mail-Adressen oder IP-Adressen. Prüfen Sie ihn trotzdem vor dem
+Senden. Schreiben Sie keine Passwörter oder Kundendaten hinein. Der Text bleibt nach dem Kopieren
+kurz in der Zwischenablage. Ist die Funktion so eingestellt, leert SelfX sie nach einigen Minuten.
+
+**Geräteprotokolle an den Support senden:** Klicken Sie unten links, in den Systeminformationen oder im
+Menü des SelfX-Symbols auf **Protokolle an Support senden**.
+
+1. Bestätigen Sie. SelfX sammelt die Protokolle über seinen Dienst. Das dauert einige Minuten.
+   Auf Ihrem Gerät wird nichts verändert.
+2. Danach öffnet sich eine E-Mail an den Support mit dem Bericht als `.zip`-Datei im Anhang. Der
+   Bericht enthält auch die Protokolle von SelfX, damit der Support sieht, was Sie schon versucht haben.
+3. Beschreiben Sie Ihr Problem und senden Sie die E-Mail ab.
+
+Der Bericht enthält Gerätename, Benutzername und Protokolle. Nur Sie und Administratoren können ihn auf
+dem Gerät lesen. Senden Sie ihn nur an Ihr Support-Team.
+
+## Das SelfX-Symbol neben der Uhr
+
+Das Symbol neben der Uhr zeigt den Gerätestatus auf einen Blick:
+
+- **grün**: alles in Ordnung
+- **gelb**: Warnung
+- **rot**: Problem
+- **grau**: noch kein Ergebnis
+
+Bewegen Sie die Maus darüber, um eine Zusammenfassung zu sehen. Das Symbol bleibt unter Windows 11
+dauerhaft neben der Uhr. Es verschwindet also nicht im Überlaufmenü (Pfeil).
+
+Wird ein Problem gefunden, zeigt Windows einmal eine Benachrichtigung. Ein Klick darauf öffnet den
+Gerätestatus. Möchten Sie keine Benachrichtigungen, schalten Sie sie mit dem **Zahnrad** oder im Menü
+des Symbols aus. Das farbige Symbol zeigt den Status trotzdem.
+
+**Rechtsklick auf das Symbol:** SelfX öffnen, Status jetzt prüfen, Protokolle senden oder das Symbol
+verbergen. Wieder anzeigen können Sie es über das Zahnrad in SelfX.
+
+## Einstellungen: Sprache und Design
+
+Klicken Sie auf das **Zahnrad** in SelfX:
+
+- **Sprache:** Wählen Sie Ihre Sprache. Jede Sprache steht unter ihrem eigenen Namen, zum Beispiel
+  *Deutsch* oder *français*. SelfX startet danach neu und merkt sich die Wahl. Auch das Symbol neben
+  der Uhr nutzt die neue Sprache. **Automatisch** nimmt die Sprache von Windows. Ist sie nicht
+  verfügbar, zeigt SelfX Deutsch. Texte, die es in Ihrer Sprache nicht gibt, erscheinen auf Englisch.
+  Manche Unternehmen legen die Sprache fest. Dann fehlt diese Auswahl.
+- **Design:** *Automatisch* folgt Windows, *Dunkel* und *Hell* stellen Sie fest ein.
+- **Symbol neben der Uhr** anzeigen oder verbergen.
+- **Benachrichtigungen über Probleme** ein- oder ausschalten.
+
+Unter **i** finden Sie die Version von SelfX.
 
 ## Wichtige Hinweise
 
-- Speichern Sie offene Dokumente vor Aktionen, die Anwendungen neu starten oder
-  beenden.
-- Die Aktion OneDrive-CHKDSK führt `chkdsk /r /f` auf dem Systemlaufwerk aus. Sie
-  wird für den nächsten Neustart geplant; starten Sie das Gerät danach neu. Die
-  Prüfung kann lange dauern.
-- Die Aktion für Netzwerkadapter unterbricht die Netzwerkverbindung, während die
-  Adapter neu starten.
-- Die Aktion zur Gerätebereinigung leert den Papierkorb und entfernt Dateien aus
-  dem temporären Ordner des aktuellen Nutzers.
-- Wenden Sie sich an Ihr Support-Team, wenn eine Aktion fehlschlägt oder das
-  Problem bleibt.
+- **Speichern Sie Ihre Arbeit**, bevor Sie eine Lösung starten. Manche Lösungen starten Programme neu
+  oder beenden sie. Neustarts betreffen alle offenen Programme.
+- **Festplattenprüfung (chkdsk):** Die Prüfung wird für den nächsten Neustart geplant. Sie kann lange
+  dauern. Starten Sie den Computer danach neu.
+- **Netzwerk-Neustart:** Während die Netzwerkadapter neu starten, ist die Verbindung kurz unterbrochen.
+- **Speicher aufräumen:** Löscht temporäre Dateien und leert den Papierkorb Ihres Benutzers.
+- **Zeit korrigieren:** Gleicht die Uhr Ihres Geräts mit der Zeitquelle ab.
+- **Datenschutz:** SelfX sendet nichts von selbst. Protokolle, Berichte und Texte gehen nur an Ihr
+  Support-Team, wenn Sie es bestätigen. Protokolle enthalten keine Passwörter. Sie werden nach 90 Tagen
+  automatisch gelöscht.
+- Wenden Sie sich an Ihr Support-Team, wenn eine Lösung fehlschlägt oder das Problem bleibt.
