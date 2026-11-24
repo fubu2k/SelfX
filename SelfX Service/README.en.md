@@ -15,11 +15,11 @@ SelfX Service is installed machine-wide and works without any network connection
   (default every 15 minutes, paused on battery, postponed under high processor
   load) and keeps the result, so SelfX shows status and system information
   immediately. See
-  [Background checks](../docs/en/Configuration.md#background-checks).
+  [Background checks](../docs/en/Configuration.md#device-status).
 - Tray icon (2.5.0): a status icon next to the clock for every user (green,
   yellow, red) with a notification when a problem is found, for example low
   disk space. Each user can hide it. See
-  [Tray icon](../docs/en/Configuration.md#tray-icon).
+  [Tray icon](../docs/en/Configuration.md#status-icon).
 - **Fix all problems** and user time zone (2.5.3): one button on the Device
   status page runs all prepared repairs one after another; all times are shown
   in the current time zone of the user. SelfX and the status icon start
@@ -60,7 +60,7 @@ SelfX Service is installed machine-wide and works without any network connection
   with administrator rights through the service. Then they open a new e-mail
   (Outlook) to `Support_Mail` with the report attached; the user describes the
   issue and sends it. See
-  [Device logs for the support](../docs/en/Configuration.md#device-logs-for-the-support).
+  [Device logs for the support](../docs/en/Configuration.md#device-logs-for-support).
 - Logging and repairs (2.6.0): every script logs to `%ProgramData%\SelfX\Logs`
   (users to `Logs\Users\<SID>`), old logs are deleted after `Log_Retention_Days`
   (default 90). **Restart now** on *Restart pending* (with a restart warning),
@@ -205,5 +205,5 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 ```
 
 See [Installation](../docs/en/Installation.md#step-3-set-up-in-intune),
-[Configuration](../docs/en/Configuration.md#selfx-service) and the
+[Configuration](../docs/en/Configuration.md#the-most-important-settings) and the
 [User manual](../docs/en/User-Manual.md#selfx).
