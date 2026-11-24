@@ -472,6 +472,15 @@ Lần tới khi bạn mở một ứng dụng Office, bạn sẽ được yêu c
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Cửa sổ chương trình nằm ngoài màn hình</Name>
+				<Explanation>Một chương trình đang chạy nhưng bạn không thấy cửa sổ của nó. Điều này thường xảy ra sau khi rút màn hình ngoài, chẳng hạn khi chuyển từ làm việc tại nhà sang văn phòng.</Explanation>
+				<Alerte_MSG>Các cửa sổ chương trình nằm ngoài màn hình sẽ được đưa về màn hình chính của bạn. Không có gì bị đóng hoặc lưu, và các cửa sổ bạn đã thấy sẽ không bị thay đổi.
+
+Nếu không có gì thay đổi: nhấn phím Windows + P và chọn “Chỉ màn hình máy tính”. Sau đó nhấp vào chương trình trên thanh tác vụ.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Khởi động ứng dụng OneDrive</Name>
 				<Explanation>OneDrive hiện không chạy.</Explanation>

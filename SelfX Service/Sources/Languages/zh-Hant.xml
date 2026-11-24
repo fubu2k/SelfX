@@ -472,6 +472,15 @@
 
 是否要繼續？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>程式視窗在螢幕之外</Name>
+				<Explanation>某個程式正在執行，但您看不到它的視窗。拔掉外接螢幕後經常發生這種情況，例如從居家辦公回到辦公室時。</Explanation>
+				<Alerte_MSG>位於螢幕之外的程式視窗將被移到主螢幕上。不會關閉或儲存任何內容，您已經看得到的視窗也不會被變更。
+
+如果沒有變化：按 Windows 鍵 + P，選擇「僅電腦螢幕」，然後在工作列中按一下該程式。
+
+是否繼續？</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>啟動 OneDrive 客戶端</Name>
 				<Explanation>OneDrive 當前未執行。</Explanation>

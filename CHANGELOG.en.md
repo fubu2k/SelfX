@@ -21,6 +21,12 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
   English; more languages via `tools\Wizard\Wizard.<culture>.xml`. See
   [Package wizard](docs/en/Guided-Setup.md). `New-SelfXIntuneWin.ps1` 1.8.0 has the new parameter
   `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (runs in CI).
+- **New action "A program window is outside the screen"** (category Device, user context):
+  moves windows of the own user whose title bar cannot be reached on any screen (for example
+  after a monitor was disconnected) to the primary screen. Nothing is closed, saved or
+  changed in the settings; windows are moved through Microsoft UI Automation (no compiled
+  code) and window titles are not written to the log. Programs with higher rights are
+  skipped. New helper `SelfXWindows.ps1`, test: `Test-WindowHelper.ps1`.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 

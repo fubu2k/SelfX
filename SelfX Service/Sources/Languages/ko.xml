@@ -472,6 +472,15 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 
 계속하시겠습니까?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>프로그램 창이 화면 밖에 있습니다</Name>
+				<Explanation>프로그램은 실행 중인데 창이 보이지 않습니다. 외부 모니터를 분리했을 때, 예를 들어 재택근무에서 사무실로 옮겼을 때 자주 발생합니다.</Explanation>
+				<Alerte_MSG>화면 밖에 있는 프로그램 창을 기본 화면으로 가져옵니다. 아무것도 닫거나 저장하지 않으며, 이미 보이는 창은 변경되지 않습니다.
+
+아무 변화가 없으면 Windows 키 + P를 누르고 “PC 화면만”을 선택한 다음 작업 표시줄에서 해당 프로그램을 클릭하세요.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive 클라이언트 시작</Name>
 				<Explanation>OneDrive가 실행되고 있지 않습니다.</Explanation>

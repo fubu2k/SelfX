@@ -472,6 +472,15 @@ Au prochain démarrage d’une application Office, vous devrez vous connecter av
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Une fenêtre de programme est hors de l’écran</Name>
+				<Explanation>Un programme est en cours d’exécution, mais vous ne voyez pas sa fenêtre. Cela arrive souvent après le débranchement d’un écran externe, par exemple en passant du télétravail au bureau.</Explanation>
+				<Alerte_MSG>Les fenêtres de programme situées hors de l’écran seront ramenées sur votre écran principal. Rien n’est fermé ni enregistré, et les fenêtres que vous voyez déjà ne sont pas modifiées.
+
+Si rien ne change : appuyez sur la touche Windows + P et choisissez « Écran du PC uniquement ». Cliquez ensuite sur le programme dans la barre des tâches.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Démarrer le client OneDrive</Name>
 				<Explanation>OneDrive n’est pas en cours d’exécution.</Explanation>

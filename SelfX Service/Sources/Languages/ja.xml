@@ -472,6 +472,15 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 
 続行しますか?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>プログラムのウィンドウが画面の外にある</Name>
+				<Explanation>プログラムは動いているのに、そのウィンドウが見えません。外付けモニターを外したとき、たとえば在宅勤務からオフィスに移ったときによく起こります。</Explanation>
+				<Alerte_MSG>画面の外にあるプログラムのウィンドウを、メイン画面に移動します。何も閉じたり保存したりせず、すでに見えているウィンドウは変更されません。
+
+何も変わらない場合: Windows キー + P を押して「PC 画面のみ」を選び、タスクバーでそのプログラムをクリックしてください。
+
+続行しますか?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive クライアントを起動する</Name>
 				<Explanation>OneDrive が実行されていません。</Explanation>

@@ -472,6 +472,15 @@ Bir sonraki Office uygulaması başlatışınızda iş hesabınızla oturum açm
 
 Devam etmek istiyor musunuz?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Device_BringWindowsBack">
+				<Name>Bir program penceresi ekranın dışında</Name>
+				<Explanation>Bir program çalışıyor ama penceresini göremiyorsunuz. Bu, harici bir monitör çıkarıldığında, örneğin evden çalışmadan ofise geçerken sık olur.</Explanation>
+				<Alerte_MSG>Ekranın dışında kalan program pencereleri ana ekranınıza getirilir. Hiçbir şey kapatılmaz veya kaydedilmez, zaten gördüğünüz pencereler değiştirilmez.
+
+Hiçbir şey değişmezse: Windows tuşu + P tuşlarına basın ve “Yalnızca bilgisayar ekranı” seçeneğini seçin. Ardından görev çubuğunda programa tıklayın.
+
+Devam etmek istiyor musunuz?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive istemcisini başlatın</Name>
 				<Explanation>OneDrive çalışmıyor.</Explanation>

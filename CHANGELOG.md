@@ -21,6 +21,13 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
   Deutsch und Englisch, weitere Sprachen über `tools\Wizard\Wizard.<Kultur>.xml`. Siehe
   [Paketassistent](docs/Assistent.md). `New-SelfXIntuneWin.ps1` 1.8.0 hat den neuen Parameter
   `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (läuft in der CI).
+- **Neue Aktion „Ein Programmfenster liegt außerhalb des Bildschirms“** (Kategorie Gerät,
+  Nutzerkontext): holt Fenster des eigenen Benutzers, deren Titelleiste auf keinem Bildschirm
+  erreichbar ist (zum Beispiel nach dem Abstecken eines Monitors), auf den Hauptbildschirm.
+  Es wird nichts geschlossen, gespeichert oder an Einstellungen geändert; Fenster werden über
+  Microsoft UI Automation verschoben (kein kompilierter Code), Fenstertitel stehen nicht im
+  Log. Programme mit höheren Rechten werden übersprungen. Neuer Helfer `SelfXWindows.ps1`,
+  Test: `Test-WindowHelper.ps1`.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 
