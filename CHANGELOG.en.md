@@ -12,6 +12,16 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 (the packaging script checks this). A release gets the tag `v<version>` (for example
 `v3.0.0`); the release workflow checks that the tag and `Tool_Version` match.
 
+## Unreleased
+
+- **Package wizard (guided configuration):** `tools\New-SelfXPackage.ps1` asks questions with a
+  recommendation (support, branding, ticket and organisations by OU, group tag and device class,
+  Copilot Chat, behavior), writes the answers into a copy of the package, builds the Intune package,
+  creates the platform scripts for the ticket routing and short Intune instructions. German and
+  English; more languages via `tools\Wizard\Wizard.<culture>.xml`. See
+  [Package wizard](docs/en/Guided-Setup.md). `New-SelfXIntuneWin.ps1` 1.8.0 has the new parameter
+  `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (runs in CI).
+
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 
 Version 3.0.0 combines all changes since the upstream state 2.6.9 was taken over.

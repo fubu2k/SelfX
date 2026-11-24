@@ -239,6 +239,7 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.en.md).
 
 ## Documentation
 
+- [Package wizard](docs/en/Guided-Setup.md): guided configuration up to the Intune package
 - [Installation](docs/en/Installation.md), including the release checklist of SelfX Service
 - [Configuration](docs/en/Configuration.md)
 - [User manual](docs/en/User-Manual.md)

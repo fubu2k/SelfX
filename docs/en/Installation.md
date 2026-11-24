@@ -74,6 +74,9 @@ Windows setting.*
 
 ## Step 2: Build the package
 
+> **Easier with the wizard:** `tools\New-SelfXPackage.ps1` asks questions with recommendations, builds the package
+> and explains the steps in Intune. See [Package wizard](Guided-Setup.md). The steps below show the manual way.
+
 Repeat this step for every new version. Open PowerShell in the folder of the repository.
 
 1. **Adjust the settings.** Branding, support contacts and features are in

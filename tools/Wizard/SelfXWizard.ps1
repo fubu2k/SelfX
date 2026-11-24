@@ -293,7 +293,7 @@ function New-SelfXIntuneGuide {
         $lines.Add((Get-WText 'guide.s7tag'))
         $lines.Add('')
     }
-    $lines.Add((Get-WText 'guide.s8'))
+    $lines.Add((Get-WText 'guide.s8' @($(if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }))))
     $lines.Add('')
     if ($AnswersFile) {
         $lines.Add((Get-WText 'guide.update' @($AnswersFile)))

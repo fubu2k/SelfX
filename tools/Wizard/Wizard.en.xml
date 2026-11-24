@@ -101,7 +101,8 @@
 	<T Id="Output.ask">Output folder</T>
 	<T Id="Output.rec">The folder receives the package, the detection script, the scripts for Intune and the instructions. Do not commit it.</T>
 	<T Id="summary.header">Summary of your answers</T>
-	<T Id="summary.confirm">Create the package with these settings?</T>
+	<T Id="summary.ask">Create the package with these settings?</T>
+	<T Id="summary.rec">Yes, if the summary is correct. Nothing is installed or sent; the package is only built.</T>
 	<T Id="step.config">Writing the settings into a copy of the package ...</T>
 	<T Id="step.bin">Building the programs ...</T>
 	<T Id="step.pack">Creating the Intune package ...</T>
@@ -122,7 +123,7 @@
 	<T Id="guide.s7">7. Ticket routing: create one platform script per file below (Devices > Scripts and remediations > Platform scripts). Run this script using the logged on credentials: No. Run script in 64-bit PowerShell: Yes. Assign each script to the matching Entra device group; the groups should exclude each other.</T>
 	<T Id="guide.s7item">   {0}: group tags {1}; device classes {2}</T>
 	<T Id="guide.s7tag">   Tip for a dynamic device group of a group tag: (device.devicePhysicalIds -any (_ -eq "[OrderID]:TAG"))</T>
-	<T Id="guide.s8">8. Test on a pilot device: the Start menu shows SelfX, the service SelfXService runs, the logs are in %ProgramData%\SelfX\Logs. Then widen the assignment.</T>
+	<T Id="guide.s8">{0}. Test on a pilot device: the Start menu shows SelfX, the service SelfXService runs, the logs are in %ProgramData%\SelfX\Logs. Then widen the assignment.</T>
 	<T Id="guide.update">Update later: raise Tool_Version and ExpectedVersion in the repository, run the wizard again with your saved answers ({0}), and upload the new package as a new version of the app.</T>
 	<T Id="guide.answers">Your answers are saved in {0}. It contains your mailbox addresses: keep it out of Git.</T>
 	<T Id="guide.script.header">Set-SelfXSupportUnit script for the unit {0}. Assign it to the Entra device group of this unit.</T>

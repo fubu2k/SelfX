@@ -41,7 +41,7 @@ try {
     # ---------------------------------------------------------- language files
     Write-Host 'Language files'
     $en = Read-WizardTextFile -Path (Join-Path $WizardFolder 'Wizard.en.xml')
-    $questionIds = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('UnitId', 'UnitMail', 'UnitCc', 'UnitGroupTags', 'UnitOUs', 'UnitCategories', 'UnitMore', 'Tool', 'BuildBinaries', 'Output')
+    $questionIds = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('UnitId', 'UnitMail', 'UnitCc', 'UnitGroupTags', 'UnitOUs', 'UnitCategories', 'UnitMore', 'Tool', 'BuildBinaries', 'Output', 'summary')
     $missing = @($questionIds | Where-Object { -not $en.ContainsKey("$_.ask") -or -not $en.ContainsKey("$_.rec") })
     Assert ($missing.Count -eq 0) ("English has .ask and .rec for every question" + $(if ($missing) { ': ' + ($missing -join ',') }))
     foreach ($language in @(Get-WizardLanguages -Folder $WizardFolder)) {

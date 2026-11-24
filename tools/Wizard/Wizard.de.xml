@@ -99,7 +99,8 @@
 	<T Id="Output.ask">Ausgabeordner</T>
 	<T Id="Output.rec">Der Ordner enthält Paket, Erkennungsskript, Intune-Skripte und Anleitung. Nicht einchecken.</T>
 	<T Id="summary.header">Zusammenfassung Ihrer Angaben</T>
-	<T Id="summary.confirm">Paket mit diesen Einstellungen erstellen?</T>
+	<T Id="summary.ask">Paket mit diesen Einstellungen erstellen?</T>
+	<T Id="summary.rec">Ja, wenn die Zusammenfassung stimmt. Es wird nichts installiert oder gesendet; das Paket wird nur gebaut.</T>
 	<T Id="step.config">Einstellungen werden in eine Kopie des Pakets geschrieben ...</T>
 	<T Id="step.bin">Programme werden gebaut ...</T>
 	<T Id="step.pack">Intune-Paket wird erstellt ...</T>
@@ -120,7 +121,7 @@
 	<T Id="guide.s7">7. Ticket-Zuordnung: Legen Sie je Datei unten ein Plattformskript an (Geräte > Skripte und Fehlerbehebungen > Plattformskripts). Mit den Anmeldeinformationen des angemeldeten Benutzers ausführen: Nein. Skripthost in 64-Bit-PowerShell ausführen: Ja. Weisen Sie jedes Skript der passenden Entra-Gerätegruppe zu; die Gruppen sollten sich gegenseitig ausschließen.</T>
 	<T Id="guide.s7item">   {0}: Group Tags {1}; Geräteklassen {2}</T>
 	<T Id="guide.s7tag">   Tipp für eine dynamische Gerätegruppe zu einem Group Tag: (device.devicePhysicalIds -any (_ -eq "[OrderID]:TAG"))</T>
-	<T Id="guide.s8">8. Auf einem Pilotgerät testen: Das Startmenü zeigt SelfX, der Dienst SelfXService läuft, die Protokolle liegen in %ProgramData%\SelfX\Logs. Danach die Zuweisung erweitern.</T>
+	<T Id="guide.s8">{0}. Auf einem Pilotgerät testen: Das Startmenü zeigt SelfX, der Dienst SelfXService läuft, die Protokolle liegen in %ProgramData%\SelfX\Logs. Danach die Zuweisung erweitern.</T>
 	<T Id="guide.update">Update später: Tool_Version und ExpectedVersion im Repository erhöhen, den Assistenten mit Ihren gespeicherten Antworten erneut starten ({0}) und das neue Paket als neue Version der App hochladen.</T>
 	<T Id="guide.answers">Ihre Antworten sind in {0} gespeichert. Die Datei enthält Ihre Postfachadressen: nicht in Git einchecken.</T>
 	<T Id="guide.script.header">Set-SelfXSupportUnit-Skript für die Einheit {0}. Weisen Sie es der Entra-Gerätegruppe dieser Einheit zu.</T>
