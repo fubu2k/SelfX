@@ -525,7 +525,7 @@ commands they do not understand. The text is limited to 6000 characters.
 | `Copilot_Url` | Address that is opened. Default `https://copilot.cloud.microsoft`. It can be freely chosen but must start with `https://`, must not contain credentials and has at most 500 characters. Otherwise the button is not shown. |
 | `Copilot_Audience` | `User` (default): plain answers for users. `Admin`: technical answers for IT staff. |
 | `Copilot_Include_AppNames` | `True` (default): names of company apps with errors may be part of the text. `False`: the company apps row of the device status stays, but without details, so without app names and without error codes. |
-| `Copilot_Clear_Clipboard` | `False` (default) or `True`: SelfX empties the clipboard after `Copilot_Clear_Clipboard_Seconds`, but only if the text it copied is still on it. See [Emptying the clipboard](#emptying-the-clipboard). |
+| `Copilot_Clear_Clipboard` | `False` (default) or `True`: SelfX empties the clipboard after `Copilot_Clear_Clipboard_Seconds`, but only if the text it copied is still on it. See [Emptying the clipboard](#copilot-chat). |
 | `Copilot_Clear_Clipboard_Seconds` | Whole number from 30 to 600, default `180`. Another value is replaced by 180 and the log names the reason. |
 
 **Emptying the clipboard (optional, `Copilot_Clear_Clipboard`):** If the setting is

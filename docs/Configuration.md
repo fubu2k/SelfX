@@ -550,7 +550,7 @@ Text ist auf 6000 Zeichen begrenzt.
 | `Copilot_Url` | Adresse, die geöffnet wird. Standard `https://copilot.cloud.microsoft`. Sie ist frei wählbar, muss aber mit `https://` beginnen, darf keine Zugangsdaten enthalten und höchstens 500 Zeichen haben. Sonst wird die Schaltfläche nicht gezeigt. |
 | `Copilot_Audience` | `User` (Standard): einfache Antworten für Nutzer. `Admin`: technische Antworten für IT-Personal. |
 | `Copilot_Include_AppNames` | `True` (Standard): Namen von Firmen-Apps mit Fehlern dürfen im Text stehen. `False`: Die Zeile der Firmen-Apps im Gerätestatus bleibt, aber ohne Einzelheiten, also ohne App-Namen und ohne Fehlercodes. |
-| `Copilot_Clear_Clipboard` | `False` (Standard) oder `True`: SelfX leert die Zwischenablage nach `Copilot_Clear_Clipboard_Seconds`, aber nur, wenn der kopierte Text noch darin steht. Siehe [Zwischenablage leeren](#zwischenablage-leeren). |
+| `Copilot_Clear_Clipboard` | `False` (Standard) oder `True`: SelfX leert die Zwischenablage nach `Copilot_Clear_Clipboard_Seconds`, aber nur, wenn der kopierte Text noch darin steht. Siehe [Zwischenablage leeren](#copilot-chat). |
 | `Copilot_Clear_Clipboard_Seconds` | Ganze Zahl von 30 bis 600, Standard `180`. Ein anderer Wert wird durch 180 ersetzt, das Protokoll nennt den Grund. |
 
 **Zwischenablage leeren (optional, `Copilot_Clear_Clipboard`):** Ist die Einstellung
