@@ -165,6 +165,11 @@ try {
     $roundTrip = & $hostExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptFolder 'New-SelfXPackage.ps1') -AnswerFile (Join-Path $out 'selfx-answers.json') -OutputFolder (Join-Path $work 'round') -ConfigureOnly 2>&1
     Assert ($LASTEXITCODE -eq 0) ('saved answers can be used again' + $(if ($LASTEXITCODE) { ': ' + ($roundTrip | Out-String) }))
 
+    $minimal = [ordered]@{} ; foreach ($key in $answers.Keys) { $minimal[$key] = $answers[$key] }
+    $minimal.UseDeviceClass = $false
+    $minimal.Units = @([ordered]@{ UnitId = 'IT1'; UnitMail = 'it1@contoso.example'; UnitGroupTags = @('DE-IT1-BER') })
+    Assert ((Invoke-Wizard -Answers $minimal -Folder (Join-Path $work 'minimal')).Exit -eq 0) 'unit without OU and device class keys is accepted'
+
     # ---------------------------------------------------------- injection in text answers
     $evilAnswers = [ordered]@{} ; foreach ($key in $answers.Keys) { $evilAnswers[$key] = $answers[$key] }
     $evilAnswers.ToolName = 'Self</Tool_Name><Evil/>X'

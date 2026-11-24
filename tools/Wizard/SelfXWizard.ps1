@@ -439,9 +439,9 @@ function New-WizardUnit {
         Id         = [string]$Values.UnitId
         Mail       = [string]$Values.UnitMail
         Cc         = [string]$Values.UnitCc
-        GroupTags  = @($Values.UnitGroupTags)
-        OUs        = @($Values.UnitOUs)
-        Categories = @($Values.UnitCategories)
+        GroupTags  = @($Values.UnitGroupTags | Where-Object { $_ })
+        OUs        = @($Values.UnitOUs | Where-Object { $_ })
+        Categories = @($Values.UnitCategories | Where-Object { $_ })
     }
 }
 
