@@ -1,260 +1,250 @@
 # Installation
 
-[English](en/Installation.md) | **Deutsch**
+**English** | [Deutsch](de/Installation.md)
 
-Diese Anleitung zeigt Schritt für Schritt, wie Sie **SelfX Service** bauen, mit
-Microsoft Intune verteilen und prüfen. Sie ist für Administratoren geschrieben. Sie
-brauchen keine Programmierkenntnisse.
+This guide shows step by step how to build **SelfX Service**, deploy it with Microsoft
+Intune and check it. It is written for administrators. You do not need programming skills.
 
-![SelfX 3.0 mit dem neuen Design: Seite Fehlerbehebung](images/selfx-troubleshooting-light.png)
+![SelfX 3.0 with the new design: Troubleshooting page](images/selfx-troubleshooting-light.png)
 
-*Das neue Design von SelfX 3.0: ruhige Farben, runde Karten, große Schaltflächen und ein
-Drei-Schritte-Hinweis („Problem auswählen – Bestätigen – Fertig“). Es gibt ein helles und
-ein dunkles Design; SelfX folgt der Windows-Einstellung.*
+*The new design of SelfX 3.0: calm colors, rounded cards, large buttons and a three-step hint
+("Select problem – Confirm – Done"). There is a light and a dark design; SelfX follows the
+Windows setting.*
 
-## Inhalt
+## Contents
 
-1. [Das Wichtigste in Kürze](#das-wichtigste-in-kürze)
-2. [Voraussetzungen](#voraussetzungen)
-3. [Schritt 1: Build-Rechner einmal vorbereiten](#schritt-1-build-rechner-einmal-vorbereiten)
-4. [Schritt 2: Paket bauen](#schritt-2-paket-bauen)
-5. [Schritt 3: In Intune einrichten](#schritt-3-in-intune-einrichten)
-6. [Schritt 4: Testen](#schritt-4-testen)
-7. [Update auf eine neue Version](#update-auf-eine-neue-version)
-8. [Deinstallation](#deinstallation)
-9. [Optionale Bausteine](#optionale-bausteine)
-10. [Hintergrund: Was die Installation macht](#hintergrund-was-die-installation-macht)
-11. [Fehlerbehebung](#fehlerbehebung)
-12. [Checkliste für die Bereitstellung](#checkliste-für-die-bereitstellung)
+1. [The most important points](#the-most-important-points)
+2. [Requirements](#requirements)
+3. [Step 1: Prepare the build machine once](#step-1-prepare-the-build-machine-once)
+4. [Step 2: Build the package](#step-2-build-the-package)
+5. [Step 3: Set up in Intune](#step-3-set-up-in-intune)
+6. [Step 4: Test](#step-4-test)
+7. [Update to a new version](#update-to-a-new-version)
+8. [Uninstall](#uninstall)
+9. [Optional building blocks](#optional-building-blocks)
+10. [Background: what the installation does](#background-what-the-installation-does)
+11. [Troubleshooting](#troubleshooting)
+12. [Deployment checklist](#deployment-checklist)
 
-## Das Wichtigste in Kürze
+## The most important points
 
-- SelfX Service wird **einmal pro Gerät** installiert und arbeitet ohne Internet.
-- Sie bauen das Paket **auf einem Build-Rechner**. Auf den Geräten wird nichts
-  kompiliert.
-- Auf den Geräten müssen **Windows 11 25H2** (Build 26200 oder neuer) und
-  **PowerShell 7.6 oder neuer** vorhanden sein.
-- Verteilt wird immer das **ganze Paket**, nie einzelne Dateien.
-- Die Versionsnummer `Tool_Version` und der Wert `$ExpectedVersion` in
-  `Detection.ps1` müssen **gleich** sein. Sonst erkennt Intune das Update nicht.
-- Fehlt PowerShell 7, wird SelfX trotzdem installiert. So bleibt Autopilot ungestört.
+- SelfX Service is installed **once per device** and works without internet.
+- You build the package **on a build machine**. Nothing is compiled on the devices.
+- The devices need **Windows 11 25H2** (build 26200 or newer) and **PowerShell 7.6 or
+  newer**.
+- Always deploy the **whole package**, never single files.
+- The version number `Tool_Version` and the value `$ExpectedVersion` in `Detection.ps1` must
+  be **the same**. Otherwise Intune does not detect the update.
+- If PowerShell 7 is missing, SelfX is still installed. This keeps Autopilot undisturbed.
 
-## Voraussetzungen
+## Requirements
 
-**Auf den Geräten:**
+**On the devices:**
 
-| Voraussetzung | Einzelheiten |
+| Requirement | Details |
 |---|---|
-| Windows 11 25H2 (Build 26200) oder neuer, 64 Bit | Auf älteren Versionen bricht der Installer ab, bevor er etwas ändert. |
-| PowerShell 7.6 oder neuer | Für alle Nutzer installiert (MSI von Microsoft), Pfad `%ProgramFiles%\PowerShell\7\pwsh.exe`. Die Store-Variante (MSIX) geht nicht. |
-| Windows PowerShell 5.1 | Ist in Windows enthalten. SelfX nutzt sie nur für `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` und `Collect-DeviceLogs.ps1`. |
-| .NET | **Nicht nötig.** Dienst und Starter bringen alles selbst mit. |
+| Windows 11 25H2 (build 26200) or newer, 64-bit | On older versions the installer stops before it changes anything. |
+| PowerShell 7.6 or newer | Installed for all users (MSI from Microsoft), path `%ProgramFiles%\PowerShell\7\pwsh.exe`. The Store version (MSIX) does not work. |
+| Windows PowerShell 5.1 | Part of Windows. SelfX uses it only for `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` and `Collect-DeviceLogs.ps1`. |
+| .NET | **Not needed.** The service and the starter bring everything with them. |
 
-**Auf dem Build-Rechner (nicht auf den Geräten):**
+**On the build machine (not on the devices):**
 
-| Voraussetzung | Einzelheiten |
+| Requirement | Details |
 |---|---|
-| Windows-Rechner | Ein normaler Administrator-Arbeitsplatz reicht. **Kein Internet nötig** (siehe „Offline-Build“). |
-| .NET SDK 10 | „SDK“, nicht nur „Runtime“. Dieselbe Version wie beim Export des Ordners `offline-feed`. |
-| `IntuneWinAppUtil.exe` | Das Win32 Content Prep Tool von Microsoft. |
-| Das SelfX-Repository | `git clone` oder ZIP von GitHub, einschließlich des Ordners `offline-feed` (NuGet-Pakete mit Hashliste). |
+| Windows computer | A normal administrator workstation is enough. **No internet needed** (see "Offline build"). |
+| .NET SDK 10 | "SDK", not only "Runtime". The same version as at the export of the folder `offline-feed`. |
+| `IntuneWinAppUtil.exe` | The Win32 Content Prep Tool from Microsoft. |
+| The SelfX repository | `git clone` or ZIP from GitHub, including the folder `offline-feed` (NuGet packages with hash list). |
 
-## Schritt 1: Build-Rechner einmal vorbereiten
+## Step 1: Prepare the build machine once
 
-1. Installieren Sie das **.NET SDK 10**:
-   <https://dotnet.microsoft.com/download/dotnet/10.0>.
-2. Öffnen Sie ein **neues** PowerShell-Fenster und prüfen Sie die Version:
+Nothing is downloaded on the build machine. Everything it needs comes from the repository or from your own software distribution.
+
+1. Install the **.NET SDK 10** from your software distribution. The version must match the one with which the folder `offline-feed` was created (see "Offline build" below).
+2. Open a **new** PowerShell window and check the version:
 
    ```powershell
    dotnet --version
    ```
 
-   Die Ausgabe muss mit `10.` beginnen.
-3. Laden Sie `IntuneWinAppUtil.exe` aus dem offiziellen Microsoft-Repository
-   (<https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool>) und merken Sie
-   sich den Pfad, zum Beispiel `C:\Tools\IntuneWinAppUtil.exe`.
-4. Laden Sie das Repository auf den Rechner (`git clone` oder ZIP).
+   The output must start with `10.`.
+3. Put `IntuneWinAppUtil.exe` (Microsoft Win32 Content Prep Tool) in a folder, for example `C:\Tools\IntuneWinAppUtil.exe`, and note the path. Get the file on a computer **with** internet access from the official repository <https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool> and transfer it to the build machine. The packaging script checks the Microsoft signature.
+4. Copy the repository **including the folder `offline-feed`** to the build machine, for example as a ZIP file or on a data medium.
 
-## Schritt 2: Paket bauen
+## Step 2: Build the package
 
-> **Einfacher mit dem Assistenten:** `tools\New-SelfXPackage.ps1` stellt Fragen mit Empfehlungen, baut das Paket
-> und erklärt die Schritte in Intune. Siehe [Paketassistent](Assistent.md). Die folgenden Schritte zeigen den manuellen Weg.
+> **Easier with the wizard:** `tools\New-SelfXPackage.ps1` asks questions with recommendations, builds the package
+> and explains the steps in Intune. See [Package wizard](Guided-Setup.md). The steps below show the manual way.
 
-Wiederholen Sie diesen Schritt bei jeder neuen Version. Öffnen Sie PowerShell im Ordner
-des Repositorys.
+Repeat this step for every new version. Open PowerShell in the folder of the repository.
 
-1. **Einstellungen anpassen.** Branding, Support-Kontakte und Funktionen stehen in
-   `SelfX Service\Sources\Tool_Config.xml` (siehe [Konfiguration](Configuration.md)).
-2. **Versionsnummer prüfen.** Bei einem neuen Release tragen Sie dieselbe Nummer an zwei
-   Stellen ein:
+1. **Adjust the settings.** Branding, support contacts and features are in
+   `SelfX Service\Sources\Tool_Config.xml` (see [Configuration](Configuration.md)).
+2. **Check the version number.** For a new release, enter the same number in two places:
    - `Tool_Version` in `Sources\Tool_Config.xml`
    - `$ExpectedVersion` in `Detection.ps1`
 
-   Das Paketskript bricht ab, wenn beide Werte verschieden sind.
-3. **Programme bauen.** Der Befehl erzeugt den Ordner `SelfX Service\Bin`:
+   The packaging script stops if the two values differ.
+3. **Build the programs.** The command creates the folder `SelfX Service\Bin`:
 
    ```powershell
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-SelfXBinaries.ps1
    ```
 
-   Am Ende zeigt das Skript die gebauten Dateien mit ihrem Hash. Der Bau braucht kein
-   Internet: Alle NuGet-Pakete kommen aus dem Ordner `offline-feed` und werden vorher gegen
-   `SelfX.OfflineFeed.json` geprüft (siehe „Offline-Build“ unten).
-4. **AppLocker anpassen** (nur wenn Sie AppLocker nutzen). Das Skript schreibt
-   `build\SelfX.AppLocker.xml`. Übernehmen Sie diese Regeln und löschen Sie die Regeln der
-   vorherigen Version, bevor das Paket die Geräte erreicht.
-5. **Intune-Paket erstellen.** Setzen Sie bei `-ToolPath` den Pfad aus Schritt 1:
+   At the end the script shows the built files with their hash. The build needs no internet:
+   all NuGet packages come from the folder `offline-feed` and are checked against
+   `SelfX.OfflineFeed.json` first (see "Offline build" below).
+4. **Adjust AppLocker** (only if you use AppLocker). The script writes
+   `build\SelfX.AppLocker.xml`. Take over these rules and delete the rules of the previous
+   version before the package reaches the devices.
+5. **Create the Intune package.** Set `-ToolPath` to the path from step 1:
 
    ```powershell
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXIntuneWin.ps1 -ToolPath C:\Tools\IntuneWinAppUtil.exe
    ```
 
-Ergebnis im Ordner `build`:
+Result in the folder `build`:
 
-| Datei | Wofür |
+| File | Purpose |
 |---|---|
-| `SelfX-Service-<Version>.intunewin` | Das Paket für Intune. |
-| `SelfX-Service-<Version>.Detection.ps1` | Das Erkennungsskript für Intune. Laden Sie **diese** Datei hoch, nicht die Kopie im Repository. |
+| `SelfX-Service-<version>.intunewin` | The package for Intune. |
+| `SelfX-Service-<version>.Detection.ps1` | The detection script for Intune. Upload **this** file, not the copy in the repository. |
 
-Das Skript prüft vorher: Die Setup-Datei ist da, alle XML-Dateien sind gültig, `Bin` passt
-zu den Quelltexten, die beiden Versionen sind gleich und `IntuneWinAppUtil.exe` hat die
-Microsoft-Signatur. Es lädt nichts nach Intune hoch.
+The script checks beforehand: the setup file exists, all XML files are valid, `Bin` matches the
+source code, the two versions are the same and `IntuneWinAppUtil.exe` has the Microsoft
+signature. It uploads nothing to Intune.
 
-**Alternative: Release auf GitHub.** Setzen Sie nach dem Merge das Tag `v<Tool_Version>`
-(zum Beispiel `v3.0.0`) auf `main`. Der Workflow `.github/workflows/release.yml` baut
-Programme, `.intunewin`, eine Stückliste (SBOM) und `SHA256SUMS.txt` und legt einen
-**Entwurf** unter *Releases* an. Er veröffentlicht nichts. Prüfen Sie die Hashes und
-veröffentlichen Sie den Entwurf erst danach. Der Workflow bricht ab, wenn Tag und
-`Tool_Version` nicht übereinstimmen.
+**Alternative: release on GitHub.** After the merge, set the tag `v<Tool_Version>` (for example
+`v3.0.0`) on `main`. The workflow `.github/workflows/release.yml` builds the programs, the
+`.intunewin`, a bill of materials (SBOM) and `SHA256SUMS.txt` and creates a **draft** under
+*Releases*. It publishes nothing. Check the hashes and publish the draft only afterwards. The
+workflow stops if the tag and `Tool_Version` do not match.
 
-### Offline-Build: Paketordner erneuern
+### Offline build: renew the package folder
 
-Der Bau lädt **nichts** aus dem Internet. `NuGet.config` im Repository erlaubt nur den Ordner `offline-feed` als
-Paketquelle. `Build-SelfXBinaries.ps1` prüft den Ordner vor jedem Bau gegen `offline-feed\SelfX.OfflineFeed.json`
-(SHA512 je Paket), baut mit einem frischen Paketcache `.nuget-cache` im Repository und bricht ab, wenn ein Paket fehlt,
-verändert wurde oder zusätzlich im Ordner liegt. Der Build-Rechner braucht deshalb nur das .NET SDK 10 (aus Ihrer
-Softwareverteilung), `IntuneWinAppUtil.exe` und das Repository **mit** dem Ordner `offline-feed`.
+The build loads **nothing** from the internet. `NuGet.config` in the repository allows only the folder `offline-feed` as
+package source. Before every build `Build-SelfXBinaries.ps1` checks the folder against `offline-feed\SelfX.OfflineFeed.json`
+(SHA512 of every package), builds with a fresh package cache `.nuget-cache` inside the repository and stops when a package
+is missing, changed or additional in the folder. The build machine therefore needs only the .NET SDK 10 (from your software
+distribution), `IntuneWinAppUtil.exe` and the repository **with** the folder `offline-feed`.
 
-Den Ordner erneuern Sie nur bei einer **neuen SDK-Version** (das Runtime-Paket gehört zur SDK-Version; der Bau meldet es,
-wenn die Versionen nicht passen) oder bei einem **neuen oder aktualisierten Paket**:
+Renew the folder only for a **new SDK version** (the runtime package belongs to the SDK version; the build reports it when the
+versions differ) or a **new or updated package**:
 
-1. Öffnen Sie einen Rechner **mit Internet** und **demselben .NET SDK 10** wie der Build-Rechner.
-2. Führen Sie aus:
+1. Use a computer **with internet** and **the same .NET SDK 10** as the build machine.
+2. Run:
 
    ```powershell
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Export-SelfXOfflineFeed.ps1
    ```
 
-   Das Skript lädt die Pakete von nuget.org in einen leeren Zwischenordner, lässt die NuGet-Schwachstellenprüfung laufen
-   (bei einer Meldung bricht es ab; nach eigener Prüfung geht `-AllowVulnerabilities`), prüft, dass alle Pakete der
-   `packages.lock.json` vorhanden sind, schreibt `offline-feed` neu und stellt zur Kontrolle alle Projekte nur aus diesem Ordner
-   wieder her (ohne Internet, leerer Cache, Lock-Dateien erzwungen).
-3. **Beim ersten Mal:** Die Pakete, die in keiner Lock-Datei stehen (Runtime-Paket, Windows-SDK-Projektion), sind nur durch
-   die Hashliste festgelegt. Führen Sie den Export zur Kontrolle auf einem zweiten Rechner aus; die Hashes in
-   `SelfX.OfflineFeed.json` müssen übereinstimmen.
-4. Prüfen Sie `git diff`, checken Sie den Ordner ein und kopieren Sie das Repository auf den Build-Rechner.
-5. **Test ohne Internet:** Trennen Sie den Build-Rechner vom Netz und führen Sie Schritt 2.3 aus. Der Bau muss ohne
-   Fehlermeldung durchlaufen.
+   The script downloads the packages from nuget.org into an empty temporary folder, runs the NuGet vulnerability audit (it
+   stops on a finding; after your own check use `-AllowVulnerabilities`), checks that all packages of `packages.lock.json` are
+   present, rewrites `offline-feed` and, as a proof, restores all projects from this folder only (no internet, empty cache,
+   lock files enforced).
+3. **The first time:** the packages that no lock file lists (runtime package, Windows SDK projection) are fixed only by the
+   hash list. Run the export on a second computer as a check; the hashes in `SelfX.OfflineFeed.json` must be identical.
+4. Check `git diff`, commit the folder and copy the repository to the build machine.
+5. **Test without internet:** disconnect the build machine from the network and run step 2.3. The build must finish without
+   an error.
 
-Dependabot-Vorschläge für NuGet-Pakete ändern den Ordner nicht: Nach einer Übernahme den Export wiederholen.
+Dependabot proposals for NuGet packages do not change the folder: repeat the export after you accept one.
 
-## Schritt 3: In Intune einrichten
+## Step 3: Set up in Intune
 
-Öffnen Sie das Microsoft Intune Admin Center: *Apps > Windows > Hinzufügen > Windows-App
-(Win32)*. Laden Sie die Datei `SelfX-Service-<Version>.intunewin` hoch.
+Open the Microsoft Intune admin center: *Apps > Windows > Add > Windows app (Win32)*. Upload the
+file `SelfX-Service-<version>.intunewin`.
 
-### 3.1 App-Einstellungen
+### 3.1 App settings
 
-| Einstellung | Wert |
+| Setting | Value |
 |---|---|
-| Installationsbefehl | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` |
-| Deinstallationsbefehl | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` |
-| Installationsverhalten | System |
-| Erkennungsregel | Benutzerdefiniertes Skript: `SelfX-Service-<Version>.Detection.ps1` aus dem Ordner `build` |
-| Voraussetzung (Requirement) | Windows 11 25H2, siehe 3.3 |
-| Abhängigkeit | App „PowerShell 7“, *Automatisch installieren* = Ja, siehe 3.2 |
+| Install command | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` |
+| Uninstall command | `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` |
+| Install behavior | System |
+| Detection rule | Custom script: `SelfX-Service-<version>.Detection.ps1` from the folder `build` |
+| Requirement | Windows 11 25H2, see 3.3 |
+| Dependency | App "PowerShell 7", *Automatically install* = Yes, see 3.2 |
 
-Die Erkennung meldet „installiert“ nur, wenn Version, registrierter Dienst **und** Dateiliste
-passen. So wird auch ein Update mit geänderten Dateien, aber gleicher Versionsnummer, erkannt.
+The detection reports "installed" only if the version, the registered service **and** the file
+list match. So an update with changed files but the same version number is also detected.
 
-### 3.2 PowerShell 7 als eigene Win32-App
+### 3.2 PowerShell 7 as its own Win32 app
 
-1. Laden Sie die MSI-Datei (`PowerShell-7.6.x-win-x64.msi`) von Microsoft und verpacken Sie
-   sie als **Win32-App**, nicht als Branchen-App (MSI). Die Mischung beider Typen kann bei
-   Autopilot fehlschlagen.
-2. Installationsbefehl, zum Beispiel:
+1. Download the MSI file (`PowerShell-7.6.x-win-x64.msi`) from Microsoft and package it as a
+   **Win32 app**, not as a line-of-business (MSI) app. Mixing both types can fail with
+   Autopilot.
+2. Install command, for example:
 
    ```text
    msiexec.exe /package PowerShell-7.6.x-win-x64.msi /quiet DISABLE_TELEMETRY=1 USE_MU=0 ENABLE_MU=0
    ```
 
-   Ändern Sie den Installationsordner nicht. `ADD_PATH` ist nicht nötig. Testen Sie den
-   Befehl vorher auf einem Testgerät.
-3. Erkennungsregel: Datei `%ProgramFiles%\PowerShell\7\pwsh.exe`, Dateiversion größer
-   oder gleich 7.6.0.
-4. Neue PowerShell-Versionen verteilen Sie als neue Version dieser App.
-5. In der SelfX-App unter *Abhängigkeiten* die App „PowerShell 7“ hinzufügen,
-   *Automatisch installieren* = Ja. Intune installiert dann zuerst PowerShell 7.
+   Do not change the installation folder. `ADD_PATH` is not needed. Test the command on a
+   test device first.
+3. Detection rule: file `%ProgramFiles%\PowerShell\7\pwsh.exe`, file version greater than or
+   equal to 7.6.0.
+4. Deploy new PowerShell versions as a new version of this app.
+5. In the SelfX app under *Dependencies*, add the app "PowerShell 7" with *Automatically
+   install* = Yes. Intune then installs PowerShell 7 first.
 
-### 3.3 Voraussetzungsregel für Windows 11 25H2
+### 3.3 Requirement rule for Windows 11 25H2
 
-Prüfen Sie, ob das Portal „Windows 11 25H2“ als Mindest-Betriebssystem anbietet. Wenn
-nicht, legen Sie eine Voraussetzungsregel vom Typ *Skript* an: Ausgabedatentyp *Ganzzahl*,
-Operator *Größer oder gleich*, Wert `26200`:
+Check whether the portal offers "Windows 11 25H2" as the minimum operating system. If not, add
+a requirement rule of type *Script*: output data type *Integer*, operator *Greater than or equal
+to*, value `26200`:
 
 ```powershell
 [int](Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber)
 ```
 
-Ältere Geräte erhalten die App dann nicht, statt mit einem Fehler abzubrechen.
+Older devices then do not receive the app instead of failing with an error.
 
-### 3.4 Autopilot und Statusseite (ESP)
+### 3.4 Autopilot and the status page (ESP)
 
-Autopilot installiert Apps in beliebiger Reihenfolge und darf nie an SelfX scheitern.
-Deshalb gilt:
+Autopilot installs apps in any order and must never fail because of SelfX. Therefore:
 
-- Nehmen Sie **weder SelfX noch PowerShell 7** in die Liste der blockierenden Apps der ESP
-  auf (*Block device use until these required apps are installed* = *Selected*, ohne
-  diese beiden Apps).
-- Ein fehlendes PowerShell 7 ist nur eine **Warnung**. SelfX startet dann keine Skripte,
-  prüft aber vor jedem Start erneut und arbeitet, sobald PowerShell 7 da ist.
-- Ein **unsicheres** PowerShell 7 ist dagegen ein harter Abbruch (siehe Tabelle unten).
+- Do **not** add SelfX or PowerShell 7 to the list of blocking apps of the ESP (*Block device
+  use until these required apps are installed* = *Selected*, without these two apps).
+- A missing PowerShell 7 is only a **warning**. SelfX then starts no scripts, but checks again
+  before every start and works as soon as PowerShell 7 is there.
+- An **unsafe** PowerShell 7 is a hard stop instead (see the table below).
 
-| Lage auf dem Gerät | Installer | Dienst |
+| Situation on the device | Installer | Service |
 |---|---|---|
-| Windows älter als 25H2 | Abbruch vor jeder Änderung, Exitcode 1. Eine vorhandene Installation bleibt unverändert. | nicht betroffen |
-| PowerShell 7 fehlt oder ist älter als 7.6 | **Warnung** im Installationsprotokoll, die Installation läuft weiter. | startet kein Skript und meldet den Grund |
-| Der Ordner `%ProgramFiles%\PowerShell\7` oder `pwsh.exe` ist für normale Nutzer änderbar | Abbruch vor jeder Änderung, Exitcode 1. | startet nichts |
+| Windows older than 25H2 | Stops before any change, exit code 1. An existing installation stays unchanged. | not affected |
+| PowerShell 7 is missing or older than 7.6 | **Warning** in the installation log, the installation continues. | starts no script and reports the reason |
+| The folder `%ProgramFiles%\PowerShell\7` or `pwsh.exe` can be changed by normal users | Stops before any change, exit code 1. | starts nothing |
 
-### 3.5 Zuweisung
+### 3.5 Assignment
 
-Weisen Sie die App einer Gerätegruppe als *Erforderlich* zu. Beginnen Sie mit einer kleinen
-Pilotgruppe.
+Assign the app to a device group as *Required*. Start with a small pilot group.
 
-## Schritt 4: Testen
+## Step 4: Test
 
-Testen Sie auf einem Gerät, das nicht produktiv ist:
+Test on a device that is not in production:
 
-1. Neuinstallation: Das SelfX-Fenster, das Statussymbol neben der Uhr und die
-   Verknüpfungen erscheinen.
-2. Als **normaler Nutzer** (ohne Administratorrechte) eine Aktion ausführen.
-3. Update von der Vorversion.
-4. Deinstallation und Erkennung.
-5. Auf einem Gerät mit mehreren Nutzern: zweiten Nutzer angemeldet lassen.
-6. Installation ohne PowerShell 7 (Warnung, später funktioniert SelfX von selbst) und
-   auf Windows 11 24H2 (Abbruch mit Exitcode 1).
-7. Einen Autopilot-Lauf mit beiden Apps (die Bereitstellung darf nicht hängen).
+1. New installation: the SelfX window, the status icon next to the clock and the shortcuts
+   appear.
+2. Run an action as a **normal user** (without administrator rights).
+3. Update from the previous version.
+4. Uninstall and detection.
+5. On a device with several users: keep a second user signed in.
+6. Installation without PowerShell 7 (warning, SelfX works by itself later) and on
+   Windows 11 24H2 (stops with exit code 1).
+7. An Autopilot run with both apps (the provisioning must not hang).
 
-Prüfen auf dem Gerät:
+Check on the device:
 
 ```powershell
 Get-Service SelfXService
-Get-Content "$env:ProgramData\SelfX\Logs\Install.log" -Tail 20          # als Administrator
-Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20     # als Administrator
+Get-Content "$env:ProgramData\SelfX\Logs\Install.log" -Tail 20          # as administrator
+Get-Content "$env:ProgramData\SelfX\Logs\SelfXService.log" -Tail 20     # as administrator
 ```
 
-Die Tests des Repositorys führen Sie so aus (jeder Test endet mit Exitcode 1, wenn er einen
-Fehler findet; GitHub Actions führt dieselben Tests bei jedem Pull Request aus):
+Run the tests of the repository like this (each test ends with exit code 1 if it finds an
+error; GitHub Actions runs the same tests for every pull request):
 
 ```powershell
 Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
@@ -263,64 +253,59 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
 }
 ```
 
-## Update auf eine neue Version
+## Update to a new version
 
-1. Verteilen Sie immer das **ganze Paket**. Oberfläche und Dienst müssen zusammenpassen.
-2. Erhöhen Sie `Tool_Version` und `$ExpectedVersion` auf denselben neuen Wert.
-3. Bauen Sie Programme und Paket neu (Schritt 2) und ersetzen Sie die AppLocker-Regeln.
-4. Laden Sie die neue `.intunewin` **und** das neue Erkennungsskript in dieselbe Intune-App
-   hoch.
-5. Prüfen Sie vor dem Paketieren die Support-Kontakte in `Tool_Config.xml` und
-   `Health_Config.xml` (siehe [Konfiguration](Configuration.md)).
+1. Always deploy the **whole package**. The window and the service must fit together.
+2. Raise `Tool_Version` and `$ExpectedVersion` to the same new value.
+3. Build the programs and the package again (step 2) and replace the AppLocker rules.
+4. Upload the new `.intunewin` **and** the new detection script to the same Intune app.
+5. Before packaging, check the support contacts in `Tool_Config.xml` and `Health_Config.xml`
+   (see [Configuration](Configuration.md)).
 
-**Update von SelfX 2.6.9 (Upstream):** Zusätzlich brauchen die Geräte Windows 11 25H2 und
-PowerShell 7.6 (Schritt 3). Das Paket muss mit dem .NET SDK 10 neu gebaut werden; die alte
-Methode, den Dienst auf dem Gerät zu kompilieren, gibt es nicht mehr. Ersetzen Sie auch die
-AppLocker-Regeln. Die Standardsprache der Oberfläche ist jetzt Deutsch
-(`Tool_Language` = `de`). Alle Änderungen stehen im [Änderungsprotokoll](../CHANGELOG.md).
+**Update from SelfX 2.6.9 (upstream):** In addition the devices need Windows 11 25H2 and
+PowerShell 7.6 (step 3). The package must be built again with the .NET SDK 10; the old method of
+compiling the service on the device no longer exists. Also replace the AppLocker rules. The
+default language of the interface is now German (`Tool_Language` = `de`). All changes are in
+the [changelog](../CHANGELOG.en.md).
 
-## Deinstallation
+## Uninstall
 
-`Uninstall.ps1` entfernt den Dienst, `%ProgramFiles%\SelfX`, die Verknüpfungen, den Eintrag
-unter Apps & Features, den Autostart des Statussymbols, den Status-Cache und die Berichte.
-Offene SelfX-Fenster und Statussymbole werden vorher geschlossen. Hält ein anderes
-Programm eine Datei offen, versucht der Deinstaller es bis zu 90 Sekunden lang erneut.
+`Uninstall.ps1` removes the service, `%ProgramFiles%\SelfX`, the shortcuts, the entry under Apps
+& features, the autostart of the status icon, the status cache and the reports. Open SelfX
+windows and status icons are closed first. If another program keeps a file open, the uninstaller
+tries again for up to 90 seconds.
 
-- Die Protokolle bleiben erhalten. Mit `-RemoveLogs` wird auch `%ProgramData%\SelfX`
-  gelöscht.
-- Einstellungen einzelner Nutzer (`HKCU\Software\SelfX`, `%LOCALAPPDATA%\SelfX`) werden
-  nicht entfernt.
-- Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Uninstall.log`.
+- The logs are kept. With `-RemoveLogs`, `%ProgramData%\SelfX` is deleted as well.
+- Settings of single users (`HKCU\Software\SelfX`, `%LOCALAPPDATA%\SelfX`) are not removed.
+- The result is in `%ProgramData%\SelfX\Logs\Uninstall.log`.
 
-## Optionale Bausteine
+## Optional building blocks
 
-### Ticket-Zuordnung per Intune
+### Ticket routing with Intune
 
-Nur nötig, wenn Sie die Ticket-Funktion (`Ticket_Enabled`) mit Regeln für Group-Tag oder
-Kategorie in `Ticket_Config.xml` nutzen (siehe
-[Konfiguration](Configuration.md#ticket-per-e-mail)). SelfX liest die Werte nur. Sie stehen in
-`HKLM\SOFTWARE\SelfX\Support`:
+Only needed if you use the ticket function (`Ticket_Enabled`) with rules for group tag or
+category in `Ticket_Config.xml` (see [Configuration](Configuration.md#ticket-by-e-mail)). SelfX
+only reads the values. They are in `HKLM\SOFTWARE\SelfX\Support`:
 
-- `GroupTag` und `Category` (je bis 64 Zeichen: Buchstaben, Ziffern, Leerzeichen, `.`, `_`, `-`)
-- `TicketMail` und `TicketCc`: genau eine einfache Adresse je Wert, nur Funktionspostfächer,
-  keine persönlichen Postfächer
+- `GroupTag` and `Category` (each up to 64 characters: letters, digits, space, `.`, `_`, `-`)
+- `TicketMail` and `TicketCc`: exactly one plain address per value, shared (functional)
+  mailboxes only, no personal mailboxes
 
-Hybrid-Geräte können zusätzlich nach der OU zugeordnet werden; dafür ist nichts zu setzen.
+Hybrid devices can also be assigned by OU; nothing has to be set for that.
 
-So gehen Sie vor (*Geräte > Skripte und Fehlerbehebungen > Plattformskripts*):
+How to proceed (*Devices > Scripts and remediations > Platform scripts*):
 
-1. Kopieren Sie das Skript unten je Einheit und passen Sie die Werte oben an.
-2. Einstellungen: *Mit den Anmeldeinformationen des angemeldeten Benutzers ausführen* =
-   **Nein** (läuft als SYSTEM), *Skripthost in 64-Bit-PowerShell ausführen* = **Ja**.
-3. Weisen Sie das Skript einer Entra-Gerätegruppe zu. Die Gruppen sollten sich gegenseitig
-   ausschließen. Das Skript setzt immer alle vier Werte; wechselt ein Gerät die Gruppe,
-   ersetzt das Skript der neuen Gruppe die Werte der alten.
-4. Kontrolle auf dem Gerät: `Get-ItemProperty 'HKLM:\SOFTWARE\SelfX\Support'`. Vor der
-   Verteilung zeigt `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ...`, welche
-   Einheit herauskommt.
+1. Copy the script below for each unit and adjust the values at the top.
+2. Settings: *Run this script using the logged on credentials* = **No** (runs as SYSTEM),
+   *Run script in 64-bit PowerShell host* = **Yes**.
+3. Assign the script to an Entra device group. The groups should exclude each other. The script
+   always sets all four values; when a device moves to another group, the script of the new
+   group replaces the values of the old one.
+4. Check on the device: `Get-ItemProperty 'HKLM:\SOFTWARE\SelfX\Support'`. Before deployment,
+   `tools\Test-SelfXTicketRouting.ps1 -GroupTag ... -Category ...` shows which unit results.
 
-Das Skript läuft in Windows PowerShell 5.1 und PowerShell 7 und ändert nur diese vier
-Werte. Ungültige Werte brechen ab, bevor etwas geschrieben wird.
+The script runs in Windows PowerShell 5.1 and PowerShell 7 and changes only these four values.
+Invalid values stop it before anything is written.
 
 ```powershell
 # Set-SelfXSupportUnit.ps1 (example) - sets the values SelfX reads for the ticket routing.
@@ -357,177 +342,167 @@ exit 0
 
 ### App Control for Business (WDAC)
 
-SelfX braucht WDAC nicht, und im Paket ist nichts davon eingeschaltet. Wenn Ihre
-Organisation App Control for Business einsetzt, können Sie damit zusätzlich verhindern, dass
-auf den Geräten andere als die ausgelieferten SelfX-Programme und -Skripte laufen. SelfX
-bleibt unsigniert und wird per Hash zugelassen.
+SelfX does not need WDAC, and nothing of it is switched on in the package. If your organization
+uses App Control for Business, you can use it in addition to prevent programs and scripts other
+than the delivered SelfX ones from running on the devices. SelfX stays unsigned and is allowed
+by hash.
 
-1. **Basisrichtlinie.** Sie gehört Ihrer Organisation. Sie muss ergänzende Richtlinien
-   erlauben (Regeloption 17) und die von Microsoft signierten Dateien zulassen, darunter
-   `%ProgramFiles%\PowerShell\7\pwsh.exe` und den Intune-Agenten.
-2. **Paket bauen** (Schritt 2).
-3. **Ergänzende Richtlinie erzeugen**, in Windows PowerShell 5.1 auf einem
-   Administrator-PC (Modul ConfigCI):
+1. **Base policy.** It belongs to your organization. It must allow supplemental policies (rule
+   option 17) and allow the files signed by Microsoft, including
+   `%ProgramFiles%\PowerShell\7\pwsh.exe` and the Intune agent.
+2. **Build the package** (step 2).
+3. **Create the supplemental policy**, in Windows PowerShell 5.1 on an administrator PC (module
+   ConfigCI):
 
    ```powershell
-   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXWdacPolicy.ps1 -BasePolicyId {GUID der Basisrichtlinie}
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXWdacPolicy.ps1 -BasePolicyId {GUID of the base policy}
    ```
 
-   Das Skript legt in `build\wdac` die XML- und die `.cip`-Datei ab. Sie enthält
-   Hashregeln für alle Programme, Bibliotheken und Skripte des Pakets. Es ändert nichts auf
-   dem PC.
-4. **Verteilen** mit Intune (Richtlinie für App Control for Business) an dieselben Geräte
-   wie das SelfX-Paket. Die Richtlinie muss vor dem Paket auf dem Gerät sein.
-5. **Erst im Überwachungsmodus.** Ob überwacht oder erzwungen wird, bestimmt die
-   Basisrichtlinie (Regeloption 3, „Audit Mode“). Im Überwachungsmodus läuft alles weiter,
-   und Windows protokolliert, was blockiert würde (Protokoll
-   `Microsoft-Windows-CodeIntegrity/Operational`, Ereignis 3076). Prüfen Sie auf einem
-   Testgerät, dass für SelfX kein Ereignis entsteht. Erst dann schaltet die Organisation
-   die Option 3 ab.
-6. **Bei jeder neuen Version** die Richtlinie neu erzeugen und mit dem Paket verteilen,
-   denn jede Skriptänderung ändert den Hash. Für gestaffelte Rollouts erzeugen Sie die
-   Richtlinie mit `-PolicyId {neue GUID}` je Version und entfernen die alte, wenn alle
-   Geräte aktualisiert sind.
+   The script writes the XML and the `.cip` file to `build\wdac`. It contains hash rules for all
+   programs, libraries and scripts of the package. It changes nothing on the PC.
+4. **Deploy** with Intune (App Control for Business policy) to the same devices as the SelfX
+   package. The policy must be on the device before the package.
+5. **Audit mode first.** Whether the policies audit or enforce is decided by the base policy
+   (rule option 3, "Audit Mode"). In audit mode everything keeps running, and Windows logs what
+   would be blocked (log `Microsoft-Windows-CodeIntegrity/Operational`, event 3076). Check on a
+   test device that no event is created for SelfX. Only then does the organization remove
+   option 3.
+6. **For every new version**, create the policy again and deploy it with the package, because
+   every script change changes its hash. For staged rollouts, create the policy with
+   `-PolicyId {new GUID}` per version and remove the old one when all devices are updated.
 
-Hinweise: Regeloption 19 („Dynamic Code Security“) nur nach einem Test im Überwachungsmodus
-einschalten, weil SelfX-Skripte `Add-Type` nutzen. Eine unsignierte Richtlinie kann ein
-lokaler Administrator ersetzen. Die Vorlage ist noch nicht auf einem Gerät erprobt.
+Notes: switch on rule option 19 ("Dynamic Code Security") only after a test in audit mode,
+because SelfX scripts use `Add-Type`. A local administrator can replace an unsigned policy. The
+template has not yet been tried on a device.
 
-## Hintergrund: Was die Installation macht
+## Background: what the installation does
 
-`Install.ps1` läuft mit Administratorrechten, in Intune als SYSTEM. Es prüft **ganz am
-Anfang**, bevor es etwas ändert: Windows-Version, PowerShell-7-Ordnerrechte, die Programme
-in `Bin` (SHA256-Manifest) und die Dateiliste. Passt etwas nicht, endet es mit Exitcode 1,
-und die bisherige Installation bleibt unverändert. Danach:
+`Install.ps1` runs with administrator rights, in Intune as SYSTEM. It checks **right at the
+start**, before it changes anything: Windows version, folder rights of PowerShell 7, the programs
+in `Bin` (SHA256 manifest) and the file list. If something does not match, it ends with exit
+code 1 and the existing installation stays unchanged. Then:
 
-1. Es stoppt und entfernt einen vorhandenen `SelfXService`.
-2. Es leert `%ProgramFiles%\SelfX` (der Ordner selbst bleibt) und kopiert `Sources` und
-   `Uninstall.ps1` hinein. Benutzer dürfen dort nur lesen und ausführen; SYSTEM und
-   Administratoren haben Vollzugriff.
-3. Es installiert `SelfXService.exe` (den Dienst) und `SelfX.exe` (einen kleinen Starter
-   ohne Konsolenfenster, der SelfX oder das Statussymbol mit einem versteckten
-   PowerShell 7 startet). Es prüft die installierten Dateien noch einmal gegen die Liste.
-4. Es registriert und startet den Dienst `SelfXService` (LocalSystem, automatischer Start,
-   Neustart nach einem Fehler) und begrenzt seine Rechte.
-5. Es legt Verknüpfungen auf dem öffentlichen Desktop und im Startmenü an und einen
-   Eintrag unter Apps & Features.
-6. Ist `Show_Tray_Icon` = `True` (Standard), legt es den Autostart `SelfXTray` an. Als
-   SYSTEM startet der Installer das Statussymbol in jeder aktiven Nutzersitzung mit den
-   normalen Rechten des Nutzers. Bei manueller Installation erscheint es bei der nächsten
-   Anmeldung.
+1. It stops and removes an existing `SelfXService`.
+2. It empties `%ProgramFiles%\SelfX` (the folder itself stays) and copies `Sources` and
+   `Uninstall.ps1` into it. Users may only read and run there; SYSTEM and administrators have
+   full control.
+3. It installs `SelfXService.exe` (the service) and `SelfX.exe` (a small starter without a
+   console window that starts SelfX or the status icon with a hidden PowerShell 7). It checks
+   the installed files against the list once more.
+4. It registers and starts the service `SelfXService` (LocalSystem, automatic start, restart
+   after a failure) and limits its rights.
+5. It creates shortcuts on the public desktop and in the Start menu and an entry under Apps &
+   features.
+6. If `Show_Tray_Icon` = `True` (default), it creates the autostart `SelfXTray`. As SYSTEM the
+   installer starts the status icon in every active user session with the normal rights of the
+   user. With a manual installation it appears at the next sign-in.
 
-Ein Update bricht nicht ab, wenn ein Nutzer SelfX geöffnet hat: Der Installer leert den
-Ordner, statt ihn zu löschen, und wiederholt gesperrte Dateien 20 Sekunden lang.
+An update does not fail when a user has SelfX open: the installer empties the folder instead of
+deleting it and retries locked files for 20 seconds.
 
-### Protokolle
+### Logs
 
-| Protokoll | Ort | Wer liest |
+| Log | Location | Who can read it |
 |---|---|---|
-| Installation | `%ProgramData%\SelfX\Logs\Install.log` | Administratoren, SYSTEM |
-| Dienst | `%ProgramData%\SelfX\Logs\SelfXService.log` (rotiert bei 5 MB nach `.old`) | Administratoren, SYSTEM |
-| Skripte | `%ProgramData%\SelfX\Logs` (eine Datei pro Skript und Tag) | Administratoren, SYSTEM |
-| Fenster, Statussymbol, Nutzeraktionen | `%ProgramData%\SelfX\Logs\Users\<SID>` | jeder Nutzer nur den eigenen Ordner |
+| Installation | `%ProgramData%\SelfX\Logs\Install.log` | administrators, SYSTEM |
+| Service | `%ProgramData%\SelfX\Logs\SelfXService.log` (rotates at 5 MB to `.old`) | administrators, SYSTEM |
+| Scripts | `%ProgramData%\SelfX\Logs` (one file per script and day) | administrators, SYSTEM |
+| Window, status icon, user actions | `%ProgramData%\SelfX\Logs\Users\<SID>` | each user only their own folder |
 
-Dateien, die älter sind als `Log_Retention_Days` (Standard 90), werden automatisch gelöscht
-(siehe [Protokolle und Aufbewahrung](Configuration.md#protokolle-und-aufbewahrung)).
+Files older than `Log_Retention_Days` (default 90) are deleted automatically (see
+[Logs and retention](Configuration.md#logs-and-retention)).
 
-### Windows-Ereignisprotokoll
+### Windows event log
 
-Der Dienst schreibt sicherheitsrelevante Ereignisse in das Protokoll *Anwendung* (Quelle
-`SelfXService`), damit Defender for Endpoint, Intune oder ein SIEM sie auswerten können. Die
-Texte sind fest und enthalten keine Anfragetexte und keine Nutzernamen. Je Ereignis-ID gelten
-höchstens 10 Einträge in 10 Minuten; danach meldet 4099 die Zahl der ausgelassenen.
+The service writes security-relevant events to the *Application* log (source `SelfXService`) so
+that Defender for Endpoint, Intune or a SIEM can evaluate them. The texts are fixed and contain
+no request texts and no user names. For each event ID at most 10 entries in 10 minutes apply;
+after that 4099 reports the number of skipped ones.
 
-| ID | Stufe | Bedeutung |
+| ID | Level | Meaning |
 |---|---|---|
-| 4001 | Fehler | Der Pipe-Name gehört schon einem anderen Prozess; der Dienst nimmt keine Verbindungen an, bis er frei ist. |
-| 4002 | Warnung | Eine Anfrage oder Verbindung wurde abgelehnt (ungültig, nicht erlaubt, Begrenzung). |
-| 4003 | Warnung | PowerShell 7 ist nicht gegen Änderungen durch Nutzer geschützt; Aktionen als SYSTEM werden nicht gestartet. |
-| 4004 | Fehler | `%ProgramData%\SelfX` ist nicht geschützt (Verknüpfung oder fremder Besitzer); der Dienst schreibt dort nichts, bis ein Administrator es repariert (SelfX neu installieren). |
-| 4005 | Fehler | Installierte Skripte oder Konfigurationen stimmen nicht mit `SelfX.Files.json` überein; der Dienst startet nichts. Mit `Service_FileCheck` = `Audit` nur eine Warnung. |
-| 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
+| 4001 | Error | The pipe name already belongs to another process; the service accepts no connections until it is free. |
+| 4002 | Warning | A request or connection was rejected (invalid, not allowed, limit). |
+| 4003 | Warning | PowerShell 7 is not protected against changes by users; actions as SYSTEM are not started. |
+| 4004 | Error | `%ProgramData%\SelfX` is not protected (link or foreign owner); the service writes nothing there until an administrator repairs it (reinstall SelfX). |
+| 4005 | Error | Installed scripts or configurations do not match `SelfX.Files.json`; the service starts nothing. With `Service_FileCheck` = `Audit` only a warning. |
+| 4099 | Warning | Further events of the same ID were not written (limit). |
 
-### Die Dateiliste `SelfX.Files.json`
+### The file list `SelfX.Files.json`
 
-Der Paketbau schreibt den SHA256 jeder installierten Datei in `SelfX.Files.json`. Sie wird bei
-jedem Bau neu erzeugt; Sie müssen nichts von Hand pflegen.
+The package build writes the SHA256 of every installed file to `SelfX.Files.json`. It is created
+again with every build; you do not have to maintain anything by hand.
 
-- `Install.ps1` prüft vor und nach dem Kopieren, dass jede Datei zur Liste passt und keine
-  Datei ohne Eintrag im Paket liegt.
-- Der Dienst prüft vor **jedem** Start (Aktion, Gesundheitsprüfung, Hintergrundprüfung), dass
-  alle gelisteten Dateien unverändert sind, dass keine Datei ohne Eintrag im Ordner liegt und
-  dass keine Verknüpfung im Weg ist. Bei einer Abweichung startet er nichts und schreibt
-  Ereignis 4005.
-- Für den ersten Rollout können Sie `Service_FileCheck` auf `Audit` stellen (nur
-  protokollieren).
-- Die Bibliotheken `WinRT\*.dll` (Windows-Update-Schnittstelle) und `Audio\SelfXAudio.dll`
-  (Aktion „Kein Ton an diesem PC“) werden zusätzlich **beim Laden** geprüft und dabei
-  geöffnet gehalten, damit sie nicht zwischen Prüfung und Laden ersetzt werden können.
-- Grenze: Die Prüfung erkennt Unfälle (defektes oder halbes Update) und eine ausgetauschte
-  `SelfX.exe`, aber keinen Angreifer mit Administratorrechten. Dagegen helfen die
-  Ordnerrechte und App Control.
+- `Install.ps1` checks before and after copying that every file matches the list and that no
+  file without an entry is in the package.
+- The service checks before **every** start (action, health check, background check) that all
+  listed files are unchanged, that no file without an entry is in the folder and that no link is
+  in the way. On a deviation it starts nothing and writes event 4005.
+- For the first rollout you can set `Service_FileCheck` to `Audit` (log only).
+- The libraries `WinRT\*.dll` (Windows Update interface) and `Audio\SelfXAudio.dll` (action "No
+  sound on this PC") are also checked **when loaded** and kept open meanwhile, so that they cannot
+  be replaced between the check and loading.
+- Limit: the check detects accidents (broken or partial update) and a replaced `SelfX.exe`, but
+  not an attacker with administrator rights. The folder rights and App Control help against
+  that.
 
-### Ausführungsrichtlinie `-ExecutionPolicy Bypass`
+### Execution policy `-ExecutionPolicy Bypass`
 
-Dienst, Starter, Fenster, Statussymbol und Gesundheitsprüfung starten PowerShell mit
-`-ExecutionPolicy Bypass`. Das ist gewollt: Die Skripte liegen im geschützten
-Installationsordner, und die Ausführungsrichtlinie ist ohnehin keine Sicherheitsgrenze.
-Schutz bieten die Dateiliste und App Control.
+The service, the starter, the window, the status icon and the health check start PowerShell with
+`-ExecutionPolicy Bypass`. This is intended: the scripts are in the protected installation
+folder, and the execution policy is not a security boundary anyway. The file list and App Control
+provide protection.
 
-Erzwingt Ihre Gruppenrichtlinie `AllSigned`, hat `Bypass` keine Wirkung. Signieren Sie dann
-alle SelfX-Skripte (die Dateien in `Sources`, alle Prüf- und Aktionsskripte, auch
-`Collect-DeviceLogs.ps1`) mit einem vertrauenswürdigen Codesignatur-Zertifikat. Ein eigenes
-Signaturkonzept gibt es nicht.
+If your group policy enforces `AllSigned`, `Bypass` has no effect. Then sign all SelfX scripts
+(the files in `Sources`, all check and action scripts, also `Collect-DeviceLogs.ps1`) with a
+trusted code signing certificate. There is no signing concept of its own.
 
-### Rechte des Dienstes
+### Service privileges
 
-Der Dienst läuft als LocalSystem. `Install.ps1` begrenzt sein Token mit `sc.exe privs` auf die
-nötigen Rechte (`Service_Privileges` = `Restricted`, Standard). Gefährliche Rechte wie
-`SeTcbPrivilege`, `SeDebugPrivilege`, `SeCreateTokenPrivilege`, `SeLoadDriverPrivilege` und
-`SeSecurityPrivilege` hat der Dienst dann nicht.
+The service runs as LocalSystem. `Install.ps1` limits its token with `sc.exe privs` to the
+required rights (`Service_Privileges` = `Restricted`, default). Dangerous rights such as
+`SeTcbPrivilege`, `SeDebugPrivilege`, `SeCreateTokenPrivilege`, `SeLoadDriverPrivilege` and
+`SeSecurityPrivilege` are then not held by the service.
 
-| Recht | Wofür |
+| Right | Purpose |
 |---|---|
-| `SeChangeNotifyPrivilege` | jeder Prozess |
-| `SeImpersonatePrivilege` | Pipe-Client prüfen |
-| `SeCreateGlobalPrivilege` | globale Objekte des Dienstes |
-| `SeShutdownPrivilege` | Aktion Neustart |
-| `SeSystemtimePrivilege` | Zeit synchronisieren |
-| `SeBackupPrivilege`, `SeRestorePrivilege`, `SeTakeOwnershipPrivilege` | Dateireparaturen (zum Beispiel Spooler) |
-| `SeManageVolumePrivilege` | Datenträgerprüfung |
+| `SeChangeNotifyPrivilege` | every process |
+| `SeImpersonatePrivilege` | check the pipe client |
+| `SeCreateGlobalPrivilege` | global objects of the service |
+| `SeShutdownPrivilege` | action Restart |
+| `SeSystemtimePrivilege` | synchronize the time |
+| `SeBackupPrivilege`, `SeRestorePrivilege`, `SeTakeOwnershipPrivilege` | file repairs (for example spooler) |
+| `SeManageVolumePrivilege` | disk check |
 
-Prüfen: `sc.exe qprivs SelfXService`. Schlägt das Setzen fehl, meldet `Install.ps1` nur eine
-Warnung (Autopilot scheitert nie daran). `Service_Privileges` = `Default` lässt alle Rechte
-und ist nur für die Fehlersuche gedacht. Testen Sie vor der Verteilung jede System-Aktion
-einmal auf einem Testgerät.
+Check: `sc.exe qprivs SelfXService`. If setting fails, `Install.ps1` only reports a warning
+(Autopilot never fails because of it). `Service_Privileges` = `Default` keeps all rights and is
+meant only for troubleshooting. Test every system action once on a test device before
+deployment.
 
-## Fehlerbehebung
+## Troubleshooting
 
-| Meldung oder Lage | Bedeutung und Lösung |
+| Message or situation | Meaning and solution |
 |---|---|
-| `The command dotnet was not found` | Das .NET SDK 10 fehlt, oder das PowerShell-Fenster ist älter als die Installation. SDK installieren und ein neues Fenster öffnen. |
-| `The .NET SDK 10 is required, found '…'` | Es ist kein SDK 10 installiert. Bei mehreren SDKs wählt die `global.json` im Repository automatisch SDK 10. |
-| `The offline feed folder … does not exist` oder `SelfX.OfflineFeed.json is missing` | Der Ordner `offline-feed` fehlt oder ist leer. Export auf einem Rechner mit Internet ausführen (Abschnitt „Offline-Build“) und den Ordner kopieren. |
-| `… does not match its SHA512` oder `… not listed in SelfX.OfflineFeed.json` | Ein Paket im Ordner `offline-feed` wurde verändert oder ergänzt. Ordner aus dem Repository wiederherstellen oder den Export wiederholen. |
-| `The offline feed was exported with .NET SDK …` | Auf dem Build-Rechner ist eine andere SDK-Version installiert als beim Export. Dieselbe Version installieren oder den Export mit dieser Version wiederholen. |
-| `NU1101` oder `NU1102` beim Bau | Ein Paket fehlt im Ordner `offline-feed`. Export wiederholen. |
-| `The folder Bin is missing …` | Schritt 2.3 fehlt oder wurde vor dem Paketbau nicht ausgeführt. Schritt 2.3 und 2.5 wiederholen. |
-| `Bin was not built from the current …` | Ein Quelltext wurde nach dem Bauen geändert. Schritt 2.3 und 2.5 wiederholen. |
-| Installation endet mit Exitcode 1 | Den Grund nennt die letzte Zeile von `Install.log`. Die bisherige Installation bleibt unverändert. |
-| Intune erkennt ein Update nicht | `Tool_Version` und `$ExpectedVersion` sind gleich geblieben, oder Sie haben die Kopie aus dem Repository statt `build\SelfX-Service-<Version>.Detection.ps1` hochgeladen. |
-| SelfX startet keine Aktion | PowerShell 7.6 fehlt (Warnung im `Install.log`), oder Ereignis 4005 meldet eine abweichende Datei. Das SelfX-Protokoll nennt die Einzelheiten. |
+| `The command dotnet was not found` | The .NET SDK 10 is missing, or the PowerShell window is older than the installation. Install the SDK and open a new window. |
+| `The .NET SDK 10 is required, found '…'` | No SDK 10 is installed. With several SDKs, the `global.json` in the repository selects SDK 10 automatically. |
+| `The offline feed folder … does not exist` or `SelfX.OfflineFeed.json is missing` | The folder `offline-feed` is missing or empty. Run the export on a computer with internet (section "Offline build") and copy the folder. |
+| `… does not match its SHA512` or `… not listed in SelfX.OfflineFeed.json` | A package in the folder `offline-feed` was changed or added. Restore the folder from the repository or repeat the export. |
+| `The offline feed was exported with .NET SDK …` | The build machine has another SDK version than the export. Install the same version or repeat the export with this version. |
+| `NU1101` or `NU1102` during the build | A package is missing in the folder `offline-feed`. Repeat the export. |
+| `The folder Bin is missing …` | Step 2.3 was not run before building the package. Repeat steps 2.3 and 2.5. |
+| `Bin was not built from the current …` | A source file was changed after building. Repeat steps 2.3 and 2.5. |
+| Installation ends with exit code 1 | The last line of `Install.log` names the reason. The existing installation stays unchanged. |
+| Intune does not detect an update | `Tool_Version` and `$ExpectedVersion` stayed the same, or you uploaded the copy from the repository instead of `build\SelfX-Service-<version>.Detection.ps1`. |
+| SelfX starts no action | PowerShell 7.6 is missing (warning in `Install.log`), or event 4005 reports a deviating file. The SelfX log names the details. |
 
-## Checkliste für die Bereitstellung
+## Deployment checklist
 
-1. Konfiguration angepasst (Branding, Support-Kontakte, Funktionen) und alle XML-Dateien
-   gültig.
-2. `Tool_Version` und `$ExpectedVersion` sind gleich und neu; Verlauf in beiden Dateien
-   ergänzt.
-3. Alle Tests laufen ohne Fehler.
-4. Programme gebaut, AppLocker-Regeln ersetzt (falls genutzt).
-5. Paket gebaut; `.intunewin` **und** `…Detection.ps1` aus `build` verwendet.
-6. PowerShell 7 als Win32-App und als Abhängigkeit eingerichtet; Voraussetzungsregel
-   Windows 11 25H2 gesetzt; weder SelfX noch PowerShell 7 blockieren die ESP.
-7. Auf einem Testgerät geprüft (Neuinstallation, Update, Deinstallation, Standardnutzer,
-   Autopilot).
-8. Erst mit einer Pilotgruppe verteilen, dann breit.
+1. Configuration adjusted (branding, support contacts, features) and all XML files valid.
+2. `Tool_Version` and `$ExpectedVersion` are the same and new; history added in both files.
+3. All tests run without errors.
+4. Programs built, AppLocker rules replaced (if used).
+5. Package built; `.intunewin` **and** `…Detection.ps1` from `build` used.
+6. PowerShell 7 set up as a Win32 app and as a dependency; requirement rule Windows 11 25H2
+   set; neither SelfX nor PowerShell 7 blocks the ESP.
+7. Checked on a test device (new installation, update, uninstall, standard user, Autopilot).
+8. Deploy to a pilot group first, then broadly.

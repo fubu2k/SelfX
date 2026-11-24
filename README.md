@@ -202,8 +202,8 @@ menu opens SelfX, checks the status or sends the logs.
   Actions runs all of them, and a security-focused script analysis, for every
   pull request.
 
-The details are described in [Configuration](docs/en/Configuration.md) and
-[Installation](docs/en/Installation.md); the [User manual](docs/en/User-Manual.md)
+The details are described in [Configuration](docs/Configuration.md) and
+[Installation](docs/Installation.md); the [User manual](docs/User-Manual.md)
 explains SelfX for the users.
 
 ## Security hardening in this fork
@@ -239,10 +239,10 @@ Report vulnerabilities privately as described in [security policy](SECURITY.en.m
 
 ## Documentation
 
-- [Package wizard](docs/en/Guided-Setup.md): guided configuration up to the Intune package
-- [Installation](docs/en/Installation.md), including the release checklist of SelfX Service
-- [Configuration](docs/en/Configuration.md)
-- [User manual](docs/en/User-Manual.md)
+- [Package wizard](docs/Guided-Setup.md): guided configuration up to the Intune package
+- [Installation](docs/Installation.md), including the release checklist of SelfX Service
+- [Configuration](docs/Configuration.md)
+- [User manual](docs/User-Manual.md)
 - [Package notes of SelfX Service](SelfX%20Service/README.en.md)
 - [Changelog](CHANGELOG.en.md)
 - [Security policy](SECURITY.en.md)
@@ -252,8 +252,9 @@ Report vulnerabilities privately as described in [security policy](SECURITY.en.m
 | Directory | Contents |
 |---|---|
 | `SelfX Service` | The package: installer, local Windows service (C# source), action catalogue with User and System actions, WPF application, scripts and tests |
-| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/en/Installation.md#step-2-build-the-package)), and `Build-SelfXBinaries.ps1`, which builds the .NET 10 programs of SelfX Service (see [Building the programs](docs/en/Installation.md#step-2-build-the-package)) |
+| `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/Installation.md#step-2-build-the-package)), and `Build-SelfXBinaries.ps1`, which builds the .NET 10 programs of SelfX Service (see [Building the programs](docs/Installation.md#step-2-build-the-package)) |
 | `offline-feed` | NuGet packages for the offline build with `SelfX.OfflineFeed.json` (SHA512 of each file); created by `tools\Export-SelfXOfflineFeed.ps1`. `NuGet.config` in the root allows only this folder. |
+| `docs` | Installation, configuration and user manual (English); `docs/de` contains the German versions, `docs/images` the screenshots |
 | `.github` | GitHub Actions workflow (compile, tests, script analysis), `CODEOWNERS`, Dependabot configuration |
 | `build` | Not committed. Output of `New-SelfXIntuneWin.ps1`: `SelfX-Service-<version>.intunewin`; and of `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 

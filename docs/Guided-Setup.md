@@ -1,6 +1,6 @@
 # Package wizard (guided configuration)
 
-**English** | [Deutsch](../Assistent.md)
+**English** | [Deutsch](de/Assistent.md)
 
 The wizard `tools\New-SelfXPackage.ps1` walks you through the SelfX settings with questions and builds
 the Intune package from your answers. Every question shows a **recommendation**. At the end it

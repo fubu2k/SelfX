@@ -26,9 +26,8 @@ Sicherheit, Tests und Bereitstellung von SelfX Service: siehe
 [Sicherheitshärtung in diesem Fork](#sicherheitshärtung-in-diesem-fork) und das
 [Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **3.0.1**.
 
-Deutsch ist die Basissprache der Oberfläche und dieser Dokumentation; Englisch
-ist der Rückfall für fehlende Texte und die Übersetzung der Dokumentation (Dateien
-mit der Endung `.en.md` und der Ordner `docs/en`).
+Deutsch ist die Basissprache der Oberfläche; Englisch ist der Rückfall für fehlende
+Texte. Die Dokumentation steht auf Englisch in `docs/`, die deutsche Fassung in `docs/de/`.
 
 ## Bildschirmfotos
 
@@ -220,8 +219,8 @@ Menü öffnet SelfX, prüft den Status oder sendet die Protokolle.
   Dienstes unter einem Testnamen. GitHub Actions führt sie alle sowie eine
   sicherheitsorientierte Skriptanalyse für jeden Pull Request aus.
 
-Die Einzelheiten stehen in der [Konfiguration](docs/Configuration.md) und der
-[Installation](docs/Installation.md); das [Benutzerhandbuch](docs/User-Manual.md)
+Die Einzelheiten stehen in der [Konfiguration](docs/de/Configuration.md) und der
+[Installation](docs/de/Installation.md); das [Benutzerhandbuch](docs/de/User-Manual.md)
 erklärt SelfX für die Nutzer.
 
 ## Sicherheitshärtung in diesem Fork
@@ -262,15 +261,15 @@ beschrieben.
 
 ## Dokumentation
 
-- [Paketassistent](docs/Assistent.md): geführte Konfiguration bis zum Intune-Paket
-- [Installation](docs/Installation.md), mit der Release-Checkliste von SelfX Service
-- [Konfiguration](docs/Configuration.md)
-- [Benutzerhandbuch](docs/User-Manual.md)
+- [Paketassistent](docs/de/Assistent.md): geführte Konfiguration bis zum Intune-Paket
+- [Installation](docs/de/Installation.md), mit der Release-Checkliste von SelfX Service
+- [Konfiguration](docs/de/Configuration.md)
+- [Benutzerhandbuch](docs/de/User-Manual.md)
 - [Pakethinweise zu SelfX Service](SelfX%20Service/README.md)
 - [Änderungsprotokoll](CHANGELOG.md)
 - [Sicherheitsrichtlinie](SECURITY.md)
-- Englische Fassungen: [README](README.md), [Installation](docs/en/Installation.md),
-  [Configuration](docs/en/Configuration.md), [User manual](docs/en/User-Manual.md),
+- Englische Fassungen: [README](README.md), [Installation](docs/Installation.md),
+  [Configuration](docs/Configuration.md), [User manual](docs/User-Manual.md),
   [Changelog](CHANGELOG.en.md), [Security policy](SECURITY.en.md)
 
 ## Aufbau des Repositorys
@@ -278,9 +277,9 @@ beschrieben.
 | Verzeichnis | Inhalt |
 |---|---|
 | `SelfX Service` | Das Paket: Installer, lokaler Windows-Dienst (C#-Quelltext), Aktionskatalog mit Nutzer- und Systemaktionen, WPF-Anwendung, Skripte und Tests |
-| `tools` | `New-SelfXIntuneWin.ps1`, das das Intune-Paket mit dem signierten Win32 Content Prep Tool von Microsoft erstellt (siehe [Intune-Paket erstellen](docs/Installation.md#schritt-2-paket-bauen)), und `Build-SelfXBinaries.ps1`, das die .NET-10-Programme von SelfX Service baut (siehe [Programme bauen](docs/Installation.md#schritt-2-paket-bauen)) |
+| `tools` | `New-SelfXIntuneWin.ps1`, das das Intune-Paket mit dem signierten Win32 Content Prep Tool von Microsoft erstellt (siehe [Intune-Paket erstellen](docs/de/Installation.md#schritt-2-paket-bauen)), und `Build-SelfXBinaries.ps1`, das die .NET-10-Programme von SelfX Service baut (siehe [Programme bauen](docs/de/Installation.md#schritt-2-paket-bauen)) |
 | `offline-feed` | NuGet-Pakete für den Offline-Bau mit `SelfX.OfflineFeed.json` (SHA512 je Datei); erzeugt von `tools\Export-SelfXOfflineFeed.ps1`. `NuGet.config` im Hauptordner erlaubt nur diesen Ordner. |
-| `docs` | Installation, Konfiguration und Benutzerhandbuch (Deutsch); `docs/en` enthält die englischen Fassungen, `docs/images` die Bildschirmfotos |
+| `docs` | Installation, Konfiguration und Benutzerhandbuch (Englisch); `docs/de` enthält die deutschen Fassungen, `docs/images` die Bildschirmfotos |
 | `.github` | GitHub-Actions-Workflow (Kompilieren, Tests, Skriptanalyse), `CODEOWNERS`, Dependabot-Konfiguration |
 | `build` | Nicht eingecheckt. Ausgabe von `New-SelfXIntuneWin.ps1`: `SelfX-Service-<Version>.intunewin`; und von `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 

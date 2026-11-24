@@ -122,7 +122,7 @@
 	<T Id="guide.s2c">   Installationsverhalten: System. Neustartverhalten: keine bestimmte Aktion.</T>
 	<T Id="guide.s3">3. Anforderungen: 64 Bit, Windows 11 25H2 (Build 26200 oder neuer). Bietet das Portal 25H2 nicht an, legen Sie eine Skript-Voraussetzung an: Ganzzahl, größer oder gleich 26200, Skript: [int](Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber)</T>
 	<T Id="guide.s4">4. Erkennungsregel: Benutzerdefiniertes Skript. Laden Sie {0} hoch (nicht die Datei im Repository). Skript als 32-Bit-Prozess ausführen: Nein. Skriptsignaturprüfung erzwingen: Nein.</T>
-	<T Id="guide.s5">5. Abhängigkeit: PowerShell 7.6 oder neuer als eigene Win32-App (MSI von Microsoft), Automatisch installieren: Ja. Einzelheiten: docs\Installation.md, Kapitel 3.2.</T>
+	<T Id="guide.s5">5. Abhängigkeit: PowerShell 7.6 oder neuer als eigene Win32-App (MSI von Microsoft), Automatisch installieren: Ja. Einzelheiten: docs\de\Installation.md, Kapitel 3.2.</T>
 	<T Id="guide.s6">6. Zuweisung: Weisen Sie die App einer Pilot-Gerätegruppe als Erforderlich zu. Nehmen Sie weder SelfX noch PowerShell 7 in die blockierenden Apps der Autopilot-Statusseite (ESP) auf.</T>
 	<T Id="guide.s7">7. Ticket-Zuordnung: Legen Sie je Datei unten ein Plattformskript an (Geräte > Skripte und Fehlerbehebungen > Plattformskripts). Mit den Anmeldeinformationen des angemeldeten Benutzers ausführen: Nein. Skripthost in 64-Bit-PowerShell ausführen: Ja. Weisen Sie jedes Skript der passenden Entra-Gerätegruppe zu; die Gruppen sollten sich gegenseitig ausschließen.</T>
 	<T Id="guide.s7item">   {0}: Group Tags {1}; Geräteklassen {2}</T>
