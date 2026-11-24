@@ -412,7 +412,7 @@ try {
 		Remove-Item -LiteralPath $selfService -Force
 		New-FakeProcess 'SelfService' 'C:\Users\Public\SelfService.exe'
 		$run = Invoke-TestScript $citrixScript
-		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)|$(@($global:FakeProcesses).Count)" '1|0|1' 'Citrix: untrusted program path, nothing closed or started'
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)|$($global:FakeProcesses.Count)" '1|0|1' 'Citrix: untrusted program path, nothing closed or started'
 		$global:FakeProcesses.Clear()
 
 		# Teams meeting add-in: registry values are set, Outlook is restarted only if it runs.
