@@ -335,6 +335,20 @@ Do you want to continue?</Alerte_MSG>
 Do you want to continue?</Alerte_MSG>
 		</Action>
 
+		<Action Id="D_Excel_NewInstance">
+			<Name>Excel opens every file in the same window</Name>
+			<Buttons>Ok_Cancel</Buttons>
+			<Explanation>You want to compare two workbooks side by side, for example on two screens, but Excel always opens the second file in the same window.</Explanation>
+			<Script>SelfX_Excel_NewInstance.ps1</Script>
+			<Context>User</Context>
+			<Category>Office</Category>
+			<Alerte_MSG>A second, independent Excel window will be started. Excel windows and workbooks that are already open are not closed or changed.
+
+Open the second workbook in the new window (File &gt; Open) and move the window to your other screen. Files that you open by double-click may still open in the first window.
+
+Do you want to continue?</Alerte_MSG>
+		</Action>
+
 		<Action Id="D_Office_ResetLicence">
 			<Name>Office asks to activate or reports an unlicensed product</Name>
 			<Buttons>Ok_Cancel</Buttons>

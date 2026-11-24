@@ -472,6 +472,15 @@ Na próxima vez que iniciar uma aplicação do Office, ser-lhe-á pedido que ini
 
 Pretende continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>O Excel abre todos os ficheiros na mesma janela</Name>
+				<Explanation>Quer comparar dois livros lado a lado, por exemplo em dois ecrãs, mas o Excel abre sempre o segundo ficheiro na mesma janela.</Explanation>
+				<Alerte_MSG>Será iniciada uma segunda janela do Excel, independente. As janelas do Excel e os livros que já estão abertos não são fechados nem alterados.
+
+Abra o segundo livro na nova janela (Ficheiro > Abrir) e mova a janela para o seu outro ecrã. Os ficheiros que abrir com duplo clique podem continuar a aparecer na primeira janela.
+
+Deseja continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>Iniciar o cliente do OneDrive</Name>
 				<Explanation>O OneDrive não está em execução.</Explanation>
