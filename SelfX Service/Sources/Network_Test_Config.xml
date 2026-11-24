@@ -32,6 +32,10 @@
     <Target Label="Intranet" Host="intranet.example.org" Port="443" />
     <Target Label="Internet" Host="www.example.org" Port="443" />
   </Targets>
+
+  Citrix: add the address of the StoreFront server or the Gateway of the Citrix Workspace app as a target
+  (for example Label="Citrix Gateway" Host="citrix.example.org" Port="443"). The row shows whether the name resolves
+  and how fast the connection opens; users and the support team see it in the system information and in the ticket.
 -->
 <Network_Test_Config>
   <Settings Enabled="False" Gateway="True" Samples="3" TimeoutMs="2000" />

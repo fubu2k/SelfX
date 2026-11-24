@@ -39,6 +39,11 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
   gespeicherte Anmeldung und Einstellungen bleiben unverändert. Der Programmpfad muss unter
   Program Files liegen (kein Link); es gibt keine Nutzereingaben. Nur die aktuelle
   Citrix Workspace App wird unterstützt, nicht der Receiver.
+- **Citrix Workspace in den Systeminformationen:** Ist die Citrix Workspace App installiert, zeigt
+  SelfX unter „Gerät“ die Zeile „Citrix Workspace“ mit der Version. Die Zeile steht auch in den
+  Geräteinformationen des Support-Tickets. Die Erreichbarkeit von StoreFront oder Gateway lässt sich
+  über ein Ziel in `Network_Test_Config.xml` messen (Beispiel in der Datei). Test:
+  `Test-CitrixInfo.ps1`.
 
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 
