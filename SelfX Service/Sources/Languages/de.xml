@@ -554,6 +554,15 @@ Beim nächsten Start einer Office-App werden Sie aufgefordert, sich mit Ihrem Ar
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel öffnet alle Dateien im selben Fenster</Name>
+				<Explanation>Sie möchten zwei Arbeitsmappen nebeneinander vergleichen, zum Beispiel auf zwei Bildschirmen, aber Excel öffnet die zweite Datei immer im selben Fenster.</Explanation>
+				<Alerte_MSG>Es wird ein zweites, unabhängiges Excel-Fenster gestartet. Bereits geöffnete Excel-Fenster und Arbeitsmappen werden nicht geschlossen oder verändert.
+
+Öffnen Sie die zweite Arbeitsmappe im neuen Fenster (Datei > Öffnen) und schieben Sie das Fenster auf Ihren anderen Bildschirm. Dateien, die Sie per Doppelklick öffnen, können weiterhin im ersten Fenster erscheinen.
+
+Möchten Sie fortfahren?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>Ein Programmfenster liegt außerhalb des Bildschirms</Name>
 				<Explanation>Ein Programm läuft, aber Sie sehen sein Fenster nicht. Das passiert oft, wenn ein externer Monitor abgesteckt wurde, zum Beispiel beim Wechsel vom Homeoffice ins Büro.</Explanation>

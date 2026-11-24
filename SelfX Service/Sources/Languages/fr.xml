@@ -472,6 +472,15 @@ Au prochain démarrage d’une application Office, vous devrez vous connecter av
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel ouvre tous les fichiers dans la même fenêtre</Name>
+				<Explanation>Vous voulez comparer deux classeurs côte à côte, par exemple sur deux écrans, mais Excel ouvre toujours le deuxième fichier dans la même fenêtre.</Explanation>
+				<Alerte_MSG>Une deuxième fenêtre Excel indépendante va être lancée. Les fenêtres Excel et les classeurs déjà ouverts ne sont ni fermés ni modifiés.
+
+Ouvrez le deuxième classeur dans la nouvelle fenêtre (Fichier > Ouvrir) et déplacez la fenêtre sur votre autre écran. Les fichiers ouverts par double-clic peuvent encore s’afficher dans la première fenêtre.
+
+Voulez-vous continuer ?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>Une fenêtre de programme est hors de l’écran</Name>
 				<Explanation>Un programme est en cours d’exécution, mais vous ne voyez pas sa fenêtre. Cela arrive souvent après le débranchement d’un écran externe, par exemple en passant du télétravail au bureau.</Explanation>

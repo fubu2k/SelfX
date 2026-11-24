@@ -472,6 +472,15 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 
 계속하시겠습니까?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel이 모든 파일을 같은 창에서 엽니다</Name>
+				<Explanation>통합 문서 두 개를 나란히, 예를 들어 모니터 두 대에서 비교하려는데 Excel이 두 번째 파일을 항상 같은 창에서 엽니다.</Explanation>
+				<Alerte_MSG>독립적인 두 번째 Excel 창이 시작됩니다. 이미 열려 있는 Excel 창과 통합 문서는 닫히거나 변경되지 않습니다.
+
+새 창에서 두 번째 통합 문서를 열고(파일 > 열기) 창을 다른 모니터로 옮기세요. 두 번 클릭해서 여는 파일은 계속 첫 번째 창에 표시될 수 있습니다.
+
+계속하시겠습니까?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>프로그램 창이 화면 밖에 있습니다</Name>
 				<Explanation>프로그램은 실행 중인데 창이 보이지 않습니다. 외부 모니터를 분리했을 때, 예를 들어 재택근무에서 사무실로 옮겼을 때 자주 발생합니다.</Explanation>

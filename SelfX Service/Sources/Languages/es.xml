@@ -472,6 +472,15 @@ La próxima vez que inicie una aplicación de Office, se le pedirá que inicie s
 
 ¿Quiere continuar?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel abre todos los archivos en la misma ventana</Name>
+				<Explanation>Quiere comparar dos libros uno al lado del otro, por ejemplo en dos pantallas, pero Excel abre siempre el segundo archivo en la misma ventana.</Explanation>
+				<Alerte_MSG>Se iniciará una segunda ventana de Excel independiente. Las ventanas de Excel y los libros que ya están abiertos no se cierran ni se modifican.
+
+Abra el segundo libro en la nueva ventana (Archivo > Abrir) y mueva la ventana a su otra pantalla. Los archivos que abra con doble clic pueden seguir apareciendo en la primera ventana.
+
+¿Desea continuar?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>Una ventana de programa está fuera de la pantalla</Name>
 				<Explanation>Un programa está en ejecución, pero no ve su ventana. Suele ocurrir cuando se desconecta un monitor externo, por ejemplo al pasar del teletrabajo a la oficina.</Explanation>

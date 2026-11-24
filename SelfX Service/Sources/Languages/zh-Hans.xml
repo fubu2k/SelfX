@@ -472,6 +472,15 @@
 
 是否要继续？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel 在同一个窗口中打开所有文件</Name>
+				<Explanation>您想并排比较两个工作簿，例如在两个屏幕上，但 Excel 总是在同一个窗口中打开第二个文件。</Explanation>
+				<Alerte_MSG>将启动第二个独立的 Excel 窗口。已打开的 Excel 窗口和工作簿不会被关闭或更改。
+
+请在新窗口中打开第二个工作簿（文件 > 打开），然后把窗口拖到另一个屏幕上。通过双击打开的文件仍可能出现在第一个窗口中。
+
+是否继续？</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>程序窗口在屏幕之外</Name>
 				<Explanation>某个程序正在运行，但您看不到它的窗口。拔掉外接显示器后经常出现这种情况，例如从居家办公回到办公室时。</Explanation>

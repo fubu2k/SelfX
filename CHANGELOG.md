@@ -21,6 +21,11 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
   Deutsch und Englisch, weitere Sprachen über `tools\Wizard\Wizard.<Kultur>.xml`. Siehe
   [Paketassistent](docs/Assistent.md). `New-SelfXIntuneWin.ps1` 1.8.0 hat den neuen Parameter
   `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (läuft in der CI).
+- **Neue Aktion „Excel öffnet alle Dateien im selben Fenster“** (Kategorie Office, Nutzerkontext):
+  startet eine zweite, unabhängige Excel-Instanz (`excel.exe /x`), zum Beispiel um zwei
+  Arbeitsmappen auf zwei Bildschirmen zu vergleichen. Es wird nichts geschlossen oder geändert;
+  der Programmpfad kommt aus `SelfXOffice.ps1` (unter Program Files, kein Link), das einzige
+  Argument ist der feste Schalter `/x`. Texte in allen 24 Sprachen, Tests in `Test-Scripts.ps1`.
 - **Neue Aktion „Ein Programmfenster liegt außerhalb des Bildschirms“** (Kategorie Gerät,
   Nutzerkontext): holt Fenster des eigenen Benutzers, deren Titelleiste auf keinem Bildschirm
   erreichbar ist (zum Beispiel nach dem Abstecken eines Monitors), auf den Hauptbildschirm.

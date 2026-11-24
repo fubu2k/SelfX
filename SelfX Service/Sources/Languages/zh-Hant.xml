@@ -472,6 +472,15 @@
 
 是否要繼續？</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel 在同一個視窗中開啟所有檔案</Name>
+				<Explanation>您想並排比較兩個活頁簿，例如在兩個螢幕上，但 Excel 一律在同一個視窗中開啟第二個檔案。</Explanation>
+				<Alerte_MSG>將啟動第二個獨立的 Excel 視窗。已開啟的 Excel 視窗和活頁簿不會被關閉或變更。
+
+請在新視窗中開啟第二個活頁簿（檔案 > 開啟），再將視窗拖到另一個螢幕上。以按兩下開啟的檔案仍可能出現在第一個視窗中。
+
+是否繼續？</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>程式視窗在螢幕之外</Name>
 				<Explanation>某個程式正在執行，但您看不到它的視窗。拔掉外接螢幕後經常發生這種情況，例如從居家辦公回到辦公室時。</Explanation>

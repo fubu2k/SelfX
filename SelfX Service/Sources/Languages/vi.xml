@@ -472,6 +472,15 @@ Lần tới khi bạn mở một ứng dụng Office, bạn sẽ được yêu c
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel mở mọi tệp trong cùng một cửa sổ</Name>
+				<Explanation>Bạn muốn so sánh hai sổ làm việc cạnh nhau, chẳng hạn trên hai màn hình, nhưng Excel luôn mở tệp thứ hai trong cùng một cửa sổ.</Explanation>
+				<Alerte_MSG>Một cửa sổ Excel thứ hai, độc lập, sẽ được khởi động. Các cửa sổ Excel và sổ làm việc đã mở không bị đóng hoặc thay đổi.
+
+Hãy mở sổ làm việc thứ hai trong cửa sổ mới (Tệp > Mở) rồi kéo cửa sổ sang màn hình còn lại. Các tệp bạn mở bằng cách nhấp đúp vẫn có thể xuất hiện trong cửa sổ đầu tiên.
+
+Bạn có muốn tiếp tục không?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>Cửa sổ chương trình nằm ngoài màn hình</Name>
 				<Explanation>Một chương trình đang chạy nhưng bạn không thấy cửa sổ của nó. Điều này thường xảy ra sau khi rút màn hình ngoài, chẳng hạn khi chuyển từ làm việc tại nhà sang văn phòng.</Explanation>

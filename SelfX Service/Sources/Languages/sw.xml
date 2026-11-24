@@ -472,6 +472,15 @@ Utakapoanzisha programu ya Office wakati ujao, utaombwa uingie kwa akaunti yako 
 
 Je, ungependa kuendelea?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel hufungua faili zote kwenye dirisha moja</Name>
+				<Explanation>Unataka kulinganisha vitabu viwili vya kazi kando kwa kando, kwa mfano kwenye skrini mbili, lakini Excel hufungua faili ya pili kila mara kwenye dirisha lilelile.</Explanation>
+				<Alerte_MSG>Dirisha la pili la Excel, linalojitegemea, litaanzishwa. Madirisha ya Excel na vitabu vya kazi vilivyo wazi tayari havifungwi wala kubadilishwa.
+
+Fungua kitabu cha pili cha kazi kwenye dirisha jipya (Faili > Fungua) kisha hamishia dirisha kwenye skrini yako nyingine. Faili unazofungua kwa kubofya mara mbili zinaweza bado kuonekana kwenye dirisha la kwanza.
+
+Unataka kuendelea?</Alerte_MSG>
+			</Action>
 			<Action Id="D_Device_BringWindowsBack">
 				<Name>Dirisha la programu liko nje ya skrini</Name>
 				<Explanation>Programu inaendeshwa, lakini huoni dirisha lake. Hili hutokea mara nyingi baada ya kuondoa skrini ya nje, kwa mfano unapohama kutoka kazi ya nyumbani hadi ofisini.</Explanation>
