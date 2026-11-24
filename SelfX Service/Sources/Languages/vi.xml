@@ -197,6 +197,8 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Ticket_Recipient_Text>Thư được gửi đến: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Hỏi Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>Chuẩn bị một đoạn văn bản ngắn về máy tính này cho Microsoft 365 Copilot Chat để nó giải thích sự cố bằng ngôn ngữ đơn giản.</Copilot_Row_Text>
+		<Wiki_Row_Label>Wiki của tổ chức</Wiki_Row_Label>
+		<Wiki_Row_Text>Mở wiki của tổ chức bạn với các mẹo và thủ thuật trong trình duyệt web.</Wiki_Row_Text>
 		<Copilot_Button>Chuẩn bị văn bản</Copilot_Button>
 		<Copilot_Window_Title>Hỏi Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX chuẩn bị một đoạn văn bản ngắn cho Copilot Chat. Văn bản gồm mô tả của bạn và thông tin cơ bản về thiết bị. Tên, địa chỉ email và địa chỉ mạng được thay bằng ký hiệu giữ chỗ.</Copilot_Intro_Text>

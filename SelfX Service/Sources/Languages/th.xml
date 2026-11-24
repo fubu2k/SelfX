@@ -197,6 +197,8 @@
 		<Ticket_Recipient_Text>อีเมลจะถูกส่งไปที่: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>ถาม Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>เตรียมข้อความสั้น ๆ เกี่ยวกับพีซีเครื่องนี้สำหรับ Microsoft 365 Copilot Chat เพื่อให้อธิบายปัญหาด้วยภาษาที่เข้าใจง่าย</Copilot_Row_Text>
+		<Wiki_Row_Label>วิกิองค์กร</Wiki_Row_Label>
+		<Wiki_Row_Text>เปิดวิกิขององค์กรที่มีเคล็ดลับและเทคนิคในเว็บเบราว์เซอร์</Wiki_Row_Text>
 		<Copilot_Button>เตรียมข้อความ</Copilot_Button>
 		<Copilot_Window_Title>ถาม Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX เตรียมข้อความสั้น ๆ สำหรับ Copilot Chat ซึ่งมีคำอธิบายของคุณและข้อมูลพื้นฐานของอุปกรณ์ ชื่อ ที่อยู่อีเมล และที่อยู่เครือข่ายจะถูกแทนที่ด้วยตัวแทน</Copilot_Intro_Text>

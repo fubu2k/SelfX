@@ -331,6 +331,9 @@ function Get-WizardQuestions {
     & $add @{ Section = 'copilot'; Id = 'CopilotEnabled'; Kind = 'bool'; Default = $false }
     & $add @{ Id = 'CopilotAudience'; Kind = 'choice'; Choices = @('User', 'Admin'); When = { param($a) $a.CopilotEnabled }; Default = 'User' }
     & $add @{ Id = 'CopilotClearClipboard'; Kind = 'bool'; When = { param($a) $a.CopilotEnabled }; Default = $true }
+    & $add @{ Id = 'WikiEnabled'; Kind = 'bool'; Default = $false }
+    & $add @{ Id = 'WikiUrl'; Kind = 'url'; Required = $true; When = { param($a) $a.WikiEnabled }; Default = '' }
+    & $add @{ Id = 'WikiName'; Kind = 'text'; Max = 40; When = { param($a) $a.WikiEnabled }; Default = '' }
     & $add @{ Section = 'behavior'; Id = 'TrayIcon'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'ShortcutDesktop'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'ShortcutStartMenu'; Kind = 'bool'; Default = $true }
@@ -483,6 +486,8 @@ function Get-WizardToolConfigValues {
     }
     if ($A.TicketEnabled) { $values['Ticket_Mail'] = $A.TicketMail; $values['Ticket_Subject_Tag'] = $A.TicketSubjectTag }
     if ($A.CopilotEnabled) { $values['Copilot_Audience'] = $A.CopilotAudience; $values['Copilot_Clear_Clipboard'] = [bool]$A.CopilotClearClipboard }
+    $values['Wiki_Enabled'] = [bool]$A.WikiEnabled
+    if ($A.WikiEnabled) { $values['Wiki_Url'] = $A.WikiUrl; $values['Wiki_Name'] = $A.WikiName }
     if ($A.AccentColor) {
         $values['Brand_Accent_Color'] = $A.AccentColor
         $values['Brand_TitleBar_Color'] = $A.AccentColor

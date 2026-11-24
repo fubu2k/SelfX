@@ -197,6 +197,8 @@ Descrição do problema:</Report_Mail_Body>
 		<Ticket_Recipient_Text>O e-mail é enviado para: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Perguntar ao Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>Prepara um texto curto sobre este computador para o Microsoft 365 Copilot Chat, para que ele possa explicar o problema em linguagem simples.</Copilot_Row_Text>
+		<Wiki_Row_Label>Wiki da empresa</Wiki_Row_Label>
+		<Wiki_Row_Text>Abre no navegador web o wiki da sua organização com dicas e truques.</Wiki_Row_Text>
 		<Copilot_Button>Preparar texto</Copilot_Button>
 		<Copilot_Window_Title>Perguntar ao Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>O SelfX prepara um texto curto para o Copilot Chat. Ele contém a sua descrição e dados básicos do dispositivo. Nomes, endereços de e-mail e endereços de rede são substituídos por marcadores.</Copilot_Intro_Text>

@@ -197,6 +197,8 @@
 		<Ticket_Recipient_Text>Лист буде надіслано на адресу: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Запитати Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>Готує короткий текст про цей комп’ютер для Microsoft 365 Copilot Chat, щоб він міг пояснити проблему простою мовою.</Copilot_Row_Text>
+		<Wiki_Row_Label>Корпоративна вікі</Wiki_Row_Label>
+		<Wiki_Row_Text>Відкриває в браузері вікі вашої організації з порадами та підказками.</Wiki_Row_Text>
 		<Copilot_Button>Підготувати текст</Copilot_Button>
 		<Copilot_Window_Title>Запитати Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX готує короткий текст для Copilot Chat. Він містить ваш опис і основні відомості про пристрій. Імена, адреси електронної пошти та мережеві адреси замінюються заповнювачами.</Copilot_Intro_Text>

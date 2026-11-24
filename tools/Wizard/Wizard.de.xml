@@ -18,7 +18,7 @@
 	<T Id="section.support">2/7 Support-Kontakte</T>
 	<T Id="section.branding">3/7 Branding</T>
 	<T Id="section.ticket">4/7 Ticket per E-Mail und Organisationen</T>
-	<T Id="section.copilot">5/7 Copilot Chat</T>
+	<T Id="section.copilot">5/7 Copilot Chat und Firmen-Wiki</T>
 	<T Id="section.behavior">6/7 Verhalten auf dem Gerät</T>
 	<T Id="section.build">7/7 Paket bauen</T>
 	<T Id="ToolLanguage.ask">Standardsprache von SelfX auf den Geräten (de, en, fr, es ... oder Auto)</T>
@@ -74,6 +74,12 @@
 	<T Id="UnitMore.rec">Ja, bis jedes Postfach angelegt ist. Die erste passende Regel gewinnt: zuerst Group Tags, dann OUs, dann Geräteklassen.</T>
 	<T Id="CopilotEnabled.ask">Haben Sie Microsoft 365 Copilot Chat lizenziert und möchten ihn im Hilfe-Dialog anbieten?</T>
 	<T Id="CopilotEnabled.rec">Ja, wenn Ihre Nutzer Copilot Chat haben. SelfX nutzt keine Schnittstelle und kein Token: Es bereitet einen Text vor, den der Nutzer in Copilot einfügt.</T>
+	<T Id="WikiEnabled.ask">Soll es eine Schaltfläche geben, die das Wiki oder die Intranet-Seite Ihrer Firma im Webbrowser öffnet?</T>
+	<T Id="WikiEnabled.rec">Ja, wenn Sie ein Wiki mit Tipps und Tricks für Ihre Mitarbeitenden haben. Die Schaltfläche erscheint in der Navigation von SelfX.</T>
+	<T Id="WikiUrl.ask">Adresse des Wikis (https://)</T>
+	<T Id="WikiUrl.rec">Die Seite, die per Klick geöffnet wird, zum Beispiel https://wiki.contoso.example. Es wird nur https:// akzeptiert.</T>
+	<T Id="WikiName.ask">Name auf der Schaltfläche (leer = Firmen-Wiki, bis 40 Zeichen)</T>
+	<T Id="WikiName.rec">Optional, zum Beispiel Contoso Wiki. Leer zeigt einen Text in der Sprache des Nutzers.</T>
 	<T Id="CopilotAudience.ask">Für wen ist die Antwort? User (einfache Sprache) oder Admin (technische Schritte)</T>
 	<T Id="CopilotAudience.rec">User. Technische Antworten überfordern die meisten Beschäftigten.</T>
 	<T Id="CopilotClearClipboard.ask">Zwischenablage einige Minuten nach dem Kopieren des Textes leeren?</T>

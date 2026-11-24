@@ -197,6 +197,8 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Ticket_Recipient_Text>메일 받는 사람: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Copilot Chat에 문의</Copilot_Row_Label>
 		<Copilot_Row_Text>이 PC에 대한 짧은 텍스트를 Microsoft 365 Copilot Chat용으로 준비하여 문제를 쉬운 말로 설명할 수 있게 합니다.</Copilot_Row_Text>
+		<Wiki_Row_Label>사내 위키</Wiki_Row_Label>
+		<Wiki_Row_Text>조직의 팁과 요령이 담긴 위키를 웹 브라우저에서 엽니다.</Wiki_Row_Text>
 		<Copilot_Button>텍스트 준비</Copilot_Button>
 		<Copilot_Window_Title>Copilot Chat에 문의</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX가 Copilot Chat용 짧은 텍스트를 준비합니다. 텍스트에는 사용자의 설명과 기본 장치 정보가 포함됩니다. 이름, 이메일 주소, 네트워크 주소는 자리 표시자로 바뀝니다.</Copilot_Intro_Text>

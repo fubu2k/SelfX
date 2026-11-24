@@ -23,11 +23,12 @@ selbst steht in der [Installationsanleitung](Installation.md).
 9. [Geräteprotokolle für den Support](#geräteprotokolle-für-den-support)
 10. [Netzwerk-Messungen](#netzwerk-messungen)
 11. [Ticket per E-Mail](#ticket-per-e-mail)
-12. [Copilot Chat](#copilot-chat)
-13. [Protokolle und Aufbewahrung](#protokolle-und-aufbewahrung)
-14. [Branding (Firmenlogo und Farben)](#branding)
-15. [Sprachen](#sprachen)
-16. [Änderungen sicher ausliefern](#änderungen-sicher-ausliefern)
+12. [Firmen-Wiki](#firmen-wiki)
+13. [Copilot Chat](#copilot-chat)
+14. [Protokolle und Aufbewahrung](#protokolle-und-aufbewahrung)
+15. [Branding (Firmenlogo und Farben)](#branding)
+16. [Sprachen](#sprachen)
+17. [Änderungen sicher ausliefern](#änderungen-sicher-ausliefern)
 
 ## Wo die Einstellungen liegen
 
@@ -74,6 +75,7 @@ Sprachdateien (siehe [Sprachen](#sprachen)).
 | `Show_Tray_Icon` | `True` | Statussymbol neben der Uhr anzeigen. Siehe [Statussymbol](#statussymbol). |
 | `Ticket_Enabled` | `False` | Ticket per E-Mail einschalten. Siehe [Ticket per E-Mail](#ticket-per-e-mail). |
 | `Copilot_Enabled` | `False` | Copilot Chat einschalten. Siehe [Copilot Chat](#copilot-chat). |
+| `Wiki_Enabled` | `False` | Schaltfläche für das Firmen-Wiki einschalten. Siehe [Firmen-Wiki](#firmen-wiki). |
 | `DeviceLogs_Days` | `7` | Wie viele Tage Ereignisse in den Geräteprotokollen stehen (1 bis 60). |
 
 **Support-Kontakte** (im Hilfe-Dialog):
@@ -478,6 +480,21 @@ Felder werden bereinigt: keine Zeilenumbrüche im Betreff und feste Längen. Fre
 Geräteinformationen stehen in Codeblöcken, damit ein Ticketsystem daraus keine Befehle ausführt.
 Testen Sie vor dem Einschalten, ob Ihr Ticketsystem das so behandelt. Das Protokoll nennt nur
 das Ergebnis, nie den Text.
+
+## Firmen-Wiki
+
+Optional und standardmäßig aus (`Wiki_Enabled` = `False`). Ist die Funktion an und `Wiki_Url` gültig, zeigt
+SelfX in der Navigation die Schaltfläche *Firmen-Wiki*. Ein Klick öffnet die Adresse im Standard-Webbrowser
+des Nutzers, zum Beispiel eine Seite mit Tipps und Tricks Ihrer Firma. SelfX sendet dabei keine Daten.
+
+| Einstellung | Bedeutung |
+| --- | --- |
+| `Wiki_Enabled` | `False` (Standard) oder `True`. |
+| `Wiki_Url` | Adresse des Wikis. Nur `https://`, ohne Benutzername und Kennwort, höchstens 2000 Zeichen. Ist sie ungültig, wird die Schaltfläche nicht angezeigt und eine Warnung ins Protokoll geschrieben. |
+| `Wiki_Name` | Optional. Name auf der Schaltfläche, bis 40 Zeichen. Leer = Text „Firmen-Wiki“ in der Sprache des Nutzers. |
+
+Die Schaltfläche läuft im Nutzerkontext, der Dienst ist nicht beteiligt. Der Assistent (`tools\New-SelfXPackage.ps1`)
+fragt die drei Werte ab.
 
 ## Copilot Chat
 

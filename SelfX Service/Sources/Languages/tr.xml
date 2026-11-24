@@ -197,6 +197,8 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Ticket_Recipient_Text>E-posta şu adrese gider: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Copilot Chat’e sor</Copilot_Row_Label>
 		<Copilot_Row_Text>Bu bilgisayar hakkında Microsoft 365 Copilot Chat için kısa bir metin hazırlar; böylece sorunu basit bir dille açıklayabilir.</Copilot_Row_Text>
+		<Wiki_Row_Label>Şirket wikisi</Wiki_Row_Label>
+		<Wiki_Row_Text>Kuruluşunuzun ipuçları ve püf noktaları içeren wikisini web tarayıcısında açar.</Wiki_Row_Text>
 		<Copilot_Button>Metni hazırla</Copilot_Button>
 		<Copilot_Window_Title>Copilot Chat’e sor</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX, Copilot Chat için kısa bir metin hazırlar. Metin açıklamanızı ve temel cihaz bilgilerini içerir. Adlar, e-posta adresleri ve ağ adresleri yer tutucularla değiştirilir.</Copilot_Intro_Text>

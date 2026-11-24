@@ -113,6 +113,7 @@ try {
             [ordered]@{ UnitId = 'IT-Mobile'; UnitMail = 'it-mobile@contoso.example'; UnitCc = 'service@contoso.example'; UnitGroupTags = @(); UnitOUs = @(); UnitCategories = @('Tablet') }
         )
         CopilotEnabled = $true; CopilotAudience = 'User'; CopilotClearClipboard = $true
+        WikiEnabled = $true; WikiUrl = 'https://wiki.contoso.example/start'; WikiName = 'Contoso <Wiki>'
         TrayIcon = $true; ShortcutDesktop = $false; ShortcutStartMenu = $true; Expert = $false
     }
     function Invoke-Wizard {
@@ -133,6 +134,7 @@ try {
     Assert ($g.Tool_Language -eq 'Auto' -and $g.Support_Mail -eq 'it-support@contoso.example') 'Tool_Config: language and support mail'
     Assert ($g.Ticket_Enabled -eq 'True' -and $g.Ticket_Mail -eq 'servicedesk@contoso.example') 'Tool_Config: ticket on, default recipient'
     Assert ($g.Copilot_Enabled -eq 'True' -and $g.Copilot_Audience -eq 'User' -and $g.Copilot_Clear_Clipboard -eq 'True') 'Tool_Config: Copilot'
+    Assert ($g.Wiki_Enabled -eq 'True' -and $g.Wiki_Url -eq 'https://wiki.contoso.example/start' -and $g.Wiki_Name -eq 'Contoso <Wiki>') 'Tool_Config: wiki button'
     Assert ($g.Shortcut_Desktop -eq 'False' -and $g.Shortcut_StartMenu -eq 'True') 'Tool_Config: shortcuts'
     Assert ($g.Brand_Accent_Color -eq '#E20074' -and $g.Brand_Logo -eq 'Branding\logo.png') 'Tool_Config: branding'
     Assert ((Test-Path (Join-Path $out 'package\Sources\Branding\logo.png')) -and -not (Test-Path (Join-Path $out 'package\Sources\Branding\company_logo.png'))) 'logo copied, placeholder removed'

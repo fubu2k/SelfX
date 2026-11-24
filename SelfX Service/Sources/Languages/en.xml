@@ -195,6 +195,8 @@ Description of the issue:</Report_Mail_Body>
 		<Ticket_Recipient_Text>The e-mail goes to: {0}</Ticket_Recipient_Text>
 		<Copilot_Row_Label>Ask Copilot Chat</Copilot_Row_Label>
 		<Copilot_Row_Text>Prepares a short text about this PC for Microsoft 365 Copilot Chat, so that it can explain the problem in plain language.</Copilot_Row_Text>
+		<Wiki_Row_Label>Company wiki</Wiki_Row_Label>
+		<Wiki_Row_Text>Opens the wiki of your organization with tips and tricks in your web browser.</Wiki_Row_Text>
 		<Copilot_Button>Prepare text</Copilot_Button>
 		<Copilot_Window_Title>Ask Copilot Chat</Copilot_Window_Title>
 		<Copilot_Intro_Text>SelfX prepares a short text for Copilot Chat. It contains your description and basic device facts. Names, e-mail addresses and network addresses are replaced by placeholders.</Copilot_Intro_Text>

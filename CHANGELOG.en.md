@@ -14,6 +14,7 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 
 ## Unreleased
 
+- **New button "Company wiki" (optional):** `Wiki_Enabled`, `Wiki_Url` (`https://` only) and `Wiki_Name` (up to 40 characters) in `Tool_Config.xml` show a button in the navigation, styled like the Copilot button, that opens the wiki address in the web browser. Off by default; an invalid address hides the button and writes a warning to the log. Runs in the user context. Texts in all 24 languages, new questions in the package wizard, tests in `Test-SupportLinks.ps1` and `Test-SelfXPackageWizard.ps1`.
 - **Package wizard (guided configuration):** `tools\New-SelfXPackage.ps1` asks questions with a
   recommendation (support, branding, ticket and organisations by OU, group tag and device class,
   Copilot Chat, behavior), writes the answers into a copy of the package, builds the Intune package,
