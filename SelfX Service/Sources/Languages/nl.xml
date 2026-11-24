@@ -472,6 +472,15 @@ Bij de volgende keer dat u een Office-app start, wordt u gevraagd u aan te melde
 
 Wilt u doorgaan?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel opent alle bestanden in hetzelfde venster</Name>
+				<Explanation>U wilt twee werkmappen naast elkaar vergelijken, bijvoorbeeld op twee schermen, maar Excel opent het tweede bestand altijd in hetzelfde venster.</Explanation>
+				<Alerte_MSG>Er wordt een tweede, onafhankelijk Excel-venster gestart. Excel-vensters en werkmappen die al geopend zijn, worden niet gesloten of gewijzigd.
+
+Open de tweede werkmap in het nieuwe venster (Bestand > Openen) en verplaats het venster naar uw andere scherm. Bestanden die u met een dubbelklik opent, kunnen nog in het eerste venster verschijnen.
+
+Wilt u doorgaan?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>De OneDrive-client starten</Name>
 				<Explanation>OneDrive wordt niet uitgevoerd.</Explanation>

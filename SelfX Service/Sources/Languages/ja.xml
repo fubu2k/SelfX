@@ -472,6 +472,15 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 
 続行しますか?</Alerte_MSG>
 			</Action>
+			<Action Id="D_Excel_NewInstance">
+				<Name>Excel がすべてのファイルを同じウィンドウで開く</Name>
+				<Explanation>2 つのブックを並べて（たとえば 2 台のモニターで）比較したいのに、Excel が 2 つ目のファイルを常に同じウィンドウで開いてしまいます。</Explanation>
+				<Alerte_MSG>2 つ目の独立した Excel ウィンドウを起動します。すでに開いている Excel のウィンドウとブックは、閉じられたり変更されたりしません。
+
+新しいウィンドウで 2 つ目のブックを開き（ファイル > 開く）、ウィンドウをもう一方のモニターに移動してください。ダブルクリックで開いたファイルは、引き続き 1 つ目のウィンドウに表示されることがあります。
+
+続行しますか?</Alerte_MSG>
+			</Action>
 			<Action Id="D_OneDrive_Start">
 				<Name>OneDrive クライアントを起動する</Name>
 				<Explanation>OneDrive が実行されていません。</Explanation>

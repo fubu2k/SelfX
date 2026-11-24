@@ -361,6 +361,27 @@ try {
 		Assert-Equal ((Get-SandboxLog 'SelfX_Excel_Reboot') -match 'Error.*Excel is still running after 15 seconds') $true 'Excel: failure logged'
 		$global:FakeProcesses.Clear()
 
+		# Second Excel instance (SelfX_Excel_NewInstance.ps1): only the fixed switch /x is passed; nothing is closed or ended.
+		$global:FakeRegValues['HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\EXCEL.EXE'] = [pscustomobject]@{ '(default)' = $excel86 }
+		$run = Invoke-TestScript 'SelfX_Excel_NewInstance.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $excel86 /x" 'Excel new instance: not running, started with /x (32-bit path from App Paths)'
+		New-FakeProcess 'EXCEL' $excel86
+		$run = Invoke-TestScript 'SelfX_Excel_NewInstance.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')|$(@($global:FakeProcesses | Where-Object ProcessName -eq 'EXCEL').Count)" "0|Start-Process $excel86 /x|1" 'Excel new instance: running Excel is not closed, a second instance is started'
+		Assert-Equal ((Get-SandboxLog 'SelfX_Excel_NewInstance') -match 'New Excel instance started') $true 'Excel new instance: logged'
+		$global:FakeProcesses.Clear()
+
+		# Process path outside Program Files and no registration: nothing is started, error.
+		New-FakeProcess 'EXCEL' 'C:\Office\EXCEL.EXE'
+		$global:FakeRegValues.Clear()
+		$savedPf = @{ PF = $env:ProgramFiles; PF6432 = $env:ProgramW6432; PF86 = ${env:ProgramFiles(x86)} }
+		$env:ProgramFiles = Join-Path $sandbox 'NoPf'; $env:ProgramW6432 = $env:ProgramFiles; ${env:ProgramFiles(x86)} = $env:ProgramFiles
+		$run = Invoke-TestScript 'SelfX_Excel_NewInstance.ps1'
+		$env:ProgramFiles = $savedPf.PF; $env:ProgramW6432 = $savedPf.PF6432; ${env:ProgramFiles(x86)} = $savedPf.PF86
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '1|0' 'Excel new instance: no valid program path, nothing started'
+		Assert-Equal ((Get-SandboxLog 'SelfX_Excel_NewInstance') -match 'Error.*Classic Excel was not found') $true 'Excel new instance: failure logged'
+		$global:FakeProcesses.Clear()
+
 		# Teams meeting add-in: registry values are set, Outlook is restarted only if it runs.
 		New-FakeProcess 'OUTLOOK' $out64
 		$run = Invoke-TestScript 'SelfX_Outlook_TeamsAddIn.ps1'
