@@ -12,39 +12,6 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 (the packaging script checks this). A release gets the tag `v<version>` (for example
 `v3.0.0`); the release workflow checks that the tag and `Tool_Version` match.
 
-## Unreleased
-
-- **New button "Company wiki" (optional):** `Wiki_Enabled`, `Wiki_Url` (`https://` only) and `Wiki_Name` (up to 40 characters) in `Tool_Config.xml` show a button in the navigation, styled like the Copilot button, that opens the wiki address in the web browser. Off by default; an invalid address hides the button and writes a warning to the log. Runs in the user context. Texts in all 24 languages, new questions in the package wizard, tests in `Test-SupportLinks.ps1` and `Test-SelfXPackageWizard.ps1`.
-- **Package wizard (guided configuration):** `tools\New-SelfXPackage.ps1` asks questions with a
-  recommendation (support, branding, ticket and organisations by OU, group tag and device class,
-  Copilot Chat, behavior), writes the answers into a copy of the package, builds the Intune package,
-  creates the platform scripts for the ticket routing and short Intune instructions. German and
-  English; more languages via `tools\Wizard\Wizard.<culture>.xml`. See
-  [Package wizard](docs/en/Guided-Setup.md). `New-SelfXIntuneWin.ps1` 1.8.0 has the new parameter
-  `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (runs in CI).
-- **New action "Excel opens every file in the same window"** (category Office, user context):
-  starts a second, independent Excel instance (`excel.exe /x`), for example to compare two
-  workbooks on two screens. Nothing is closed or changed; the program path comes from
-  `SelfXOffice.ps1` (below Program Files, no link) and the only argument is the fixed switch
-  `/x`. Texts in all 24 languages, tests in `Test-Scripts.ps1`.
-- **New action "A program window is outside the screen"** (category Device, user context):
-  moves windows of the own user whose title bar cannot be reached on any screen (for example
-  after a monitor was disconnected) to the primary screen. Nothing is closed, saved or
-  changed in the settings; windows are moved through Microsoft UI Automation (no compiled
-  code) and window titles are not written to the log. Programs with higher rights are
-  skipped. New helper `SelfXWindows.ps1`, test: `Test-WindowHelper.ps1`.
-- **New action "Citrix Workspace does not respond or does not show your apps"** (category
-  Citrix, user context): closes the Citrix Workspace app processes of the own user account and
-  starts the app again. Application and desktop sessions that are already open are not ended;
-  the saved sign-in and the settings stay unchanged. The program path must be below Program
-  Files (no link); there is no user input. Only the current Citrix Workspace app is
-  supported, not the Receiver.
-- **Citrix Workspace in the system information:** when the Citrix Workspace app is installed,
-  SelfX shows the row "Citrix Workspace" with the version under "Device". The row is also part of
-  the device information of the support ticket. The reachability of StoreFront or the Gateway can be
-  measured with a target in `Network_Test_Config.xml` (example in the file). Test:
-  `Test-CitrixInfo.ps1`.
-
 ## 3.0.0 - 2026-11-23 (SelfX Service)
 
 Version 3.0.0 combines all changes since the upstream state 2.6.9 was taken over.
@@ -119,6 +86,24 @@ Details: [Installation guide](docs/en/Installation.md).
   it stays Quick Assist.
 - German is the base language of the interface (before: the Windows display language);
   24 languages, missing texts appear in English. Missing translations were added.
+- **New button "Company wiki" (optional):** `Wiki_Enabled`, `Wiki_Url` (`https://` only) and `Wiki_Name` (up to 40 characters) in `Tool_Config.xml` show a button in the navigation, styled like the Copilot button, that opens the wiki address in the web browser. Off by default; an invalid address hides the button and writes a warning to the log. Runs in the user context. Texts in all 24 languages, new questions in the package wizard, tests in `Test-SupportLinks.ps1` and `Test-SelfXPackageWizard.ps1`.
+- **New action "Excel opens every file in the same window"** (category Office, user context):
+  starts a second, independent Excel instance (`excel.exe /x`), for example to compare two
+  workbooks on two screens. Nothing is closed or changed; the program path comes from
+  `SelfXOffice.ps1` (below Program Files, no link) and the only argument is the fixed switch
+  `/x`. Texts in all 24 languages, tests in `Test-Scripts.ps1`.
+- **New action "A program window is outside the screen"** (category Device, user context):
+  moves windows of the own user whose title bar cannot be reached on any screen (for example
+  after a monitor was disconnected) to the primary screen. Nothing is closed, saved or
+  changed in the settings; windows are moved through Microsoft UI Automation (no compiled
+  code) and window titles are not written to the log. Programs with higher rights are
+  skipped. New helper `SelfXWindows.ps1`, test: `Test-WindowHelper.ps1`.
+- **New action "Citrix Workspace does not respond or does not show your apps"** (category
+  Citrix, user context): closes the Citrix Workspace app processes of the own user account and
+  starts the app again. Application and desktop sessions that are already open are not ended;
+  the saved sign-in and the settings stay unchanged. The program path must be below Program
+  Files (no link); there is no user input. Only the current Citrix Workspace app is
+  supported, not the Receiver.
 
 ### New features for administrators
 
@@ -147,6 +132,18 @@ Details: [Installation guide](docs/en/Installation.md).
   automatically after 7 days.
 - Prerequisite check during installation: Windows 11 25H2, safe folder rights for
   PowerShell 7 (otherwise abort before any change).
+- **Package wizard (guided configuration):** `tools\New-SelfXPackage.ps1` asks questions with a
+  recommendation (support, branding, ticket and organisations by OU, group tag and device class,
+  Copilot Chat, behavior), writes the answers into a copy of the package, builds the Intune package,
+  creates the platform scripts for the ticket routing and short Intune instructions. German and
+  English; more languages via `tools\Wizard\Wizard.<culture>.xml`. See
+  [Package wizard](docs/en/Guided-Setup.md). `New-SelfXIntuneWin.ps1` 1.8.0 has the new parameter
+  `-SourceFolder`. Test: `tools\Test-SelfXPackageWizard.ps1` (runs in CI).
+- **Citrix Workspace in the system information:** when the Citrix Workspace app is installed,
+  SelfX shows the row "Citrix Workspace" with the version under "Device". The row is also part of
+  the device information of the support ticket. The reachability of StoreFront or the Gateway can be
+  measured with a target in `Network_Test_Config.xml` (example in the file). Test:
+  `Test-CitrixInfo.ps1`.
 
 ### Security
 

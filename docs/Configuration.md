@@ -68,6 +68,12 @@ Sprachdateien (siehe [Sprachen](#sprachen)).
 | `Show_Support_Button` | `True` | Hilfe-Schaltfläche (?) mit Ihren Kontakten anzeigen. |
 | `Show_Reboot_Warning` | `True` | Erinnerung an einen ausstehenden Neustart anzeigen. |
 | `Show_Computer_Name_MainGUI` | — | Computername im Fenster anzeigen. |
+| `Show_Computer_Name_title_bar` | `False` | Computername in der Titelleiste anzeigen. |
+| `Show_About_Button` | `True` | Info-Schaltfläche (i) in der Titelleiste anzeigen. |
+| `About_Logo` | `logo.png` | Logo im Info-Dialog. |
+| `Show_SystemInfo_Intune_Actions` | `True` | Werkzeuge (Intune, Company Portal, Fernwartung, Protokolle) auf der Seite *Systeminformationen* anzeigen. |
+| `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | `www.msftconnecttest.com`, `80` | Ziel der Prüfung „Internet erreichbar“ auf der Seite *Systeminformationen*. |
+| `Ticket_Subject_Tag` | `SelfX` | Kennzeichen am Anfang des Betreffs einer Ticket-Mail. Erlaubt sind Buchstaben, Ziffern, `.`, `_`, `-` und höchstens 20 Zeichen, sonst `SelfX`. |
 | `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Verknüpfungen, die die Installation für alle Nutzer anlegt. |
 | `Log_Retention_Days` | `90` | Wie lange Protokolle aufbewahrt werden (1 bis 3650 Tage). |
 | `Service_FileCheck` | `Enforce` | `Enforce`: Der Dienst startet nichts, wenn Dateien nicht stimmen. `Audit`: Der Dienst meldet das nur. Siehe [Installationsanleitung](Installation.md#die-dateiliste-selfxfilesjson). |
@@ -139,6 +145,19 @@ Do you want to continue?</Alerte_MSG>
 
 **Neue Aktion anlegen:** Geben Sie ihr eine neue `Id` und ergänzen Sie die Texte in den
 Sprachdateien. Ohne Übersetzung erscheint der englische Text.
+
+**Konto-Aktionen mit Internetadresse (`Context` = `Link`):** Sie öffnen eine Adresse aus
+`Tool_Config.xml` im Webbrowser. Mitgeliefert sind zwei Konto-Aktionen:
+
+| Aktion | Einstellung | Standard |
+|---|---|---|
+| Passwort vergessen oder abgelaufen (`D_Account_PasswordReset`) | `Link_PasswordReset` | `https://passwordreset.microsoftonline.com/` |
+| Anmeldemethoden verwalten (`D_Account_SecurityInfo`) | `Link_SecurityInfo` | `https://mysignins.microsoft.com/security-info` |
+
+- Ersetzen Sie die Adresse, wenn Ihr Unternehmen eine eigene Seite nutzt.
+- Leer oder `Off` blendet die Aktion aus.
+- Eine Adresse, die nicht mit `https://` beginnt, ist ungültig. Die Aktion wird dann nicht angezeigt, und SelfX schreibt eine Warnung ins Protokoll.
+- Die Aktion läuft im Nutzerkontext, der Dienst ist nicht beteiligt. Der Nutzer bestätigt vorher im Dialog.
 
 Mitgelieferte Skripte für `System`-Aktionen:
 

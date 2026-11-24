@@ -66,6 +66,12 @@ SelfX is configured with XML files in the folder `SelfX Service\Sources`.
 | `Show_Support_Button` | `True` | Show the help button (?) with your contacts. |
 | `Show_Reboot_Warning` | `True` | Show a reminder about a pending restart. |
 | `Show_Computer_Name_MainGUI` | — | Show the computer name in the window. |
+| `Show_Computer_Name_title_bar` | `False` | Show the computer name in the title bar. |
+| `Show_About_Button` | `True` | Show the info button (i) in the title bar. |
+| `About_Logo` | `logo.png` | Logo in the info dialog. |
+| `Show_SystemInfo_Intune_Actions` | `True` | Show the tools (Intune, Company Portal, remote support, logs) on the *System information* page. |
+| `SystemInfo_Internet_Test_Host`, `SystemInfo_Internet_Test_Port` | `www.msftconnecttest.com`, `80` | Target of the "Internet reachable" check on the *System information* page. |
+| `Ticket_Subject_Tag` | `SelfX` | Marker at the start of the subject of a ticket e-mail. Letters, digits, `.`, `_`, `-` and at most 20 characters, otherwise `SelfX`. |
 | `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Shortcuts that the installation creates for all users. |
 | `Log_Retention_Days` | `90` | How long logs are kept (1 to 3650 days). |
 | `Service_FileCheck` | `Enforce` | `Enforce`: the service starts nothing if files do not match. `Audit`: the service only reports it. See the [installation guide](Installation.md#the-file-list-selfxfilesjson). |
@@ -137,6 +143,19 @@ Do you want to continue?</Alerte_MSG>
 
 **Add a new action:** Give it a new `Id` and add the texts to the language files. Without a
 translation, the English text appears.
+
+**Account actions with a web address (`Context` = `Link`):** They open an address from
+`Tool_Config.xml` in the web browser. Two account actions are included:
+
+| Action | Setting | Default |
+|---|---|---|
+| Forgot or expired password (`D_Account_PasswordReset`) | `Link_PasswordReset` | `https://passwordreset.microsoftonline.com/` |
+| Manage sign-in methods (`D_Account_SecurityInfo`) | `Link_SecurityInfo` | `https://mysignins.microsoft.com/security-info` |
+
+- Replace the address if your company uses its own page.
+- An empty value or `Off` hides the action.
+- An address that does not start with `https://` is invalid. The action is then not shown, and SelfX writes a warning to the log.
+- The action runs in the user context; the service is not involved. The user confirms in the dialog first.
 
 Bundled scripts for `System` actions:
 
