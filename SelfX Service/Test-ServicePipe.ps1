@@ -15,6 +15,12 @@
       - An oversized request without a line end is cut and rejected, not answered with PONG.
       - N3: when another process already owns the pipe name, the service does not join it (FirstPipeInstance), logs
         the problem and serves as soon as the name is free.
+      - Trust mode: the service reads the anchor (tested in a key of the current user) only when it is valid and no
+        normal account owns or may change it; files stay pinned (not writable, not replaceable) while they are checked;
+        embedded signatures and the signed catalogs SelfX.Code.cat and SelfX.Config.cat are checked with test certificates
+        (wrong signer, changed XML, missing catalog, unsigned or changed script, unsigned library); the cache of positive
+        results. The cases that need a signature accepted by Windows run with administrator rights in CI or with
+        SELFX_TEST_ALLOW_ROOT_IMPORT=1 (two test certificates become trusted roots until the end of the test).
     Runs as a normal user, needs no administrator rights. Duration about 30 seconds. Windows PowerShell 5.1:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-ServicePipe.ps1
 
@@ -38,6 +44,8 @@
     3.1.0    2026-11-27  fubu2k               Layout App/Config: configuration folder, fixed names of the settings files, file check of App, Config and the
                                               install folder above them, scripts of the company only with their entry in SelfX.Config.json.
     3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml in the configuration list, nothing below Texts in the code list.
+    3.1.0    2026-11-27  fubu2k               Trust mode: the anchor (missing, invalid, unsafe rights), pinned files, signatures and signed catalogs with
+                                              test certificates (wrong signer, changed XML, missing catalog, unsigned script and library), the cache.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -57,6 +65,8 @@ function Add-SelfXServiceType {
 	Push-Location (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $Path)))
 	try { $log = @(& dotnet build $project -c Release -o $output --nologo -v q 2>&1); $code = $LASTEXITCODE } finally { Pop-Location }
 	if ($code -ne 0) { throw ("dotnet build of the service failed:`n" + (($log | Select-Object -Last 15) -join "`n")) }
+	# The folder of the build: the trust tests sign a copy of the built library.
+	$script:serviceBuildFolder = $output
 	[void][Reflection.Assembly]::LoadFrom((Join-Path $output 'SelfXService.dll'))
 }
 
@@ -450,6 +460,436 @@ if ($configRootMethod -and $configFileMethod -and $layoutMethod -and $resolveMet
 	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' 'Own_Action.ps1')) 'Scripts: an own script behind a junction is not started'
 	(Get-Item -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run')).Delete()
 	Remove-Item -LiteralPath $layoutRoot, $elsewhere -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# --- Trust mode: the anchor HKLM\SOFTWARE\SelfX\Trust, signatures through pinned handles, the signed catalogs, the cache ---
+# The anchor is tested in a key of the current user. The signatures are made with self-signed test certificates
+# (Cert:\CurrentUser\My, removed at the end). Windows accepts them only when they are trusted roots: with administrator rights in
+# CI, or with SELFX_TEST_ALLOW_ROOT_IMPORT=1, they are added to the trusted roots for the time of the test (same rule as
+# Test-InstallBinaries.ps1). Without that, the cases that need an accepted signature are skipped and the others expect the
+# result UntrustedRoot where the signature itself fits.
+$anchorMethod = [SelfX.SelfXService].GetMethod('ReadTrustAnchor', $flags)
+$signedMethod = [SelfX.SelfXService].GetMethod('VerifySignedLayout', $flags)
+$pinnedType = [SelfX.SelfXService].GetNestedType('PinnedFiles', [Reflection.BindingFlags]'NonPublic')
+$cacheType = [SelfX.SelfXService].GetNestedType('SignatureCache', [Reflection.BindingFlags]'NonPublic')
+$trustType = [SelfX.SelfXService].Assembly.GetType('SelfX.SelfXTrust')
+Assert-True ($null -ne $anchorMethod) 'Trust: the service has ReadTrustAnchor'
+Assert-True ($null -ne $signedMethod) 'Trust: the service has VerifySignedLayout'
+Assert-True (($null -ne $pinnedType) -and ($null -ne $cacheType) -and ($null -ne $trustType)) 'Trust: the service has PinnedFiles, SignatureCache and SelfXTrust'
+Assert-True ($serviceText.Contains('ReadTrustAnchor(RegistryHive.LocalMachine, TrustKeyPath, TrustAnchorWriterSids, out anchorProblem)')) 'Trust: the service reads the anchor from HKLM with the fixed key and the fixed identities'
+Assert-True ($serviceText.Contains('const string TrustKeyPath = @"SOFTWARE\SelfX\Trust";')) 'Trust: the key is SOFTWARE\SelfX\Trust'
+Assert-True ($serviceText.Contains('static readonly string[] TrustAnchorWriterSids = { "S-1-5-18", "S-1-5-32-544" };')) 'Trust: only SYSTEM and Administrators may own or change the anchor (by SID)'
+Assert-True ($serviceText.Contains('if (!CheckInstalledFiles(scriptName, scriptPath, out pinned))')) 'Trust: every start goes through the check with the anchor'
+Assert-True ($serviceText.Contains('if (pinned != null) pinned.Dispose();')) 'Trust: the pinned files are released after the script has ended'
+Assert-True ($serviceText -match 'WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT \| WTD_CACHE_ONLY_URL_RETRIEVAL') 'Trust: revocation is checked from the cache only (no network request)'
+Assert-True (($serviceText -split 'data\.dwUIChoice = WTD_UI_NONE;').Count -eq 2) 'Trust: WinVerifyTrust never shows a window'
+Assert-True ($serviceText -notmatch '(?i)"BUILTIN\\|"NT AUTHORITY|Administratoren') 'Trust: the service names accounts by SID only'
+
+if ($anchorMethod -and $signedMethod -and $pinnedType -and $cacheType -and $trustType) {
+	# 1. The anchor.
+	$anchorRoot = 'Software\SelfXServiceTest_' + [guid]::NewGuid().ToString('N')
+	$anchorKey = "$anchorRoot\Trust"
+	$anchorWriters = [string[]]@('S-1-5-18', 'S-1-5-32-544', $currentSid)
+	$hkcu = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::CurrentUser, [Microsoft.Win32.RegistryView]::Registry64)
+	function Read-Anchor([string[]]$Writers = $anchorWriters) {
+		$arguments = [object[]]@([Microsoft.Win32.RegistryHive]::CurrentUser, [string]$anchorKey, $Writers, $null)
+		$anchor = $anchorMethod.Invoke($null, $arguments)
+		$mode = $null; $signers = @()
+		if ($null -ne $anchor) {
+			$mode = if ($anchor.GetType().GetField('Signature').GetValue($anchor)) { 'Signature' } else { 'Hash' }
+			$signers = @($anchor.GetType().GetField('Signers').GetValue($anchor))
+		}
+		return [pscustomobject]@{ Mode = $mode; Signers = ($signers -join ','); Problem = [string]$arguments[3] }
+	}
+	function Set-AnchorRights([string[]]$ReadSids = @('S-1-5-32-545'), [hashtable]$Extra = @{}) {
+		# Rights like Set-SelfXTrustAnchor of Install.ps1, plus full control for the current user (the test must remove the key again).
+		$security = New-Object System.Security.AccessControl.RegistrySecurity
+		$security.SetAccessRuleProtection($true, $false)
+		foreach ($sid in 'S-1-5-18', 'S-1-5-32-544', $currentSid) {
+			$security.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule((New-Object System.Security.Principal.SecurityIdentifier($sid)), [System.Security.AccessControl.RegistryRights]::FullControl, 'ContainerInherit', 'None', 'Allow')))
+		}
+		foreach ($sid in $ReadSids) {
+			$security.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule((New-Object System.Security.Principal.SecurityIdentifier($sid)), [System.Security.AccessControl.RegistryRights]::ReadKey, 'ContainerInherit', 'None', 'Allow')))
+		}
+		foreach ($sid in $Extra.Keys) {
+			$security.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule((New-Object System.Security.Principal.SecurityIdentifier($sid)), [System.Security.AccessControl.RegistryRights]$Extra[$sid], 'ContainerInherit', 'None', 'Allow')))
+		}
+		$key = $hkcu.OpenSubKey($anchorKey, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]'ChangePermissions, ReadKey')
+		try { $key.SetAccessControl($security) } finally { $key.Dispose() }
+	}
+	function Set-AnchorValues([scriptblock]$Action) {
+		$key = $hkcu.CreateSubKey($anchorKey)
+		try { foreach ($name in @($key.GetValueNames())) { $key.DeleteValue($name, $false) }; & $Action $key } finally { $key.Dispose() }
+	}
+	$thumbA = 'A1' * 20
+	$thumbB = 'b2' * 20
+	try {
+		$read = Read-Anchor
+		Assert-True (($null -eq $read.Mode) -and ($read.Problem -eq 'the key is missing')) "Anchor: a missing key is a problem, nothing starts ($($read.Problem))"
+		Set-AnchorValues { param($key) $key.SetValue('Mode', 'Hash', 'String') }
+		Set-AnchorRights
+		$read = Read-Anchor
+		Assert-True (($read.Mode -eq 'Hash') -and (-not $read.Problem)) "Anchor: Mode = Hash is read ($($read.Problem))"
+		Set-AnchorValues { param($key) $key.SetValue('Mode', 'Signature', 'String'); $key.SetValue('Signers', [string[]]@($thumbA, $thumbB), 'MultiString') }
+		$read = Read-Anchor
+		Assert-True (($read.Mode -eq 'Signature') -and ($read.Signers -eq "$thumbA,$($thumbB.ToUpperInvariant())")) "Anchor: Mode = Signature with two signers is read, thumbprints in upper case ($($read.Signers) $($read.Problem))"
+		$invalid = [ordered]@{
+			'Mode in another case'                     = { param($key) $key.SetValue('Mode', 'hash', 'String') }
+			'Mode with another text'                   = { param($key) $key.SetValue('Mode', 'None', 'String') }
+			'Mode as a number'                         = { param($key) $key.SetValue('Mode', 1, 'DWord') }
+			'Mode as an expandable text'               = { param($key) $key.SetValue('Mode', 'Hash', 'ExpandString') }
+			'no Mode'                                  = { param($key) $key.SetValue('Signers', [string[]]@($thumbA), 'MultiString') }
+			'Signature without Signers'                = { param($key) $key.SetValue('Mode', 'Signature', 'String') }
+			'Signature with Signers as one text'       = { param($key) $key.SetValue('Mode', 'Signature', 'String'); $key.SetValue('Signers', $thumbA, 'String') }
+			'Signature with an empty list'             = { param($key) $key.SetValue('Mode', 'Signature', 'String'); $key.SetValue('Signers', [string[]]@(), 'MultiString') }
+			'Signature with a short thumbprint'        = { param($key) $key.SetValue('Mode', 'Signature', 'String'); $key.SetValue('Signers', [string[]]@($thumbA, 'A1B2'), 'MultiString') }
+			'Signature with a thumbprint and a space'  = { param($key) $key.SetValue('Mode', 'Signature', 'String'); $key.SetValue('Signers', [string[]]@("$thumbA "), 'MultiString') }
+			'Signature with 11 signers'                = { param($key) $key.SetValue('Mode', 'Signature', 'String'); $key.SetValue('Signers', [string[]]@(0..10 | ForEach-Object { '{0:X2}' -f $_ * 20 }), 'MultiString') }
+		}
+		foreach ($case in $invalid.Keys) {
+			Set-AnchorValues $invalid[$case]
+			$read = Read-Anchor
+			Assert-True (($null -eq $read.Mode) -and $read.Problem) "Anchor: $case is refused ($($read.Problem))"
+		}
+		Set-AnchorValues { param($key) $key.SetValue('Mode', 'Hash', 'String'); $key.SetValue('Signers', 'left over', 'String') }
+		Assert-True ((Read-Anchor).Mode -eq 'Hash') 'Anchor: in the mode Hash a left-over value Signers does not matter'
+		# Unsafe anchors: who owns the key and who may change it.
+		$read = Read-Anchor -Writers ([string[]]@('S-1-5-18', 'S-1-5-32-544'))
+		Assert-True (($null -eq $read.Mode) -and ($read.Problem -match 'owned by|can be changed by')) "Anchor: a key that a normal account owns or may change is refused ($($read.Problem))"
+		foreach ($unsafe in @(@('S-1-5-32-545', 'SetValue'), @('S-1-5-11', 'FullControl'), @('S-1-1-0', 'CreateSubKey'), @('S-1-5-32-545', 'Delete'), @('S-1-5-4', 'ChangePermissions'), @('S-1-5-32-545', 'TakeOwnership'), @('S-1-5-32-545', 'CreateLink'))) {
+			Set-AnchorRights -Extra @{ $unsafe[0] = $unsafe[1] }
+			$read = Read-Anchor
+			Assert-True (($null -eq $read.Mode) -and ($read.Problem -eq "the key can be changed by $($unsafe[0])")) "Anchor: $($unsafe[0]) with $($unsafe[1]) makes the anchor unsafe, nothing starts ($($read.Problem))"
+		}
+		Set-AnchorRights -ReadSids @('S-1-5-32-545', 'S-1-5-11', 'S-1-1-0')
+		Assert-True ((Read-Anchor).Mode -eq 'Hash') 'Anchor: read rights for users do not make the anchor unsafe'
+	}
+	finally {
+		try { $hkcu.DeleteSubKeyTree($anchorRoot, $false) } catch { }
+		$hkcu.Dispose()
+	}
+
+	# 2. Signatures and catalogs.
+	$isAdminTest = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+	$canTrust = (($env:GITHUB_ACTIONS -eq 'true') -and $isAdminTest) -or ($env:SELFX_TEST_ALLOW_ROOT_IMPORT -eq '1')
+	$rootLocation = $(if ($isAdminTest) { 'LocalMachine' } else { 'CurrentUser' })
+	$accepted = $(if ($canTrust) { 'Ok' } else { 'UntrustedRoot' })
+	if (-not $canTrust) {
+		Write-Output 'Trust: the test certificates are not trusted roots here, so the cases that need an accepted signature are skipped (set SELFX_TEST_ALLOW_ROOT_IMPORT=1 to add two test certificates to the trusted roots until the end of the test: Cert:\LocalMachine\Root with administrator rights, otherwise Cert:\CurrentUser\Root with a question of Windows; CI runs them).'
+	}
+	$signedRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXSignedTest_' + [guid]::NewGuid().ToString('N'))
+	$signedApp = Join-Path $signedRoot 'App'
+	$signedConfig = Join-Path $signedRoot 'Config'
+	$testCertificates = New-Object System.Collections.Generic.List[string]
+	$testRoots = New-Object System.Collections.Generic.List[string]
+	$utf8 = New-Object System.Text.UTF8Encoding($false)
+	function New-TestSigner([string]$Name) {
+		$created = New-SelfSignedCertificate -Subject "CN=SelfX Service Test $Name $([guid]::NewGuid().ToString('N'))" -CertStoreLocation 'Cert:\CurrentUser\My' -Type CodeSigningCert -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -KeyUsage DigitalSignature -NotAfter (Get-Date).AddDays(2)
+		$testCertificates.Add($created.Thumbprint)
+		if ($canTrust) {
+			$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', $rootLocation)
+			$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+			try { $store.Add([System.Security.Cryptography.X509Certificates.X509Certificate2]::new($created.RawData)) } finally { $store.Close() }
+			$testRoots.Add($created.Thumbprint)
+		}
+		return (Get-Item -LiteralPath "Cert:\CurrentUser\My\$($created.Thumbprint)")
+	}
+	function Set-TestSignature([string[]]$Path, $Certificate) {
+		foreach ($file in $Path) { $null = Set-AuthenticodeSignature -LiteralPath $file -Certificate $Certificate -HashAlgorithm SHA256 -IncludeChain NotRoot }
+	}
+	function Write-SignedLists($Certificate, $CatalogCertificate = $Certificate) {
+		# The two lists (as Write-LayoutLists) and, next to each, its signed catalog. On a device SelfX.Code.cat is the catalog of the
+		# package; here it is a catalog of the folder App. The service looks the list up by its hash, so the names do not matter.
+		foreach ($part in @(@{ Folder = $signedApp; List = 'SelfX.Code.json'; Catalog = 'SelfX.Code.cat' }, @{ Folder = $signedConfig; List = 'SelfX.Config.json'; Catalog = 'SelfX.Config.cat' })) {
+			$catalog = Join-Path $part.Folder $part.Catalog
+			if (Test-Path -LiteralPath $catalog) { Remove-Item -LiteralPath $catalog -Force }
+			$files = [ordered]@{}
+			foreach ($file in @(Get-ChildItem -LiteralPath $part.Folder -Recurse -File | Where-Object { $_.Name -ne $part.List } | Sort-Object FullName)) {
+				$files[$file.FullName.Substring($part.Folder.Length + 1).Replace('\', '/')] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+			}
+			[IO.File]::WriteAllText((Join-Path $part.Folder $part.List), ([ordered]@{ ManifestVersion = 1; Files = $files } | ConvertTo-Json -Depth 4), $utf8)
+			$temporary = Join-Path $signedRoot $part.Catalog
+			$null = New-FileCatalog -Path $part.Folder -CatalogFilePath $temporary -CatalogVersion 2
+			if ($CatalogCertificate) { Set-TestSignature $temporary $CatalogCertificate }
+			Move-Item -LiteralPath $temporary -Destination $catalog -Force
+		}
+	}
+	function New-SignedLayout($Certificate) {
+		if (Test-Path -LiteralPath $signedRoot) { Remove-Item -LiteralPath $signedRoot -Recurse -Force }
+		foreach ($folder in 'App\Scripts_to_run', 'App\WinRT', 'App\Languages', 'Config\Scripts_to_run', 'Config\Branding') { New-Item -ItemType Directory -Path (Join-Path $signedRoot $folder) -Force | Out-Null }
+		$scripts = @('App\HealthStatus.ps1', 'App\SelfXPaths.ps1', 'App\Scripts_to_run\SelfX_Test.ps1', 'Config\Scripts_to_run\Own_Action.ps1') | ForEach-Object { Join-Path $signedRoot $_ }
+		foreach ($file in $scripts) { [IO.File]::WriteAllText($file, "Write-Output '$(Split-Path -Leaf $file)'`r`n", $utf8) }
+		# A real library: the service built for this test.
+		$library = Join-Path $signedApp 'WinRT\SelfXTest.dll'
+		Copy-Item -LiteralPath (Join-Path $script:serviceBuildFolder 'SelfXService.dll') -Destination $library
+		[IO.File]::WriteAllText((Join-Path $signedApp 'SelfXService.exe'), 'binary of the service', $utf8)
+		[IO.File]::WriteAllText((Join-Path $signedApp 'Languages\de.xml'), '<Language />', $utf8)
+		[IO.File]::WriteAllText((Join-Path $signedConfig 'Tool_Config.xml'), '<GUI_Config><Service_FileCheck>Enforce</Service_FileCheck></GUI_Config>', $utf8)
+		[IO.File]::WriteAllText((Join-Path $signedConfig 'Issues_List.xml'), '<Issues><Action><Script>SelfX_Test.ps1</Script><Context>System</Context></Action></Issues>', $utf8)
+		[IO.File]::WriteAllText((Join-Path $signedConfig 'Health_Config.xml'), '<HealthConfig><Background Enabled="true" /></HealthConfig>', $utf8)
+		[IO.File]::WriteAllText((Join-Path $signedConfig 'Branding\company_logo.png'), 'logo', $utf8)
+		Set-TestSignature ($scripts + $library) $Certificate
+		Write-SignedLists $Certificate
+	}
+	function New-Pins { return [Activator]::CreateInstance($pinnedType, $true) }
+	function Test-SignedLayout([string[]]$Signers, $Cache = $null, $Pins = $null) {
+		$own = ($null -eq $Pins)
+		if ($own) { $Pins = New-Pins }
+		try {
+			if ($null -ne $Cache) { $Cache = $Cache.PSObject.BaseObject }
+			$Pins = $Pins.PSObject.BaseObject
+			$arguments = [object[]]@([string]$signedApp, [string]$signedConfig, $Signers, $Cache, $Pins, $null, $null)
+			$ok = [bool]$signedMethod.Invoke($null, $arguments)
+			return [pscustomobject]@{ Ok = $ok; Files = (@($arguments[5]) -join '; '); Signatures = (@($arguments[6]) -join '; '); Pinned = [int]$pinnedType.GetProperty('Count').GetValue($Pins) }
+		}
+		finally { if ($own) { ([IDisposable]$Pins).Dispose() } }
+	}
+	function Test-Embedded([string]$Path) {
+		$stream = [IO.FileStream]::new($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+		try {
+			$verdict = $trustType.GetMethod('VerifyEmbedded', $flags).Invoke($null, [object[]]@([string]$Path, $stream))
+			return [pscustomobject]@{ Reason = [string]$verdict.GetType().GetField('Reason').GetValue($verdict); Thumbprint = [string]$verdict.GetType().GetField('Thumbprint').GetValue($verdict) }
+		}
+		finally { $stream.Dispose() }
+	}
+	function Test-Member([string]$Catalog, [string]$Path) {
+		$stream = [IO.FileStream]::new($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+		try {
+			$verdict = $trustType.GetMethod('VerifyCatalogMember', $flags).Invoke($null, [object[]]@([string]$Catalog, [string]$Path, $stream))
+			return [pscustomobject]@{ Reason = [string]$verdict.GetType().GetField('Reason').GetValue($verdict); Thumbprint = [string]$verdict.GetType().GetField('Thumbprint').GetValue($verdict) }
+		}
+		finally { $stream.Dispose() }
+	}
+	try {
+		$certA = New-TestSigner 'A'
+		$certB = New-TestSigner 'B'
+		$signersA = [string[]]@($certA.Thumbprint)
+		$signersB = [string[]]@($certB.Thumbprint)
+		New-SignedLayout $certA
+		$script = Join-Path $signedApp 'Scripts_to_run\SelfX_Test.ps1'
+		$ownScript = Join-Path $signedConfig 'Scripts_to_run\Own_Action.ps1'
+		$library = Join-Path $signedApp 'WinRT\SelfXTest.dll'
+		$catalogXml = Join-Path $signedConfig 'Issues_List.xml'
+		$configCatalog = Join-Path $signedConfig 'SelfX.Config.cat'
+		$codeCatalog = Join-Path $signedApp 'SelfX.Code.cat'
+		$listedCount = @(Get-ChildItem -LiteralPath $signedRoot -Recurse -File).Count
+
+		# 2a. The calls of Windows, file by file (these cases need no trusted root).
+		$result = Test-Embedded $script
+		Assert-True (($result.Reason -eq $accepted) -and ($result.Thumbprint -eq $certA.Thumbprint)) "Signature: a signed script gives $accepted and the thumbprint of its signer ($($result.Reason))"
+		$result = Test-Embedded $library
+		Assert-True (($result.Reason -eq $accepted) -and ($result.Thumbprint -eq $certA.Thumbprint)) "Signature: a signed library gives $accepted and the thumbprint of its signer ($($result.Reason))"
+		$probe = Join-Path $signedRoot 'Probe.ps1'
+		[IO.File]::WriteAllText($probe, "Write-Output 'changed'`r`n" + [IO.File]::ReadAllText($script), $utf8)
+		Assert-True ((Test-Embedded $probe).Reason -eq 'BadDigest') 'Signature: a script changed before the signature block gives BadDigest'
+		[IO.File]::WriteAllText($probe, [IO.File]::ReadAllText($script) + "# added`r`n", $utf8)
+		Assert-True ((Test-Embedded $probe).Reason -eq 'NoSignature') 'Signature: a script with text after the signature block gives NoSignature'
+		[IO.File]::WriteAllText($probe, "Write-Output 'unsigned'`r`n", $utf8)
+		Assert-True ((Test-Embedded $probe).Reason -eq 'NoSignature') 'Signature: an unsigned script gives NoSignature'
+		$result = Test-Member $configCatalog $catalogXml
+		Assert-True (($result.Reason -eq $accepted) -and ($result.Thumbprint -eq $certA.Thumbprint)) "Catalog: the catalog XML is a member of SelfX.Config.cat, signer of the catalog read ($($result.Reason))"
+		Assert-True ((Test-Member $configCatalog (Join-Path $signedConfig 'SelfX.Config.json')).Reason -eq $accepted) 'Catalog: SelfX.Config.json is a member of SelfX.Config.cat'
+		Assert-True ((Test-Member $codeCatalog (Join-Path $signedApp 'SelfX.Code.json')).Reason -eq $accepted) 'Catalog: SelfX.Code.json is a member of SelfX.Code.cat'
+		Assert-True ((Test-Member $codeCatalog $catalogXml).Reason -eq 'NoSignature') 'Catalog: a file of Config is not a member of SelfX.Code.cat'
+		[IO.File]::WriteAllText($probe, [IO.File]::ReadAllText($catalogXml) + '<!-- changed -->', $utf8)
+		Assert-True ((Test-Member $configCatalog $probe).Reason -eq 'NoSignature') 'Catalog: a changed XML is not a member'
+		Assert-True ((Test-Member (Join-Path $signedRoot 'Missing.cat') $catalogXml).Reason -notin 'Ok', 'UntrustedRoot') 'Catalog: a missing catalog never gives a positive result'
+		Remove-Item -LiteralPath $probe -Force
+
+		# 2b. Pinned files: what was checked cannot be changed or replaced until it is released.
+		$pins = New-Pins
+		try {
+			$entry = $pinnedType.GetMethod('Open').Invoke($pins, [object[]]@([string]$script))
+			Assert-True ($entry.GetType().GetField('Hash').GetValue($entry) -eq (Get-FileHash -LiteralPath $script -Algorithm SHA256).Hash) 'Pinned: the SHA256 is the one of the file behind the handle'
+			Assert-True ([IO.File]::ReadAllText($script).Length -gt 0) 'Pinned: other processes can still read the file (PowerShell reads the script)'
+			foreach ($attempt in @(
+					@{ Name = 'written'; Action = { [IO.File]::AppendAllText($script, '# x') } },
+					@{ Name = 'replaced'; Action = { [IO.File]::WriteAllText($script, 'Write-Output 0') } },
+					@{ Name = 'deleted'; Action = { [IO.File]::Delete($script) } },
+					@{ Name = 'renamed'; Action = { [IO.File]::Move($script, "$script.moved") } },
+					@{ Name = 'replaced by another file'; Action = { [IO.File]::Copy($ownScript, $script, $true) } })) {
+				$refused = $false
+				try { & $attempt.Action } catch { $refused = $true }
+				Assert-True $refused "Pinned: the file cannot be $($attempt.Name) while it is pinned"
+			}
+			$refused = $false
+			try { [IO.Directory]::Move((Join-Path $signedApp 'Scripts_to_run'), (Join-Path $signedApp 'Scripts_moved')) } catch { $refused = $true }
+			Assert-True $refused 'Pinned: the folder of a pinned file cannot be renamed'
+		}
+		finally { ([IDisposable]$pins).Dispose() }
+		[IO.File]::AppendAllText($script, '')
+		Assert-True (Test-Path -LiteralPath $script -PathType Leaf) 'Pinned: after the release the file can be opened for writing again'
+
+		# 2c. Without an accepted signature nothing passes: the lists are refused first.
+		if (-not $canTrust) {
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'SelfX\.Code\.json against SelfX\.Code\.cat \(UntrustedRoot\)') -and ($result.Signatures -match 'SelfX\.Config\.json against SelfX\.Config\.cat \(UntrustedRoot\)')) "Signature mode: a signer that Windows does not trust is refused, also when he is in the list ($($result.Signatures))"
+		}
+		# Cases that do not depend on the trust of the root.
+		Remove-Item -LiteralPath $configCatalog -Force
+		$result = Test-SignedLayout $signersA
+		Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'signature: SelfX\.Config\.cat \(missing\)')) "Signature mode: a missing SelfX.Config.cat is refused ($($result.Signatures))"
+		New-SignedLayout $certA
+		Remove-Item -LiteralPath $codeCatalog -Force
+		$result = Test-SignedLayout $signersA
+		Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'signature: SelfX\.Code\.cat \(missing\)')) "Signature mode: a missing SelfX.Code.cat is refused ($($result.Signatures))"
+		New-SignedLayout $certA
+		Add-Content -LiteralPath (Join-Path $signedConfig 'SelfX.Config.json') -Value ' '
+		$result = Test-SignedLayout $signersA
+		Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'SelfX\.Config\.json against SelfX\.Config\.cat \(NotInCatalogOrCatalogUnsigned\)')) "Signature mode: a changed SelfX.Config.json is refused ($($result.Signatures))"
+		New-SignedLayout $certA
+		Write-SignedLists $certA $null
+		$result = Test-SignedLayout $signersA
+		Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'against SelfX\.Code\.cat \(NotInCatalogOrCatalogUnsigned\)')) "Signature mode: unsigned catalogs are refused ($($result.Signatures))"
+		$result = Test-SignedLayout ([string[]]@())
+		Assert-True ((-not $result.Ok) -and ($result.Signatures -eq 'signature: no allowed signer')) 'Signature mode: an empty list of signers never means "everything is allowed"'
+		# Mode Hash: a catalog in the install folder is a file that is not listed.
+		New-SignedLayout $certA
+		$arguments = [object[]]@([string]$signedApp, [string]$signedConfig, $null)
+		$ok = [bool]$layoutMethod.Invoke($null, $arguments)
+		Assert-True ((-not $ok) -and ((@($arguments[2]) -join '; ') -match 'not listed: SelfX\.Code\.cat') -and ((@($arguments[2]) -join '; ') -match 'not listed: Config/SelfX\.Config\.cat')) 'Mode Hash: the file check refuses a catalog like every unlisted file'
+
+		if ($canTrust) {
+			# 2d. The whole check with accepted signatures.
+			New-SignedLayout $certA
+			$result = Test-SignedLayout $signersA
+			Assert-True ($result.Ok -and (-not $result.Files) -and (-not $result.Signatures)) "Signature mode: a completely signed installation is accepted ($($result.Files) $($result.Signatures))"
+			Assert-True ($result.Pinned -eq $listedCount) "Signature mode: every list, catalog and listed file is pinned ($($result.Pinned) of $listedCount)"
+			$pins = New-Pins
+			try {
+				$null = Test-SignedLayout $signersA $null $pins
+				$checked = $pinnedType.GetMethod('IsSignatureChecked')
+				Assert-True ([bool]$checked.Invoke($pins, [object[]]@([string]$script))) 'Signature mode: the script of the project counts as checked'
+				Assert-True ([bool]$checked.Invoke($pins, [object[]]@([string]$ownScript))) 'Signature mode: the own script of the company counts as checked'
+				Assert-True ([bool]$checked.Invoke($pins, [object[]]@([string]$library))) 'Signature mode: the library counts as checked'
+				Assert-True (-not [bool]$checked.Invoke($pins, [object[]]@([string](Join-Path $signedApp 'SelfXService.exe')))) 'Signature mode: a file without a signature check does not count as checked (it could not be started)'
+				Assert-True (-not [bool]$checked.Invoke($pins, [object[]]@([string](Join-Path $signedApp 'Scripts_to_run\Other.ps1')))) 'Signature mode: a script that is not in the lists does not count as checked'
+				$refused = $false
+				try { [IO.File]::AppendAllText($catalogXml, '<!-- x -->') } catch { $refused = $true }
+				Assert-True $refused 'Signature mode: the catalog XML cannot be changed while the check holds it'
+			}
+			finally { ([IDisposable]$pins).Dispose() }
+			Assert-True (Test-SignedLayout ([string[]]@($certB.Thumbprint, $certA.Thumbprint.ToLowerInvariant()))).Ok 'Signature mode: the signer is one of several allowed signers (any case)'
+			# Wrong signer: validly signed, but not by a signer of the anchor.
+			$result = Test-SignedLayout $signersB
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'SelfX\.Code\.json against SelfX\.Code\.cat \(SignerNotAllowed\)')) "Signature mode: a valid signature of a signer that is not in the anchor is refused ($($result.Signatures))"
+			# Catalogs of another signer than the files.
+			Write-SignedLists $certA $certB
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'against SelfX\.Config\.cat \(SignerNotAllowed\)')) "Signature mode: catalogs signed by another signer are refused ($($result.Signatures))"
+			$result = Test-SignedLayout ([string[]]@($certA.Thumbprint, $certB.Thumbprint))
+			Assert-True $result.Ok 'Signature mode: files of one allowed signer and catalogs of another allowed signer are accepted'
+			# One script of another signer, lists and catalogs correct.
+			New-SignedLayout $certA
+			Set-TestSignature $script $certB
+			Write-SignedLists $certA
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -eq 'signature: Scripts_to_run/SelfX_Test.ps1 (SignerNotAllowed)')) "Signature mode: one script of a signer that is not allowed is refused ($($result.Signatures))"
+			# Changed XML: the list no longer fits (file problem) and the XML is not in the catalog (signature problem).
+			New-SignedLayout $certA
+			[IO.File]::WriteAllText($catalogXml, '<Issues><Action><Script>Planted.ps1</Script><Context>System</Context></Action></Issues>', $utf8)
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Files -match 'changed: Issues_List\.xml') -and ($result.Signatures -match 'Issues_List\.xml against SelfX\.Config\.cat \(NotInCatalogOrCatalogUnsigned\)')) "Signature mode: a changed catalog XML is refused as a signature problem (not open to Audit) ($($result.Files) | $($result.Signatures))"
+			# Changed XML with the list rewritten to fit: the list is no longer the signed one.
+			$list = Join-Path $signedConfig 'SelfX.Config.json'
+			$json = Get-Content -LiteralPath $list -Raw | ConvertFrom-Json
+			$json.Files.'Issues_List.xml' = (Get-FileHash -LiteralPath $catalogXml -Algorithm SHA256).Hash
+			[IO.File]::WriteAllText($list, ($json | ConvertTo-Json -Depth 4), $utf8)
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'SelfX\.Config\.json against SelfX\.Config\.cat \(NotInCatalogOrCatalogUnsigned\)')) "Signature mode: a changed XML with a rewritten list is refused ($($result.Signatures))"
+			# Changed Health_Config.xml.
+			New-SignedLayout $certA
+			Add-Content -LiteralPath (Join-Path $signedConfig 'Health_Config.xml') -Value '<!-- changed -->'
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'Health_Config\.xml against SelfX\.Config\.cat')) "Signature mode: a changed Health_Config.xml is refused ($($result.Signatures))"
+			# Unsigned script, unsigned own script, unsigned library, changed script: lists and catalogs fit, the embedded signature decides.
+			New-SignedLayout $certA
+			[IO.File]::WriteAllText($script, "Write-Output 'unsigned'`r`n", $utf8)
+			Write-SignedLists $certA
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and (-not $result.Files) -and ($result.Signatures -eq 'signature: Scripts_to_run/SelfX_Test.ps1 (NoSignature)')) "Signature mode: an unsigned script is refused although the lists and catalogs fit ($($result.Signatures))"
+			New-SignedLayout $certA
+			[IO.File]::WriteAllText($ownScript, "Write-Output 'unsigned'`r`n", $utf8)
+			Write-SignedLists $certA
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -eq 'signature: Config/Scripts_to_run/Own_Action.ps1 (NoSignature)')) "Signature mode: an unsigned own script of the company is refused ($($result.Signatures))"
+			New-SignedLayout $certA
+			Copy-Item -LiteralPath (Join-Path $script:serviceBuildFolder 'SelfXService.dll') -Destination $library -Force
+			Write-SignedLists $certA
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -eq 'signature: WinRT/SelfXTest.dll (NoSignature)')) "Signature mode: an unsigned library is refused ($($result.Signatures))"
+			New-SignedLayout $certA
+			[IO.File]::WriteAllText($script, "Write-Output 'changed'`r`n" + [IO.File]::ReadAllText($script), $utf8)
+			Write-SignedLists $certA
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -eq 'signature: Scripts_to_run/SelfX_Test.ps1 (BadDigest)')) "Signature mode: a script changed after signing is refused ($($result.Signatures))"
+			# A file that is not listed is a problem of the file check only (Service_FileCheck decides, as in the mode Hash).
+			New-SignedLayout $certA
+			[IO.File]::WriteAllText((Join-Path $signedApp 'Extra.txt'), 'x', $utf8)
+			$result = Test-SignedLayout $signersA
+			Assert-True ((-not $result.Ok) -and ($result.Files -eq 'not listed: Extra.txt') -and (-not $result.Signatures)) "Signature mode: an unlisted file is a problem of the file check, not of the signatures ($($result.Files) | $($result.Signatures))"
+
+			# 2e. The cache: a second check of unchanged files asks Windows nothing; any change of a file is checked again.
+			New-SignedLayout $certA
+			$cache = [Activator]::CreateInstance($cacheType, $true)
+			function Get-CacheCount([string]$Name) { return [int]$cacheType.GetField($Name).GetValue($cache) }
+			$watch = [Diagnostics.Stopwatch]::StartNew()
+			$result = Test-SignedLayout $signersA $cache
+			$cold = $watch.Elapsed.TotalMilliseconds
+			$asked = Get-CacheCount 'Misses'
+			Assert-True ($result.Ok -and ($asked -eq 10) -and ((Get-CacheCount 'Hits') -eq 0)) "Cache: the first check asks Windows for every signature (2 lists, 5 signed files, 3 settings files; counted $asked)"
+			$watch.Restart()
+			$result = Test-SignedLayout $signersA $cache
+			$warm = $watch.Elapsed.TotalMilliseconds
+			Assert-True ($result.Ok -and ((Get-CacheCount 'Misses') -eq $asked) -and ((Get-CacheCount 'Hits') -eq $asked)) "Cache: the second check of unchanged files uses the stored results only (hits $(Get-CacheCount 'Hits'), checks $(Get-CacheCount 'Misses'); $($result.Files) $($result.Signatures))"
+			Write-Output ("Trust: signature check of the small test installation: first run {0:N1} ms, second run (cache) {1:N1} ms." -f $cold, $warm)
+			$result = Test-SignedLayout $signersB $cache
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -match 'SignerNotAllowed')) 'Cache: a stored result does not replace the list of signers of the anchor'
+			$before = Get-CacheCount 'Misses'
+			(Get-Item -LiteralPath $script).LastWriteTimeUtc = (Get-Date).ToUniversalTime().AddMinutes(-5)
+			$result = Test-SignedLayout $signersA $cache
+			Assert-True ($result.Ok -and ((Get-CacheCount 'Misses') -eq ($before + 1))) 'Cache: a file with another write time is checked again'
+			[IO.File]::WriteAllText($script, "Write-Output 'unsigned'`r`n", $utf8)
+			Write-SignedLists $certA
+			$result = Test-SignedLayout $signersA $cache
+			Assert-True ((-not $result.Ok) -and ($result.Signatures -eq 'signature: Scripts_to_run/SelfX_Test.ps1 (NoSignature)')) "Cache: a replaced script is checked again and refused ($($result.Signatures))"
+			$result = Test-SignedLayout $signersA $cache
+			Assert-True (-not $result.Ok) 'Cache: a negative result is never stored'
+
+			# 2f. Measurement with the scripts, language files and settings of the project (the two programs are not built here; their
+			#     SHA256 is calculated once per start in both modes).
+			if (Test-Path -LiteralPath $signedRoot) { Remove-Item -LiteralPath $signedRoot -Recurse -Force }
+			New-Item -ItemType Directory -Path $signedApp, $signedConfig -Force | Out-Null
+			Copy-Item -Path (Join-Path $PSScriptRoot 'Sources\*') -Destination $signedApp -Recurse
+			foreach ($name in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml', 'Branding') { Move-Item -LiteralPath (Join-Path $signedApp $name) -Destination $signedConfig }
+			$projectScripts = @(Get-ChildItem -LiteralPath $signedApp -Recurse -File -Filter '*.ps1' | ForEach-Object { $_.FullName })
+			Set-TestSignature $projectScripts $certA
+			Write-SignedLists $certA
+			$projectFiles = @(Get-ChildItem -LiteralPath $signedRoot -Recurse -File).Count
+			$cache = [Activator]::CreateInstance($cacheType, $true)
+			$watch = [Diagnostics.Stopwatch]::StartNew()
+			$result = Test-SignedLayout $signersA $cache
+			$cold = $watch.Elapsed.TotalMilliseconds
+			Assert-True $result.Ok "Measurement: the signed scripts of the project are accepted ($($result.Files) $($result.Signatures))"
+			$warmRuns = 5
+			$watch.Restart()
+			for ($i = 0; $i -lt $warmRuns; $i++) { $result = Test-SignedLayout $signersA $cache }
+			$warm = $watch.Elapsed.TotalMilliseconds / $warmRuns
+			Assert-True ($result.Ok -and ((Get-CacheCount 'Misses') -eq ($projectScripts.Count + 2 + 5))) "Measurement: only the first run asks Windows ($(Get-CacheCount 'Misses') checks for $($projectScripts.Count) scripts, 2 lists and 5 settings files)"
+			Remove-Item -LiteralPath (Join-Path $signedApp 'SelfX.Code.cat'), (Join-Path $signedConfig 'SelfX.Config.cat') -Force
+			$arguments = [object[]]@([string]$signedApp, [string]$signedConfig, $null)
+			$watch.Restart()
+			for ($i = 0; $i -lt $warmRuns; $i++) { $hashOk = [bool]$layoutMethod.Invoke($null, $arguments) }
+			$hashMode = $watch.Elapsed.TotalMilliseconds / $warmRuns
+			Assert-True $hashOk 'Measurement: the same files pass the file check of the mode Hash'
+			Write-Output ("Trust: measurement with {0} files of the project ({1} signed scripts): mode Hash {2:N0} ms per start; mode Signature {3:N0} ms for the first start and {4:N0} ms for each later start within 60 minutes (cache)." -f $projectFiles, $projectScripts.Count, $hashMode, $cold, $warm)
+		}
+	}
+	finally {
+		foreach ($thumbprint in $testRoots) { Remove-Item -LiteralPath "Cert:\$rootLocation\Root\$thumbprint" -Force -ErrorAction SilentlyContinue }
+		foreach ($thumbprint in $testCertificates) { Remove-Item -LiteralPath "Cert:\CurrentUser\My\$thumbprint" -Force -ErrorAction SilentlyContinue }
+		Remove-Item -LiteralPath $signedRoot -Recurse -Force -ErrorAction SilentlyContinue
+	}
 }
 
 $pipeName = 'SelfX.Test.' + [guid]::NewGuid().ToString('N')
