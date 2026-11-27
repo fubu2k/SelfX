@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Runs non-interactively in the context of the signed-in user (no administrator rights, no SelfX service). Loads
-    SelfXAudio.dll from the install folder after its SHA256 was checked against SelfX.Files.json (SelfXAudio.ps1) and calls
+    SelfXAudio.dll from the install folder after its SHA256 was checked against SelfX.Code.json (SelfXAudio.ps1) and calls
     [SelfX.SelfXAudio]::Restore(30): a muted default playback device is unmuted, a volume below 30 % is raised to 30 %, a higher
     volume stays as it is. The legacy script pressed the mute key (SendKeys), which toggles: an audible device became silent.
     Nothing is toggled here. The microphone, the default device, drivers, services and the registry are not changed, no

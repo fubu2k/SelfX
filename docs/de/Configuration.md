@@ -76,7 +76,7 @@ Sprachdateien (siehe [Sprachen](#sprachen)).
 | `Ticket_Subject_Tag` | `SelfX` | Kennzeichen am Anfang des Betreffs einer Ticket-Mail. Erlaubt sind Buchstaben, Ziffern, `.`, `_`, `-` und höchstens 20 Zeichen, sonst `SelfX`. |
 | `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Verknüpfungen, die die Installation für alle Nutzer anlegt. |
 | `Log_Retention_Days` | `90` | Wie lange Protokolle aufbewahrt werden (1 bis 3650 Tage). |
-| `Service_FileCheck` | `Enforce` | `Enforce`: Der Dienst startet nichts, wenn Dateien nicht stimmen. `Audit`: Der Dienst meldet das nur. Siehe [Installationsanleitung](Installation.md#die-dateiliste-selfxfilesjson). |
+| `Service_FileCheck` | `Enforce` | `Enforce`: Der Dienst startet nichts, wenn Dateien nicht stimmen. `Audit`: Der Dienst meldet das nur. Siehe [Installationsanleitung](Installation.md#die-dateilisten-selfxcodejson-und-selfxconfigjson). |
 | `Service_Privileges` | `Restricted` | Begrenzt die Rechte des Dienstes. `Default` nur zur Fehlersuche. Siehe [Installationsanleitung](Installation.md#rechte-des-dienstes). |
 | `Show_Tray_Icon` | `True` | Statussymbol neben der Uhr anzeigen. Siehe [Statussymbol](#statussymbol). |
 | `Ticket_Enabled` | `False` | Ticket per E-Mail einschalten. Siehe [Ticket per E-Mail](#ticket-per-e-mail). |

@@ -53,7 +53,7 @@ function Start-SelfXStoreUpdate {
 
 # Windows Update orchestrator (Windows.Management.Update.WindowsUpdateManager, Windows 11 25H2 and newer) through
 # SelfXWinRT.dll in the folder WinRT of the install folder. Import-SelfXWinRT (SelfXWinRT.ps1) checks the DLLs against
-# SelfX.Files.json and keeps them open while it loads them. PowerShell 7 cannot load the Windows Runtime type
+# SelfX.Code.json and keeps them open while it loads them. PowerShell 7 cannot load the Windows Runtime type
 # by name. Returns $null when the API is not available or a check fails (the reason is logged; replaced in tests).
 function Get-SelfXUpdateManager {
 	try {

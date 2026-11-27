@@ -582,7 +582,7 @@ try {
 	Assert-Equal ($audioCode -match '(?i)Start-Process|Invoke-Expression|iex\b|SendKeys|Add-Type|Assembly\]::Load|Set-ItemProperty|New-ItemProperty|reg\.exe|sc\.exe|\$args|\$env:') $false 'No sound: no process, no keys, no own code loading, no registry, no caller input'
 	Assert-Equal ($audioCode -match '\$MinimumVolumePercent = 30\b') $true 'No sound: the minimum volume is a fixed 30 %'
 	$run = Invoke-TestScript 'SelfX_Audio_Restore.ps1'
-	Assert-Equal ($run.ExitCode -eq 1 -and "$($run.Output -join ' ')" -like '*Sound could not be switched on*SelfX.Files.json is missing*') $true 'No sound: without a checked install folder nothing is loaded (exit 1, short reason)'
+	Assert-Equal ($run.ExitCode -eq 1 -and "$($run.Output -join ' ')" -like '*Sound could not be switched on*SelfX.Code.json is missing*') $true 'No sound: without a checked install folder nothing is loaded (exit 1, short reason)'
 
 	# The time action may only synchronize: no input, no change of time, time zone, time source or service configuration.
 	$syncText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Device_SyncTime.ps1'))

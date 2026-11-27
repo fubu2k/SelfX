@@ -14,6 +14,16 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Paket, zwei Dateilisten (`SelfX.Code.json`, `SelfX.Config.json`):** `SelfX.Files.json` wird durch zwei Listen ersetzt.
+  `SelfX.Code.json` enthält die Programme, Bibliotheken sowie die Skripte, Sprachdateien und Bilder des Projekts;
+  `SelfX.Config.json` enthält die Einstellungsdateien, alles unter `Branding` sowie eigene Skripte und Sprachdateien. Jede Datei
+  steht in genau einer Liste, eine unbekannte Datei stoppt den Bau, und eine Datei in beiden Listen oder in der falschen Liste wird
+  abgelehnt. Die Code-Liste hat keine Bauzeit, ein geändertes Firmenlogo ändert daher nur `SelfX.Config.json` und den
+  Konfigurations-Digest. Neu: `tools\SelfXPackage.Common.ps1` (Dateiklassen, beide Listen, Digest, Schreiber der `Detection.ps1`).
+  `Install.ps1` 2.9.0 prüft Paket und installierten Ordner gegen beide Listen; `Detection.ps1` 3.0.3 prüft zwei Digests; der Dienst
+  (2.9.0) liest beide Listen mit denselben Regeln (Ereignis 4005 und `Service_FileCheck` unverändert); `SelfXWinRT.ps1` und
+  `SelfXAudio.ps1` lesen die Hashes ihrer Bibliotheken aus `SelfX.Code.json`. `Tool_Version` bleibt unverändert. Tests angepasst und
+  erweitert (Logo-Test, Klassen- und Platzierungstests, Negativtests).
 - **Dokumentation, Architektur:** Neu `docs/de/Architecture.md` (Englisch: `docs/Architecture.md`): die drei Dateiklassen (Code,
   Konfiguration, eigener Code der Firma), die Zuordnung jeder Datei des Pakets SelfX Service, die geplanten Listen `SelfX.Code.json`
   und `SelfX.Config.json`, die Vertrauensmodi Hash und Signatur, der Vertrauensanker und die Grenze der Prüfungen gegenüber einem

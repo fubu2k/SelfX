@@ -17,13 +17,14 @@
     Name    : Test-WinRTLoad.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI; not installed)
-    Version : 2.8.14
+    Version : 2.9.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.14   2026-11-23  fubu2k               Initial version.
+    2.9.0    2026-11-27  fubu2k               The hashes come from SelfX.Code.json.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -51,7 +52,7 @@ function Get-Hash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm S
 function Close-Handles { foreach ($stream in @($Script:SelfXWinRTHandles)) { $stream.Dispose() }; $Script:SelfXWinRTHandles.Clear() }
 function Write-List([hashtable]$Files, [int]$Version = 1) {
 	$json = [ordered]@{ ManifestVersion = $Version; ToolVersion = '9.9.9'; Files = $Files } | ConvertTo-Json -Depth 4
-	[IO.File]::WriteAllText((Join-Path $install 'SelfX.Files.json'), $json)
+	[IO.File]::WriteAllText((Join-Path $install 'SelfX.Code.json'), $json)
 }
 function New-Install {
 	Close-Handles
@@ -118,9 +119,9 @@ try {
 	Assert-Refused 'folder WinRT is missing' 'a missing folder WinRT is refused'
 
 	# --- the list ---
-	New-Install; Remove-Item -LiteralPath (Join-Path $install 'SelfX.Files.json')
-	Assert-Refused 'SelfX.Files.json is missing' 'a missing list is refused'
-	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Files.json'), '{ not json')
+	New-Install; Remove-Item -LiteralPath (Join-Path $install 'SelfX.Code.json')
+	Assert-Refused 'SelfX.Code.json is missing' 'a missing list is refused'
+	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Code.json'), '{ not json')
 	Assert-Refused 'not valid JSON' 'a broken list is refused'
 	New-Install; Write-List @{ 'WinRT/SelfXWinRT.dll' = (Get-Hash $mainDll) } 2
 	Assert-Refused 'unknown format' 'an unknown list format is refused'
@@ -128,7 +129,7 @@ try {
 	Assert-Refused 'SelfXWinRT.dll is not listed' 'a list without SelfXWinRT.dll is refused'
 	New-Install; Write-List @{ 'WinRT/SelfXWinRT.dll' = 'ABC'; 'WinRT/Microsoft.Windows.SDK.NET.dll' = (Get-Hash $depDll) }
 	Assert-Refused 'invalid hash' 'an invalid hash in the list is refused'
-	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Files.json'), ('{"ManifestVersion":1,"Files":{"x":"' + ('A' * 1100000) + '"}}'))
+	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Code.json'), ('{"ManifestVersion":1,"Files":{"x":"' + ('A' * 1100000) + '"}}'))
 	Assert-Refused 'too large' 'an oversized list is refused'
 	New-Install; Write-List @{ 'WinRT/SelfXWinRT.dll' = (Get-Hash $mainDll); 'WinRT/Microsoft.Windows.SDK.NET.dll' = (Get-Hash $depDll); 'WinRT/../evil.dll' = (Get-Hash $depDll) }
 	Test-SelfXWinRTFiles -InstallFolder $install
@@ -146,11 +147,11 @@ try {
 		New-Install; New-Item -ItemType Directory -Path $linkTarget | Out-Null
 		New-Item -ItemType Junction -Path (Join-Path $winRT 'jl') -Target $linkTarget | Out-Null
 		Assert-Refused 'is a link' 'a junction inside WinRT is refused'
-		New-Install; Copy-Item -LiteralPath (Join-Path $install 'SelfX.Files.json') -Destination (Join-Path $root 'list.json')
-		Remove-Item -LiteralPath (Join-Path $install 'SelfX.Files.json')
+		New-Install; Copy-Item -LiteralPath (Join-Path $install 'SelfX.Code.json') -Destination (Join-Path $root 'list.json')
+		Remove-Item -LiteralPath (Join-Path $install 'SelfX.Code.json')
 		$symlinkOk = $true
-		try { New-Item -ItemType SymbolicLink -Path (Join-Path $install 'SelfX.Files.json') -Target (Join-Path $root 'list.json') | Out-Null } catch { $symlinkOk = $false }
-		if ($symlinkOk) { Assert-Refused 'SelfX.Files.json is a link' 'a symbolic link as list is refused' }
+		try { New-Item -ItemType SymbolicLink -Path (Join-Path $install 'SelfX.Code.json') -Target (Join-Path $root 'list.json') | Out-Null } catch { $symlinkOk = $false }
+		if ($symlinkOk) { Assert-Refused 'SelfX.Code.json is a link' 'a symbolic link as list is refused' }
 	}
 
 	# --- Import-SelfXWinRT: nothing is loaded when the check fails; with a valid check it gets to the loader ---
@@ -171,7 +172,7 @@ try {
 	}
 	$service = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -Raw
 	# Since the file check has no extension filter, an unlisted .dll is refused like any other file (Test-ServicePipe.ps1 tests the behaviour).
-	Assert-Equal (($service -match '"not listed: "') -and ($service -notmatch 'CheckedExtensions')) $true 'the service checks .dll files against SelfX.Files.json'
+	Assert-Equal (($service -match '"not listed: "') -and ($service -notmatch 'CheckedExtensions')) $true 'the service checks .dll files against SelfX.Code.json'
 }
 finally {
 	Close-Handles

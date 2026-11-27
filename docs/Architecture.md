@@ -6,11 +6,12 @@ This document describes how the files of **SelfX Service** are divided into clas
 record them, how a device decides to trust them and where the limits of that trust are. It is
 written for administrators and reviewers.
 
-> **Status.** Sections marked **Today** describe SelfX Service 3.0.2: one list,
-> `SelfX.Files.json`, covers all installed files (see
-> [Installation](Installation.md#the-file-list-selfxfilesjson)). Sections marked **Target**
-> describe the planned structure with two lists and two trust modes. It is introduced in several
-> steps; until then the behavior of 3.0.2 applies.
+> **Status.** Sections marked **Today** describe what is implemented: the files are divided into
+> the lists `SelfX.Code.json` and `SelfX.Config.json` (see
+> [Installation](Installation.md#the-file-lists-selfxcodejson-and-selfxconfigjson)). Sections
+> marked **Target** describe the planned structure with the folder layout, the version in the
+> code list and two trust modes. It is introduced in several steps; until then the behavior
+> described as **Today** applies.
 
 ## Contents
 
@@ -66,11 +67,12 @@ code list stays byte-identical, and so do the AppLocker and App Control rules th
 ## Assignment of every file
 
 The tables show the package **SelfX Service** as it is built today by
-`tools\New-SelfXIntuneWin.ps1` (function `New-SelfXFileManifest`). Paths are relative to the
+`tools\New-SelfXIntuneWin.ps1`; the rule that gives every file its class is the function
+`Get-SelfXFileClass` in `tools\SelfXPackage.Common.ps1`. Paths are relative to the
 folder `SelfX Service` of the repository. "Installed as" is the path in the installation folder
 (`%ProgramFiles%\SelfX`).
 
-**Today**, `SelfX.Files.json` lists: every file below `Sources` (89 files), `Uninstall.ps1`, the
+**Today**, the two lists together contain: every file below `Sources` (89 files), `Uninstall.ps1`, the
 DLLs of `Bin\WinRT` (as `WinRT/<name>`), `Bin\Audio\SelfXAudio.dll` (as `Audio/SelfXAudio.dll`)
 and the programs `SelfXService.exe` and `SelfX.exe` from `Bin`. Files named `Test-*.ps1` and the
 folder `Service\Projects` are removed from the staging folder before packaging and are not
@@ -114,18 +116,35 @@ The 89 files of `Sources` are: 22 + 5 + 1 + 24 + 1 + 3 + 33 from the rows above.
 | `Service\SelfXService.cs`, `SelfXLauncher.cs`, `SelfXSessionStarter.cs`, `SelfXWinRT.cs`, `SelfXAudio.cs` | no | Code (sources of the programs), not listed, **open** (item 1) |
 | `Bin\SelfXSessionStarter.dll` | no (loaded by `Install.ps1` only) | Code, not listed, **open** (item 1) |
 | `Bin\SelfX.Binaries.json` | no | build record of the programs, not listed, **open** (item 1) |
-| `SelfX.Files.json` | yes (written at build) | the list itself; replaced by the two lists in the target |
+| `SelfX.Code.json`, `SelfX.Config.json` | yes (written at build) | the two lists themselves; they list every other installed file, not themselves |
 
 ## The two lists
 
-### Today: `SelfX.Files.json`
+### Today: `SelfX.Code.json` and `SelfX.Config.json`
 
-A JSON object with `ManifestVersion` (1), `ToolVersion`, `BuiltUtc` and `Files`. `Files` maps the
+Each list is a JSON object with `ManifestVersion` (1) and `Files`; `SelfX.Code.json` also has
+`ToolVersion`, `SelfX.Config.json` also has `BuiltUtc`. The code list has no build time, so the same
+code always gives the same bytes. `Files` maps the
 relative name of each file (forward slashes) to its SHA256. A name consists of letters, digits,
 `_`, space, `.`, `(`, `)` and `-`, and every segment starts with a letter, digit or `_`; a segment
 is never `.` or `..`.
-The package build writes it, `Install.ps1` copies it into the installation folder, and its digest
-is embedded in the `Detection.ps1` that is uploaded to Intune.
+The package build writes both lists, `Install.ps1` copies them into the installation folder, and
+their two digests are embedded in the `Detection.ps1` that is uploaded to Intune. A package from
+an earlier version has `SelfX.Files.json` instead; `Install.ps1` removes the old installation
+folder contents before copying, so no old list is left behind (the service would report a
+left-over one as a file without an entry).
+
+**Which list a file belongs to.** `Get-SelfXFileClass` knows the files of the project by name.
+Configuration are the five settings files, everything below `Branding`, and every other script in
+`Scripts_to_run` and `HealthChecks` or language file in `Languages` that is not on the list of
+the project (own actions, own checks, an own language). Every file that no rule knows stops the
+build (fail closed). `Install.ps1` and the service do not know the list of names; they check
+only that no file is in both lists or in none, that the code list holds no settings file or file
+of `Branding`, and that the configuration list holds nothing but settings files, `Branding`
+files, own scripts and own language files. So no program, library, `Uninstall.ps1` or script of
+the project can be moved into the list that carries the files of the company. The test
+`Test-FileManifest.ps1` keeps the list of names equal to the files of the repository: a new file
+of the project has to be added to `$script:SelfXCodeFileNames`, otherwise the test fails.
 
 **Digest of a list:** SHA256 over the lines `<name>=<SHA256 in upper case>`, sorted by name
 (ordinal), joined by LF, UTF-8 without BOM. `Detection.ps1` and the build use the same function.
@@ -135,7 +154,7 @@ is embedded in the `Detection.ps1` that is uploaded to Intune.
 | | `SelfX.Code.json` | `SelfX.Config.json` |
 |---|---|---|
 | Lists | all files of class *code* | all files of class *configuration* and *company code* |
-| Fields | `ManifestVersion`, `ToolVersion`, `BuiltUtc`, `Files` | `ManifestVersion`, `ConfigRevision` (UTC time of the wizard run), `MinCodeVersion` (only in a package that replaces the configuration alone), `Files` |
+| Fields | `ManifestVersion`, `ToolVersion`, `Files` (no build time, so the file is reproducible) | `ManifestVersion`, `ConfigRevision` (UTC time of the wizard run), `MinCodeVersion` (only in a package that replaces the configuration alone), `Files` |
 | `Files` | relative name → SHA256, same name rules as today | same |
 | Written by | the release build (GitHub Actions); identical for every company | the package wizard, automatically; nobody edits it by hand |
 | Changes when | the code changes | the configuration changes |
@@ -216,9 +235,9 @@ version. See [Installation](Installation.md#app-control-for-business-wdac).
 
 | Component | Runs as | Today | Target |
 |---|---|---|---|
-| `Install.ps1` | SYSTEM, started by Intune, Windows PowerShell 5.1 | compares the package with `SelfX.Files.json` before copying and the installed folder after copying | the same with both lists; in mode signature also the signatures and the signer |
-| `SelfXService.exe` | SYSTEM | compares the installed folder with `SelfX.Files.json` before every start; no file without an entry and no link may be in the way (event 4005) | the same with both lists; in mode signature also the signature of the scripts and the catalog |
-| `Detection.ps1` | Intune, Windows PowerShell 5.1 | version and digest of `SelfX.Files.json` | code version and configuration digest, separately |
+| `Install.ps1` | SYSTEM, started by Intune, Windows PowerShell 5.1 | compares the package with both lists before copying and the installed folder after copying | the same with both lists; in mode signature also the signatures and the signer |
+| `SelfXService.exe` | SYSTEM | compares the installed folder with both lists before every start; no file without an entry and no link may be in the way (event 4005) | the same with both lists; in mode signature also the signature of the scripts and the catalog |
+| `Detection.ps1` | Intune, Windows PowerShell 5.1 | version and the digests of both lists | code version and configuration digest, separately |
 | SelfX window, status icon | the signed-in user | read only | read only |
 
 Users cannot pass a path, a command, an argument or code to the service. The service starts only
@@ -232,17 +251,15 @@ and the check was not cut off at its limit of 20 problems.
 ## Files whose class is open
 
 The mapping above was checked against the files of the repository and against
-`New-SelfXFileManifest`. These points cannot be settled without a further rule:
+`Get-SelfXFileClass`. These points cannot be settled without a further rule:
 
 1. **Files outside the installed set:** `Install.ps1` verifies the lists, so it cannot be listed in
    a list it verifies. `Detection.ps1` is a template: the build replaces the placeholder
-   `__SELFX_FILES_HASH__`, so every package has its own copy. `README*.md`, `Service\*.cs`,
+   `__SELFX_CODE_HASH__` and `__SELFX_CONFIG_HASH__`, so every package has its own copy. `README*.md`, `Service\*.cs`,
    `Bin\SelfXSessionStarter.dll` and `Bin\SelfX.Binaries.json` are shipped but not installed and
-   are not in `SelfX.Files.json` today.
-2. **Company files in project folders:** the documentation describes adding own scripts to
-   `Scripts_to_run` and `HealthChecks` and adding a language by copying `en.xml` to
-   `Languages\<culture>.xml`. A rule that tells a project file from a company file in the same
-   folder is not defined yet.
+   are not in the lists today.
+2. **Company files in project folders:** settled. The list of names of the project tells a
+   project file from a company file in the same folder (see above).
 3. **`Bin\WinRT\*.dll`:** the Windows SDK projection DLLs next to `SelfXWinRT.dll` are the output
    of `dotnet publish`. The folder `Bin` is not part of the repository, so their names cannot be
    listed here.

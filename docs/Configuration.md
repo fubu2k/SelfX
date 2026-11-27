@@ -74,7 +74,7 @@ SelfX is configured with XML files in the folder `SelfX Service\Sources`.
 | `Ticket_Subject_Tag` | `SelfX` | Marker at the start of the subject of a ticket e-mail. Letters, digits, `.`, `_`, `-` and at most 20 characters, otherwise `SelfX`. |
 | `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Shortcuts that the installation creates for all users. |
 | `Log_Retention_Days` | `90` | How long logs are kept (1 to 3650 days). |
-| `Service_FileCheck` | `Enforce` | `Enforce`: the service starts nothing if files do not match. `Audit`: the service only reports it. See the [installation guide](Installation.md#the-file-list-selfxfilesjson). |
+| `Service_FileCheck` | `Enforce` | `Enforce`: the service starts nothing if files do not match. `Audit`: the service only reports it. See the [installation guide](Installation.md#the-file-lists-selfxcodejson-and-selfxconfigjson). |
 | `Service_Privileges` | `Restricted` | Limits the rights of the service. `Default` only for troubleshooting. See the [installation guide](Installation.md#service-privileges). |
 | `Show_Tray_Icon` | `True` | Show the status icon next to the clock. See [Status icon](#status-icon). |
 | `Ticket_Enabled` | `False` | Switch on ticket by e-mail. See [Ticket by e-mail](#ticket-by-e-mail). |

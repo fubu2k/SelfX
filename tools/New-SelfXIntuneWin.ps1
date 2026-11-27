@@ -19,9 +19,9 @@
     for SelfX Service, that $ExpectedVersion in Detection.ps1 matches Tool_Version in
     Sources\Tool_Config.xml (otherwise the Intune detection would fail after installation).
     The version in the file name comes from Tool_Version.
-    Next to the .intunewin it writes build\SelfX-Service-<version>.Detection.ps1: Detection.ps1 with the digest of the
-    package file list (SelfX.Files.json) filled in. Upload that file as the detection script to Intune (not the
-    repository copy): then the detection also finds an update whose files changed without a new Tool_Version.
+    Next to the .intunewin it writes build\SelfX-Service-<version>.Detection.ps1: Detection.ps1 with the
+    digests of the two file lists (SelfX.Code.json and SelfX.Config.json) filled in. Upload that file as the detection script to
+    Intune (not the repository copy): then the detection also finds an update whose files changed without a new Tool_Version.
 
     The script only reads the product folders, writes the staging folder (deleted at the end)
     and the build folder. It uploads nothing to Intune.
@@ -46,7 +46,7 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.8.0
+    Version : 1.9.0
 
     History:
     Version  Date        Author               Change
@@ -56,6 +56,8 @@
     1.7.0    2026-11-23  fubu2k               Security (M2): also writes build\SelfX-Service-<version>.Detection.ps1 with the digest of
                                               SelfX.Files.json (changed files are detected without a version change)
     1.8.0    2026-11-24  fubu2k               New parameter -SourceFolder: build from a configured copy of the package (New-SelfXPackage.ps1)
+    1.9.0    2026-11-27  fubu2k               Two file lists instead of SelfX.Files.json: SelfX.Code.json and SelfX.Config.json by file class
+                                              (tools\SelfXPackage.Common.ps1); Detection.ps1 gets two digests
 #>
 
 [CmdletBinding()]
@@ -72,6 +74,8 @@ $ErrorActionPreference = 'Stop'
 # Windows PowerShell 5.1 does not set $PSScriptRoot for parameter defaults, so they are resolved here.
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptFolder
+# File classes, SelfX.Code.json, SelfX.Config.json and the Detection.ps1 writer (shared with the tests).
+. (Join-Path $ScriptFolder 'SelfXPackage.Common.ps1')
 if (-not $OutputFolder) { $OutputFolder = Join-Path $RepositoryRoot 'build' }
 if (-not $ToolPath) { $ToolPath = Join-Path $ScriptFolder 'IntuneWinAppUtil.exe' }
 
@@ -130,91 +134,6 @@ function Test-StagedPackage {
     }
 }
 
-# Digest of the file list: SHA256 over the lines "<name>=<SHA256>", sorted by name (ordinal), joined by LF, UTF-8.
-# Detection.ps1 has the same function (Test-Detection.ps1 checks that both give the same value for the same list).
-function Get-SelfXFilesDigest {
-    param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$Files)
-    $names = [string[]]@($Files.Keys)
-    [Array]::Sort($names, [StringComparer]::Ordinal)
-    $text = [string]::Join("`n", @($names | ForEach-Object { '{0}={1}' -f $_, "$($Files[$_])".ToUpperInvariant() }))
-    $sha = [Security.Cryptography.SHA256]::Create()
-    try { return ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))) -replace '-', '') }
-    finally { $sha.Dispose() }
-}
-
-# Writes the Detection.ps1 for Intune: the copy of the package with the digest of SelfX.Files.json instead of the placeholder.
-# The detection script is uploaded to Intune separately from the .intunewin, so it must come from the same build. The digest is
-# read back from the SelfX.Files.json of the staged package, so it is exactly what Install.ps1 installs.
-function New-SelfXDetectionScript {
-    param([string]$Stage, [string]$Target)
-    $list = Get-Content -LiteralPath (Join-Path $Stage 'SelfX.Files.json') -Raw | ConvertFrom-Json
-    $files = [ordered]@{}
-    foreach ($property in @($list.Files.PSObject.Properties)) { $files[$property.Name] = "$($property.Value)" }
-    if ($files.Count -eq 0) { throw 'SelfX.Files.json lists no files.' }
-    $digest = Get-SelfXFilesDigest -Files $files
-    $path = Join-Path $Stage 'Detection.ps1'
-    $bytes = [IO.File]::ReadAllBytes($path)
-    $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
-    $text = [IO.File]::ReadAllText($path)
-    $pattern = "(\`$ExpectedFilesHash\s*=\s*')__SELFX_FILES_HASH__(')"
-    if (@([regex]::Matches($text, $pattern)).Count -ne 1) { throw 'Detection.ps1 must contain the placeholder for $ExpectedFilesHash exactly once.' }
-    $text = [regex]::Replace($text, $pattern, ('${1}' + $digest + '${2}'))
-    [IO.File]::WriteAllText($Target, $text, (New-Object System.Text.UTF8Encoding($hasBom)))
-    return $digest
-}
-
-# Writes SelfX.Files.json into the staged package: the SHA256 of every file that Install.ps1
-# copies to the installation folder (everything below Sources, Uninstall.ps1 and the DLLs of Bin\WinRT, which Install.ps1
-# copies to WinRT\). Install.ps1 checks the package against it before anything is installed and keeps the file in the
-# installation folder; the service uses it before it starts a script and the scripts before they load a WinRT DLL.
-function New-SelfXFileManifest {
-    param([string]$Stage, [string]$Version)
-    $sources = Join-Path $Stage 'Sources'
-    if (-not (Test-Path -LiteralPath $sources -PathType Container)) { throw 'The folder Sources is missing in the package.' }
-    $entries = New-Object System.Collections.Generic.List[object]
-    foreach ($item in (@(Get-ChildItem -LiteralPath $sources -Recurse -File -Force) + @(Get-Item -LiteralPath (Join-Path $Stage 'Uninstall.ps1') -Force))) {
-        $relative = if ($item.FullName.StartsWith($sources + '\', [StringComparison]::OrdinalIgnoreCase)) { $item.FullName.Substring($sources.Length + 1) } else { $item.Name }
-        $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = $relative.Replace('\', '/') })
-    }
-    # The WinRT libraries come from Bin (built by tools\Build-SelfXBinaries.ps1) and are installed into the folder WinRT.
-    $winRT = Join-Path $Stage 'Bin\WinRT'
-    if (Test-Path -LiteralPath $winRT -PathType Container) {
-        foreach ($item in @(Get-ChildItem -LiteralPath $winRT -Recurse -File -Force)) {
-            if ($item.DirectoryName -ne (Get-Item -LiteralPath $winRT).FullName) { throw "Unexpected sub folder in Bin\WinRT: $($item.DirectoryName)" }
-            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'WinRT/' + $item.Name })
-        }
-    }
-    # The audio library comes from Bin too and is installed into the folder Audio.
-    $audio = Join-Path $Stage 'Bin\Audio'
-    if (Test-Path -LiteralPath $audio -PathType Container) {
-        foreach ($item in @(Get-ChildItem -LiteralPath $audio -Recurse -File -Force)) {
-            if ($item.DirectoryName -ne (Get-Item -LiteralPath $audio).FullName) { throw "Unexpected sub folder in Bin\Audio: $($item.DirectoryName)" }
-            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'Audio/' + $item.Name })
-        }
-    }
-    # The two programs (service and starter) come from Bin and are installed next to the scripts; a missing one is an error.
-    foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
-        $programPath = Join-Path $Stage "Bin\$program"
-        if (-not (Test-Path -LiteralPath $programPath -PathType Leaf)) { throw "Bin\$program is missing in the package." }
-        $entries.Add([pscustomobject]@{ Path = $programPath; Name = $program })
-    }
-    $files = [ordered]@{}
-    foreach ($entry in ($entries | Sort-Object Name)) {
-        if ($entry.Name -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $entry.Name -match '(^|/)\.\.?(/|$)') { throw "Unsupported file name in the package: $($entry.Name)" }
-        if ($files.Contains($entry.Name)) { throw "Duplicate file name in the package: $($entry.Name)" }
-        $files[$entry.Name] = (Get-FileHash -LiteralPath $entry.Path -Algorithm SHA256).Hash
-    }
-    $manifest = [ordered]@{
-        ManifestVersion = 1
-        ToolVersion     = $Version
-        BuiltUtc        = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
-        Files           = $files
-    }
-    $path = Join-Path $Stage 'SelfX.Files.json'
-    [IO.File]::WriteAllText($path, ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
-    return $files.Count
-}
-
 # Creates <OutputDir>\<setup file name>.intunewin, like IntuneWinAppUtil.exe.
 function New-PackageFile {
     param([string]$Stage, [string]$SetupFile, [string]$OutputDir)
@@ -259,7 +178,10 @@ try {
             $projectsInStage = Join-Path $stage 'Service\Projects'
             if (Test-Path -LiteralPath $projectsInStage) { Remove-Item -LiteralPath $projectsInStage -Recurse -Force }
             Test-StagedPackage -Stage $stage -Name $name -Definition $definition -Version $version
-            if ($name -eq 'Service') { Write-Host ('Service: SelfX.Files.json lists {0} files.' -f (New-SelfXFileManifest -Stage $stage -Version $version)) }
+            if ($name -eq 'Service') {
+                Write-Host ('Service: SelfX.Code.json lists {0} files.' -f (New-SelfXCodeManifest -Stage $stage -Version $version))
+                Write-Host ('Service: SelfX.Config.json lists {0} files.' -f (New-SelfXConfigManifest -Stage $stage))
+            }
 
             $created = New-PackageFile -Stage $stage -SetupFile $definition.Setup -OutputDir $toolOutput
 
@@ -267,8 +189,8 @@ try {
             Move-Item -LiteralPath $created -Destination $target -Force
             if ($name -eq 'Service') {
                 $detectionTarget = Join-Path $OutputFolder ('SelfX-{0}-{1}.Detection.ps1' -f $name, $version)
-                $digest = New-SelfXDetectionScript -Stage $stage -Target $detectionTarget
-                Write-Host "Service: $detectionTarget contains the file list digest $digest. Upload this file as the detection script to Intune."
+                $digests = New-SelfXDetectionScript -Stage $stage -Target $detectionTarget
+                Write-Host "Service: $detectionTarget contains the digest of SelfX.Code.json ($($digests.Code)) and of SelfX.Config.json ($($digests.Config)). Upload this file as the detection script to Intune."
             }
             $file = Get-Item -LiteralPath $target
             $results.Add([pscustomobject]@{

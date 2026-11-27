@@ -10,7 +10,7 @@
     It never toggles, does not change the default device, the microphone, drivers, services or the registry, starts no
     process, reads no file and needs no administrator rights (it acts on the endpoint of the signed-in user). The only
     input is the minimum volume in percent (0 to 100). The library is built by tools\Build-SelfXBinaries.ps1, listed with
-    its SHA256 in Bin\SelfX.Binaries.json and SelfX.Files.json and installed by Install.ps1 into the folder Audio of the
+    its SHA256 in Bin\SelfX.Binaries.json and SelfX.Code.json and installed by Install.ps1 into the folder Audio of the
     install folder (writable only by administrators); the script checks the hash before it loads the library
     (Sources\SelfXAudio.ps1).
 

@@ -119,7 +119,7 @@ function Get-SelfXWuaRebootRequired {
 # that are installed and wait for the restart (AttentionRequiredReason ReadyToReboot).
 function New-SelfXOrchestratorManager {
     # PowerShell 7 cannot load the Windows Runtime type by name: it uses SelfXWinRT.dll from the folder WinRT of the
-    # install folder. Import-SelfXWinRT (SelfXWinRT.ps1) checks the DLLs against SelfX.Files.json and keeps them open
+    # install folder. Import-SelfXWinRT (SelfXWinRT.ps1) checks the DLLs against SelfX.Code.json and keeps them open
     # while it loads them; any difference throws and nothing is loaded. Throws when the API is not available.
     param([string]$ClientId)
     Import-SelfXWinRT -InstallFolder $PSScriptRoot
