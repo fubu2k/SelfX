@@ -14,6 +14,16 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Signing library (`tools\SelfXSigning.ps1`, tools only, not part of the package):** Functions for the trust mode "signature"
+  (docs/Architecture.md), working in Windows PowerShell 5.1 and PowerShell 7: `Get-SelfXSigningCertificate` (certificates of
+  `Cert:\CurrentUser\My` and `Cert:\LocalMachine\My` with private key, key usage Code Signing and a valid period, or a PFX file with a
+  `SecureString` password that is not imported into a store), `Set-SelfXCodeSignature` (SHA256, chain without the root, optional
+  http/https time stamp server; all input is checked before the first file is signed, every file is read back), `New-SelfXSignedCatalog`
+  (`New-FileCatalog` version 2 and signature; no unsigned catalog is left when signing fails), `Test-SelfXSignature` (status `Valid` and
+  the signer in the list of allowed thumbprints; returns the reason) and `Test-SelfXSignedCatalog` (signer and folder contents; names changed,
+  missing and extra files). The password is never converted to plain text and never appears in an output, log or message. Nothing uses the
+  library yet. Tests: new `tools\Test-SelfXSigning.ps1` (part 1 on every system, part 2 with self-signed test certificates in
+  `Cert:\CurrentUser`), new CI job "Signing library" (Windows PowerShell 5.1 and PowerShell 7).
 - **Text overrides (`Config\Texts\<culture>.xml`, version 3.1.0):** A company can replace single texts without changing a
   bundled language file. The optional file has the format of the language files and holds only the texts to change (`UI`,
   `SystemInfo`, `Catalog`); it is configuration (class Config, listed in `SelfX.Config.json`) and is installed into

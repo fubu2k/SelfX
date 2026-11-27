@@ -21,10 +21,11 @@ written for administrators and reviewers.
 4. [The two lists](#the-two-lists)
 5. [Trust modes: hash and signature](#trust-modes-hash-and-signature)
 6. [The trust anchor](#the-trust-anchor)
-7. [The limit: local administrator](#the-limit-local-administrator)
-8. [Who checks what](#who-checks-what)
-9. [Files whose class is open](#files-whose-class-is-open)
-10. [Folder layout](#folder-layout)
+7. [The signing library](#the-signing-library)
+8. [The limit: local administrator](#the-limit-local-administrator)
+9. [Who checks what](#who-checks-what)
+10. [Files whose class is open](#files-whose-class-is-open)
+11. [Folder layout](#folder-layout)
 
 ## Overview
 
@@ -220,6 +221,49 @@ The anchor says which signers a device accepts (**Target**, mode signature).
   for a time stamp server; offline networks can use an internal one.
 - An invalid signature or a signer that is not in the list is a hard stop **before** anything on
   the device changes. This also holds during Autopilot.
+
+## The signing library
+
+`tools\SelfXSigning.ps1` holds the functions that sign the files of a package and check signatures. It works in Windows
+PowerShell 5.1 and in PowerShell 7, only defines functions and is not part of the package (nothing of it is installed on
+a device). `Install.ps1` and the service do not use it yet.
+
+| Function | Purpose |
+|---|---|
+| `Get-SelfXSigningCertificate` | finds a certificate in `Cert:\CurrentUser\My` and `Cert:\LocalMachine\My` (also by thumbprint) or opens a PFX file |
+| `Set-SelfXCodeSignature` | signs files (SHA256, chain without the root, optional time stamp server) and reads every file back |
+| `New-SelfXSignedCatalog` | writes a catalog (`New-FileCatalog`, version 2) of a folder and signs it |
+| `Test-SelfXSignature` | a signature counts only when its status is `Valid` **and** the signer is in the list of allowed thumbprints |
+| `Test-SelfXSignedCatalog` | the catalog is signed by an allowed signer **and** the folder matches it; names changed, missing and extra files |
+
+Rules of the functions:
+
+- **Certificate:** private key, key usage *Code Signing* (and *Digital Signature* when the usage is restricted) and a valid
+  period. Other certificates are not returned. A PFX file needs a password (`SecureString`); an unsuitable certificate in it
+  stops the function.
+- **Signing:** all input is checked before the first file is signed (certificate, address, every path). Files must exist, must
+  not be links and must be of the type `.exe`, `.dll`, `.ps1`, `.psm1`, `.psd1` or `.cat`; other files (XML, PNG) belong in a
+  catalog. A script with characters outside ASCII needs a byte order mark, because Windows PowerShell 5.1 and PowerShell 7
+  read a file without it differently. The time stamp server is an absolute `http` or `https` address (no user information, no
+  other scheme). A server that cannot be reached is an error; no file is silently signed without a time stamp. After signing
+  every file is read back: status `Valid`, signer is the given certificate, time stamp present when one was requested.
+- **Catalog:** the catalog file must be outside the folder (it is copied into the folder afterwards;
+  `Test-SelfXSignedCatalog` accepts both places). A folder with a link or without a file is refused. When signing fails the
+  unsigned catalog is deleted.
+- **Check:** an empty list of allowed signers or a thumbprint that is not 40 hexadecimal characters is an error, never
+  "everything is allowed". `Test-SelfXSignature` returns the reason: `Ok`, `FileMissing`, `NotSigned`, `HashMismatch`,
+  `NotSupported`, `NotTrusted`, `SignerNotAllowed` or `Error`. Every unexpected condition gives `IsValid = $false`.
+- **Password:** a `SecureString` from the parameter to the certificate; it is never converted to a plain string and never
+  written to a log, the output, an answer file or an error message. A PFX file is not imported into a certificate store; the
+  certificate lives in memory with a temporary key that is removed when the caller disposes the object (`.Dispose()`).
+
+Not covered by the library: the behaviour of the revocation check without a network (checked with `Install.ps1`, plan step 7),
+which kind of time stamp each PowerShell edition writes, and the check of a catalog by the service with `WinVerifyTrust`.
+
+Tests: `tools\Test-SelfXSigning.ps1`. Part 1 runs everywhere. Part 2 (Windows) creates self-signed certificates in
+`Cert:\CurrentUser\My`, trusts their public part in `Cert:\CurrentUser\Root` and removes both at the end; it runs on GitHub
+Actions (job *Signing library*, both PowerShell editions) or with `SELFX_TEST_ALLOW_ROOT_IMPORT=1`. `SELFX_TEST_SLOW=1`
+adds the tests with a certificate that expires during the test, `SELFX_TEST_TIMESTAMP_URL` the test with a time stamp.
 
 ## The limit: local administrator
 
