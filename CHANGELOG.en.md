@@ -14,6 +14,21 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Publisher rules for AppLocker and App Control (`tools\New-SelfXAppLockerRules.ps1` 1.1.0, `tools\New-SelfXWdacPolicy.ps1` 1.1.0):**
+  For a package signed with the certificate of the company the rules no longer change with every version. `New-SelfXAppLockerRules.ps1
+  -Mode Publisher` reads the publisher from the signature of the given files (all must be signed with status `Valid` by the same
+  certificate; never a parameter) and writes **one publisher rule for each rule collection** (Exe, Dll, Script): Allow, SID `S-1-1-0`,
+  no product, file name or version range, fixed rule IDs, no hash rules. `New-SelfXWdacPolicy.ps1 -Level Publisher` creates the
+  supplemental policy with `New-CIPolicy -Level Publisher -Fallback Hash`: a signer rule of the signing certificate instead of hash
+  rules, hash rules only for files without signature, fixed policy ID as before. Before the scan it stops for a file with an invalid
+  signature, for several signers (unless `-AllowMultipleSigners`) and for a package whose `Install.ps1` is not signed; after the
+  scan it checks the policy (signer rules without file attribute, no hash rule next to a signed file, no denied signer) and lists the
+  trusted publishers. **Default unchanged:** without `-Mode` / `-Level` both tools write hash rules as before. New files:
+  `tools\SelfXPublisherRules.ps1` (functions of the publisher mode and the checks, no AppLocker or ConfigCI cmdlet),
+  `tools\SelfXTestCertificate.ps1` (test helper). Docs: docs/Installation.md, "Set up once instead of per version". Tests:
+  `Test-SelfXAppLockerRules.ps1` (structure, SID instead of name, no hash rule or version, changed policies as negative tests, mocked
+  signature states, refusals; with a trusted test certificate also a run with signed files), `Test-WdacPolicy.ps1` (checks of signer
+  policies on synthetic texts, refusal without a signed file; with a trusted test certificate also a run). Not tried on a device.
 - **Trust mode in the service (`SelfXService.exe`, version 3.1.0):** Before every start of a script the service reads the trust anchor
   `HKLM\SOFTWARE\SelfX\Trust` (64-bit view). An anchor that is missing, invalid (`Mode` not `Hash` or `Signature`; in the mode signature
   `Signers` not a list of 1 to 10 SHA1 thumbprints) or not protected (owner other than SYSTEM `S-1-5-18` or Administrators

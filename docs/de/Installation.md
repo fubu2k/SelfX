@@ -105,7 +105,9 @@ des Repositorys.
    `SelfX.OfflineFeed.json` geprüft (siehe „Offline-Build“ unten).
 4. **AppLocker anpassen** (nur wenn Sie AppLocker nutzen). Das Skript schreibt
    `build\SelfX.AppLocker.xml`. Übernehmen Sie diese Regeln und löschen Sie die Regeln der
-   vorherigen Version, bevor das Paket die Geräte erreicht.
+   vorherigen Version, bevor das Paket die Geräte erreicht. Für ein **signiertes** Paket nehmen
+   Sie stattdessen Herausgeberregeln, die Sie einmal einrichten
+   ([Einmal einrichten statt je Version](#einmal-einrichten-statt-je-version)).
 5. **Intune-Paket erstellen.** Setzen Sie bei `-ToolPath` den Pfad aus Schritt 1:
 
    ```powershell
@@ -300,7 +302,9 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
 
 1. Verteilen Sie immer das **ganze Paket**. Oberfläche und Dienst müssen zusammenpassen.
 2. Erhöhen Sie `Version.txt` und `$ExpectedVersion` auf denselben neuen Wert.
-3. Bauen Sie Programme und Paket neu (Schritt 2) und ersetzen Sie die AppLocker-Regeln.
+3. Bauen Sie Programme und Paket neu (Schritt 2) und ersetzen Sie die AppLocker-Regeln (bei
+   Herausgeberregeln für ein mit demselben Zertifikat signiertes Paket nicht nötig, siehe
+   [Einmal einrichten statt je Version](#einmal-einrichten-statt-je-version)).
 4. Laden Sie die neue `.intunewin` **und** das neue Erkennungsskript in dieselbe Intune-App
    hoch.
 5. Prüfen Sie vor dem Paketieren die Support-Kontakte in `Tool_Config.xml` und
@@ -393,8 +397,9 @@ exit 0
 
 SelfX braucht WDAC nicht, und im Paket ist nichts davon eingeschaltet. Wenn Ihre
 Organisation App Control for Business einsetzt, können Sie damit zusätzlich verhindern, dass
-auf den Geräten andere als die ausgelieferten SelfX-Programme und -Skripte laufen. SelfX
-bleibt unsigniert und wird per Hash zugelassen.
+auf den Geräten andere als die ausgelieferten SelfX-Programme und -Skripte laufen. Standardmäßig
+wird SelfX per Hash zugelassen; für ein mit dem Zertifikat Ihrer Organisation signiertes Paket
+gibt es eine Signer-Regel ([Einmal einrichten statt je Version](#einmal-einrichten-statt-je-version)).
 
 1. **Basisrichtlinie.** Sie gehört Ihrer Organisation. Sie muss ergänzende Richtlinien
    erlauben (Regeloption 17) und die von Microsoft signierten Dateien zulassen, darunter
@@ -426,6 +431,85 @@ bleibt unsigniert und wird per Hash zugelassen.
 Hinweise: Regeloption 19 („Dynamic Code Security“) nur nach einem Test im Überwachungsmodus
 einschalten, weil SelfX-Skripte `Add-Type` nutzen. Eine unsignierte Richtlinie kann ein
 lokaler Administrator ersetzen. Die Vorlage ist noch nicht auf einem Gerät erprobt.
+
+### Einmal einrichten statt je Version
+
+Bei den Hashregeln (Standard) müssen AppLocker und App Control für jede neue Version ersetzt
+werden, weil jede geänderte Datei einen neuen Hash hat. Für ein Paket, das mit dem
+Codesignatur-Zertifikat Ihrer Organisation signiert ist, ersetzen **Herausgeberregeln** sie: Sie
+erzeugen sie einmal, und sie bleiben für jede spätere Version gleich, die mit demselben Zertifikat
+signiert ist.
+
+Voraussetzungen:
+
+- Das Paket ist signiert (Vertrauensmodus Signatur, siehe
+  [Optional: signiertes Paket](#optional-signiertes-paket-vertrauensmodus-signatur) und
+  [Architektur](Architecture.md#vertrauensmodi-hash-und-signatur)).
+- Die Zertifikatskette des Signierzertifikats ist auf dem PC vertrauenswürdig, auf dem Sie die
+  Regeln erzeugen. Eine Datei, deren Signatur Windows nicht akzeptiert (nach dem Signieren
+  verändert, Zertifikat nicht vertrauenswürdig), stoppt beide Skripte; ebenso eine Datei ohne
+  Signatur (AppLocker) oder ein Paket, dessen `Install.ps1` nicht signiert ist (App Control).
+- Windows PowerShell 5.1 (`powershell.exe`). Für App Control zusätzlich das Modul ConfigCI.
+
+**AppLocker.** Übergeben Sie dem Skript signierte Dateien des Pakets, getrennt durch `|`:
+mindestens ein Programm und ein Skript, zum Beispiel:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXAppLockerRules.ps1 -Mode Publisher -PathList "C:\Paket\Bin\SelfXService.exe|C:\Paket\Bin\SelfX.exe|C:\Paket\Install.ps1" -OutputFile C:\Paket\SelfX.AppLocker.Publisher.xml -RuleNamePrefix SelfX
+```
+
+- Das Skript liest den Herausgebernamen aus der Signatur (er ist nie ein Parameter) und schreibt
+  **eine Herausgeberregel je Regelsammlung** (Exe, Dll, Script): Zulassen, für die SID `S-1-1-0`
+  (Jeder), ohne Produkt, Dateinamen oder Versionsbereich. Keine Hashregeln.
+- Alle Dateien müssen mit demselben Zertifikat signiert sein. Die Regeln haben feste IDs: Ein
+  zweiter Lauf für denselben Herausgeber ergibt dieselbe Datei.
+- Übernehmen Sie die Regeln einmal und löschen Sie die Hashregeln früherer SelfX-Versionen. Eine
+  neue, mit demselben Zertifikat signierte Version braucht keine Änderung. Ein erneuertes
+  Zertifikat mit demselben Antragsteller (gleicher Herausgebername) braucht auch keine; bei einem
+  anderen Antragsteller erzeugen Sie die Regeln neu, fügen sie hinzu, bevor das erste Paket mit
+  dem neuen Zertifikat die Geräte erreicht, und entfernen die alten, wenn alle Geräte aktualisiert
+  sind.
+- Ohne `-Mode` (oder mit `-Mode Hash`) schreibt das Skript wie bisher Hashregeln; das bleibt der
+  Standard für ein Paket, das nicht signiert ist.
+
+**App Control for Business (WDAC).** Schritt 3 von
+[App Control for Business (WDAC)](#app-control-for-business-wdac) mit dem zusätzlichen Parameter
+`-Level Publisher`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXWdacPolicy.ps1 -BasePolicyId {GUID der Basisrichtlinie} -Level Publisher
+```
+
+- Die Richtlinie enthält statt der Hashregeln eine Signer-Regel (Zertifizierungsstelle und
+  Herausgebername des Signierzertifikats, keine Version). Eine Datei ohne Signatur bekommt
+  stattdessen eine Hashregel (Rückfall); bei einem vollständig signierten Paket enthält die
+  Richtlinie gar keine Hashregel.
+- Die Richtlinien-ID bleibt fest. Verteilen Sie die Richtlinie einmal; eine neue signierte Version
+  braucht keine neue Richtlinie. Nur wenn sich das Signierzertifikat ändert, erzeugen Sie die
+  Richtlinie neu (während des Wechsels sind beide Zertifikate im Einsatz: `-AllowMultipleSigners`
+  ergänzen).
+- Das Skript stoppt vor dem Scan bei einer Datei mit ungültiger Signatur, bei Dateien, die mit
+  verschiedenen Zertifikaten signiert sind (ohne `-AllowMultipleSigners`), und bei einem Paket,
+  dessen `Install.ps1` nicht signiert ist (dafür die Stufe Hash verwenden). Nach dem Scan prüft es
+  die Richtlinie: Signer-Regeln ohne Dateiattribut und keine Hashregel neben einer signierten
+  Datei.
+- Die Ausgabe nennt die Herausgeber, denen die Richtlinie vertraut. Prüfen Sie, dass das Ihr
+  Signierzertifikat ist und kein anderes.
+
+Was eine Herausgeberregel **nicht** leistet:
+
+- Sie vertraut dem **Signierer**, nicht einer Datei oder Version. Wer mit diesem Zertifikat
+  signieren kann, bekommt Dateien zugelassen; schützen Sie den Schlüssel (Smartcard, HSM oder ein
+  eingeschränkter Signier-Host). Um das Vertrauen zu entziehen, tauschen Sie Zertifikat und Regeln
+  aus.
+- Sie verhindert nicht, dass eine ältere, noch korrekt signierte SelfX-Version läuft. Die
+  Versionsbindung kommt aus den Dateilisten und, im Modus Signatur, aus den Prüfungen von
+  `Install.ps1` und Dienst ([Architektur](Architecture.md#die-grenze-lokaler-administrator)).
+- Die Grenze für einen lokalen Administrator bleibt: Nur App Control im Erzwingungsmodus hilft
+  gegen ihn.
+
+Die Skripte sind durch automatische Tests abgedeckt; die erzeugten Richtlinien sind noch nicht auf
+einem Gerät erprobt. Testen Sie sie zuerst im Überwachungsmodus.
 
 ## Hintergrund: Was die Installation macht
 
