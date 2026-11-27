@@ -17,7 +17,7 @@
     Name    : Test-Detection.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator before building the package; not installed)
-    Version : 2.9.1
+    Version : 3.1.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -27,6 +27,8 @@
     2.9.0    2026-11-27  fubu2k               Two lists and two digests; a changed logo changes only the configuration digest.
     2.9.1    2026-11-27  fubu2k               The version comes from SelfX.Code.json: tests of Get-SelfXInstalledVersion and Test-SelfXInstalledPackage (code
                                               version, code files and configuration detected separately; an old Tool_Version in Tool_Config.xml is ignored).
+    3.1.0    2026-11-27  fubu2k               Layout App/Config: lists in App and Config, the old layout is not detected, paths of the programs and of
+                                              Tool_Config.xml.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -93,12 +95,13 @@ try {
 
 	# The tool writes the Detection.ps1 with the digests of the staged lists.
 	$stage = Join-Path $temp 'Stage'
-	[void][IO.Directory]::CreateDirectory($stage)
+	[void][IO.Directory]::CreateDirectory((Join-Path $stage 'App'))
+	[void][IO.Directory]::CreateDirectory((Join-Path $stage 'Config'))
 	Copy-Item -LiteralPath $detectionScript -Destination (Join-Path $stage 'Detection.ps1')
 	$codeFiles = [ordered]@{ 'Self_X.ps1' = 'aa11'; 'Uninstall.ps1' = 'cc33' }
 	$configFiles = [ordered]@{ 'Tool_Config.xml' = 'bb22'; 'Branding/logo.png' = 'ee55' }
-	Write-List (Join-Path $stage 'SelfX.Code.json') $codeFiles
-	Write-List (Join-Path $stage 'SelfX.Config.json') $configFiles
+	Write-List (Join-Path $stage 'App\SelfX.Code.json') $codeFiles
+	Write-List (Join-Path $stage 'Config\SelfX.Config.json') $configFiles
 	$expectedCode = Get-SelfXFilesDigest -Files $codeFiles
 	$expectedConfig = Get-SelfXFilesDigest -Files $configFiles
 	$target = Join-Path $temp 'out\Detection.ps1'
@@ -118,7 +121,7 @@ try {
 
 	# A changed logo changes only the configuration digest.
 	$configLogo = [ordered]@{ 'Tool_Config.xml' = 'bb22'; 'Branding/logo.png' = 'ee56' }
-	Write-List (Join-Path $stage 'SelfX.Config.json') $configLogo
+	Write-List (Join-Path $stage 'Config\SelfX.Config.json') $configLogo
 	$logo = New-SelfXDetectionScript -Stage $stage -Target (Join-Path $temp 'out\Logo.ps1')
 	Assert-Equal $logo.Code $expectedCode 'logo changed: the code digest stays'
 	Assert-Equal ($logo.Config -ne $expectedConfig) $true 'logo changed: the configuration digest changes'
@@ -138,7 +141,7 @@ try {
 	}
 	# A staged package without one of the lists is refused.
 	Copy-Item -LiteralPath $detectionScript -Destination (Join-Path $stage 'Detection.ps1') -Force
-	Remove-Item -LiteralPath (Join-Path $stage 'SelfX.Config.json')
+	Remove-Item -LiteralPath (Join-Path $stage 'Config\SelfX.Config.json')
 	$threw = $false
 	try { [void](New-SelfXDetectionScript -Stage $stage -Target (Join-Path $temp 'out\Bad.ps1')) } catch { $threw = $true }
 	Assert-Equal $threw $true 'tool: a package without SelfX.Config.json is refused'
@@ -150,11 +153,13 @@ try {
 	$digestConfig = Get-SelfXFilesDigest -Files $configInstalled
 	function New-InstalledFolder([string]$ToolVersion, $CodeFiles, $ConfigFiles, [string]$LegacyToolConfigVersion) {
 		$dir = Join-Path $temp ('inst-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
-		[void][IO.Directory]::CreateDirectory($dir)
+		# Layout of the installation: SelfX.Code.json in App, SelfX.Config.json and Tool_Config.xml in Config.
+		[void][IO.Directory]::CreateDirectory((Join-Path $dir 'App'))
+		[void][IO.Directory]::CreateDirectory((Join-Path $dir 'Config'))
 		$codeList = [ordered]@{ ManifestVersion = 1; ToolVersion = $ToolVersion; Files = $CodeFiles }
-		[IO.File]::WriteAllText((Join-Path $dir 'SelfX.Code.json'), ($codeList | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
-		if ($ConfigFiles) { Write-List (Join-Path $dir 'SelfX.Config.json') $ConfigFiles }
-		if ($LegacyToolConfigVersion) { [IO.File]::WriteAllText((Join-Path $dir 'Tool_Config.xml'), "<GUI_Config><Tool_Version>$LegacyToolConfigVersion</Tool_Version></GUI_Config>") }
+		[IO.File]::WriteAllText((Join-Path $dir 'App\SelfX.Code.json'), ($codeList | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+		if ($ConfigFiles) { Write-List (Join-Path $dir 'Config\SelfX.Config.json') $ConfigFiles }
+		if ($LegacyToolConfigVersion) { [IO.File]::WriteAllText((Join-Path $dir 'Config\Tool_Config.xml'), "<GUI_Config><Tool_Version>$LegacyToolConfigVersion</Tool_Version></GUI_Config>") }
 		return $dir
 	}
 	function Test-Installed([string]$Dir, [string]$ExpectedVersion = '3.0.2', [string]$CodeDigest = $digestCode, [string]$ConfigDigest = $digestConfig) {
@@ -166,8 +171,8 @@ try {
 	$installedNewVersion = New-InstalledFolder '3.0.3' $codeInstalled $configInstalled
 	Assert-Equal (Test-Installed $installedNewVersion).Reason 'installed version 3.0.3' 'installed: a different code version is reported as version'
 	Assert-Equal (Test-Installed $installedOk -ExpectedVersion '3.0.3').Reason 'installed version 3.0.2' 'installed: an update to a new code version is detected (expected 3.0.3, installed 3.0.2)'
-	Assert-Equal $null (Det_Test-SelfXFilesList -Path (Join-Path $installedNewVersion 'SelfX.Config.json') -ExpectedHash $digestConfig) 'installed: a different code version does not touch the configuration list'
-	Assert-Equal $null (Det_Test-SelfXFilesList -Path (Join-Path $installedNewVersion 'SelfX.Code.json') -ExpectedHash $digestCode) 'installed: the code digest does not contain the version'
+	Assert-Equal $null (Det_Test-SelfXFilesList -Path (Join-Path $installedNewVersion 'Config\SelfX.Config.json') -ExpectedHash $digestConfig) 'installed: a different code version does not touch the configuration list'
+	Assert-Equal $null (Det_Test-SelfXFilesList -Path (Join-Path $installedNewVersion 'App\SelfX.Code.json') -ExpectedHash $digestCode) 'installed: the code digest does not contain the version'
 	# 2. Changed code files with the same version: reported as code files.
 	$codeChanged = [ordered]@{ 'Self_X.ps1' = 'aa12'; 'Uninstall.ps1' = 'cc33'; 'SelfXService.exe' = 'dd44' }
 	Assert-Equal (Test-Installed (New-InstalledFolder '3.0.2' $codeChanged $configInstalled)).Reason 'SelfX.Code.json differs from the package' 'installed: changed code files without a new version are detected'
@@ -175,15 +180,15 @@ try {
 	$configLogo = [ordered]@{ 'Tool_Config.xml' = 'bb22'; 'Branding/logo.png' = 'ee56' }
 	$digestConfigLogo = Get-SelfXFilesDigest -Files $configLogo
 	Assert-Equal (Test-Installed $installedOk -ConfigDigest $digestConfigLogo).Reason 'SelfX.Config.json differs from the package' 'installed: a changed configuration is detected without a new code version'
-	Assert-Equal (Det_Get-SelfXInstalledVersion -Path (Join-Path $installedOk 'SelfX.Code.json')) '3.0.2' 'installed: a changed configuration does not change the code version'
+	Assert-Equal (Det_Get-SelfXInstalledVersion -Path (Join-Path $installedOk 'App\SelfX.Code.json')) '3.0.2' 'installed: a changed configuration does not change the code version'
 	Assert-Equal $null (Test-Installed (New-InstalledFolder '3.0.2' $codeInstalled $configLogo) -ConfigDigest $digestConfigLogo).Reason 'installed: the package with the new configuration is accepted'
 	# 4. Tool_Config.xml is not evaluated for the version (an old Tool_Version element is ignored in both directions).
 	Assert-Equal $null (Test-Installed (New-InstalledFolder '3.0.2' $codeInstalled $configInstalled '9.9.9')).Reason 'installed: an old Tool_Version in Tool_Config.xml does not matter'
 	Assert-Equal (Test-Installed (New-InstalledFolder '3.0.3' $codeInstalled $configInstalled '3.0.2')).Reason 'installed version 3.0.3' 'installed: Tool_Config.xml cannot make an old code version look current'
 	# 5. Negative cases: a missing, damaged or manipulated code list never counts as installed.
 	$negative = Join-Path $temp 'negative'
-	[void][IO.Directory]::CreateDirectory($negative)
-	$negativeList = Join-Path $negative 'SelfX.Code.json'
+	[void][IO.Directory]::CreateDirectory((Join-Path $negative 'App'))
+	$negativeList = Join-Path $negative 'App\SelfX.Code.json'
 	Assert-Equal ($null -eq (Det_Get-SelfXInstalledVersion -Path $negativeList)) $true 'version: a missing list gives no version'
 	Assert-Equal (Test-Installed $negative).Reason 'no code version in SelfX.Code.json' 'installed: a missing code list is reported'
 	[IO.File]::WriteAllText($negativeList, '{ not json')
@@ -206,6 +211,16 @@ try {
 	[void][IO.Directory]::CreateDirectory($negativeList)
 	Assert-Equal ($null -eq (Det_Get-SelfXInstalledVersion -Path $negativeList)) $true 'version: a folder instead of the list gives no version'
 	Assert-Equal (Test-Installed (New-InstalledFolder '3.0.2' $codeInstalled $null)).Reason 'SelfX.Config.json missing' 'installed: a missing configuration list is reported'
+	# 5b. An installation in the old layout (everything directly in the install folder, version 3.0.2) is not detected, so Intune installs
+	#     the update; a copy of the lists in the wrong folder does not count either.
+	$oldLayout = Join-Path $temp 'oldlayout'
+	[void][IO.Directory]::CreateDirectory($oldLayout)
+	[IO.File]::WriteAllText((Join-Path $oldLayout 'SelfX.Code.json'), (([ordered]@{ ManifestVersion = 1; ToolVersion = '3.0.2'; Files = $codeInstalled }) | ConvertTo-Json -Depth 4))
+	Write-List (Join-Path $oldLayout 'SelfX.Config.json') $configInstalled
+	Assert-Equal (Test-Installed $oldLayout).Reason 'no code version in SelfX.Code.json' 'installed: the old layout (lists in the install folder) is not detected'
+	$swapped = New-InstalledFolder '3.0.2' $codeInstalled $configInstalled
+	Move-Item -LiteralPath (Join-Path $swapped 'Config\SelfX.Config.json') -Destination (Join-Path $swapped 'App\SelfX.Config.json')
+	Assert-Equal (Test-Installed $swapped).Reason 'SelfX.Config.json missing' 'installed: SelfX.Config.json in App instead of Config is not accepted'
 	# 6. Digests in the script: a placeholder is not checked (and noted), a damaged value is refused, the version is checked first.
 	$placeholders = Test-Installed $installedOk -CodeDigest '__SELFX_CODE_HASH__' -ConfigDigest '__SELFX_CONFIG_HASH__'
 	Assert-Equal $null $placeholders.Reason 'installed: the repository copy (placeholders) checks the version only'
@@ -221,6 +236,10 @@ try {
 	Assert-Equal ([regex]::Matches($repoText, "\`$ExpectedConfigHash\s*=\s*'__SELFX_CONFIG_HASH__'").Count) 1 'Detection.ps1: one configuration placeholder assignment'
 	Assert-Equal ($repoText -match 'GUI_Config\.Tool_Version|Tool_Config\.xml\s*-Raw') $false 'Detection.ps1: the version is not read from Tool_Config.xml'
 	Assert-Equal ($repoText.Contains("'^[0-9A-Za-z.\-]{1,30}\z'")) $true 'Detection.ps1: the version pattern is the one of the package tools'
+	# Layout App/Config: programs in App, Tool_Config.xml in Config.
+	foreach ($expected in @("`$AppFolder = Join-Path `$InstallFolder 'App'", "(Join-Path `$AppFolder 'SelfXService.exe')", "(Join-Path `$AppFolder 'SelfX.exe')", "`$ToolConfigFile = Join-Path `$InstallFolder 'Config\Tool_Config.xml'")) {
+		Assert-Equal $repoText.Contains($expected) $true "Detection.ps1 contains: $expected"
+	}
 } finally {
 	Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }

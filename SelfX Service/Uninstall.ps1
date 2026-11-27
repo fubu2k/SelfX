@@ -6,7 +6,8 @@
     Runs elevated, normally as SYSTEM via Intune/SCCM. Stops and deletes SelfXService,
     waits up to thirty seconds for removal, deletes configured shortcuts from the public
     desktop and machine Start Menu, and removes the HKLM Apps & Features entry. Deletes
-    the entire InstallFolder (default ProgramFiles\SelfX), including local customizations.
+    the entire InstallFolder (default ProgramFiles\SelfX), including local customizations. Both layouts are removed: the
+    current one (InstallFolder\App and InstallFolder\Config) and the older one (all files directly in InstallFolder).
     ProgramData\SelfX logs are retained unless -RemoveLogs deletes that directory too. Folders in
     ProgramData\SelfX are deleted without following junctions or symbolic links (a link is removed,
     never the folder it points to), because users can create links in their own Logs\Users folder.
@@ -14,7 +15,7 @@
     are always deleted (with Logs\Users on -RemoveLogs) by the helper of SelfXService.exe, which opens every entry
     without following links and deletes through that handle; without the helper nothing is deleted by path. The HKLM Run entry of the status icon is removed. Open SelfX windows
     and status icons of all signed-in users (powershell.exe or pwsh.exe running Self_X.ps1 or
-    SelfX_Tray.ps1 from InstallFolder) are closed first, because they keep the install
+    SelfX_Tray.ps1 from InstallFolder or InstallFolder\App) are closed first, because they keep the install
     folder in use. Per-user settings and caches (HKCU\Software\SelfX,
     LOCALAPPDATA\SelfX) are not removed.
     Install files locked by other programs are retried for up to 90 seconds;
@@ -30,7 +31,7 @@
     Name    : Uninstall.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.6.11
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -41,6 +42,9 @@
                                               link is removed itself, never its target
     2.6.11   2026-11-23  fubu2k               Security (M1): Reports, Cache and Logs\Users are deleted by the handle-based helper of
                                               SelfXService.exe (no time window between link check and delete)
+    3.1.0    2026-11-27  fubu2k               Both layouts: Tool_Config.xml, the delete helper and the open windows are found in App and Config
+                                              and, for an installation of an older version, directly in InstallFolder; Tool_Config.xml is read
+                                              without DTD
 #>
 
 [CmdletBinding()]
@@ -101,12 +105,24 @@ If(Test-Path -LiteralPath (Join-Path $DataFolder 'Logs'))
 	Try { Start-Transcript -Path (Join-Path $DataFolder 'Logs\Uninstall.log') -Append | Out-Null; $Transcript = $true } Catch {}
 }
 
+# Current layout (Config\Tool_Config.xml, App\SelfXService.exe) first, then the layout of older versions (directly in InstallFolder).
 $ShortcutName = 'SelfX (Self fix)'
-$ToolConfigFile = Join-Path $InstallFolder 'Tool_Config.xml'
-If(Test-Path -LiteralPath $ToolConfigFile)
+$ToolConfigFile = @((Join-Path $InstallFolder 'Config\Tool_Config.xml'), (Join-Path $InstallFolder 'Tool_Config.xml')) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+If($ToolConfigFile)
 {
-	$Name = ([xml](Get-Content -LiteralPath $ToolConfigFile -Raw)).GUI_Config.Shortcut_Name
-	If(-not [string]::IsNullOrWhiteSpace($Name)) { $ShortcutName = $Name.Trim() }
+	Try
+	{
+		$ToolConfig = New-Object System.Xml.XmlDocument
+		$ToolConfig.XmlResolver = $null
+		$XmlSettings = New-Object System.Xml.XmlReaderSettings
+		$XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+		$XmlSettings.XmlResolver = $null
+		$XmlReader = [System.Xml.XmlReader]::Create($ToolConfigFile, $XmlSettings)
+		Try { $ToolConfig.Load($XmlReader) } Finally { $XmlReader.Dispose() }
+		$Name = $ToolConfig.GUI_Config.Shortcut_Name
+		If(-not [string]::IsNullOrWhiteSpace($Name)) { $ShortcutName = $Name.Trim() }
+	}
+	Catch { Write-Output "Tool_Config.xml could not be read; the default shortcut name is used." }
 }
 
 $Service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
@@ -128,7 +144,7 @@ Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' 
 
 # Close open SelfX windows and status icons of all signed-in users: they use the install folder (working
 # directory, scripts) and would otherwise make the uninstallation fail.
-$SelfXPattern = [regex]::Escape($InstallFolder.TrimEnd('\')) + '\\(Self_X|SelfX_Tray)\.ps1'
+$SelfXPattern = [regex]::Escape($InstallFolder.TrimEnd('\')) + '\\(App\\)?(Self_X|SelfX_Tray)\.ps1'
 $SelfXProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name = 'powershell.exe' OR Name = 'pwsh.exe'" -ErrorAction SilentlyContinue |
 	Where-Object { ($_.ProcessId -ne $PID) -and ("$($_.CommandLine)" -match $SelfXPattern) })
 ForEach($Process in $SelfXProcesses)
@@ -140,7 +156,8 @@ If($SelfXProcesses.Count -gt 0) { Start-Sleep -Seconds 2 }
 
 # Data of the users: Reports, Cache and (with -RemoveLogs) Logs\Users are deleted by the handle-based helper while it still exists in
 # the install folder. Users can create links in their own folders there; the helper never follows them (M1).
-$SafeDeleteExe = Join-Path $InstallFolder 'SelfXService.exe'
+$SafeDeleteExe = Join-Path $InstallFolder 'App\SelfXService.exe'
+If(-not (Test-Path -LiteralPath $SafeDeleteExe -PathType Leaf)) { $SafeDeleteExe = Join-Path $InstallFolder 'SelfXService.exe' }
 $DataFoldersSafe = $true
 $DataFolders = @((Join-Path $DataFolder 'Reports'), (Join-Path $DataFolder 'Cache'))
 If($RemoveLogs) { $DataFolders += (Join-Path $DataFolder 'Logs\Users') }

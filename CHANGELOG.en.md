@@ -14,6 +14,29 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Package and device, code and configuration in two folders (version 3.1.0):** The package has the folders `App` (code)
+  and `Config` (configuration) instead of `Sources`; `tools\New-SelfXIntuneWin.ps1` sorts the files of `Sources` by their file
+  class (`ConvertTo-SelfXPackageLayout` in `tools\SelfXPackage.Common.ps1`; a file without a class stops the build). On the
+  device the programs, libraries, scripts, language files and default images of the project, `Uninstall.ps1` and
+  `SelfX.Code.json` are in `%ProgramFiles%\SelfX\App`; the settings files, `Branding`, own scripts and language files and
+  `SelfX.Config.json` are in `%ProgramFiles%\SelfX\Config`; the rights are unchanged (users `S-1-5-32-545` read and execute
+  only). One path resolver: `Sources\SelfXPaths.ps1` (`Get-SelfXConfigPath`, `Get-SelfXImagePath`, `Resolve-SelfXScriptPath`,
+  Windows PowerShell 5.1 and PowerShell 7) and in the service `GetConfigRoot`, `GetConfigFilePath`, `ResolveScriptPath`; the
+  configuration folder is `Config` next to a code folder named `App`, otherwise the code folder itself. The service loads the
+  catalog, `Health_Config.xml` and `Tool_Config.xml` only from `Config` and scripts of the project only from `App`; an own
+  script below `Config` starts only when the catalog or `Health_Config.xml` names it and `SelfX.Config.json` lists it with its
+  current SHA256, also with `Service_FileCheck` = `Audit`; a script of the project with the same name wins (likewise in
+  `Self_X.ps1` for user actions and in `HealthStatus.ps1` for own check scripts). The file check of the service and of
+  `Install.ps1` compares every folder only with its own list and allows nothing next to `App` and `Config` (empty folders that
+  are still in use excepted). Images: `Branding\...` in `Config`, other relative values in `App`. Own language files in
+  `Config\Languages` are offered but cannot replace a bundled language. Migration: `Install.ps1` 3.1.0 removes an
+  installation in the old layout completely before the copy (new functions `Clear-SelfXInstallFolder`,
+  `Copy-SelfXPayload`) and refuses a package in the old layout; `Uninstall.ps1` 3.1.0 removes both layouts and reads
+  `Tool_Config.xml` without DTD; `Detection.ps1` 3.1.0 detects only the new layout. **Note:** own scripts that look for
+  `SelfXLog.ps1` or `SelfXOffice.ps1` through `Split-Path -Parent $PSScriptRoot` have to be adapted (`docs/Configuration.md`,
+  section "Own scripts of the company"). `Version.txt` and `Detection.ps1` are set to 3.1.0. Tests: new
+  `Test-ConfigPath.ps1`; extended `Test-FileManifest.ps1`, `Test-InstallBinaries.ps1` (update 3.0.2 -> 3.1.0, mixed state,
+  locked file), `Test-Uninstall.ps1`, `Test-Detection.ps1`, `Test-ServicePipe.ps1`, `Test-Compat51.ps1`.
 - **Package, the version is a property of the code (`Version.txt`, `SelfX.Code.json`):** The version is no longer stored in the settings file
   `Tool_Config.xml`. The new file `SelfX Service\Version.txt` (one line) is the only source; the build writes it into `ToolVersion` of
   `SelfX.Code.json`. A new version therefore changes no configuration file, and a changed configuration (for example a logo) does not

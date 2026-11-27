@@ -25,6 +25,9 @@
     Intune (not the repository copy): then the detection also finds an update whose files changed without a new version, and a
     changed configuration (for example a logo) without a new code version.
     SelfX.Config.json gets ConfigRevision, the UTC time of this run.
+    In the staging folder the files of Sources are sorted into App\ (code) and Config\ (configuration) by their file class
+    (ConvertTo-SelfXPackageLayout in tools\SelfXPackage.Common.ps1); the lists are App\SelfX.Code.json and Config\SelfX.Config.json.
+    Install.ps1 installs them into %ProgramFiles%\SelfX\App and %ProgramFiles%\SelfX\Config.
 
     The script only reads the product folders, writes the staging folder (deleted at the end)
     and the build folder. It uploads nothing to Intune.
@@ -49,7 +52,7 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.10.0
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -63,6 +66,7 @@
                                               (tools\SelfXPackage.Common.ps1); Detection.ps1 gets two digests
     1.10.0   2026-11-27  fubu2k               The version comes from Version.txt (no longer from Tool_Config.xml) and is written only into SelfX.Code.json;
                                               SelfX.Config.json gets ConfigRevision
+    3.1.0    2026-11-27  fubu2k               Package layout App\ and Config\ instead of Sources\ (ConvertTo-SelfXPackageLayout)
 #>
 
 [CmdletBinding()]
@@ -183,6 +187,9 @@ try {
             if (Test-Path -LiteralPath $projectsInStage) { Remove-Item -LiteralPath $projectsInStage -Recurse -Force }
             Test-StagedPackage -Stage $stage -Name $name -Definition $definition -Version $version
             if ($name -eq 'Service') {
+                # Code and configuration in two folders (App, Config), sorted by file class; a file without a class stops the build.
+                $layout = ConvertTo-SelfXPackageLayout -Stage $stage
+                Write-Host ('Service: {0} code files in App, {1} configuration files in Config.' -f $layout.Code, $layout.Config)
                 Write-Host ('Service: SelfX.Code.json lists {0} files.' -f (New-SelfXCodeManifest -Stage $stage -Version $version))
                 Write-Host ('Service: SelfX.Config.json lists {0} files.' -f (New-SelfXConfigManifest -Stage $stage))
             }

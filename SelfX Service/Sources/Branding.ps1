@@ -20,7 +20,7 @@
     Name    : Branding.ps1
     Package : SelfX Service
     Context : GUI helper (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1 as the signed-in user)
-    Version : 2.5.1
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -28,7 +28,9 @@
     2.1.0    2026-10-28  Wolfgang Baeck       Initial version: company logo, icon and colors
     2.5.0    2026-11-04  Wolfgang Baeck       Modern UI: theme colors without MahApps (dark/light), named
                                               accent colors, readable accent text, title bar text color
-    2.5.1    2026-11-23  Marc                  Calmer base colors (softer surfaces and borders)
+    2.5.1    2026-11-23  fubu2k               Calmer base colors (softer surfaces and borders)
+    3.1.0    2026-11-27  fubu2k               Get-SelfXImage resolves Branding\... in the configuration folder (Config) and other relative values in
+                                              the code folder (App) through Get-SelfXImagePath (SelfXPaths.ps1)
 #>
 
 # Named accent colors of the former MahApps themes (Tool_Color), so existing configurations keep their color.
@@ -172,14 +174,15 @@ Function Set-SelfXThemeResources
 		}
 }
 
-# Loads an image file of the install folder (relative path) as BitmapImage; returns $null if it is missing or invalid.
+# Loads an image file named in Tool_Config.xml as BitmapImage; returns $null if it is missing or invalid.
 Function Get-SelfXImage
 {
-	# Loads a local image (png, jpg, bmp, gif or ico) relative to the install folder; returns $null if not usable.
+	# Loads a local image (png, jpg, bmp, gif or ico): Branding\... from the configuration folder, another relative value from the
+	# code folder BaseFolder (default images), a rooted value as it is (Get-SelfXImagePath in SelfXPaths.ps1). $null if not usable.
 	param([string]$FileName, [string]$BaseFolder)
 	If([string]::IsNullOrWhiteSpace($FileName)) { return $null }
-	$Path = $FileName.Trim()
-	If(-not [IO.Path]::IsPathRooted($Path)) { $Path = Join-Path $BaseFolder $Path }
+	$Path = Get-SelfXImagePath -Value $FileName -CodeRoot $BaseFolder
+	If(-not $Path) { return $null }
 	If(-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
 	If([IO.Path]::GetExtension($Path) -notin '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.ico') { return $null }
 	Try

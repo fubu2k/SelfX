@@ -121,9 +121,11 @@ collector (optionally one validated check), `STATUS` for the cached result of th
 (answers immediately, runs nothing) and `RUN <script>.ps1` for repairs. A repair is accepted only when:
 
 - the script name is a plain file name with no path,
-- the installed `Issues_List.xml` contains an action with that script and
-  `<Context>System</Context>`,
-- the file exists in `%ProgramFiles%\SelfX\Scripts_to_run`.
+- the installed `Issues_List.xml` (`%ProgramFiles%\SelfX\Config`) contains an action with that
+  script and `<Context>System</Context>`,
+- the file exists in `%ProgramFiles%\SelfX\App\Scripts_to_run` (script of the project) or in
+  `%ProgramFiles%\SelfX\Config\Scripts_to_run` with an entry and its current SHA256 in
+  `Config\SelfX.Config.json` (own script of the company).
 
 Users cannot send parameters, script content or paths. Only one System action
 runs at a time, and other requests get a *busy* answer. Each action is stopped
@@ -134,7 +136,8 @@ user, for example the device logs report.
 
 ## Security model
 
-- `%ProgramFiles%\SelfX` is writable only by SYSTEM and administrators, and
+- `%ProgramFiles%\SelfX` (with the code folder `App` and the configuration folder `Config`) is
+  writable only by SYSTEM and administrators, and
   users get read and execute rights. The scripts that run as SYSTEM therefore
   cannot be changed by users.
 - The pipe denies network access, so only local, authenticated users can

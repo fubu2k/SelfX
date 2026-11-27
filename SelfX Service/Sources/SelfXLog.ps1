@@ -25,12 +25,13 @@
     Name    : SelfXLog.ps1
     Package : SelfX Service
     Context : User and System (dot-sourced)
-    Version : 2.6.0
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.0    2026-11-06  Wolfgang Baeck       Initial version: shared logging and user-side log housekeeping
+    3.1.0    2026-11-27  fubu2k               The default Tool_Config.xml is the one of the configuration folder (Config next to App, SelfXPaths.ps1)
 #>
 
 $Script:SelfXLogState = $null
@@ -107,7 +108,8 @@ function Invoke-SelfXLogHousekeeping {
 .PARAMETER DataRoot
     ProgramData\SelfX (tests use a temporary folder).
 .PARAMETER ConfigPath
-    Tool_Config.xml for Log_Retention_Days. Default: Tool_Config.xml in the folder of this file.
+    Tool_Config.xml for Log_Retention_Days. Default: Tool_Config.xml of the configuration folder (Config next to the code
+    folder App of this file, otherwise the folder of this file; Get-SelfXConfigPath in SelfXPaths.ps1).
 .PARAMETER Mode
     Auto (default) = by account. User / System force the folder (tests).
 #>
@@ -120,7 +122,10 @@ function Initialize-SelfXLog {
 	)
 	$Script:SelfXLogState = $null
 	try {
-		if (-not $ConfigPath -and $PSScriptRoot) { $ConfigPath = Join-Path $PSScriptRoot 'Tool_Config.xml' }
+		if (-not $ConfigPath -and $PSScriptRoot) {
+			if (-not (Get-Command -Name Get-SelfXConfigPath -CommandType Function -ErrorAction SilentlyContinue)) { . (Join-Path $PSScriptRoot 'SelfXPaths.ps1') }
+			$ConfigPath = Get-SelfXConfigPath -Name 'Tool_Config.xml' -CodeRoot $PSScriptRoot
+		}
 		$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 		$sid = $identity.User.Value
 		$name = ($Component -replace '[^A-Za-z0-9_.-]', '_')

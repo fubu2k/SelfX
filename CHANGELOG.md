@@ -14,6 +14,29 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Paket und Gerät, Code und Konfiguration in zwei Ordnern (Version 3.1.0):** Das Paket hat statt `Sources` die Ordner
+  `App` (Code) und `Config` (Konfiguration); `tools\New-SelfXIntuneWin.ps1` sortiert die Dateien aus `Sources` nach ihrer
+  Dateiklasse (`ConvertTo-SelfXPackageLayout` in `tools\SelfXPackage.Common.ps1`, eine Datei ohne Klasse bricht den Bau ab).
+  Auf dem Gerät liegen Programme, Bibliotheken, Skripte, Sprachdateien und Standardbilder des Projekts, `Uninstall.ps1` und
+  `SelfX.Code.json` in `%ProgramFiles%\SelfX\App`, die Einstellungsdateien, `Branding`, eigene Skripte und Sprachdateien und
+  `SelfX.Config.json` in `%ProgramFiles%\SelfX\Config`; die Rechte sind unverändert (Benutzer `S-1-5-32-545` nur Lesen und
+  Ausführen). Ein Pfad-Auflöser: `Sources\SelfXPaths.ps1` (`Get-SelfXConfigPath`, `Get-SelfXImagePath`,
+  `Resolve-SelfXScriptPath`, Windows PowerShell 5.1 und PowerShell 7) und im Dienst `GetConfigRoot`, `GetConfigFilePath`,
+  `ResolveScriptPath`; der Konfigurationsordner ist `Config` neben einem Code-Ordner namens `App`, sonst der Code-Ordner
+  selbst. Der Dienst lädt Katalog, `Health_Config.xml` und `Tool_Config.xml` nur aus `Config` und Skripte des Projekts nur
+  aus `App`; ein eigenes Skript unter `Config` startet nur, wenn Katalog oder `Health_Config.xml` es nennen und
+  `SelfX.Config.json` es mit seinem aktuellen SHA256 führt, auch bei `Service_FileCheck` = `Audit`; ein Projektskript gleichen
+  Namens hat Vorrang (ebenso in `Self_X.ps1` für Nutzeraktionen und in `HealthStatus.ps1` für eigene Prüfskripte). Die
+  Dateiprüfung von Dienst und `Install.ps1` vergleicht jeden Ordner nur mit seiner Liste und lässt neben `App` und `Config`
+  nichts zu (leere, noch benutzte Ordner ausgenommen). Bilder: `Branding\...` in `Config`, andere relative Werte in `App`.
+  Eigene Sprachdateien in `Config\Languages` werden angeboten, ersetzen aber keine mitgelieferte Sprache. Umstellung:
+  `Install.ps1` 3.1.0 entfernt eine Installation im alten Aufbau vollständig vor dem Kopieren (neue Funktionen
+  `Clear-SelfXInstallFolder`, `Copy-SelfXPayload`) und lehnt ein Paket im alten Aufbau ab; `Uninstall.ps1` 3.1.0 entfernt
+  beide Aufbauten und liest `Tool_Config.xml` ohne DTD; `Detection.ps1` 3.1.0 erkennt nur den neuen Aufbau. **Achtung:**
+  Eigene Skripte, die `SelfXLog.ps1` oder `SelfXOffice.ps1` über `Split-Path -Parent $PSScriptRoot` suchen, müssen angepasst
+  werden (`docs/Configuration.md`, Abschnitt „Eigene Skripte der Firma“). `Version.txt` und `Detection.ps1` stehen auf 3.1.0.
+  Tests: neu `Test-ConfigPath.ps1`; erweitert `Test-FileManifest.ps1`, `Test-InstallBinaries.ps1` (Update 3.0.2 → 3.1.0,
+  Mischzustand, gesperrte Datei), `Test-Uninstall.ps1`, `Test-Detection.ps1`, `Test-ServicePipe.ps1`, `Test-Compat51.ps1`.
 - **Paket, die Version ist eine Eigenschaft des Codes (`Version.txt`, `SelfX.Code.json`):** Die Version steht nicht mehr in der
   Einstellungsdatei `Tool_Config.xml`. Die neue Datei `SelfX Service\Version.txt` (eine Zeile) ist die einzige Quelle; der Bau
   schreibt sie in `ToolVersion` von `SelfX.Code.json`. Eine neue Version ändert damit keine Konfigurationsdatei, und eine geänderte

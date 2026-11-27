@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.27
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -47,13 +47,15 @@
     2.8.18   2026-11-23  fubu2k               Calmer look: larger radii and spacing, three-step hint, status chips with icon, help buttons (ticket, Copilot) in the navigation
     2.8.26   2026-11-24  fubu2k               Optional wiki button in the navigation (Wiki_Enabled, Wiki_Url, Wiki_Name)
     2.8.27   2026-11-27  fubu2k               The displayed version is ToolVersion of SelfX.Code.json (the version is a property of the code), no longer Tool_Version of Tool_Config.xml
+    3.1.0    2026-11-27  fubu2k               Code and configuration in two folders (App, Config): settings, catalog, ticket routing, network targets,
+                                              images and own scripts and language files are resolved by SelfXPaths.ps1
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
 	[string]$Page = ''
 )
 
-# Work in the install folder so that all relative paths (XML, images) resolve correctly.
+# Work in the code folder (App). The configuration (Config) is resolved by SelfXPaths.ps1, never relative to the working folder.
 $Global:Current_Folder = Split-Path $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $Current_Folder
 [Environment]::CurrentDirectory = $Current_Folder
@@ -173,6 +175,8 @@ Catch {}
 # Client and helper scripts are also passed as text to background runspaces (no execution policy check there).
 $Global:SelfXClient_Script = Get-Content -LiteralPath "$Current_Folder\SelfXServiceClient.ps1" -Raw
 $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\SupportReport.ps1" -Raw
+# Paths of the configuration (folder Config next to App), the images and the own scripts of the company
+. "$Current_Folder\SelfXPaths.ps1"
 . "$Current_Folder\SelfXServiceClient.ps1"
 . "$Current_Folder\Branding.ps1"
 . "$Current_Folder\Localization.ps1"
@@ -200,7 +204,7 @@ $Config_XML.XmlResolver = $null
 $XmlSettings = New-Object System.Xml.XmlReaderSettings
 $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
 $XmlSettings.XmlResolver = $null
-$XmlReader = [System.Xml.XmlReader]::Create("$Current_Folder\Tool_Config.xml", $XmlSettings)
+$XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Tool_Config.xml' -CodeRoot $Current_Folder), $XmlSettings)
 Try { $Config_XML.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 $GUI_Config = $Config_XML.GUI_Config
 
@@ -220,7 +224,8 @@ Function Get-SelfXConfigValue
 
 # Language: choice of the user (SelfX > Settings), else Tool_Language (default de; Auto = Windows display language), German as base language, English as fallback for missing texts
 $Show_Language_Setting = (Get-SelfXText "Show_Language_Setting" "True") -eq 'True'
-$Global:SelfX_LanguageFolder = Join-Path $Current_Folder 'Languages'
+# Bundled language files (App\Languages) first, then own language files of the company (Config\Languages).
+$Global:SelfX_LanguageFolder = Get-SelfXLanguageFolders -CodeRoot $Current_Folder
 $Global:SelfX_Language_Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "de") `
 	-UserLanguage ([string](Get-SelfXUserSetting 'Language' '')) -AllowUserChoice $Show_Language_Setting -LanguageFolder $Global:SelfX_LanguageFolder
 $SelfX_UI_Language = Initialize-SelfXLanguage -LanguageFolder $Global:SelfX_LanguageFolder -Language $Global:SelfX_Language_Setting
@@ -231,7 +236,7 @@ $List_Issues_XML.XmlResolver = $null
 $XmlSettings = New-Object System.Xml.XmlReaderSettings
 $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
 $XmlSettings.XmlResolver = $null
-$XmlReader = [System.Xml.XmlReader]::Create("$Current_Folder\Issues_List.xml", $XmlSettings)
+$XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Issues_List.xml' -CodeRoot $Current_Folder), $XmlSettings)
 Try { $List_Issues_XML.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 $Global:SelfX_Quick_Actions = @(Get-SelfXLocalizedActions -Catalog $List_Issues_XML -Section 'Quick_Solution')
 $Global:SelfX_Detailed_Actions = @(Get-SelfXLocalizedActions -Catalog $List_Issues_XML -Section 'Detailed_Solution')
@@ -308,7 +313,7 @@ If($Ticket_Available)
 	{
 		Try
 			{
-				$Ticket_Routing = Read-SelfXTicketConfig -Path (Join-Path $Current_Folder 'Ticket_Config.xml')
+				$Ticket_Routing = Read-SelfXTicketConfig -Path (Get-SelfXConfigPath -Name 'Ticket_Config.xml' -CodeRoot $Current_Folder)
 				foreach($Ticket_Error in $Ticket_Routing.Errors) { Write-SelfXLog "Ticket_Config.xml: $Ticket_Error" 'Warning' }
 			}
 		Catch { Write-SelfXLog "Ticket_Config.xml could not be read: $($_.Exception.Message)" 'Warning' }
@@ -1083,8 +1088,8 @@ If($Brand_Logo_Image -ne $null)
 $Brand_Icon_Image = Get-SelfXImage -FileName (Get-SelfXText "Brand_Icon" "Repair.ico") -BaseFolder $Current_Folder
 If($Brand_Icon_Image -ne $null) { $Form.Icon = $Brand_Icon_Image; $AppIcon.Source = $Brand_Icon_Image }
 # Taskbar: the window icon (all sizes of an .ico) and the relaunch data of a pinned SelfX.
-$Global:SelfX_Icon_Path = (Get-SelfXText "Brand_Icon" "Repair.ico")
-If(-not [IO.Path]::IsPathRooted($Global:SelfX_Icon_Path)) { $Global:SelfX_Icon_Path = Join-Path $Current_Folder $Global:SelfX_Icon_Path }
+$Global:SelfX_Icon_Path = Get-SelfXImagePath -Value (Get-SelfXText "Brand_Icon" "Repair.ico") -CodeRoot $Current_Folder
+If(-not $Global:SelfX_Icon_Path) { $Global:SelfX_Icon_Path = Join-Path $Current_Folder 'Repair.ico' }
 If(($Global:SelfX_Icon_Path -notlike '*.ico') -or -not (Test-Path -LiteralPath $Global:SelfX_Icon_Path -PathType Leaf)) { $Global:SelfX_Icon_Path = Join-Path $Current_Folder 'Repair.ico' }
 If(Test-Path -LiteralPath $Global:SelfX_Icon_Path -PathType Leaf)
 	{
@@ -1455,8 +1460,10 @@ Function Run_Remediation($rowObj)
 					}
 				Else
 					{
-						$Script_Path = Join-Path "$Current_Folder\Scripts_to_run" $Script_Name
-						If(Test-Path -LiteralPath $Script_Path)
+						# The script of the project (App\Scripts_to_run) or an own script of the company that is listed in SelfX.Config.json
+						# with its current SHA256 (Config\Scripts_to_run); anything else is not started.
+						$Script_Path = Resolve-SelfXScriptPath -Folder 'Scripts_to_run' -FileName $Script_Name -CodeRoot $Current_Folder
+						If($Script_Path)
 							{
 								# User actions run in their own process and log their result themselves (Logs\Users\<SID>).
 								Try
@@ -2062,7 +2069,7 @@ Function Start-SysInfoCollection
 		$Global:SysInfo_PS = [PowerShell]::Create()
 		[void]$Global:SysInfo_PS.AddScript($Global:SysInfo_Script).AddStatement().AddScript(
 			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig); try { Save-SelfXSystemInfoCache -Items $Items -Culture $Culture } catch { }; $Items'
-		).AddArgument($SysInfo_Test_Host).AddArgument($SysInfo_Test_Port).AddArgument($Global:SysInfo_Texts).AddArgument($SelfX_UI_Language.Culture).AddArgument((Join-Path $Current_Folder 'Network_Test_Config.xml'))
+		).AddArgument($SysInfo_Test_Host).AddArgument($SysInfo_Test_Port).AddArgument($Global:SysInfo_Texts).AddArgument($SelfX_UI_Language.Culture).AddArgument((Get-SelfXConfigPath -Name 'Network_Test_Config.xml' -CodeRoot $Current_Folder))
 		$Global:SysInfo_Handle = $Global:SysInfo_PS.BeginInvoke()
 		$SysInfo_Timer.Start()
 	}

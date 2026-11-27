@@ -6,16 +6,21 @@
     Defender, BitLocker, disks, pending-reboot markers, the offline Windows Update Agent
     cache and the Intune Win32 app reporting cache. Missing sources are
     Unknown, not OK. Intune cloud compliance cannot be inferred offline; an administrator can
-    supply a compliance check. Optional scripts run from the protected HealthChecks folder.
+    supply a compliance check. Optional scripts run from the protected HealthChecks folder: a script of the
+    project from App\HealthChecks, an own script of the company from Config\HealthChecks only when it is listed
+    in Config\SelfX.Config.json with its current SHA256 (Resolve-SelfXScriptPath in SelfXPaths.ps1).
+    Health_Config.xml is read from the configuration folder (Config next to App).
     Dot-sourcing defines functions only. -Collect writes a single compact JSON response.
     -CacheFile (set by the service) also stores the result for the background status cache:
     a full collection replaces the file, a single check replaces only its own rows.
 .NOTES
-    Version: 2.8.1
+    Version: 3.1.0
     History:
     2.3.0  2026-10-28  Wolfgang Baeck  Initial local health checks and extension contract.
     2.8.2  2026-11-23  fubu2k          Security: the WinRT libraries are checked against SelfX.Files.json when they are loaded
                                        (SelfXWinRT.ps1); a difference = no orchestrator information.
+    3.1.0  2026-11-27  fubu2k          Health_Config.xml from the configuration folder; own health scripts of the company only from
+                                       Config\HealthChecks with an entry in SelfX.Config.json (SelfXPaths.ps1)
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -64,6 +69,9 @@ function Get-SelfXDiskHealth {
         }
     } catch { New-SelfXHealthResult Disk Unknown $_.Exception.Message }
 }
+
+# Paths of the configuration (Health_Config.xml) and of the health scripts (App\HealthChecks, Config\HealthChecks).
+. (Join-Path $PSScriptRoot 'SelfXPaths.ps1')
 
 # Defender status through CIM (SelfXDefender.ps1, no Defender module).
 . (Join-Path $PSScriptRoot 'SelfXDefender.ps1')
@@ -409,10 +417,11 @@ function Get-SelfXCustomHealth {
     try {
         $file = $Check.GetAttribute('Script')
         if ($file -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,90}\.ps1$' -or $file.Contains('..')) { throw 'Invalid health script filename.' }
-        $path = Join-Path (Join-Path $Root 'HealthChecks') $file
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Health script not found: $file" }
+        # The script of the project (App\HealthChecks) wins; an own script (Config\HealthChecks) needs its entry in SelfX.Config.json.
+        $path = Resolve-SelfXScriptPath -Folder 'HealthChecks' -FileName $file -CodeRoot $Root
+        if (-not $path) { throw "Health script not found or not listed in SelfX.Config.json: $file" }
         # Reject reparse points rather than allowing a protected filename to redirect outside the package.
-        foreach ($target in @((Join-Path $Root 'HealthChecks'), $path)) {
+        foreach ($target in @((Split-Path -Parent $path), $path)) {
             if ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Health script reparse points are not allowed.' }
         }
         $timeout = 30
@@ -439,7 +448,7 @@ function Get-SelfXHealth {
         $XmlSettings = New-Object System.Xml.XmlReaderSettings
         $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
         $XmlSettings.XmlResolver = $null
-        $XmlReader = [System.Xml.XmlReader]::Create((Join-Path $Root 'Health_Config.xml'), $XmlSettings)
+        $XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Health_Config.xml' -CodeRoot $Root), $XmlSettings)
         Try { $config.Load($XmlReader) } Finally { $XmlReader.Dispose() }
         if ($config.DocumentElement.LocalName -ne 'HealthConfig') { throw 'Invalid Health_Config.xml root.' }
         if (-not $config.SelectSingleNode('/HealthConfig/Applications')) { throw 'Applications configuration is missing.' }

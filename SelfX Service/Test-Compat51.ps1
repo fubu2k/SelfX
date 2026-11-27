@@ -6,18 +6,20 @@
     Install.ps1, Uninstall.ps1, Detection.ps1 and Sources\Scripts_to_run\Collect-DeviceLogs.ps1 must run in Windows PowerShell 5.1
     (and Collect-DeviceLogs.ps1 also in PowerShell 7). Everything else is PowerShell 7 only. This test runs in Windows PowerShell 5.1
     in CI. It uses the parser of the running edition, so a PowerShell 7 only syntax (ternary operator, pipeline chain operators,
-    null-coalescing, ForEach-Object -Parallel) in one of these four scripts is found. It changes nothing on the device.
+    null-coalescing, ForEach-Object -Parallel) in one of these scripts is found. Sources\SelfXPaths.ps1 (the resolver of the folders
+    App and Config) is checked too, because it is written for both editions. It changes nothing on the device.
 
 .NOTES
     Name    : Test-Compat51.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.6.10
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.10   2026-11-22  fubu2k               Initial version
+    3.1.0    2026-11-27  fubu2k               Also Sources\SelfXPaths.ps1
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -29,7 +31,7 @@ function Assert-Equal($Actual, $Expected, $Message) {
 }
 
 $package = $PSScriptRoot
-$files = @('Install.ps1', 'Uninstall.ps1', 'Detection.ps1', 'Sources\Scripts_to_run\Collect-DeviceLogs.ps1')
+$files = @('Install.ps1', 'Uninstall.ps1', 'Detection.ps1', 'Sources\Scripts_to_run\Collect-DeviceLogs.ps1', 'Sources\SelfXPaths.ps1')
 Write-Output "Parser of PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
 foreach ($file in $files) {
 	$path = Join-Path $package $file
@@ -51,5 +53,5 @@ if ($script:errors.Count) {
 	Write-Output "FAILED: $($script:errors.Count) of $script:checks checks."
 	exit 1
 }
-Write-Output "PASS: $script:checks checks. The four scripts of Intune and Autopilot stay compatible with Windows PowerShell 5.1."
+Write-Output "PASS: $script:checks checks. The scripts of Intune and Autopilot and SelfXPaths.ps1 stay compatible with Windows PowerShell 5.1."
 exit 0

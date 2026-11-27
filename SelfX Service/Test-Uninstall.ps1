@@ -5,7 +5,8 @@
 .DESCRIPTION
     Takes the function Remove-SelfXTree out of Uninstall.ps1 (the script itself is never run: it would uninstall
     SelfX) and runs it in a temporary folder. A user can create a junction in a folder that SYSTEM deletes;
-    the junction must be removed, the folder it points to must stay untouched.
+    the junction must be removed, the folder it points to must stay untouched. Static checks: Uninstall.ps1 handles the
+    layout App/Config and the old layout (everything directly in the install folder).
     Files are created only in a temporary folder. Windows PowerShell 5.1:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-Uninstall.ps1
 
@@ -13,13 +14,15 @@
     Name    : Test-Uninstall.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator before building the package; not installed)
-    Version : 2.6.10
+    Version : 3.1.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.10   2026-11-22  fubu2k               Initial version.
+    3.1.0    2026-11-27  fubu2k               Both layouts: Tool_Config.xml in Config and in the install folder, delete helper in App, pattern of the
+                                              open windows for App and the old layout, Tool_Config.xml without DTD.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -38,6 +41,31 @@ $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language
 Assert-Equal ($null -ne $definition) $true 'Uninstall.ps1 defines Remove-SelfXTree'
 if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
 . ([scriptblock]::Create($definition.Extent.Text))
+
+# Both layouts (3.1.0): App\ and Config\ and, for an installation of an older version, everything directly in the install folder.
+$uninstallText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Uninstall.ps1'))
+Assert-Equal $uninstallText.Contains("'Config\Tool_Config.xml'") $true 'Both layouts: Tool_Config.xml is looked for in Config'
+Assert-Equal $uninstallText.Contains("(Join-Path `$InstallFolder 'Tool_Config.xml')") $true 'Both layouts: Tool_Config.xml of the old layout is looked for too'
+Assert-Equal $uninstallText.Contains("'App\SelfXService.exe'") $true 'Both layouts: the delete helper is looked for in App'
+Assert-Equal ($uninstallText -match '\[xml\]\(Get-Content') $false 'Tool_Config.xml is not read with [xml] (DTD processing is prohibited explicitly)'
+Assert-Equal $uninstallText.Contains('DtdProcessing]::Prohibit') $true 'Tool_Config.xml is read without DTD'
+$patternAssignment = $ast.Find({ param($node) $node -is [Management.Automation.Language.AssignmentStatementAst] -and $node.Left.Extent.Text -eq '$SelfXPattern' }, $true)
+Assert-Equal ($null -ne $patternAssignment) $true 'Uninstall.ps1 builds the pattern of the open SelfX windows'
+if ($patternAssignment) {
+	$InstallFolder = 'C:\Program Files\SelfX'
+	$pattern = & ([scriptblock]::Create($patternAssignment.Right.Extent.Text))
+	foreach ($case in @(
+		@('pwsh.exe -File "C:\Program Files\SelfX\Self_X.ps1"', $true),
+		@('pwsh.exe -File "C:\Program Files\SelfX\SelfX_Tray.ps1"', $true),
+		@('pwsh.exe -File "C:\Program Files\SelfX\App\Self_X.ps1"', $true),
+		@('pwsh.exe -File "C:\Program Files\SelfX\App\SelfX_Tray.ps1"', $true),
+		@('pwsh.exe -File "C:\Program Files\SelfX\Config\Self_X.ps1"', $false),
+		@('pwsh.exe -File "C:\Other\Self_X.ps1"', $false))) {
+		Assert-Equal ($case[0] -match $pattern) $case[1] "Window pattern: $($case[0])"
+	}
+}
+# The uninstallation removes the whole install folder (both layouts) in one step.
+Assert-Equal $uninstallText.Contains('Remove-Item -LiteralPath $InstallFolder -Recurse -Force') $true 'Both layouts: the whole install folder is removed'
 
 $temp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXUninstallTests-' + [guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($temp)

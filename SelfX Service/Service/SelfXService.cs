@@ -9,6 +9,13 @@ Description:
     PING returns PONG with the service protocol version. RUN accepts only a validated
     script filename listed with Context=System in the installed Issues_List.xml and
     present under the installed Scripts_to_run folder; user actions are not elevated.
+    Layout: the service runs from the code folder App; the configuration (Tool_Config.xml,
+    Issues_List.xml, Health_Config.xml, Branding, own scripts and language files of the
+    company) is in the folder Config next to it (GetConfigRoot). A script of the project is
+    started from App\Scripts_to_run; an own script of the company from Config\Scripts_to_run
+    only when it is listed in Config\SelfX.Config.json with its current SHA256 (also with
+    Service_FileCheck=Audit). The file check compares App with SelfX.Code.json and Config with
+    SelfX.Config.json; the install folder above them may hold nothing but App and Config.
     RUN children receive the SID of the requesting pipe client in SELFX_CALLER_SID, read
     from the client token (identification level), so scripts can deliver results only to
     that user. The variable is absent when the caller cannot be identified.
@@ -68,6 +75,10 @@ Notes:
                                               uninstall finds no SYSTEM process that still holds files. No new action starts while stopping.
     2.9.0    2026-11-27  fubu2k               The file check reads two lists, SelfX.Code.json and SelfX.Config.json, instead of SelfX.Files.json; a file
                                               in both lists or in the wrong list (placement rule) is an invalid entry (event 4005)
+    3.1.0    2026-11-27  fubu2k               Code and configuration in two folders: catalog, Health_Config.xml and Tool_Config.xml are read only from
+                                              Config (GetConfigFilePath), scripts of the project only from App; an own script below Config is started
+                                              only when SelfX.Config.json lists it with its current SHA256 and the catalog or Health_Config.xml names
+                                              it; the file check covers App (SelfX.Code.json), Config (SelfX.Config.json) and the folder above them
 */
 
 using System;
@@ -183,7 +194,9 @@ namespace SelfX
             @"^HEALTH(?: (IME|Defender|Compliance|Applications|Disk|BitLocker|PendingReboot|Updates|Service|Custom)(?: ([A-Za-z0-9+/]{2,400}={0,2}))?)?\z",
             RegexOptions.CultureInvariant);
 
+        // installRoot is the code folder (App on a device), configRoot the configuration folder (Config next to App).
         readonly string installRoot;
+        readonly string configRoot;
         readonly string scriptsRoot;
         readonly string catalogPath;
         readonly string logDirectory;
@@ -269,8 +282,9 @@ namespace SelfX
             AutoLog = true;
 
             installRoot = AppContext.BaseDirectory.TrimEnd('\\');
+            configRoot = GetConfigRoot(installRoot);
             scriptsRoot = Path.Combine(installRoot, "Scripts_to_run");
-            catalogPath = Path.Combine(installRoot, "Issues_List.xml");
+            catalogPath = GetConfigFilePath("Issues_List.xml");
             this.pipeName = pipeName;
             this.logDirectory = logDirectory;
             // The cache folder is a sibling of the log folder (default ProgramData\SelfX\Cache).
@@ -329,7 +343,7 @@ namespace SelfX
             background.IsBackground = true;
             background.Name = "SelfXBackgroundHealth";
             background.Start();
-            Log("Service started. Version " + Version + ", pipe '" + pipeName + "', root '" + installRoot + "'.");
+            Log("Service started. Version " + Version + ", pipe '" + pipeName + "', code '" + installRoot + "', configuration '" + configRoot + "'.");
         }
 
         /// <summary>
@@ -862,8 +876,10 @@ namespace SelfX
                 return "ERROR Action is not allowed";
             }
 
-            string scriptPath = Path.GetFullPath(Path.Combine(scriptsRoot, scriptName));
-            if (!scriptPath.StartsWith(scriptsRoot + "\\", StringComparison.OrdinalIgnoreCase) || !File.Exists(scriptPath))
+            // The script of the project (App\Scripts_to_run) or an own script of the company that SelfX.Config.json lists with its
+            // current SHA256 (Config\Scripts_to_run); nothing else, also not with Service_FileCheck=Audit.
+            string scriptPath = ResolveScriptPath(installRoot, configRoot, "Scripts_to_run", scriptName);
+            if (scriptPath == null)
             {
                 LogRejected("Rejected request from " + user + ": script '" + scriptName + "' not found.");
                 return "ERROR Script not found";
@@ -929,7 +945,7 @@ namespace SelfX
                 "//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "']");
             if (action == null)
             {
-                string healthConfig = Path.Combine(installRoot, "Health_Config.xml");
+                string healthConfig = GetConfigFilePath("Health_Config.xml");
                 if (!File.Exists(healthConfig)) return false;
                 XmlDocument health = new XmlDocument();
                 health.XmlResolver = null;
@@ -1064,11 +1080,100 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Reads one list into expected (name -> SHA256, case-insensitive names). A name that is already in expected (listed twice or
-        /// in both lists) or that is not allowed in this list is an invalid entry. Returns false and a problem text when the list
-        /// is missing, a link, too large or invalid (fail closed).
+        /// The configuration folder: the folder Config next to the code folder when the code folder is named App (installation),
+        /// otherwise the code folder itself (flat layout of the repository and of tests). Same rule as Get-SelfXConfigRoot in
+        /// SelfXPaths.ps1. Nothing that a user can set (environment, registry, request) takes part in it.
         /// </summary>
-        static bool ReadFileList(string root, string listName, Dictionary<string, string> expected, out string problem)
+        static string GetConfigRoot(string codeRoot)
+        {
+            string code = Path.GetFullPath(codeRoot).TrimEnd('\\');
+            if (string.Equals(Path.GetFileName(code), "App", StringComparison.OrdinalIgnoreCase))
+            {
+                string parent = Path.GetDirectoryName(code);
+                if (!string.IsNullOrEmpty(parent)) return Path.Combine(parent, "Config");
+            }
+            return code;
+        }
+
+        /// <summary>
+        /// The only way the service builds the path of a settings file: one of the fixed names in the configuration folder.
+        /// Any other name throws (no path from a request or a file can reach this method).
+        /// </summary>
+        string GetConfigFilePath(string name)
+        {
+            return GetConfigFilePath(configRoot, name);
+        }
+
+        static string GetConfigFilePath(string root, string name)
+        {
+            foreach (string known in ConfigFileNames)
+            {
+                if (string.Equals(known, name, StringComparison.Ordinal)) return Path.Combine(root, known);
+            }
+            throw new ArgumentException("Not a configuration file of SelfX.", "name");
+        }
+
+        /// <summary>
+        /// Full path of a script named in the catalog or in Health_Config.xml, or null when it may not be started. folder is
+        /// Scripts_to_run or HealthChecks, fileName a name checked by ScriptNamePattern. The script of the project (code folder)
+        /// wins. An own script of the company (configuration folder, only in the layout App/Config) is used only when neither the
+        /// script nor a folder below the configuration folder is a link and SelfX.Config.json lists "folder/fileName" with the
+        /// SHA256 the file has now. This does not depend on Service_FileCheck, so an unlisted or changed own script never starts.
+        /// Same rule as Resolve-SelfXScriptPath in SelfXPaths.ps1.
+        /// </summary>
+        static string ResolveScriptPath(string codeRoot, string configRoot, string folder, string fileName)
+        {
+            if (folder != "Scripts_to_run" && folder != "HealthChecks") return null;
+            if (fileName == null || !ScriptNamePattern.IsMatch(fileName) || fileName.Contains("..") || fileName.IndexOfAny(new[] { '\\', '/', ':' }) >= 0) return null;
+            string code = Path.GetFullPath(codeRoot).TrimEnd('\\');
+            string codeFolder = Path.Combine(code, folder);
+            string codePath = Path.GetFullPath(Path.Combine(codeFolder, fileName));
+            if (codePath.StartsWith(codeFolder + "\\", StringComparison.OrdinalIgnoreCase) && File.Exists(codePath)) return codePath;
+
+            string config = Path.GetFullPath(configRoot).TrimEnd('\\');
+            if (string.Equals(config, code, StringComparison.OrdinalIgnoreCase)) return null;
+            string configFolder = Path.Combine(config, folder);
+            string configPath = Path.GetFullPath(Path.Combine(configFolder, fileName));
+            if (!configPath.StartsWith(configFolder + "\\", StringComparison.OrdinalIgnoreCase) || !File.Exists(configPath)) return null;
+            try
+            {
+                if ((new DirectoryInfo(config).Attributes & FileAttributes.ReparsePoint) != 0 || IsLinkBelow(config, configPath)) return null;
+                Dictionary<string, ListedFile> listed = new Dictionary<string, ListedFile>(StringComparer.OrdinalIgnoreCase);
+                string problem;
+                if (!ReadFileList(config, ConfigListName, listed, out problem)) return null;
+                ListedFile entry;
+                if (!listed.TryGetValue(folder + "/" + fileName, out entry)) return null;
+                return string.Equals(HashFile(configPath), entry.Hash, StringComparison.OrdinalIgnoreCase) ? configPath : null;
+            }
+            catch (Exception)
+            {
+                // Fail closed: a list or a file that cannot be read starts nothing.
+                return null;
+            }
+        }
+
+        static string HashFile(string path)
+        {
+            using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (SHA256 sha = SHA256.Create())
+            {
+                return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
+            }
+        }
+
+        /// <summary>One entry of a file list: the expected SHA256 and the folder the name is relative to.</summary>
+        sealed class ListedFile
+        {
+            public string Hash;
+            public string Root;
+        }
+
+        /// <summary>
+        /// Reads one list (in root) into expected (name -> SHA256 and root, case-insensitive names). A name that is already in
+        /// expected (listed twice or in both lists) or that is not allowed in this list is an invalid entry. Returns false and a
+        /// problem text when the list is missing, a link, too large or invalid (fail closed).
+        /// </summary>
+        static bool ReadFileList(string root, string listName, Dictionary<string, ListedFile> expected, out string problem)
         {
             problem = null;
             string listPath = Path.Combine(root, listName);
@@ -1097,7 +1202,7 @@ namespace SelfX
                         problem = "file list: " + listName + " invalid entry";
                         return false;
                     }
-                    expected[entry.Name] = hash;
+                    expected[entry.Name] = new ListedFile { Hash = hash, Root = root };
                     count++;
                 }
             }
@@ -1106,55 +1211,76 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Compare the installed scripts and configuration with SelfX.Code.json and SelfX.Config.json (written at package build,
-        /// copied by Install.ps1). Every listed file must exist with the listed SHA256, in exactly one of the two lists; no file
-        /// below the root may be missing from the lists; no link (junction, symbolic link) may be in the way. Returns false and the
-        /// problems (at most 20, "kind: name", plus the entry TruncatedProblem when the check stopped there; Tool_Config.xml and
-        /// Issues_List.xml are checked first) when anything differs, when a list is missing, too large or invalid (fail closed).
+        /// Flat layout (code and configuration in one folder: repository, tests): see VerifyInstalledLayout.
         /// </summary>
         static bool VerifyInstalledFiles(string root, out List<string> problems)
+        {
+            return VerifyInstalledLayout(root, root, out problems);
+        }
+
+        /// <summary>
+        /// Compare the installed files with SelfX.Code.json (in the code folder, names relative to it) and SelfX.Config.json (in the
+        /// configuration folder, names relative to it), written at package build and copied by Install.ps1. Every listed file must
+        /// exist with the listed SHA256, in exactly one of the two lists; no file in either folder may be missing from its list; no
+        /// link (junction, symbolic link) may be in the way. In the layout App/Config the install folder above them may hold only the
+        /// two folders (an empty folder left over from an older layout that is still in use is allowed; a file anywhere else is not
+        /// listed). Returns false and the problems (at most 20, "kind: name", plus the entry TruncatedProblem when the check stopped
+        /// there; Tool_Config.xml and Issues_List.xml are checked first) when anything differs, when a list is missing, too large or
+        /// invalid (fail closed).
+        /// </summary>
+        static bool VerifyInstalledLayout(string codeRoot, string configRoot, out List<string> problems)
         {
             problems = new List<string>();
             bool truncated = false;
             try
             {
-                root = root.TrimEnd('\\');
-                Dictionary<string, string> expected = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string listName in FileListNames)
+                string code = Path.GetFullPath(codeRoot).TrimEnd('\\');
+                string config = Path.GetFullPath(configRoot).TrimEnd('\\');
+                bool split = !string.Equals(code, config, StringComparison.OrdinalIgnoreCase);
+                if (split)
                 {
-                    string listProblem;
-                    if (!ReadFileList(root, listName, expected, out listProblem)) { problems.Add(listProblem); return false; }
+                    // Both folders must be real folders of the installation, not links to somewhere else.
+                    if (!Directory.Exists(config)) { problems.Add("missing: Config"); return false; }
+                    if ((new DirectoryInfo(code).Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("link: App"); return false; }
+                    if ((new DirectoryInfo(config).Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("link: Config"); return false; }
                 }
+                Dictionary<string, ListedFile> expected = new Dictionary<string, ListedFile>(StringComparer.OrdinalIgnoreCase);
+                string listProblem;
+                if (!ReadFileList(code, CodeListName, expected, out listProblem)) { problems.Add(listProblem); return false; }
+                if (!ReadFileList(config, ConfigListName, expected, out listProblem)) { problems.Add(listProblem); return false; }
 
                 // Configuration and catalog first, then the rest.
-                List<KeyValuePair<string, string>> ordered = new List<KeyValuePair<string, string>>();
-                foreach (KeyValuePair<string, string> entry in expected)
+                List<KeyValuePair<string, ListedFile>> ordered = new List<KeyValuePair<string, ListedFile>>();
+                foreach (KeyValuePair<string, ListedFile> entry in expected)
                 {
                     if (IsPriorityFile(entry.Key)) ordered.Add(entry);
                 }
-                foreach (KeyValuePair<string, string> entry in expected)
+                foreach (KeyValuePair<string, ListedFile> entry in expected)
                 {
                     if (!IsPriorityFile(entry.Key)) ordered.Add(entry);
                 }
-                foreach (KeyValuePair<string, string> entry in ordered)
+                foreach (KeyValuePair<string, ListedFile> entry in ordered)
                 {
+                    string root = entry.Value.Root;
                     string full = Path.GetFullPath(Path.Combine(root, entry.Key.Replace('/', '\\')));
                     if (!full.StartsWith(root + "\\", StringComparison.OrdinalIgnoreCase)) { AddProblem(problems, "path: " + entry.Key, ref truncated); continue; }
                     if (!File.Exists(full)) { AddProblem(problems, "missing: " + entry.Key, ref truncated); continue; }
                     if (IsLinkBelow(root, full)) { AddProblem(problems, "link: " + entry.Key, ref truncated); continue; }
                     string actual;
-                    try
-                    {
-                        using (FileStream stream = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        using (SHA256 sha = SHA256.Create())
-                        {
-                            actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
-                        }
-                    }
+                    try { actual = HashFile(full); }
                     catch (IOException) { AddProblem(problems, "not readable: " + entry.Key, ref truncated); continue; }
-                    if (!string.Equals(actual, entry.Value, StringComparison.OrdinalIgnoreCase)) AddProblem(problems, "changed: " + entry.Key, ref truncated);
+                    if (!string.Equals(actual, entry.Value.Hash, StringComparison.OrdinalIgnoreCase)) AddProblem(problems, "changed: " + entry.Key, ref truncated);
                 }
-                FindUnlistedFiles(new DirectoryInfo(root), root, expected, problems, ref truncated);
+                if (split)
+                {
+                    FindUnlistedFiles(new DirectoryInfo(code), code, "", expected, new[] { CodeListName }, problems, ref truncated);
+                    FindUnlistedFiles(new DirectoryInfo(config), config, "Config/", expected, new[] { ConfigListName }, problems, ref truncated);
+                    FindForeignEntries(code, config, problems, ref truncated);
+                }
+                else
+                {
+                    FindUnlistedFiles(new DirectoryInfo(code), code, "", expected, FileListNames, problems, ref truncated);
+                }
                 if (truncated) problems.Add(TruncatedProblem);
                 return problems.Count == 0;
             }
@@ -1168,6 +1294,38 @@ namespace SelfX
                 // Fail closed: when a list or the files cannot be read, nothing is started.
                 problems.Add("check failed: " + ex.GetType().Name);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Layout App/Config: the install folder above the two folders may hold nothing else. A file there or in another folder is
+        /// "not listed", a link is "link"; an empty folder (left over from an older layout while a process still uses it as working
+        /// folder) is allowed.
+        /// </summary>
+        static void FindForeignEntries(string code, string config, List<string> problems, ref bool truncated)
+        {
+            string parent = Path.GetDirectoryName(code);
+            if (string.IsNullOrEmpty(parent) || !string.Equals(Path.GetDirectoryName(config), parent, StringComparison.OrdinalIgnoreCase)) { AddProblem(problems, "path: Config", ref truncated); return; }
+            foreach (FileSystemInfo entry in new DirectoryInfo(parent).EnumerateFileSystemInfos())
+            {
+                string full = entry.FullName.TrimEnd('\\');
+                if (string.Equals(full, code, StringComparison.OrdinalIgnoreCase) || string.Equals(full, config, StringComparison.OrdinalIgnoreCase)) continue;
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { AddProblem(problems, "link: ../" + entry.Name, ref truncated); continue; }
+                DirectoryInfo folder = entry as DirectoryInfo;
+                if (folder == null) { AddProblem(problems, "not listed: ../" + entry.Name, ref truncated); continue; }
+                FindAnyFile(folder, parent, problems, ref truncated);
+            }
+        }
+
+        static void FindAnyFile(DirectoryInfo folder, string parent, List<string> problems, ref bool truncated)
+        {
+            foreach (FileSystemInfo entry in folder.EnumerateFileSystemInfos())
+            {
+                string relative = "../" + entry.FullName.Substring(parent.Length + 1).Replace('\\', '/');
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { AddProblem(problems, "link: " + relative, ref truncated); continue; }
+                DirectoryInfo sub = entry as DirectoryInfo;
+                if (sub != null) { FindAnyFile(sub, parent, problems, ref truncated); continue; }
+                AddProblem(problems, "not listed: " + relative, ref truncated);
             }
         }
 
@@ -1200,22 +1358,28 @@ namespace SelfX
             else problems.Add(problem);
         }
 
-        static void FindUnlistedFiles(DirectoryInfo folder, string root, Dictionary<string, string> listed, List<string> problems, ref bool truncated)
+        /// <summary>
+        /// Every file below root must be listed with root as its folder (a file of the code folder is not covered by an entry of the
+        /// configuration list and the other way round). shownPrefix is put in front of the name in a problem ("Config/" for the
+        /// configuration folder). The names in exempt (the list files of this folder) are skipped at the top of root.
+        /// </summary>
+        static void FindUnlistedFiles(DirectoryInfo folder, string root, string shownPrefix, Dictionary<string, ListedFile> listed, string[] exempt, List<string> problems, ref bool truncated)
         {
             foreach (FileSystemInfo entry in folder.EnumerateFileSystemInfos())
             {
                 string relative = entry.FullName.Substring(root.Length + 1).Replace('\\', '/');
-                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { AddProblem(problems, "link: " + relative, ref truncated); continue; }
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { AddProblem(problems, "link: " + shownPrefix + relative, ref truncated); continue; }
                 DirectoryInfo sub = entry as DirectoryInfo;
-                if (sub != null) { FindUnlistedFiles(sub, root, listed, problems, ref truncated); continue; }
-                // Any file type: the list is the complete content of the install folder (see the comment at PriorityFiles).
+                if (sub != null) { FindUnlistedFiles(sub, root, shownPrefix, listed, exempt, problems, ref truncated); continue; }
+                // Any file type: the lists are the complete content of the install folder (see the comment at PriorityFiles).
                 bool isList = false;
-                foreach (string listName in FileListNames)
+                foreach (string listName in exempt)
                 {
                     if (string.Equals(relative, listName, StringComparison.OrdinalIgnoreCase)) isList = true;
                 }
                 if (isList) continue;
-                if (!listed.ContainsKey(relative)) AddProblem(problems, "not listed: " + relative, ref truncated);
+                ListedFile file;
+                if (!listed.TryGetValue(relative, out file) || !string.Equals(file.Root, root, StringComparison.OrdinalIgnoreCase)) AddProblem(problems, "not listed: " + shownPrefix + relative, ref truncated);
             }
         }
 
@@ -1229,7 +1393,7 @@ namespace SelfX
         bool CheckInstalledFiles(string scriptName)
         {
             List<string> problems;
-            if (VerifyInstalledFiles(installRoot, out problems)) return true;
+            if (VerifyInstalledLayout(installRoot, configRoot, out problems)) return true;
             bool audit = false;
             bool truncated = problems.Contains(TruncatedProblem);
             bool settingTrusted = !truncated && !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.StartsWith("check failed:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
@@ -1247,7 +1411,7 @@ namespace SelfX
         {
             try
             {
-                string toolConfig = Path.Combine(installRoot, "Tool_Config.xml");
+                string toolConfig = GetConfigFilePath("Tool_Config.xml");
                 XmlReaderSettings settings = new XmlReaderSettings();
                 settings.DtdProcessing = DtdProcessing.Prohibit;
                 settings.XmlResolver = null;
@@ -1525,7 +1689,7 @@ namespace SelfX
             BackgroundSettings result = new BackgroundSettings();
             try
             {
-                string healthConfig = Path.Combine(installRoot, "Health_Config.xml");
+                string healthConfig = GetConfigFilePath("Health_Config.xml");
                 if (!File.Exists(healthConfig)) return result;
                 XmlReaderSettings settings = new XmlReaderSettings();
                 settings.DtdProcessing = DtdProcessing.Prohibit;
@@ -1672,7 +1836,7 @@ namespace SelfX
         {
             try
             {
-                string toolConfig = Path.Combine(installRoot, "Tool_Config.xml");
+                string toolConfig = GetConfigFilePath("Tool_Config.xml");
                 if (!File.Exists(toolConfig)) return DefaultLogRetentionDays;
                 XmlReaderSettings settings = new XmlReaderSettings();
                 settings.DtdProcessing = DtdProcessing.Prohibit;

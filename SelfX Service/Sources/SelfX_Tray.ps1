@@ -26,7 +26,7 @@
     Name    : SelfX_Tray.ps1
     Package : SelfX Service
     Context : User (started at sign-in, HKLM Run entry)
-    Version : 2.8.19
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -34,6 +34,8 @@
     2.5.0    2026-11-04  Wolfgang Baeck       Initial version: status icon, notifications, menu
     2.8.9    2026-11-23  fubu2k               Windows 11: the icon is shown permanently next to the clock (IsPromoted; Tray_Pin_Icon, user value TrayPin)
     2.8.19   2026-11-23  fubu2k               New app icon with a frame for every size; the status icon is drawn in the size of the display (sharp at 100 to 200 % scaling)
+    3.1.0    2026-11-27  fubu2k               Code and configuration in two folders (App, Config): Tool_Config.xml, the catalog, the icon and own
+                                              language files are resolved by SelfXPaths.ps1
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -43,6 +45,9 @@ $Global:Tray_UserKey = 'HKCU:\Software\SelfX'
 # Windows refuses to replace or delete the folder during an update or uninstallation (all paths are absolute).
 Set-Location -LiteralPath $env:SystemRoot
 [Environment]::CurrentDirectory = $env:SystemRoot
+# Paths of the configuration (folder Config next to App) and of the images
+. (Join-Path $Global:Tray_Folder 'SelfXPaths.ps1')
+$Global:Tray_Config_File = Get-SelfXConfigPath -Name 'Tool_Config.xml' -CodeRoot $Global:Tray_Folder
 
 Function Get-TrayUserSetting
 	{
@@ -68,7 +73,7 @@ $Config.XmlResolver = $null
 $XmlSettings = New-Object System.Xml.XmlReaderSettings
 $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
 $XmlSettings.XmlResolver = $null
-$XmlReader = [System.Xml.XmlReader]::Create((Join-Path $Global:Tray_Folder 'Tool_Config.xml'), $XmlSettings)
+$XmlReader = [System.Xml.XmlReader]::Create($Global:Tray_Config_File, $XmlSettings)
 Try { $Config.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 $GUI_Config = $Config.GUI_Config
 Function Get-TrayConfig($Name, $Default)
@@ -102,10 +107,10 @@ Initialize-SelfXLog -Component 'SelfX_Tray'
 Function Get-TrayLanguageSetting
 	{
 		return (Resolve-SelfXLanguageSetting -ConfigLanguage (Get-TrayConfig 'Tool_Language' 'de') -UserLanguage ([string](Get-TrayUserSetting 'Language' '')) `
-			-AllowUserChoice ((Get-TrayConfig 'Show_Language_Setting' 'True') -eq 'True') -LanguageFolder (Join-Path $Global:Tray_Folder 'Languages'))
+			-AllowUserChoice ((Get-TrayConfig 'Show_Language_Setting' 'True') -eq 'True') -LanguageFolder (Get-SelfXLanguageFolders -CodeRoot $Global:Tray_Folder))
 	}
 $Global:Tray_Language_Setting = Get-TrayLanguageSetting
-$Language = Initialize-SelfXLanguage -LanguageFolder (Join-Path $Global:Tray_Folder 'Languages') -Language $Global:Tray_Language_Setting
+$Language = Initialize-SelfXLanguage -LanguageFolder (Get-SelfXLanguageFolders -CodeRoot $Global:Tray_Folder) -Language $Global:Tray_Language_Setting
 $Global:Tray_Texts = Get-SelfXSystemInfoTexts
 $Global:Tray_Job_Script = (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXNetwork.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SystemInfo.ps1') -Raw)
 $Global:Tray_Tool_Name = Get-TrayConfig 'Tool_Name' 'SelfX'
@@ -150,7 +155,7 @@ Try { $Global:Tray_Process_Path = (Get-Process -Id $PID).Path } Catch {}
 $Global:Tray_Poll_Seconds = 60
 $Poll = 0
 If([int]::TryParse((Get-TrayConfig 'Tray_Poll_Seconds' '60'), [ref]$Poll) -and $Poll -ge 15 -and $Poll -le 3600) { $Global:Tray_Poll_Seconds = $Poll }
-$Global:Tray_Config_Time = (Get-Item -LiteralPath (Join-Path $Global:Tray_Folder 'Tool_Config.xml')).LastWriteTimeUtc
+$Global:Tray_Config_Time = (Get-Item -LiteralPath $Global:Tray_Config_File).LastWriteTimeUtc
 
 #******************************************************************************
 # Icon with a colored status dot
@@ -159,8 +164,9 @@ $Global:Tray_Base_Icon = $null
 foreach($Candidate in @((Get-TrayConfig 'Brand_Icon' ''), 'icon_systray.ico', 'Repair.ico'))
 	{
 		If("$Candidate" -notlike '*.ico') { continue }
-		$Path = $(If([IO.Path]::IsPathRooted($Candidate)) { $Candidate } Else { Join-Path $Global:Tray_Folder $Candidate })
-		If(Test-Path -LiteralPath $Path -PathType Leaf)
+		# Branding\... in the configuration folder, a default icon in the code folder, a rooted value as it is.
+		$Path = Get-SelfXImagePath -Value $Candidate -CodeRoot $Global:Tray_Folder
+		If($Path -and (Test-Path -LiteralPath $Path -PathType Leaf))
 			{
 				Try { $Global:Tray_Base_Icon = New-Object System.Drawing.Icon($Path, 32, 32); $Global:Tray_Base_Path = $Path; break } Catch {}
 			}
@@ -315,7 +321,7 @@ Function Start-TraySystemInfoCache
 		$Global:Tray_Info_PS = [PowerShell]::Create()
 		[void]$Global:Tray_Info_PS.AddScript($Global:Tray_Job_Script).AddStatement().AddScript(
 			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig); Save-SelfXSystemInfoCache -Items $Items -Culture $Culture'
-		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture).AddArgument((Join-Path $Global:Tray_Folder 'Network_Test_Config.xml'))
+		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture).AddArgument((Get-SelfXConfigPath -Name 'Network_Test_Config.xml' -CodeRoot $Global:Tray_Folder))
 		$Global:Tray_Info_Job = $Global:Tray_Info_PS.BeginInvoke()
 	}
 
@@ -341,7 +347,7 @@ $Catalog.XmlResolver = $null
 $XmlSettings = New-Object System.Xml.XmlReaderSettings
 $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
 $XmlSettings.XmlResolver = $null
-$XmlReader = [System.Xml.XmlReader]::Create((Join-Path $Global:Tray_Folder 'Issues_List.xml'), $XmlSettings)
+$XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Issues_List.xml' -CodeRoot $Global:Tray_Folder), $XmlSettings)
 Try { $Catalog.Load($XmlReader) } Finally { $XmlReader.Dispose() }
 If($Catalog.SelectSingleNode("//Action[normalize-space(Post_Action)='MailReport' and normalize-space(Context)='System']"))
 	{
@@ -401,7 +407,7 @@ $Global:Tray_Timer.Add_Tick({
 
 	If(($Global:Tray_Ticks % 10) -eq 0)
 		{
-			$Config_File = Join-Path $Global:Tray_Folder 'Tool_Config.xml'
+			$Config_File = $Global:Tray_Config_File
 			If(-not (Test-Path -LiteralPath $Global:Tray_Script) -or -not (Test-Path -LiteralPath $Config_File))
 				{
 					# Uninstalled (or replaced right now): close after one minute without the files.

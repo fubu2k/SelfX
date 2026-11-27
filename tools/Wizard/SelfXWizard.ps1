@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 1.0.0
+    Version : 3.1.0
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 #>
@@ -502,7 +502,8 @@ function Get-WizardToolConfigValues {
     return $values
 }
 
-# Copies the logo into Sources\Branding and returns the relative path for Brand_Logo.
+# Copies the logo into <configuration folder>\Branding and returns the relative path for Brand_Logo (relative to the configuration
+# folder: Branding\<name>, resolved by SelfXPaths.ps1 on the device).
 function Copy-WizardLogo {
     param([string]$LogoPath, [string]$SourcesFolder)
     $item = Get-Item -LiteralPath $LogoPath -Force -ErrorAction Stop
@@ -517,10 +518,21 @@ function Copy-WizardLogo {
     return "Branding\$name"
 }
 
-# Writes the answers into a copy of the package folder (Sources\Tool_Config.xml, Ticket_Config.xml, logo).
+# The folder of the configuration files in a copy of the package: Config (package layout App/Config) or Sources (layout of the
+# repository, sorted into App and Config by New-SelfXIntuneWin.ps1).
+function Get-WizardConfigFolder {
+    param([Parameter(Mandatory = $true)][string]$PackageFolder)
+    $config = Join-Path $PackageFolder 'Config'
+    if (Test-Path -LiteralPath $config -PathType Container) { return $config }
+    $sources = Join-Path $PackageFolder 'Sources'
+    if (Test-Path -LiteralPath $sources -PathType Container) { return $sources }
+    throw 'The package has neither a folder Config nor a folder Sources.'
+}
+
+# Writes the answers into a copy of the package folder (Tool_Config.xml, Ticket_Config.xml, logo in Config or Sources).
 function Set-WizardPackageConfiguration {
     param([Parameter(Mandatory = $true)][string]$PackageFolder, [Parameter(Mandatory = $true)][hashtable]$Answers)
-    $sources = Join-Path $PackageFolder 'Sources'
+    $sources = Get-WizardConfigFolder -PackageFolder $PackageFolder
     $values = Get-WizardToolConfigValues -A $Answers
     if ($Answers.LogoPath) { $values['Brand_Logo'] = Copy-WizardLogo -LogoPath $Answers.LogoPath -SourcesFolder $sources }
     else {

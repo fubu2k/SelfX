@@ -128,9 +128,11 @@ führt nichts aus) und `RUN <Skript>.ps1` für Reparaturen. Eine Reparatur wird 
 angenommen, wenn
 
 - der Skriptname ein reiner Dateiname ohne Pfad ist,
-- der installierte `Issues_List.xml` eine Aktion mit diesem Skript und
-  `<Context>System</Context>` enthält,
-- die Datei in `%ProgramFiles%\SelfX\Scripts_to_run` existiert.
+- der installierte `Issues_List.xml` (`%ProgramFiles%\SelfX\Config`) eine Aktion mit diesem
+  Skript und `<Context>System</Context>` enthält,
+- die Datei in `%ProgramFiles%\SelfX\App\Scripts_to_run` existiert (Skript des Projekts) oder in
+  `%ProgramFiles%\SelfX\Config\Scripts_to_run` mit Eintrag und aktuellem SHA256 in
+  `Config\SelfX.Config.json` (eigenes Skript der Firma).
 
 Nutzer können weder Parameter noch Skriptinhalt oder Pfade senden. Es läuft immer
 nur eine Systemaktion, andere Anfragen erhalten die Antwort *busy*. Jede Aktion wird
@@ -141,7 +143,8 @@ nach ihrer `TimeoutSeconds` gestoppt: Standard ist 900, Maximum 7200. Der Dienst
 
 ## Sicherheitsmodell
 
-- `%ProgramFiles%\SelfX` ist nur für SYSTEM und Administratoren schreibbar, Nutzer
+- `%ProgramFiles%\SelfX` (mit dem Code-Ordner `App` und dem Konfigurationsordner `Config`) ist
+  nur für SYSTEM und Administratoren schreibbar, Nutzer
   erhalten Lese- und Ausführungsrechte. Die Skripte, die als SYSTEM laufen, können
   Nutzer deshalb nicht ändern.
 - Die Pipe verweigert den Netzwerkzugriff, daher können sich nur lokale,

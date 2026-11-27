@@ -35,7 +35,10 @@ administrators. You do not need programming skills. The installation itself is d
 SelfX is configured with XML files in the folder `SelfX Service\Sources`.
 
 - You change the files **in the package, before installation**.
-- After installation they are in `%ProgramFiles%\SelfX`. Only administrators can change them there.
+- After installation they are in `%ProgramFiles%\SelfX\Config` (the code is in
+  `%ProgramFiles%\SelfX\App`). Only administrators can change them there. The package build sorts
+  every file of `Sources` into `App` or `Config` by its file class ([Architecture](Architecture.md));
+  a file that has no class stops the build.
 - SelfX does not download settings from the network. New settings come with a new package version.
 
 | File | Purpose |
@@ -150,6 +153,7 @@ Do you want to continue?</Alerte_MSG>
 **Add a new action:** Give it a new `Id` and add the texts to the language files. Without a
 translation, the English text appears.
 
+
 **Account actions with a web address (`Context` = `Link`):** They open an address from
 `Tool_Config.xml` in the web browser. Two account actions are included:
 
@@ -172,6 +176,30 @@ Bundled scripts for `System` actions:
 | `SelfX_Device_SyncTime.ps1` | Synchronize the clock with the time source (the time configuration stays unchanged) |
 | `SelfX_OneDrive_CHKDSK.ps1` | Schedule a disk check for the system drive at the next restart |
 | `SelfX_Device_CollectLogs.ps1` | Collect device logs and open an e-mail with the report |
+
+### Own scripts of the company
+
+Own scripts for actions (`Scripts_to_run`) and own check scripts (`HealthChecks`) are
+configuration of your company. You put them into `Sources\Scripts_to_run` or `Sources\HealthChecks`
+of the package; the package build lists them in `SelfX.Config.json` and installs them into
+`%ProgramFiles%\SelfX\Config\Scripts_to_run` or `Config\HealthChecks`.
+
+- An own script runs only when the catalog (`Issues_List.xml`) or `Health_Config.xml` names it
+  **and** `SelfX.Config.json` lists it with the SHA256 that the file has now. This holds also with
+  `Service_FileCheck` = `Audit`. A script without an entry, a changed script and a script behind a
+  link are not started.
+- A script of the project with the same name always wins (`App\Scripts_to_run`); an own script cannot
+  replace it. Give your scripts names of your own (for example with the prefix of your company).
+- An own script is in another folder than the helpers of SelfX. Load them from the code folder:
+
+  ```powershell
+  $SelfXApp = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'App'
+  $SelfXLogScript = Join-Path $SelfXApp 'SelfXLog.ps1'
+  if (Test-Path -LiteralPath $SelfXLogScript) { . $SelfXLogScript; Initialize-SelfXLog -Component ([IO.Path]::GetFileNameWithoutExtension($PSCommandPath)) }
+  ```
+
+  Scripts written for 3.0.x that use `Split-Path -Parent $PSScriptRoot` to find `SelfXLog.ps1` or
+  `SelfXOffice.ps1` do not find them any more and have to be adapted.
 
 ## User interface
 
@@ -305,7 +333,8 @@ the element `Background` of `Health_Config.xml`:
 | `MaxCpuPercent` | `75` | If the load is higher, the check is postponed by 2 minutes (10 to 100; 100 = no limit). |
 | `StartDelaySeconds` | `120` | Waiting time after the service starts, so that sign-in is not slowed down (0 to 3600). |
 
-**Own check scripts:** Store them in `Sources\HealthChecks`. Only simple file names are allowed, no
+**Own check scripts:** Store them in `Sources\HealthChecks` (installed into `Config\HealthChecks`,
+see [Own scripts](#own-scripts-of-the-company)). Only simple file names are allowed, no
 subfolders and no paths. Check scripts may **only read**. They must never restart, sign out, change
 settings, ask for input or start processes in the background. Review and sign them before deployment.
 Do not put credentials into them. The exit code determines the status. Time limit: 1 to 30 seconds per
@@ -317,7 +346,8 @@ A successful installation does not prove that an app works. For important apps, 
 ## Repairs
 
 The checks only read. For a row to show the *Fix* button, store a repair script in
-`Sources\Scripts_to_run` and add it to `Health_Config.xml`:
+`Sources\Scripts_to_run` (an own script is installed into `Config\Scripts_to_run`, see
+[Own scripts](#own-scripts-of-the-company)) and add it to `Health_Config.xml`:
 
 ```xml
 <Remediations>
@@ -586,8 +616,11 @@ changes are logged too. The logs contain no passwords and no secrets.
 ## Branding
 
 The company logo, icon and colors are in the section `Branding` of `Tool_Config.xml`. Copy the images before
-packaging to `SelfX Service\Sources` or to a subfolder such as `Sources\Branding`. Paths are relative to the
-installation folder. All keys are optional.
+packaging to `SelfX Service\Sources\Branding` (installed into `%ProgramFiles%\SelfX\Config\Branding`). A value
+that starts with `Branding\` is looked up in `Config\Branding`; another relative value is a default image of
+SelfX in `App` (for example `Repair.ico`, `logo.png`); a full path is used as it is. A relative value with
+`..` is ignored. An image directly in `Sources` (outside `Branding`) has no file class and stops the package
+build. All keys are optional.
 
 The bundled `Tool_Config.xml` contains **placeholders**: the logo "YOUR LOGO", the color `#0072BC` and the
 contacts `support@example.com` and `+1 555 0100`. Replace them with your values before packaging, or empty them
@@ -655,6 +688,10 @@ If a text is missing in the chosen language, it appears in English. A label ther
    ```
 
    The check reports missing keys, broken placeholders and unknown catalog entries.
+
+A language file of your own (a culture that SelfX does not bring) is configuration: it is installed into
+`%ProgramFiles%\SelfX\Config\Languages`. SelfX offers it next to the bundled languages
+(`App\Languages`). A file of your own with the name of a bundled language is ignored; the bundled file wins.
 
 To change a text for your company, for example the main title, edit only the language file. No programming is needed.
 

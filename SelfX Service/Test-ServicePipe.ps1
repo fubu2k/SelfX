@@ -22,7 +22,7 @@
     Name    : Test-ServicePipe.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.9.0
+    Version : 3.1.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -35,6 +35,8 @@
     2.8.21   2026-11-23  fubu2k               N5 (pass 2): unexpected exceptions in a request are answered with a fixed text. N6: the job object ends a
                                               child process and its descendants; nothing is added after it has ended.
     2.9.0    2026-11-27  fubu2k               Two lists (SelfX.Code.json, SelfX.Config.json): placement, both lists, one list missing, left-over SelfX.Files.json.
+    3.1.0    2026-11-27  fubu2k               Layout App/Config: configuration folder, fixed names of the settings files, file check of App, Config and the
+                                              install folder above them, scripts of the company only with their entry in SelfX.Config.json.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -290,6 +292,143 @@ if ($verifyMethod) {
 	$result = Test-CheckList $checkRoot
 	Assert-True ((-not $result.Ok) -and $result.Problems.Count -eq 20 -and ($result.Problems -notcontains 'check stopped: more problems may exist')) "N1: 20 problems (the changed Tool_Config.xml, Issues_List.xml and 18 files) are complete, no cut-off entry ($($result.Problems.Count) entries)"
 	Remove-Item -LiteralPath $checkRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# --- 3.1.0: layout App/Config. The configuration folder, the only path of a settings file, the scripts of the company and the file check
+# of both folders and of the install folder above them ---
+$flags = [Reflection.BindingFlags]'NonPublic,Static'
+$configRootMethod = [SelfX.SelfXService].GetMethod('GetConfigRoot', $flags)
+$configFileMethod = [SelfX.SelfXService].GetMethod('GetConfigFilePath', $flags, $null, [type[]]@([string], [string]), $null)
+$layoutMethod = [SelfX.SelfXService].GetMethod('VerifyInstalledLayout', $flags)
+$resolveMethod = [SelfX.SelfXService].GetMethod('ResolveScriptPath', $flags)
+Assert-True ($null -ne $configRootMethod) 'Layout: the service has GetConfigRoot'
+Assert-True ($null -ne $configFileMethod) 'Layout: the service has GetConfigFilePath'
+Assert-True ($null -ne $layoutMethod) 'Layout: the service has VerifyInstalledLayout'
+Assert-True ($null -ne $resolveMethod) 'Layout: the service has ResolveScriptPath'
+$serviceText = [IO.File]::ReadAllText($source)
+Assert-True ($serviceText -notmatch 'Path\.Combine\(installRoot, "(Tool_Config|Issues_List|Health_Config|Ticket_Config|Network_Test_Config)\.xml"\)') 'Layout: no settings file is built from the code folder any more'
+Assert-True ($serviceText.Contains('ResolveScriptPath(installRoot, configRoot, "Scripts_to_run", scriptName)')) 'Layout: RUN resolves the script through ResolveScriptPath'
+if ($configRootMethod -and $configFileMethod -and $layoutMethod -and $resolveMethod) {
+	foreach ($case in @(@('C:\Program Files\SelfX\App', 'C:\Program Files\SelfX\Config'), @('C:\Program Files\SelfX\app\', 'C:\Program Files\SelfX\Config'), @('C:\Repo\SelfX Service\Sources', 'C:\Repo\SelfX Service\Sources'), @('C:\Program Files\SelfX\App\Sub', 'C:\Program Files\SelfX\App\Sub'), @('C:\Program Files\SelfX', 'C:\Program Files\SelfX'))) {
+		Assert-True ($configRootMethod.Invoke($null, [object[]]@($case[0])) -eq $case[1]) "Layout: the configuration folder of '$($case[0])' is '$($case[1])'"
+	}
+	Assert-True ($configFileMethod.Invoke($null, [object[]]@('C:\X\Config', 'Tool_Config.xml')) -eq 'C:\X\Config\Tool_Config.xml') 'Layout: GetConfigFilePath gives the settings file in the configuration folder'
+	foreach ($bad in '..\Tool_Config.xml', 'Branding\logo.png', 'C:\Windows\Tool_Config.xml', 'tool_config.xml', 'Tool_Config.xml ', 'Scripts_to_run\Own.ps1', '') {
+		$threw = $false
+		try { [void]$configFileMethod.Invoke($null, [object[]]@('C:\X\Config', $bad)) } catch { $threw = $true }
+		Assert-True $threw "Layout: GetConfigFilePath refuses '$bad' (only the fixed names of the settings files)"
+	}
+
+	function Write-LayoutLists([string]$Root) {
+		# Lists of the layout: App against SelfX.Code.json, Config against SelfX.Config.json (names relative to the folder).
+		foreach ($part in @(@{ Folder = 'App'; List = 'SelfX.Code.json' }, @{ Folder = 'Config'; List = 'SelfX.Config.json' })) {
+			$folder = Join-Path $Root $part.Folder
+			$files = [ordered]@{}
+			foreach ($file in @(Get-ChildItem -LiteralPath $folder -Recurse -File | Where-Object { $_.Name -ne $part.List })) {
+				$files[$file.FullName.Substring($folder.Length + 1).Replace('\', '/')] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+			}
+			$json = [ordered]@{ ManifestVersion = 1; Files = $files } | ConvertTo-Json -Depth 4
+			[IO.File]::WriteAllText((Join-Path $folder $part.List), $json, (New-Object Text.UTF8Encoding($false)))
+		}
+	}
+	function Test-Layout([string]$Root) {
+		$arguments = [object[]]@([string](Join-Path $Root 'App'), [string](Join-Path $Root 'Config'), $null)
+		$ok = [bool]$layoutMethod.Invoke($null, $arguments)
+		return [pscustomobject]@{ Ok = $ok; Problems = @($arguments[2]) -join '; ' }
+	}
+	function Resolve-Script([string]$Root, [string]$Folder, [string]$Name, [switch]$Flat) {
+		$config = if ($Flat) { Join-Path $Root 'App' } else { Join-Path $Root 'Config' }
+		return $resolveMethod.Invoke($null, [object[]]@([string](Join-Path $Root 'App'), [string]$config, [string]$Folder, [string]$Name))
+	}
+	$layoutRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXLayoutTest_' + [guid]::NewGuid().ToString('N'))
+	foreach ($folder in 'App\Scripts_to_run', 'App\HealthChecks', 'Config\Scripts_to_run', 'Config\Branding') { New-Item -ItemType Directory -Path (Join-Path $layoutRoot $folder) -Force | Out-Null }
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'App\HealthStatus.ps1') -Value 'Write-Output 1'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'App\SelfXService.exe') -Value 'binary of the service'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'App\Scripts_to_run\SelfX_Test.ps1') -Value 'Write-Output 2'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'App\HealthChecks\Check-Compliance.ps1') -Value 'exit 0'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Config\Tool_Config.xml') -Value '<GUI_Config />'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Config\Issues_List.xml') -Value '<Issues />'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Config\Branding\company_logo.png') -Value 'logo'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run\Own_Action.ps1') -Value 'Write-Output 3'
+	Write-LayoutLists $layoutRoot
+	$result = Test-Layout $layoutRoot
+	Assert-True $result.Ok "Layout: App and Config that match their lists are accepted ($($result.Problems))"
+	# Install folder above App and Config: a file or a non-empty folder of an older layout is refused, an empty folder is allowed.
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Tool_Config.xml') -Value '<GUI_Config />'
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'not listed: \.\./Tool_Config\.xml') "Layout: a file of the old layout next to App and Config is refused ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $layoutRoot 'Tool_Config.xml')
+	New-Item -ItemType Directory -Path (Join-Path $layoutRoot 'Scripts_to_run') -Force | Out-Null
+	Assert-True (Test-Layout $layoutRoot).Ok 'Layout: an empty folder of the old layout (still in use) is allowed'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Scripts_to_run\SelfX_Device_Restart.ps1') -Value 'old'
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'not listed: \.\./Scripts_to_run/SelfX_Device_Restart\.ps1') "Layout: a file in a folder of the old layout is refused ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $layoutRoot 'Scripts_to_run') -Recurse -Force
+	# A file in the wrong folder: every folder is checked against its own list only.
+	Copy-Item -LiteralPath (Join-Path $layoutRoot 'Config\Tool_Config.xml') -Destination (Join-Path $layoutRoot 'App\Tool_Config.xml')
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match '(^|; )not listed: Tool_Config\.xml') "Layout: a settings file in App is refused although Config lists it ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $layoutRoot 'App\Tool_Config.xml')
+	Copy-Item -LiteralPath (Join-Path $layoutRoot 'App\Scripts_to_run\SelfX_Test.ps1') -Destination (Join-Path $layoutRoot 'Config\Scripts_to_run\SelfX_Test.ps1')
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'not listed: Config/Scripts_to_run/SelfX_Test\.ps1') "Layout: a project script in Config is refused although App lists it ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run\SelfX_Test.ps1')
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run\Planted.ps1') -Value 'calc.exe'
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'not listed: Config/Scripts_to_run/Planted\.ps1') "Layout: an unlisted own script in Config is refused ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run\Planted.ps1')
+	Add-Content -LiteralPath (Join-Path $layoutRoot 'Config\Issues_List.xml') -Value '<!-- changed -->'
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: Issues_List\.xml') "Layout: a changed catalog in Config is refused ($($result.Problems))"
+	Write-LayoutLists $layoutRoot
+	# The list of the other folder in a folder: SelfX.Config.json in App is an unlisted file, a missing SelfX.Config.json in Config is refused.
+	Move-Item -LiteralPath (Join-Path $layoutRoot 'Config\SelfX.Config.json') -Destination (Join-Path $layoutRoot 'App\SelfX.Config.json')
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX\.Config\.json missing') "Layout: SelfX.Config.json in App instead of Config is refused ($($result.Problems))"
+	Move-Item -LiteralPath (Join-Path $layoutRoot 'App\SelfX.Config.json') -Destination (Join-Path $layoutRoot 'Config\SelfX.Config.json')
+	# A missing folder Config or a link instead of it is refused (fail closed).
+	Rename-Item -LiteralPath (Join-Path $layoutRoot 'Config') -NewName 'Config.moved'
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'missing: Config') "Layout: a missing folder Config is refused ($($result.Problems))"
+	New-Item -ItemType Junction -Path (Join-Path $layoutRoot 'Config') -Target (Join-Path $layoutRoot 'Config.moved') | Out-Null
+	$result = Test-Layout $layoutRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'link: Config') "Layout: a junction instead of the folder Config is refused ($($result.Problems))"
+	(Get-Item -LiteralPath (Join-Path $layoutRoot 'Config')).Delete()
+	Rename-Item -LiteralPath (Join-Path $layoutRoot 'Config.moved') -NewName 'Config'
+	Assert-True (Test-Layout $layoutRoot).Ok 'Layout: accepted again'
+
+	# Scripts: the script of the project wins, an own script of the company only with its entry and current SHA256 in SelfX.Config.json.
+	$appScript = Join-Path $layoutRoot 'App\Scripts_to_run\SelfX_Test.ps1'
+	$ownScript = Join-Path $layoutRoot 'Config\Scripts_to_run\Own_Action.ps1'
+	Assert-True ((Resolve-Script $layoutRoot 'Scripts_to_run' 'SelfX_Test.ps1') -eq $appScript) 'Scripts: a script of the project is started from App'
+	Assert-True ((Resolve-Script $layoutRoot 'Scripts_to_run' 'Own_Action.ps1') -eq $ownScript) 'Scripts: a listed own script is started from Config'
+	Assert-True ((Resolve-Script $layoutRoot 'HealthChecks' 'Check-Compliance.ps1') -eq (Join-Path $layoutRoot 'App\HealthChecks\Check-Compliance.ps1')) 'Scripts: a health script of the project is found in App'
+	Copy-Item -LiteralPath $appScript -Destination (Join-Path $layoutRoot 'Config\Scripts_to_run\SelfX_Test.ps1')
+	Assert-True ((Resolve-Script $layoutRoot 'Scripts_to_run' 'SelfX_Test.ps1') -eq $appScript) 'Scripts: a script of the same name in Config cannot replace the script of the project'
+	Remove-Item -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run\SelfX_Test.ps1')
+	Add-Content -LiteralPath $ownScript -Value 'Write-Output 4'
+	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' 'Own_Action.ps1')) 'Scripts: a changed own script is not started (also with Service_FileCheck=Audit)'
+	Write-LayoutLists $layoutRoot
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run\Unlisted.ps1') -Value 'calc.exe'
+	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' 'Unlisted.ps1')) 'Scripts: an own script without an entry in SelfX.Config.json is not started'
+	Remove-Item -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run\Unlisted.ps1')
+	foreach ($bad in '..\SelfX_Test.ps1', '..\..\App\Scripts_to_run\SelfX_Test.ps1', 'Scripts_to_run\Own_Action.ps1', 'C:\Windows\x.ps1', 'Own_Action.ps1:x', 'Own_Action', '') {
+		Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' $bad)) "Scripts: the name '$bad' is refused"
+	}
+	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Branding' 'Own_Action.ps1')) 'Scripts: only the folders Scripts_to_run and HealthChecks are used'
+	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' 'Own_Action.ps1' -Flat)) 'Scripts: in the flat layout no script is taken from another folder'
+	Rename-Item -LiteralPath (Join-Path $layoutRoot 'Config\SelfX.Config.json') -NewName 'SelfX.Config.json.moved'
+	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' 'Own_Action.ps1')) 'Scripts: without SelfX.Config.json no own script is started'
+	Rename-Item -LiteralPath (Join-Path $layoutRoot 'Config\SelfX.Config.json.moved') -NewName 'SelfX.Config.json'
+	Set-Content -LiteralPath (Join-Path $layoutRoot 'Config\SelfX.Config.json') -Value '{ broken'
+	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' 'Own_Action.ps1')) 'Scripts: a broken SelfX.Config.json starts no own script'
+	Write-LayoutLists $layoutRoot
+	$elsewhere = Join-Path ([IO.Path]::GetTempPath()) ('SelfXLayoutElsewhere_' + [guid]::NewGuid().ToString('N'))
+	Move-Item -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run') -Destination $elsewhere
+	New-Item -ItemType Junction -Path (Join-Path $layoutRoot 'Config\Scripts_to_run') -Target $elsewhere | Out-Null
+	Assert-True ($null -eq (Resolve-Script $layoutRoot 'Scripts_to_run' 'Own_Action.ps1')) 'Scripts: an own script behind a junction is not started'
+	(Get-Item -LiteralPath (Join-Path $layoutRoot 'Config\Scripts_to_run')).Delete()
+	Remove-Item -LiteralPath $layoutRoot, $elsewhere -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 $pipeName = 'SelfX.Test.' + [guid]::NewGuid().ToString('N')

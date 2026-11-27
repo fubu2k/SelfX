@@ -9,8 +9,8 @@ dieses Vertrauens liegen. Es ist für Administratoren und Prüfer geschrieben.
 > **Stand.** Abschnitte mit **Heute** beschreiben das Umgesetzte: Die Dateien sind auf die Listen
 > `SelfX.Code.json` und `SelfX.Config.json` aufgeteilt (siehe
 > [Installation](Installation.md#die-dateilisten-selfxcodejson-und-selfxconfigjson)). Abschnitte
-> mit **Ziel** beschreiben die geplante Struktur mit Ordneraufbau, Version in der Code-Liste und
-> zwei Vertrauensmodi. Sie wird in mehreren Schritten eingeführt; bis dahin gilt das als
+> mit **Ziel** beschreiben die geplante Struktur mit zwei Vertrauensmodi. Die Version steht in der
+> Code-Liste, und die Ordner `App` und `Config` trennen die Dateien auf dem Gerät (beides **Heute**). Sie wird in mehreren Schritten eingeführt; bis dahin gilt das als
 > **Heute** beschriebene Verhalten.
 
 ## Inhalt
@@ -73,7 +73,9 @@ App-Control-Regeln, die darauf beruhen.
 Die Tabellen zeigen das Paket **SelfX Service**, wie `tools\New-SelfXIntuneWin.ps1` es heute baut;
 die Regel, die jeder Datei ihre Klasse gibt, ist die Funktion `Get-SelfXFileClass` in
 `tools\SelfXPackage.Common.ps1`. Pfade gelten relativ zum Ordner `SelfX Service` des
-Repositorys. „Installiert als“ ist der Pfad im Installationsordner (`%ProgramFiles%\SelfX`).
+Repositorys. „Installiert als“ ist der Pfad im Code-Ordner (`%ProgramFiles%\SelfX\App`); Dateien
+der Klasse Konfiguration werden mit demselben relativen Namen nach `%ProgramFiles%\SelfX\Config`
+installiert (siehe [Ordneraufbau](#ordneraufbau)).
 
 **Heute** enthalten die zwei Listen zusammen: jede Datei unter `Sources` (89 Dateien), `Uninstall.ps1`, die
 DLLs aus `Bin\WinRT` (als `WinRT/<Name>`), `Bin\Audio\SelfXAudio.dll` (als
@@ -251,12 +253,14 @@ Siehe [Installation](Installation.md#app-control-for-business-wdac).
 | Komponente | Läuft als | Heute | Ziel |
 |---|---|---|---|
 | `Install.ps1` | SYSTEM, von Intune gestartet, Windows PowerShell 5.1 | vergleicht das Paket vor dem Kopieren und den installierten Ordner nach dem Kopieren mit beiden Listen | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signaturen und der Signierer |
-| `SelfXService.exe` | SYSTEM | vergleicht vor jedem Start den installierten Ordner mit beiden Listen; keine Datei ohne Eintrag und keine Verknüpfung darf im Weg sein (Ereignis 4005) | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signatur der Skripte und des Katalogs |
+| `SelfXService.exe` | SYSTEM | vergleicht vor jedem Start `App` mit `SelfX.Code.json` und `Config` mit `SelfX.Config.json`; keine Datei ohne Eintrag, keine Datei neben den zwei Ordnern und keine Verknüpfung darf im Weg sein (Ereignis 4005); ein eigenes Skript unter `Config` nur mit Eintrag und aktuellem SHA256 | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signatur der Skripte und des Katalogs |
 | `Detection.ps1` | Intune, Windows PowerShell 5.1 | Version und die Digests beider Listen | Code-Version und Konfigurations-Digest, getrennt |
 | SelfX-Fenster, Statussymbol | der angemeldete Nutzer | nur lesend | nur lesend |
 
 Nutzer können dem Dienst weder Pfad noch Befehl, Argument oder Code übergeben. Der Dienst startet
-nur Skripte, die der installierte Katalog mit `Context="System"` führt.
+nur Skripte, die der installierte Katalog mit `Context="System"` führt (oder `Health_Config.xml` als
+Reparatur nennt), aus `App\Scripts_to_run` oder, für ein in `SelfX.Config.json` gelistetes eigenes
+Skript, aus `Config\Scripts_to_run`.
 
 `Tool_Config.xml` enthält zwei Einstellungen, die diese Prüfungen beeinflussen: `Service_FileCheck`
 (`Enforce` oder `Audit`, vom Dienst gelesen) und `Service_Privileges` (von `Install.ps1`
@@ -282,20 +286,44 @@ geprüft. Diese Punkte lassen sich ohne eine weitere Regel nicht klären:
 
 ## Ordneraufbau
 
-**Ziel**, zweite Stufe. Die erste Stufe trennt die Dateien logisch über die zwei Listen; die
-zweite Stufe trennt sie physisch.
+**Heute** (ab Version 3.1.0). Die zwei Listen trennen die Dateien logisch, die Ordner `App` und
+`Config` trennen sie physisch. Das Repository behält den Ordner `Sources`;
+`tools\New-SelfXIntuneWin.ps1` sortiert dessen Dateien nach ihrer Dateiklasse in `App` und
+`Config` (`ConvertTo-SelfXPackageLayout` in `tools\SelfXPackage.Common.ps1`). Eine Datei ohne
+Klasse bricht den Bau ab.
 
 ```
-Paket                                   Gerät (%ProgramFiles%\SelfX)
-+- Install.ps1  Uninstall.ps1           +- Uninstall.ps1  SelfXService.exe  SelfX.exe
-+- SelfX.Code.json                      +- SelfX.Code.json
-+- App\    (Code: Bin, Sources, ...)    +- App\      (nur Code)
-+- Config\                              +- Config\   (nur Konfiguration)
-    +- *.xml  Branding\  Texts\             +- SelfX.Config.json [+ .cat]
-    +- SelfX.Config.json [+ .cat]       (Rechte wie heute: Benutzer nur lesen und ausführen)
+Paket                                     Gerät (%ProgramFiles%\SelfX)
++- Install.ps1  Uninstall.ps1             +- App\     (nur Code)
++- Detection.ps1                          |   +- SelfXService.exe  SelfX.exe  Uninstall.ps1
++- Bin\       (Programme, Bau-Nachweis)   |   +- *.ps1  Scripts_to_run\  HealthChecks\  Languages\
++- Service\*.cs (Quellen der Programme)   |   +- WinRT\  Audio\  Repair.ico  logo.png  icon_systray.ico
++- App\       (Code aus Sources)          |   +- SelfX.Code.json
+|   +- SelfX.Code.json                    +- Config\  (nur Konfiguration)
++- Config\    (Konfiguration aus Sources)     +- *.xml  Branding\  eigene Scripts_to_run\, HealthChecks\, Languages\
+    +- SelfX.Config.json                      +- SelfX.Config.json
+                                          (Rechte unverändert: Benutzer nur Lesen und Ausführen, S-1-5-32-545)
 ```
 
-Der Dienst lädt den Katalog und `Health_Config.xml` nur aus `Config\` und Skripte nur aus `App\`.
-Ein Skript unter `Config\` (eigener Code der Firma) startet nur, wenn es in `SelfX.Config.json`
-steht und der Katalog es nennt. Eine Installation im alten Aufbau wird durch ein Update
-vollständig ersetzt, es bleibt kein Mischzustand.
+- Die Namen in beiden Listen sind relativ zu ihrem eigenen Ordner (`App` bzw. `Config`) und damit
+  dieselben wie bisher. `Install.ps1` legt die Programme und Bibliotheken aus `Bin` und
+  `Uninstall.ps1` nach `App`.
+- **Ein Pfad-Auflöser.** PowerShell: `Sources\SelfXPaths.ps1` (`Get-SelfXConfigPath`,
+  `Get-SelfXImagePath`, `Resolve-SelfXScriptPath`); Dienst: `GetConfigRoot`, `GetConfigFilePath`
+  und `ResolveScriptPath` in `SelfXService.cs`. Der Konfigurationsordner ist `Config` neben dem
+  Code-Ordner, wenn der Code-Ordner `App` heißt; sonst (Ordner `Sources` des Repositorys) ist es der
+  Code-Ordner selbst. Keine Umgebungsvariable, kein Registry-Wert und keine Anfrage entscheidet mit.
+- Der Dienst lädt Katalog, `Health_Config.xml` und `Tool_Config.xml` nur aus `Config` und die
+  Skripte des Projekts nur aus `App`. Ein Skript unter `Config` (eigener Code der Firma) startet nur,
+  wenn der Katalog oder `Health_Config.xml` es nennt **und** `SelfX.Config.json` es mit dem SHA256
+  auflistet, den die Datei jetzt hat, auch bei `Service_FileCheck` = `Audit`. Ein Skript des
+  Projekts mit gleichem Namen hat immer Vorrang. `HealthStatus.ps1` wendet dieselbe Regel auf
+  eigene Prüfskripte an.
+- Die Dateiprüfung vergleicht `App` mit `SelfX.Code.json` und `Config` mit `SelfX.Config.json`; eine
+  Datei zählt nur im Ordner ihrer Liste. In `%ProgramFiles%\SelfX` selbst darf nichts außer den
+  zwei Ordnern liegen (ein leerer Ordner, den ein laufendes Programm noch nutzt, ist erlaubt).
+- Bilder in `Tool_Config.xml`: `Branding\...` liegt in `Config`, ein anderer relativer Wert ist ein
+  Standardbild in `App`, ein vollständiger Pfad wird unverändert verwendet.
+- **Umstellung.** Eine Installation im alten Aufbau (bis 3.0.x, alles direkt in
+  `%ProgramFiles%\SelfX`) entfernt das Update vollständig, bevor `App` und `Config` kopiert werden;
+  einen Mischzustand gibt es nicht. `Uninstall.ps1` entfernt beide Aufbauten.

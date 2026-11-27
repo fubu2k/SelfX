@@ -7,14 +7,15 @@
     install SelfX) and runs it against a fake package in a temporary folder. Nothing is built or installed.
     Checked: a complete, matching Bin is accepted; a missing Bin folder, a missing file, a changed file, a changed
     source, a broken or missing manifest, an unknown manifest format and the manifest format of the old
-    on-device compiler (version 1) are refused.
+    on-device compiler (version 1) are refused. The copy step (Clear-SelfXInstallFolder, Copy-SelfXPayload, Test-SelfXInstalledFiles)
+    is run against a package in the layout App/Config and an install folder in the old layout (update 3.0.2 -> 3.1.0).
     Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-InstallBinaries.ps1
 
 .NOTES
     Name    : Test-InstallBinaries.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.18
+    Version : 3.1.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -23,6 +24,8 @@
     2.6.11   2026-11-22  fubu2k               Initial version.
     2.8.18   2026-11-23  fubu2k               Audio library (Audio/SelfXAudio.dll) in the fake package and its refusal cases.
     2.8.21   2026-11-23  fubu2k               N4: the check returns the verified hashes (Install.ps1 loads SelfXSessionStarter.dll from checked bytes).
+    3.1.0    2026-11-27  fubu2k               Layout App/Config: update from the old layout (3.0.2) and from the new layout, mixed state, empty left-over
+                                              folder, locked file, package in the old layout, paths of service, starter, shortcut and uninstall entry.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -310,6 +313,95 @@ else {
 	Assert-Equal (Test-Path -LiteralPath $data3 -PathType Container) $true 'data folder itself is kept (owner and rights are set again)'
 	Assert-Equal (Get-TestOwner $data3) 'S-1-5-32-544' 'data folder after cleaning: owner is Administrators'
 }
+	# --- Layout App/Config (3.1.0): update from an installation in the old layout, update in the new layout, no mixed state ---
+	# The functions of the copy step are taken out of Install.ps1; the package is built like tools\New-SelfXIntuneWin.ps1 does it.
+	. (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\SelfXPackage.Common.ps1')
+	foreach ($name in 'Test-SelfXListPlacement', 'Read-SelfXFileList', 'Test-SelfXFileManifest', 'Get-SelfXPackageToolVersion', 'Test-SelfXInstalledFiles', 'Clear-SelfXInstallFolder', 'Copy-SelfXPayload') {
+		$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
+		Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
+		if ($definition) { . ([scriptblock]::Create($definition.Extent.Text)) }
+	}
+	$layoutRoot = Join-Path $root 'layout'
+	$layoutPackage = Join-Path $layoutRoot 'package'
+	$layoutBin = Join-Path $layoutPackage 'Bin'
+	New-Item -ItemType Directory -Path (Join-Path $layoutBin 'WinRT'), (Join-Path $layoutBin 'Audio') -Force | Out-Null
+	Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Sources') -Destination (Join-Path $layoutPackage 'Sources') -Recurse
+	Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Uninstall.ps1') -Destination $layoutPackage
+	foreach ($name in 'SelfXService.exe', 'SelfX.exe', 'WinRT\SelfXWinRT.dll', 'Audio\SelfXAudio.dll', 'SelfXSessionStarter.dll') { [IO.File]::WriteAllText((Join-Path $layoutBin $name), "binary $name") }
+	[IO.File]::WriteAllText((Join-Path $layoutBin 'SelfX.Binaries.json'), '{ "ManifestVersion": 3, "Sources": {}, "Binaries": { "WinRT/SelfXWinRT.dll": "00", "Audio/SelfXAudio.dll": "00" } }')
+	$sorted = ConvertTo-SelfXPackageLayout -Stage $layoutPackage
+	[void](New-SelfXCodeManifest -Stage $layoutPackage -Version '3.1.0')
+	[void](New-SelfXConfigManifest -Stage $layoutPackage)
+	$packageCount = Test-SelfXFileManifest -PackageFolder $layoutPackage
+	Assert-Equal ($packageCount -eq ($sorted.Code + $sorted.Config + 5)) $true "layout: the package lists the sorted files, Uninstall.ps1 and the four files of Bin ($packageCount)"
+	Assert-Equal (Get-SelfXPackageToolVersion -PackageFolder $layoutPackage) '3.1.0' 'layout: the version comes from App\SelfX.Code.json'
+
+	$device = Join-Path $layoutRoot 'SelfX'
+	function New-OldLayout {
+		# An installation of version 3.0.2: everything directly in the install folder.
+		if (Test-Path -LiteralPath $device) { Remove-Item -LiteralPath $device -Recurse -Force }
+		foreach ($folder in 'Scripts_to_run', 'HealthChecks', 'Branding', 'Languages', 'WinRT', 'Audio') { New-Item -ItemType Directory -Path (Join-Path $device $folder) -Force | Out-Null }
+		foreach ($name in 'SelfXService.exe', 'SelfX.exe', 'Self_X.ps1', 'SelfX_Tray.ps1', 'Uninstall.ps1', 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'SelfX.Code.json', 'SelfX.Config.json', 'SelfX.Files.json',
+			'Scripts_to_run\SelfX_Device_Restart.ps1', 'Scripts_to_run\Own_Old.ps1', 'HealthChecks\Check-Compliance.ps1', 'Branding\company_logo.png', 'Languages\de.xml', 'WinRT\SelfXWinRT.dll', 'Audio\SelfXAudio.dll') {
+			[IO.File]::WriteAllText((Join-Path $device $name), "old $name")
+		}
+	}
+	function Get-TopEntries { return ((@(Get-ChildItem -LiteralPath $device -Force | ForEach-Object { $_.Name }) | Sort-Object) -join ',') }
+
+	# Update 3.0.2 -> 3.1.0: the old layout is removed completely, the new one is complete and checked.
+	New-OldLayout
+	Clear-SelfXInstallFolder -InstallFolder $device -Attempts 1 -DelaySeconds 0
+	Assert-Equal @(Get-ChildItem -LiteralPath $device -Recurse -Force).Count 0 'old layout: the install folder is empty after the cleanup'
+	Copy-SelfXPayload -PackageFolder $layoutPackage -InstallFolder $device
+	Assert-Equal (Get-TopEntries) 'App,Config' 'old layout -> new: the install folder holds only App and Config'
+	try { $installedCount = Test-SelfXInstalledFiles -InstallFolder $device } catch { $installedCount = "refused: $($_.Exception.Message)" }
+	Assert-Equal $installedCount $packageCount 'old layout -> new: the installed folders match both lists'
+	foreach ($name in 'App\SelfXService.exe', 'App\SelfX.exe', 'App\Uninstall.ps1', 'App\SelfX.Code.json', 'App\SelfXPaths.ps1', 'App\WinRT\SelfXWinRT.dll', 'App\Audio\SelfXAudio.dll', 'App\Scripts_to_run\SelfX_Device_Restart.ps1', 'Config\Tool_Config.xml', 'Config\Issues_List.xml', 'Config\SelfX.Config.json', 'Config\Branding\company_logo.png') {
+		Assert-Equal (Test-Path -LiteralPath (Join-Path $device $name) -PathType Leaf) $true "old layout -> new: $name is installed"
+	}
+	foreach ($name in 'App\Tool_Config.xml', 'Config\Self_X.ps1', 'Config\SelfX.Code.json', 'App\SelfX.Config.json', 'App\SelfX.Files.json', 'App\Scripts_to_run\Own_Old.ps1', 'Config\Scripts_to_run\Own_Old.ps1') {
+		Assert-Equal (Test-Path -LiteralPath (Join-Path $device $name)) $false "old layout -> new: $name does not exist"
+	}
+	# Update 3.1.0 -> 3.1.0 (new layout over new layout).
+	Clear-SelfXInstallFolder -InstallFolder $device -Attempts 1 -DelaySeconds 0
+	Copy-SelfXPayload -PackageFolder $layoutPackage -InstallFolder $device
+	try { $installedCount = Test-SelfXInstalledFiles -InstallFolder $device } catch { $installedCount = "refused: $($_.Exception.Message)" }
+	Assert-Equal $installedCount $packageCount 'new layout -> new: the installed folders match both lists'
+	# Mixed state: a copy over an old layout without the cleanup is refused after the copy (fail closed).
+	New-OldLayout
+	Copy-SelfXPayload -PackageFolder $layoutPackage -InstallFolder $device
+	try { Test-SelfXInstalledFiles -InstallFolder $device | Out-Null; $mixed = 'accepted' } catch { $mixed = $_.Exception.Message }
+	Assert-Equal ($mixed -match 'left over from an older installation') $true "mixed state: files of the old layout next to App and Config are refused ($mixed)"
+	# An empty folder of the old layout that is still in use (working directory) is allowed.
+	Clear-SelfXInstallFolder -InstallFolder $device -Attempts 1 -DelaySeconds 0
+	New-Item -ItemType Directory -Path (Join-Path $device 'Scripts_to_run') -Force | Out-Null
+	Copy-SelfXPayload -PackageFolder $layoutPackage -InstallFolder $device
+	try { $installedCount = Test-SelfXInstalledFiles -InstallFolder $device } catch { $installedCount = "refused: $($_.Exception.Message)" }
+	Assert-Equal $installedCount $packageCount 'empty folder of the old layout: accepted'
+	# A locked file of the old layout stops the installation before the copy.
+	New-OldLayout
+	$lock = [IO.File]::Open((Join-Path $device 'Scripts_to_run\SelfX_Device_Restart.ps1'), 'Open', 'Read', 'None')
+	try {
+		try { Clear-SelfXInstallFolder -InstallFolder $device -Attempts 1 -DelaySeconds 0; $locked = 'accepted' } catch { $locked = $_.Exception.Message }
+		Assert-Equal ($locked -match 'are in use and cannot be replaced') $true "locked file: the cleanup stops ($locked)"
+	} finally { $lock.Dispose() }
+	# A package in the old layout (Sources, lists at the top) is refused before anything is changed.
+	$oldPackage = Join-Path $layoutRoot 'oldpackage'
+	New-Item -ItemType Directory -Path (Join-Path $oldPackage 'Sources') -Force | Out-Null
+	[IO.File]::WriteAllText((Join-Path $oldPackage 'SelfX.Code.json'), '{"ManifestVersion":1,"ToolVersion":"3.0.2","Files":{"Uninstall.ps1":"00"}}')
+	try { Test-SelfXFileManifest -PackageFolder $oldPackage | Out-Null; $old = 'accepted' } catch { $old = $_.Exception.Message }
+	Assert-Equal ($old -match 'old layout') $true "old package layout: refused ($old)"
+	# The main part of Install.ps1 uses the layout: service, starter, shortcut, uninstall entry and status icon point into App.
+	$installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
+	foreach ($expected in @('$ServiceExe = Join-Path $AppFolder ''SelfXService.exe''', '$LauncherExe = Join-Path $AppFolder ''SelfX.exe''', '$Shortcut.WorkingDirectory = $AppFolder', '$AppFolder\Uninstall.ps1', 'Clear-SelfXInstallFolder -InstallFolder $InstallFolder', 'Copy-SelfXPayload -PackageFolder $PackageFolder -InstallFolder $InstallFolder', '$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder')) {
+		Assert-Equal $installText.Contains($expected) $true "Install.ps1 contains: $expected"
+	}
+	Assert-Equal ($installText -match '\[xml\]\(Get-Content') $false 'Install.ps1 reads no XML with [xml] (DTD processing is prohibited explicitly)'
+	Assert-Equal ($installText.Contains('''\\(App\\)?SelfX_Tray\.ps1''')) $true 'Install.ps1 closes status icons of both layouts'
+	$trayPattern = [regex]::Escape('C:\Program Files\SelfX') + '\\(App\\)?SelfX_Tray\.ps1'
+	Assert-Equal ('pwsh.exe -File "C:\Program Files\SelfX\SelfX_Tray.ps1"' -match $trayPattern) $true 'tray pattern: old layout'
+	Assert-Equal ('pwsh.exe -File "C:\Program Files\SelfX\App\SelfX_Tray.ps1"' -match $trayPattern) $true 'tray pattern: new layout'
+	Assert-Equal ('pwsh.exe -File "C:\Program Files\SelfX\Config\SelfX_Tray.ps1"' -match $trayPattern) $false 'tray pattern: not below Config'
 }
 finally {
 	Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue

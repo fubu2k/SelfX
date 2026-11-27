@@ -27,17 +27,42 @@
     Name    : Localization.ps1
     Package : SelfX Service
     Context : GUI helper (dot-sourced by Self_X.ps1 as the signed-in user)
-    Version : 2.8.14
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.2.0    2026-10-28  Wolfgang Baeck       Initial version: multilingual user interface
     2.8.14   2026-11-23  fubu2k               Pass the Link field of catalogue actions (Context Link)
+    3.1.0    2026-11-27  fubu2k               LanguageFolder can name several folders (bundled files in App\Languages first, own files of the company
+                                              in Config\Languages); a culture found in an earlier folder wins
 #>
 
 $Script:SelfX_Language = $null
 $Script:SelfX_LanguageFallback = $null
+
+Function Find-SelfXLanguageFile
+{
+	<#
+	.SYNOPSIS
+		Returns the path of <Name>.xml in the first of the folders that has it, else the path in the first folder (missing file).
+	.DESCRIPTION
+		The folders are searched in the given order: the bundled files of the code come first, so an own file of the company
+		cannot replace a bundled language. Name is a culture name checked by the caller (Test-SelfXLanguageName or a fixed name).
+	#>
+	param(
+		[string[]]$LanguageFolder,
+		[string]$Name
+	)
+	$Folders = @($LanguageFolder | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+	foreach($Folder in $Folders)
+		{
+			$Path = Join-Path $Folder "$Name.xml"
+			If(Test-Path -LiteralPath $Path -PathType Leaf) { return $Path }
+		}
+	If($Folders.Count -gt 0) { return (Join-Path $Folders[0] "$Name.xml") }
+	return $null
+}
 
 Function Read-SelfXLanguageFile
 {
@@ -46,7 +71,7 @@ Function Read-SelfXLanguageFile
 		Loads one language file. Returns $null if the file is missing or not valid XML.
 	#>
 	param([string]$Path)
-	If(-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+	If([string]::IsNullOrEmpty($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
 	Try
 		{
 			# XmlDocument.Load honours the encoding declaration, so UTF-8 files without BOM are read correctly
@@ -111,12 +136,15 @@ Function Resolve-SelfXLanguageSetting
 		[string]$ConfigLanguage = 'Auto',
 		[string]$UserLanguage = '',
 		[bool]$AllowUserChoice = $true,
-		[string]$LanguageFolder = ''
+		[string[]]$LanguageFolder = @()
 	)
 	$User = "$UserLanguage".Trim()
 	If($AllowUserChoice -and ($User -ne '') -and ($User -ne 'Auto') -and (Test-SelfXLanguageName $User))
 		{
-			If(($LanguageFolder -eq '') -or (Test-Path -LiteralPath (Join-Path $LanguageFolder "$User.xml") -PathType Leaf)) { return $User }
+			$Folders = @($LanguageFolder | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+			If($Folders.Count -eq 0) { return $User }
+			$Path = Find-SelfXLanguageFile -LanguageFolder $Folders -Name $User
+			If(Test-Path -LiteralPath $Path -PathType Leaf) { return $User }
 		}
 	$Config = "$ConfigLanguage".Trim()
 	If($Config -eq '') { return 'Auto' }
@@ -130,7 +158,7 @@ Function Get-SelfXLanguageFileCulture
 		Returns the culture of the language file that Initialize-SelfXLanguage selects for a setting, without loading it.
 	#>
 	param(
-		[string]$LanguageFolder,
+		[string[]]$LanguageFolder,
 		[string]$Language = 'Auto'
 	)
 	$Culture = [System.Globalization.CultureInfo]::CurrentUICulture
@@ -140,7 +168,8 @@ Function Get-SelfXLanguageFileCulture
 		}
 	foreach($Name in (Get-SelfXCultureCandidates -Culture $Culture))
 		{
-			If(Test-Path -LiteralPath (Join-Path $LanguageFolder "$Name.xml") -PathType Leaf) { return $Name }
+			$Path = Find-SelfXLanguageFile -LanguageFolder $LanguageFolder -Name $Name
+			If($Path -and (Test-Path -LiteralPath $Path -PathType Leaf)) { return $Name }
 		}
 	# Base language of SelfX
 	return 'de'
@@ -155,10 +184,14 @@ Function Get-SelfXLanguageList
 		Only the root element of each file is read, so the list is fast. Files whose name differs from their
 		Culture attribute or that are no SelfX language file are skipped.
 	#>
-	param([string]$LanguageFolder)
+	param([string[]]$LanguageFolder)
 	$List = New-Object System.Collections.Generic.List[object]
-	foreach($File in @(Get-ChildItem -LiteralPath $LanguageFolder -Filter '*.xml' -File -ErrorAction SilentlyContinue))
+	$Seen = @{}
+	$Files = @(foreach($Folder in @($LanguageFolder | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) { Get-ChildItem -LiteralPath $Folder -Filter '*.xml' -File -ErrorAction SilentlyContinue })
+	foreach($File in $Files)
 		{
+			# A culture of an earlier folder (bundled files) wins over an own file with the same name.
+			If($Seen.ContainsKey($File.BaseName.ToLowerInvariant())) { continue }
 			$Reader = $null
 			Try
 				{
@@ -172,6 +205,7 @@ Function Get-SelfXLanguageList
 					$Name = $Reader.GetAttribute('NativeName')
 					If([string]::IsNullOrWhiteSpace($Name)) { $Name = $Culture }
 					$Flow = $(If($Reader.GetAttribute('FlowDirection') -eq 'RightToLeft') { 'RightToLeft' } Else { 'LeftToRight' })
+					$Seen[$File.BaseName.ToLowerInvariant()] = $true
 					$List.Add([pscustomobject]@{ Culture = $Culture; Name = $Name; FlowDirection = $Flow })
 				}
 			Catch {}
@@ -189,12 +223,12 @@ Function Initialize-SelfXLanguage
 	.SYNOPSIS
 		Selects and loads the language file. Returns an object with Culture, Name, FlowDirection and File.
 	.PARAMETER LanguageFolder
-		Folder with the language files (Sources\Languages).
+		Folders with the language files, searched in this order (App\Languages, then Config\Languages).
 	.PARAMETER Language
 		"Auto" or empty = Windows display language, otherwise a culture name such as "de" or "fr-CH".
 	#>
 	param(
-		[string]$LanguageFolder,
+		[string[]]$LanguageFolder,
 		[string]$Language = 'Auto'
 	)
 
@@ -205,13 +239,13 @@ Function Initialize-SelfXLanguage
 			Catch { $Culture = [System.Globalization.CultureInfo]::CurrentUICulture }
 		}
 
-	$Script:SelfX_LanguageFallback = Read-SelfXLanguageFile -Path (Join-Path $LanguageFolder 'en.xml')
+	$Script:SelfX_LanguageFallback = Read-SelfXLanguageFile -Path (Find-SelfXLanguageFile -LanguageFolder $LanguageFolder -Name 'en')
 	$Script:SelfX_Language = $null
 	$Selected_File = $null
 
 	foreach($Name in (Get-SelfXCultureCandidates -Culture $Culture))
 		{
-			$Path = Join-Path $LanguageFolder "$Name.xml"
+			$Path = Find-SelfXLanguageFile -LanguageFolder $LanguageFolder -Name $Name
 			$Document = Read-SelfXLanguageFile -Path $Path
 			If($Document -ne $null)
 				{
@@ -224,12 +258,12 @@ Function Initialize-SelfXLanguage
 	If($Script:SelfX_Language -eq $null)
 		{
 			# No file for the language: German is the base language, English the fallback if de.xml is missing.
-			$Script:SelfX_Language = Read-SelfXLanguageFile -Path (Join-Path $LanguageFolder 'de.xml')
-			$Selected_File = Join-Path $LanguageFolder 'de.xml'
+			$Selected_File = Find-SelfXLanguageFile -LanguageFolder $LanguageFolder -Name 'de'
+			$Script:SelfX_Language = Read-SelfXLanguageFile -Path $Selected_File
 			If($Script:SelfX_Language -eq $null)
 				{
 					$Script:SelfX_Language = $Script:SelfX_LanguageFallback
-					$Selected_File = Join-Path $LanguageFolder 'en.xml'
+					$Selected_File = Find-SelfXLanguageFile -LanguageFolder $LanguageFolder -Name 'en'
 				}
 		}
 

@@ -284,7 +284,8 @@ AppLocker-Regeln. Die Standardsprache der Oberfläche ist jetzt Deutsch
 
 ## Deinstallation
 
-`Uninstall.ps1` entfernt den Dienst, `%ProgramFiles%\SelfX`, die Verknüpfungen, den Eintrag
+`Uninstall.ps1` entfernt den Dienst, `%ProgramFiles%\SelfX` (mit `App` und `Config`, auch eine
+Installation im alten Aufbau von 3.0.x), die Verknüpfungen, den Eintrag
 unter Apps & Features, den Autostart des Statussymbols, den Status-Cache und die Berichte.
 Offene SelfX-Fenster und Statussymbole werden vorher geschlossen. Hält ein anderes
 Programm eine Datei offen, versucht der Deinstaller es bis zu 90 Sekunden lang erneut.
@@ -404,12 +405,16 @@ in `Bin` (SHA256-Manifest) und die Dateiliste. Passt etwas nicht, endet es mit E
 und die bisherige Installation bleibt unverändert. Danach:
 
 1. Es stoppt und entfernt einen vorhandenen `SelfXService`.
-2. Es leert `%ProgramFiles%\SelfX` (der Ordner selbst bleibt) und kopiert `Sources` und
-   `Uninstall.ps1` hinein. Benutzer dürfen dort nur lesen und ausführen; SYSTEM und
-   Administratoren haben Vollzugriff.
+2. Es leert `%ProgramFiles%\SelfX` (der Ordner selbst bleibt) und legt darin zwei Ordner an:
+   `App` (Code: Programme, Bibliotheken, Skripte und Sprachdateien des Projekts,
+   `Uninstall.ps1`, `SelfX.Code.json`) und `Config` (Konfiguration: die Einstellungsdateien,
+   `Branding`, Ihre eigenen Skripte und Sprachdateien, `SelfX.Config.json`). Benutzer dürfen
+   dort nur lesen und ausführen; SYSTEM und Administratoren haben Vollzugriff (dieselben
+   Rechte wie bisher).
 3. Es installiert `SelfXService.exe` (den Dienst) und `SelfX.exe` (einen kleinen Starter
    ohne Konsolenfenster, der SelfX oder das Statussymbol mit einem versteckten
-   PowerShell 7 startet). Es prüft die installierten Dateien noch einmal gegen die Liste.
+   PowerShell 7 startet) nach `App`. Es prüft die installierten Dateien noch einmal gegen
+   beide Listen; außer `App` und `Config` darf in `%ProgramFiles%\SelfX` nichts übrig sein.
 4. Es registriert und startet den Dienst `SelfXService` (LocalSystem, automatischer Start,
    Neustart nach einem Fehler) und begrenzt seine Rechte.
 5. Es legt Verknüpfungen auf dem öffentlichen Desktop und im Startmenü an und einen
@@ -421,6 +426,16 @@ und die bisherige Installation bleibt unverändert. Danach:
 
 Ein Update bricht nicht ab, wenn ein Nutzer SelfX geöffnet hat: Der Installer leert den
 Ordner, statt ihn zu löschen, und wiederholt gesperrte Dateien 20 Sekunden lang.
+
+**Update von Version 3.0.x (alter Aufbau).** Bis 3.0.x lagen alle Dateien direkt in
+`%ProgramFiles%\SelfX`. Ab 3.1.0 entfernt der Installer diesen Inhalt zuerst vollständig und
+installiert danach `App` und `Config`; einen Mischzustand gibt es nicht. Ein leerer alter
+Ordner, den ein laufendes Programm noch als Arbeitsordner nutzt, darf bis zur nächsten
+Abmeldung bleiben; eine Datei des alten Aufbaus neben `App` und `Config` bricht die
+Installation ab (Exitcode 1). `Detection.ps1` von 3.1.0 erkennt den alten Aufbau nicht, daher
+installiert Intune das Update. Das Paket selbst hat die Ordner `App` und `Config` statt
+`Sources`; bauen Sie es mit `tools\New-SelfXIntuneWin.ps1` (im Repository bleibt der Ordner
+`Sources`).
 
 ### Protokolle
 
