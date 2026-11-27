@@ -3,7 +3,7 @@
     Close Firefox and remove selected cache and site data from its profiles.
 
 .DESCRIPTION
-    Force-stops accessible firefox processes and waits two seconds, then visits every profile
+    Force-stops the firefox processes of the signed-in user's own session (other sessions are not touched) and waits two seconds, then visits every profile
     directory under LOCALAPPDATA\Mozilla\Firefox\Profiles and APPDATA\Mozilla\Firefox\Profiles.
     Removes selected cache folders, cookies.sqlite and web-storage databases as the signed-in
     user from the SelfX GUI. Firefox windows close and unsaved browser work may be lost;
@@ -16,13 +16,14 @@
     Name    : SelfX_Browser_ClearFirefoxCache.ps1
     Package : SelfX Service
     Context : User
-    Version : 2.6.0
+    Version : 2.6.1
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
     2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1); failed removals are reported (exit 1)
+    2.6.1    2026-11-27  fubu2k               Only processes of the own session are stopped (Edge pattern)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -32,7 +33,8 @@ else { function Write-SelfXLog { param($Message, $Level) } }
 trap { Write-SelfXLog "Failed: $($_.Exception.Message)" Error; break }
 
 # Release Firefox file handles before removing profile databases and caches.
-$processes = @(Get-Process -Name firefox -ErrorAction SilentlyContinue)
+$session = (Get-Process -Id $PID).SessionId
+$processes = @(Get-Process -Name firefox -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session })
 $processes | Stop-Process -Force -ErrorAction SilentlyContinue
 Write-SelfXLog "Closed $($processes.Count) Firefox process(es)."
 Start-Sleep -Seconds 2
