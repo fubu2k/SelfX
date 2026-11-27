@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update telah selesai. Status perangkat diperiksa lagi dan menunjukkan apakah perlu dimulai ulang.</Health_Updates_Done>
 		<Health_Apps_Button>Coba lagi</Health_Apps_Button>
 		<Health_Apps_Started>Pemasangan aplikasi yang gagal dimulai lagi. Ini dapat memakan waktu beberapa menit; Anda dapat mengikutinya di Portal Perusahaan.</Health_Apps_Started>
+		<Health_FreeSpace_Button>Kosongkan ruang</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>Kosongkan ruang</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX mengosongkan ruang di drive {0}. Yang dihapus:&#10;• isi Recycle Bin Anda (tidak dapat dibatalkan)&#10;• file sementara Anda&#10;• cache Teams, hanya saat Teams ditutup (Anda mungkin perlu masuk lagi ke Teams)&#10;• file Windows yang tidak diperlukan lagi: komponen pembaruan lama, cache unduhan, file sistem sementara lama, dan file instalasi lama aplikasi perusahaan&#10;&#10;Dokumen, pengaturan, dan program Anda tetap ada. Ini dapat memakan waktu hingga satu jam; Anda dapat terus bekerja.&#10;&#10;Kosongkan ruang sekarang?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>Kosongkan ruang selesai. Ruang kosong di {0}: sebelumnya {1} GB, sekarang {2} GB.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>Kosongkan ruang selesai, tetapi tidak semua langkah berhasil. Ruang kosong di {0}: sebelumnya {1} GB, sekarang {2} GB. Jika masalah tetap ada, hubungi dukungan TI.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams sedang terbuka, jadi cache-nya tetap disimpan. Tutup Teams lalu jalankan Kosongkan ruang lagi untuk mendapat lebih banyak ruang.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>Pemindaian cepat selesai. Microsoft Defender tidak menemukan ancaman.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>Pemindaian cepat selesai. Microsoft Defender menemukan ancaman dan menanganinya sesuai pengaturan perusahaan Anda. Buka Keamanan Windows untuk detailnya.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>

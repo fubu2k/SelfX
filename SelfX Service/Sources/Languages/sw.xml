@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update imemaliza. Hali ya kifaa inakaguliwa tena na inaonyesha kama kuanzisha upya kunahitajika.</Health_Updates_Done>
 		<Health_Apps_Button>Jaribu tena</Health_Apps_Button>
 		<Health_Apps_Started>Usakinishaji wa programu zilizoshindwa unaanza tena. Hii inaweza kuchukua dakika chache; unaweza kuufuatilia katika Lango la Kampuni.</Health_Apps_Started>
+		<Health_FreeSpace_Button>Futa nafasi</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>Futa nafasi</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX inaongeza nafasi kwenye diski {0}. Vitu hivi vinafutwa:&#10;• yaliyomo kwenye Pipa la Kuchakata (haiwezi kurejeshwa)&#10;• faili zako za muda&#10;• kache ya Teams, tu wakati Teams imefungwa (huenda ukahitaji kuingia tena kwenye Teams)&#10;• faili za Windows zisizohitajika tena: vipengele vya zamani vya masasisho, kache ya vipakuliwa, faili za zamani za muda za mfumo na faili za zamani za usakinishaji za programu za kampuni&#10;&#10;Hati, mipangilio na programu zako zinabaki. Hii inaweza kuchukua hadi saa moja; unaweza kuendelea kufanya kazi.&#10;&#10;Ongeza nafasi sasa?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>Kuongeza nafasi kumekamilika. Nafasi tupu kwenye {0}: awali {1} GB, sasa {2} GB.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>Kuongeza nafasi kumekamilika, lakini si kila hatua imefaulu. Nafasi tupu kwenye {0}: awali {1} GB, sasa {2} GB. Tatizo likiendelea, wasiliana na msaada wa TEHAMA.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams ilikuwa wazi, kwa hiyo kache yake imebaki. Funga Teams na uendeshe Futa nafasi tena ili kupata nafasi zaidi.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>Uchanganuzi wa haraka umekamilika. Microsoft Defender haikupata vitisho.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>Uchanganuzi wa haraka umekamilika. Microsoft Defender imepata vitisho na inavishughulikia kama ilivyowekwa na kampuni yako. Fungua Usalama wa Windows kwa maelezo.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>Sawa</Health_Check_Button>

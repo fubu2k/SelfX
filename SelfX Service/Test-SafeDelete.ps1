@@ -7,6 +7,8 @@
     entry once without following links and deletes through that handle. This test checks in a temporary folder that
     junctions are removed and never followed (also when swapped while the helper runs), that read-only files and long paths are
     deleted, that /cleandata: keeps trusted entries and deletes foreign-owned ones, and that wrong arguments are refused.
+    /cleanold: (free up space, SelfX_Device_FreeSpace.ps1) is tested through /cleanoldpath: in the temporary folder only; the fixed
+    folders (Windows\Temp, Intune content) are never cleaned by this test, only their names are checked.
     The helper is Bin\SelfXService.exe of the package (build it with tools\Build-SelfXBinaries.ps1) or the file named in
     SELFX_TEST_SAFEDELETE_EXE. Without it the test is skipped, unless SELFX_REQUIRE_BIN=1 (CI after the build): then it fails.
     No administrator rights are needed. Files are created only in a temporary folder.
@@ -16,13 +18,15 @@
     Name    : Test-SafeDelete.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator before building the package; not installed)
-    Version : 2.8.19
+    Version : 3.1.0
     Exit code: 0 = all checks passed (or skipped), 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.19   2026-11-23  fubu2k               Initial version (M1).
+    3.1.0    2026-11-27  fubu2k               /cleanold: and /cleanoldpath: (free up space): only old entries, links deleted and never followed,
+                                              also while folders are swapped for junctions; fixed folder names only; wrong arguments refused.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -156,6 +160,129 @@ try {
 	$kept = @(1..30 | Where-Object { Test-Path -LiteralPath (Join-Path $outside "keep$_.txt") }).Count
 	Assert-Equal $kept 30 "race: all files of the outside folder are intact (helper exit code $($r.Code))"
 	Test-OutsideIntact 'race'
+
+	# 8. /cleanold: deletes only entries whose newest time (creation, write, change) is older than /minage:. Links are deleted
+	#    themselves when they are old and never followed; a folder is deleted only when it is old and empty afterwards.
+	#    The times are set on a handle (FILE_BASIC_INFO), the only way to set the change time; this code exists only in the test.
+	if (-not ('SelfXTestFileTimes' -as [type])) {
+		Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+public static class SelfXTestFileTimes
+{
+    [StructLayout(LayoutKind.Sequential)]
+    struct FILE_BASIC_INFO { public long CreationTime; public long LastAccessTime; public long LastWriteTime; public long ChangeTime; public uint FileAttributes; }
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FILE_BASIC_INFO info, uint size);
+    public static void SetAll(string path, DateTime utc)
+    {
+        // FILE_WRITE_ATTRIBUTES, share read/write/delete, OPEN_EXISTING, BACKUP_SEMANTICS | OPEN_REPARSE_POINT (a link itself).
+        using (SafeFileHandle handle = CreateFileW(@"\\?\" + path, 0x100, 7, IntPtr.Zero, 3, 0x02000000 | 0x00200000, IntPtr.Zero))
+        {
+            if (handle.IsInvalid) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            FILE_BASIC_INFO info = new FILE_BASIC_INFO();
+            long time = utc.ToFileTimeUtc();
+            info.CreationTime = time; info.LastAccessTime = time; info.LastWriteTime = time; info.ChangeTime = time;
+            if (!SetFileInformationByHandle(handle, 0, ref info, (uint)Marshal.SizeOf(typeof(FILE_BASIC_INFO)))) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        }
+    }
+}
+'@
+	}
+	$oldTime = [datetime]::UtcNow.AddDays(-30)
+	function Set-TestOld([string[]]$Paths) { foreach ($path in $Paths) { [SelfXTestFileTimes]::SetAll($path, $oldTime) } }
+	function Invoke-CleanOld([string[]]$Arguments) {
+		$out = @(& $exe @Arguments 2>&1 | ForEach-Object { "$_" })
+		$line = @($out | Where-Object { $_ -match '^SELFX-CLEANOLD-OK removed=\d+ kept=\d+ bytes=\d+$' }) | Select-Object -First 1
+		[pscustomobject]@{ Code = $LASTEXITCODE; Output = ($out -join "`n"); Ok = ([bool]$line -and $LASTEXITCODE -eq 0); Line = "$line" }
+	}
+
+	$aged = Join-Path $temp 'Aged'
+	foreach ($folder in 'Mixed', 'OldEmpty', 'OldTree\Sub') { [void][IO.Directory]::CreateDirectory((Join-Path $aged $folder)) }
+	foreach ($file in 'old.txt', 'new.txt', 'Mixed\old.txt', 'Mixed\new.txt', 'OldTree\Sub\old2.txt') { [IO.File]::WriteAllText((Join-Path $aged $file), 'x' * 100) }
+	New-TestJunction (Join-Path $aged 'OldLink') $outside
+	New-TestJunction (Join-Path $aged 'NewLink') $outside
+	# Old content of the outside folder: it would be deleted if a link were followed.
+	Set-TestOld @((Join-Path $outside 'secret.log'), (Join-Path $outside 'Sub\deep.txt'), (Join-Path $outside 'Sub'))
+	# Children first: a new entry changes the times of its folder.
+	Set-TestOld @((Join-Path $aged 'old.txt'), (Join-Path $aged 'Mixed\old.txt'), (Join-Path $aged 'OldTree\Sub\old2.txt'), (Join-Path $aged 'OldTree\Sub'),
+		(Join-Path $aged 'OldTree'), (Join-Path $aged 'OldEmpty'), (Join-Path $aged 'OldLink'), (Join-Path $aged 'Mixed'))
+	$r = Invoke-CleanOld @("/cleanoldpath:$aged", '/minage:7')
+	Assert-Equal $r.Ok $true "cleanold: result ok ($($r.Output))"
+	Assert-Equal $r.Line 'SELFX-CLEANOLD-OK removed=7 kept=1 bytes=300' 'cleanold: counts (3 files of 100 bytes, 3 folders, 1 link removed; the old folder with a new file kept)'
+	$left = @(Get-ChildItem -LiteralPath $aged -Recurse -Force | ForEach-Object { $_.FullName.Substring($aged.Length + 1) } | Sort-Object)
+	Assert-Equal ($left -join ',') 'Mixed,Mixed\new.txt,new.txt,NewLink' 'cleanold: only old entries are deleted; a folder with a new entry and a new link stay'
+	Test-OutsideIntact 'cleanold with old and new junctions'
+	$r = Invoke-CleanOld @("/cleanoldpath:$aged", '/minage:7')
+	# Deleting Mixed\old.txt changed the times of Mixed: the folder is new now and is not touched any more.
+	Assert-Equal $r.Line 'SELFX-CLEANOLD-OK removed=0 kept=0 bytes=0' 'cleanold: a second run deletes nothing more'
+
+	# The folder itself is a junction or lies behind one: refused, nothing deleted in the target.
+	$rootLink = Join-Path $temp 'CleanRootLink'
+	New-TestJunction $rootLink $outside
+	$r = Invoke-CleanOld @("/cleanoldpath:$rootLink", '/minage:1')
+	Assert-Equal "$($r.Code)/$($r.Ok)" '1/False' 'cleanold: a folder that is a junction is refused'
+	$r = Invoke-CleanOld @("/cleanoldpath:$(Join-Path $rootLink 'Sub')", '/minage:1')
+	Assert-Equal "$($r.Code)/$($r.Ok)" '1/False' 'cleanold: a folder behind a junction is refused'
+	Remove-TestJunction $rootLink
+	Test-OutsideIntact 'cleanold on and behind a junction'
+	$r = Invoke-CleanOld @("/cleanoldpath:$(Join-Path $temp 'DoesNotExist')", '/minage:7')
+	Assert-Equal $r.Line 'SELFX-CLEANOLD-OK removed=0 kept=0 bytes=0' 'cleanold: a missing folder is no error'
+
+	# Wrong arguments: unknown or differently written folder names, both modes at once, invalid ages, no path for the test mode.
+	foreach ($case in @(@('/cleanold:Windows', '/minage:7'), @('/cleanold:windowstemp', '/minage:7'), @('/cleanold:..\WindowsTemp', '/minage:7'),
+		@('/cleanold:C:\Windows\Temp', '/minage:7'), @('/cleanold:WindowsTemp', "/cleanoldpath:$aged", '/minage:7'),
+		@('/cleanold:WindowsTemp', '/minage:0'), @('/cleanold:WindowsTemp', '/minage:366'), @('/cleanold:WindowsTemp', '/minage:abc'),
+		@('/cleanold:WindowsTemp', '/minage:-1'), @('/cleanold:WindowsTemp'), @('/cleanoldpath:relative\path', '/minage:7'),
+		@('/cleanoldpath:\\server\share\x', '/minage:7'), @('/cleanoldpath:C:\', '/minage:7'))) {
+		Assert-Equal (Invoke-CleanOld $case).Code 2 "cleanold: refused with exit code 2 ($($case -join ' '))"
+	}
+	# The fixed folder names exist in the helper (checked without running it on them).
+	$serviceSource = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Service\SelfXService.cs'))
+	foreach ($key in 'WindowsTemp', 'ImeIncoming', 'ImeStaging', 'ImeCache') {
+		Assert-Equal ($serviceSource -match "case `"$key`": return ") $true "cleanold: fixed folder $key is defined in the helper"
+	}
+	Assert-Equal ($serviceSource -match 'identity\.IsSystem\) \{ Console\.WriteLine\("SELFX-CLEANOLD-ERROR: /cleanoldpath: is refused for SYSTEM') $true 'cleanold: the test mode is refused for SYSTEM'
+
+	# A user swaps folders for junctions while /cleanold: runs: the old files of the outside folder must stay intact.
+	$oldRace = Join-Path $temp 'OldRace'
+	$oldCount = 80
+	$racePaths = New-Object System.Collections.Generic.List[string]
+	1..$oldCount | ForEach-Object {
+		$dir = Join-Path $oldRace "d$_"
+		[void][IO.Directory]::CreateDirectory($dir)
+		1..3 | ForEach-Object { $file = Join-Path $dir "f$_.txt"; [IO.File]::WriteAllText($file, 'x'); $racePaths.Add($file) }
+		$racePaths.Add($dir)
+	}
+	Set-TestOld $racePaths.ToArray()
+	$keepFiles = @(1..30 | ForEach-Object { Join-Path $outside "keep$_.txt" })
+	foreach ($file in $keepFiles) { [IO.File]::WriteAllText($file, 'keep') }
+	Set-TestOld $keepFiles
+	$attacker = Start-Job -ArgumentList $oldRace, $outside, $oldCount -ScriptBlock {
+		param($race, $outside, $count)
+		$end = (Get-Date).AddSeconds(20)
+		while ((Get-Date) -lt $end) {
+			1..$count | ForEach-Object {
+				$dir = Join-Path $race "d$_"; $moved = $dir + '.old'
+				try {
+					[IO.Directory]::Move($dir, $moved)
+					$null = & cmd.exe /c mklink /J "`"$dir`"" "`"$outside`"" 2>&1
+					[IO.Directory]::Delete($dir)
+					[IO.Directory]::Move($moved, $dir)
+				} catch {}
+			}
+		}
+	}
+	Start-Sleep -Milliseconds 300
+	$r = Invoke-CleanOld @("/cleanoldpath:$oldRace", '/minage:7')
+	Stop-Job $attacker -ErrorAction SilentlyContinue; Remove-Job $attacker -Force -ErrorAction SilentlyContinue
+	$keptOld = @($keepFiles | Where-Object { Test-Path -LiteralPath $_ }).Count
+	Assert-Equal $keptOld 30 "cleanold race: all old files of the outside folder are intact (helper exit code $($r.Code))"
+	Test-OutsideIntact 'cleanold race'
+
 } finally {
 	Get-ChildItem -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint } | ForEach-Object { Remove-TestJunction $_.FullName }
 	Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue

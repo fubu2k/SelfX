@@ -11,6 +11,8 @@
   Version 2.6.0 | 2026-11-06 | Wolfgang Baeck | Fix buttons for "Restart pending" (restart after confirmation) and the apps (retry
                                                 failed installations); updates through the Windows Update orchestrator.
   Version 2.6.3 | 2026-11-06 | Wolfgang Baeck | Updates are installed through the Windows Update Agent again (UsoClient fails on 24H2).
+  Version 3.1.0 | 2026-11-27 | fubu2k         | Fix button "Free up space" on the disk row of the system drive (part as the user, then as SYSTEM);
+                                                thresholds of the SYSTEM part in DiskCleanup; Remediation attribute UserScript.
   -->
 <HealthConfig>
   <!-- Background checks: the service runs all checks regularly and keeps the result for SelfX and the tray icon.
@@ -21,6 +23,13 @@
        Enabled           : false = no background checks (SelfX then checks when it is opened) -->
   <Background Enabled="true" IntervalMinutes="15" PauseOnBattery="true" MaxCpuPercent="75" StartDelaySeconds="120" />
   <Disk UsedPercentError="90" MinimumFreeGB="20" />
+  <!-- Free up space (Fix button of the disk row, SelfX_Device_FreeSpace.ps1 as SYSTEM):
+       MinimumAgeDays  : 1-365, default 7. Only entries older than this are deleted in Windows\Temp and in the content
+                         folders of the Intune Management Extension (Content\Incoming, Content\Staging, Windows\IMECache).
+       ImeQuietMinutes : 1-1440, default 60. The Intune content is skipped while AgentExecutor.exe or msiexec.exe runs or
+                         when something in these folders changed during the last ImeQuietMinutes (an installation may run).
+       An invalid value stops the SYSTEM part before anything is deleted. -->
+  <DiskCleanup MinimumAgeDays="7" ImeQuietMinutes="60" />
   <!-- Updates to install are read from the local Windows Update cache (no online scan). An empty
        cache whose last successful scan is older than MaxSearchAgeDays (1-365, default 14) is Unknown.
   <Updates MaxSearchAgeDays="14" />
@@ -81,5 +90,12 @@
     <!-- Retry failed Intune app installations now (instead of after the IME retry schedule of 24 hours):
          resets the cached error of the failed apps and restarts the Intune Management Extension. -->
     <Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" />
+    <!-- Free up space on the system drive while the disk row is not OK. SelfX asks once, lists what is deleted, then runs
+         UserScript as the signed-in user (own recycle bin, own TEMP, own Teams cache only while Teams is closed) and after
+         it Script as SYSTEM (component store cleanup with DISM, Delivery Optimization cache, old files in Windows\Temp, old
+         Intune content). Never part of "Fix all problems": it can take long and empties the recycle bin.
+         Optional UserScript: a script of the user context, started by SelfX itself (never by the service) before Script.
+         Name="C:" limits the button to the system drive; change it when Windows is on another drive. -->
+    <Remediation Id="Disk" Name="C:" Script="SelfX_Device_FreeSpace.ps1" UserScript="SelfX_Device_FreeSpaceUser.ps1" When="NotOK" TimeoutSeconds="3600" />
   </Remediations>
 </HealthConfig>

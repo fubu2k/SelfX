@@ -51,6 +51,9 @@
                                               images and own scripts and language files are resolved by SelfXPaths.ps1
     3.1.0    2026-11-27  fubu2k               Text overrides: Config\Texts\<culture>.xml replaces single texts of the language file (Localization.ps1)
     3.1.0    2026-11-27  fubu2k               System information: status symbol (OK, warning, error) at the end of a row with a status; used by the connection check
+    3.1.0    2026-11-27  fubu2k               Repairs with two parts (Health_Config.xml UserScript): one confirmation, the part of the user, then the SYSTEM part
+                                              through the service; "Free up space" lists what is deleted and shows the free space before and after;
+                                              such repairs are never part of "Fix all problems"
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -1457,7 +1460,7 @@ Function Run_Remediation($rowObj)
 		$Script_Name = ([string]$Script_Name).Trim()
 		$Action_Context = ([string]$rowObj.Context).Trim()
 
-		If(($Action_Context -eq "System") -and $Global:SvcAction_Running)
+		If(($Action_Context -eq "System") -and ($Global:SvcAction_Running -or $Global:FreeSpace_Active))
 			{
 				$msgbar.Clear()
 				$msgbar.SetWarningAlert($Service_Busy_Text)
@@ -1544,6 +1547,92 @@ $Global:SvcAction_Running = $False
 $Global:SelfX_RestartScript = 'SelfX_Device_Restart.ps1'
 $Global:SelfX_UpdatesScript = 'SelfX_Updates_Install.ps1'
 $Global:SelfX_AppsScript = 'SelfX_Apps_RetryInstall.ps1'
+$Global:SelfX_FreeSpaceScript = 'SelfX_Device_FreeSpace.ps1'
+
+# Repairs with two parts (Health_Config.xml, Remediation UserScript): SelfX starts the part of the user itself (with the rights of
+# the user, never through the service) and, when it has ended, the SYSTEM part through the service. Only names that the health
+# result carries are used; SelfX resolves the user script like a user action of the catalogue (Resolve-SelfXScriptPath).
+$Global:FreeSpace_Active = $False
+$Global:FreeSpace_Pending = $False
+$Global:FreeSpace_Card = $null
+$Global:FreeSpace_Process = $null
+$Global:FreeSpace_Before = $null
+$Global:FreeSpace_TeamsSkipped = $False
+
+# Free space in GB of the drive of the card (for example C:), or of the Windows drive; $null when it cannot be read.
+Function Get-SelfXDriveFreeGB
+	{
+		param([string]$Drive = '')
+		Try
+			{
+				If($Drive -notmatch '^[A-Za-z]:$') { $Drive = [IO.Path]::GetPathRoot([Environment]::SystemDirectory).TrimEnd('\') }
+				Return ((New-Object System.IO.DriveInfo ($Drive + '\')).AvailableFreeSpace / 1GB)
+			}
+		Catch { Return $null }
+	}
+
+# Result sentence of "Free up space": free space before and now; a hint when the Teams cache was kept.
+Function Get-SelfXFreeSpaceResultText
+	{
+		param([string]$Key)
+		$Drive = "$($Global:FreeSpace_Card.HealthName)"
+		$After = Get-SelfXDriveFreeGB $Drive
+		$Before_Text = $(If($null -ne $Global:FreeSpace_Before) { '{0:N1}' -f $Global:FreeSpace_Before } Else { '?' })
+		$After_Text = $(If($null -ne $After) { '{0:N1}' -f $After } Else { '?' })
+		$Text = Get-SelfXString $Key $Drive $Before_Text $After_Text
+		If($Global:FreeSpace_TeamsSkipped) { $Text += ' ' + (Get-SelfXString 'Health_FreeSpace_TeamsSkipped') }
+		Return $Text
+	}
+
+$FreeSpace_Timer = New-Object System.Windows.Threading.DispatcherTimer
+$FreeSpace_Timer.Interval = [TimeSpan]::FromMilliseconds(500)
+$FreeSpace_Timer.Add_Tick({
+	If($Global:FreeSpace_Process -and -not $Global:FreeSpace_Process.HasExited) { return }
+	$FreeSpace_Timer.Stop()
+	$Code = $null
+	If($Global:FreeSpace_Process) { $Code = $Global:FreeSpace_Process.ExitCode; $Global:FreeSpace_Process.Dispose(); $Global:FreeSpace_Process = $null }
+	$Card = $Global:FreeSpace_Card
+	# Exit 2 of the user part of "Free up space": done, but Teams was open and its cache was kept.
+	$Global:FreeSpace_TeamsSkipped = ($Code -eq 2) -and ($Card.Remediation -eq $Global:SelfX_FreeSpaceScript)
+	Write-SelfXLog "Repair '$($Card.Property)': user part $($Card.UserRemediation) finished, exit code $Code." $(If($Code -in @(0, 2)) { 'Info' } Else { 'Warning' })
+	# The part of the user frees what it can; the SYSTEM part runs in any case (they do not depend on each other).
+	$Global:FreeSpace_Active = $False
+	$Global:FreeSpace_Pending = $True
+	Start-SelfXSystemAction -Script $Card.Remediation -ActionName $Card.Property -RefreshHealth -HealthId "$($Card.HealthId)" -HealthName "$($Card.HealthName)"
+	If(-not ($Global:SvcAction_Running -and ($Global:SvcAction_Script -eq $Card.Remediation))) { $Global:FreeSpace_Pending = $False }
+	Update-SelfXStatusView
+})
+
+Function Start-SelfXTwoPartRepair
+	{
+		param($Card)
+		If($Global:SvcAction_Running -or $Global:FreeSpace_Active -or (Test-SelfXCheckRunning)) { $msgbar.SetWarningAlert($Service_Busy_Text); return }
+		$Script_Path = Resolve-SelfXScriptPath -Folder 'Scripts_to_run' -FileName "$($Card.UserRemediation)" -CodeRoot $Current_Folder
+		If(-not $Script_Path)
+			{
+				$msgbar.Clear()
+				$msgbar.SetDangerAlert((Get-SelfXString 'Script_Not_Found_Text' "$($Card.UserRemediation)"))
+				return
+			}
+		$Global:FreeSpace_Card = $Card
+		$Global:FreeSpace_Before = Get-SelfXDriveFreeGB "$($Card.HealthName)"
+		$Global:FreeSpace_TeamsSkipped = $False
+		$Global:FreeSpace_Pending = $False
+		Try { $Global:FreeSpace_Process = Start-SelfXHiddenPowerShell -Path $Script_Path -WorkingDirectory $Current_Folder -PassThru }
+		Catch
+			{
+				$msgbar.Clear()
+				$msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_Text' "$($Card.Property) ($($_.Exception.Message))"))
+				return
+			}
+		$Global:FreeSpace_Active = $True
+		Write-SelfXLog "Repair '$($Card.Property)': user part started: $($Card.UserRemediation) (process $($Global:FreeSpace_Process.Id))."
+		$msgbar.Clear()
+		$msgbar.SetInformationAlert((Get-SelfXString 'Action_Running_Text' $Card.Property))
+		Update-SelfXFixAllButton
+		Update-SelfXStatusView
+		$FreeSpace_Timer.Start()
+	}
 # The quick scan reports its result in its own words: exit code 0 = no threats, 2 = Defender found threats (details in Windows Security).
 $Global:SelfX_ScanScript = 'SelfX_Defender_QuickScan.ps1'
 $SvcAction_Timer = New-Object System.Windows.Threading.DispatcherTimer
@@ -1574,7 +1663,8 @@ $SvcAction_Timer.Add_Tick({
 	Switch($Result.Status)
 		{
 			'Success'     {
-				If($Global:SvcAction_PostAction -eq 'MailReport') { Show-SelfXReportMailResult -Report $Result.Report }
+				If($Global:FreeSpace_Pending) { $msgbar.SetSuccessAlert((Get-SelfXFreeSpaceResultText 'Health_FreeSpace_Done')) }
+				ElseIf($Global:SvcAction_PostAction -eq 'MailReport') { Show-SelfXReportMailResult -Report $Result.Report }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_RestartScript)) { $msgbar.SetWarningAlert((Get-SelfXString 'Health_Restart_Started')) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_UpdatesScript) -and -not $Global:FixAll_Active) { $msgbar.SetSuccessAlert((Get-SelfXString 'Health_Updates_Done')) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_AppsScript) -and -not $Global:FixAll_Active) { $msgbar.SetSuccessAlert((Get-SelfXString 'Health_Apps_Started')) }
@@ -1582,7 +1672,8 @@ $SvcAction_Timer.Add_Tick({
 				Else { $msgbar.SetSuccessAlert((Get-SelfXString 'Action_Success_Text' $Global:SvcAction_Name)) }
 			}
 			'Failed'      {
-				If($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_ScanScript) -and ($Result.ExitCode -eq 2)) { $msgbar.SetWarningAlert((Get-SelfXString 'Defender_Scan_Threats_Text')) }
+				If($Global:FreeSpace_Pending) { $msgbar.SetWarningAlert((Get-SelfXFreeSpaceResultText 'Health_FreeSpace_Partial')) }
+				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_ScanScript) -and ($Result.ExitCode -eq 2)) { $msgbar.SetWarningAlert((Get-SelfXString 'Defender_Scan_Threats_Text')) }
 				Else { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_ExitCode_Text' $Global:SvcAction_Name $Result.ExitCode)) }
 			}
 			'Busy'        { $msgbar.SetWarningAlert($Service_Busy_Text) }
@@ -1591,6 +1682,7 @@ $SvcAction_Timer.Add_Tick({
 			'Unavailable' { $msgbar.SetDangerAlert($Service_Unavailable_Text); Update-SelfXServiceStatus }
 			Default       { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_Text' "$Global:SvcAction_Name ($($Result.Message))")) }
 		}
+	$Global:FreeSpace_Pending = $False
 	if ($Global:FixAll_Active) {
 		# "Fix all problems": count the result, stop when the service is gone or busy, then run the next repair.
 		If($Result.Status -eq 'Success') { $Global:FixAll_Success++ } Else { $Global:FixAll_Failed.Add($Global:FixAll_Current) }
@@ -1871,7 +1963,7 @@ $Global:FixAll_Queue = New-Object System.Collections.Queue
 Function Update-SelfXFixAllButton
 	{
 		$Btn_FixAll.Visibility = $(If(@($Global:Health_FixAll_Cards).Count -or $Global:FixAll_Active) { 'Visible' } Else { 'Collapsed' })
-		$Btn_FixAll.IsEnabled = -not ((Test-SelfXCheckRunning) -or $Global:SvcAction_Running -or $Global:FixAll_Active)
+		$Btn_FixAll.IsEnabled = -not ((Test-SelfXCheckRunning) -or $Global:SvcAction_Running -or $Global:FixAll_Active -or $Global:FreeSpace_Active)
 	}
 
 Function Update-SelfXStatusView
@@ -1885,12 +1977,14 @@ Function Update-SelfXStatusView
 			$Fix_Glyph = 0xE90F
 			If("$($_.Remediation)" -and ("$($_.Remediation)" -eq $Global:SelfX_RestartScript)) { $Fix_Text = Get-SelfXString 'Health_Restart_Button'; $Fix_Glyph = 0xE777 }
 			ElseIf("$($_.Remediation)" -and ("$($_.Remediation)" -eq $Global:SelfX_AppsScript)) { $Fix_Text = Get-SelfXString 'Health_Apps_Button'; $Fix_Glyph = 0xE896 }
-			# The repair of this card runs right now (Fix button with rotating icon and "Running ...").
-			$Fix_Running = [bool]($Global:SvcAction_Running -and "$($_.Remediation)" -and ("$($_.Remediation)" -eq $Global:SvcAction_Script))
+			ElseIf("$($_.Remediation)" -and ("$($_.Remediation)" -eq $Global:SelfX_FreeSpaceScript)) { $Fix_Text = Get-SelfXString 'Health_FreeSpace_Button'; $Fix_Glyph = 0xE74D }
+			# The repair of this card runs right now (Fix button with rotating icon and "Running ..."), also its part of the user.
+			$Fix_Running = [bool](($Global:SvcAction_Running -and "$($_.Remediation)" -and ("$($_.Remediation)" -eq $Global:SvcAction_Script)) -or
+				($Global:FreeSpace_Active -and "$($_.Remediation)" -and ("$($_.Remediation)" -eq "$($Global:FreeSpace_Card.Remediation)")))
 			If($Fix_Running) { $Fix_Text = Get-SelfXString 'Action_Running_Label' }
 			[pscustomobject]@{
 				Property = $_.Property; Detail = $(If("$($_.Detail)") { "$($_.Detail)" } Else { "$($_.Value)" }); Status = "$($_.Status)"
-				Remediation = "$($_.Remediation)"; HasFix = [bool]"$($_.Remediation)"; HealthId = "$($_.HealthId)"; HealthName = "$($_.HealthName)"
+				Remediation = "$($_.Remediation)"; UserRemediation = "$($_.UserRemediation)"; HasFix = [bool]"$($_.Remediation)"; HealthId = "$($_.HealthId)"; HealthName = "$($_.HealthName)"
 				FixText = $Fix_Text; FixGlyph = [string][char]$Fix_Glyph; Running = $Fix_Running
 				Glyph = [string][char]$Glyph; Rank = $Order["$($_.Status)"]; Index = $Index++
 			}
@@ -1910,9 +2004,10 @@ Function Update-SelfXStatusView
 		$Btn_CheckAll.IsEnabled = -not (Test-SelfXCheckRunning)
 
 		# One repair per script: several rows (for example two disks) can share the same repair.
-		# The restart is never part of "Fix all problems": it would end all other repairs and the session.
+		# The restart is never part of "Fix all problems": it would end all other repairs and the session. A repair with a part of
+		# the user (UserScript, for example "Free up space") is not either: it has its own confirmation and can take long.
 		$Seen = @{}
-		$Global:Health_FixAll_Cards = @($Cards | Where-Object { $_.HasFix -and $_.Status -in @('Error', 'Pending') -and $_.Remediation -ne $Global:SelfX_RestartScript } | Where-Object {
+		$Global:Health_FixAll_Cards = @($Cards | Where-Object { $_.HasFix -and $_.Status -in @('Error', 'Pending') -and $_.Remediation -ne $Global:SelfX_RestartScript -and -not $_.UserRemediation } | Where-Object {
 			$Key = "$($_.Remediation)".ToLowerInvariant()
 			If($Seen.ContainsKey($Key)) { $False } Else { $Seen[$Key] = $True; $True }
 		})
@@ -1947,7 +2042,7 @@ $StatusCards.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEv
 	$event.Handled = $True
 	$Card = $Button.DataContext
 	If(-not $Card) { return }
-	If($Global:SvcAction_Running -or (Test-SelfXCheckRunning))
+	If($Global:SvcAction_Running -or $Global:FreeSpace_Active -or (Test-SelfXCheckRunning))
 		{
 			$msgbar.SetWarningAlert($Service_Busy_Text)
 			return
@@ -1956,6 +2051,23 @@ $StatusCards.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEv
 		{
 			# Only checks this status again; nothing is changed on the device.
 			Start-SysInfoHealthCheck -Id "$($Card.HealthId)" -Name "$($Card.HealthName)"
+			return
+		}
+	If(("$($Button.Tag)" -eq 'Fix') -and $Card.Remediation -and $Card.UserRemediation)
+		{
+			# Repair with a part of the user: one confirmation for both parts. "Free up space" lists what is deleted.
+			If($Card.Remediation -eq $Global:SelfX_FreeSpaceScript)
+				{
+					$Answer = Show-SelfXDialog -Title (Get-SelfXString 'Health_FreeSpace_Title') -Message (Get-SelfXString 'Health_FreeSpace_Confirm' "$($Card.HealthName)") `
+						-AffirmativeText (Get-SelfXString 'Button_Yes') -NegativeText (Get-SelfXString 'Button_No') -Kind Warning
+				}
+			Else
+				{
+					$Answer = Show-SelfXDialog -Title (Get-SelfXString 'Health_Fix') -Message (Get-SelfXString 'Health_Fix_Confirm' $Card.Property) `
+						-AffirmativeText (Get-SelfXString 'Button_Yes') -NegativeText (Get-SelfXString 'Button_No') -Kind Warning
+				}
+			Write-SelfXLog "Fix '$($Card.Property)' ($($Card.UserRemediation), then $($Card.Remediation)): user answered $Answer."
+			If($Answer -eq 'Affirmative') { Start-SelfXTwoPartRepair $Card }
 			return
 		}
 	If(("$($Button.Tag)" -eq 'Fix') -and $Card.Remediation)
@@ -2012,7 +2124,7 @@ Function Start-SelfXNextFixAll
 	}
 
 $Btn_FixAll.Add_Click({
-	If($Global:SvcAction_Running -or (Test-SelfXCheckRunning) -or $Global:FixAll_Active)
+	If($Global:SvcAction_Running -or (Test-SelfXCheckRunning) -or $Global:FixAll_Active -or $Global:FreeSpace_Active)
 		{
 			$msgbar.SetWarningAlert($Service_Busy_Text)
 			return
@@ -2485,7 +2597,7 @@ Function Set-SelfXUserLanguage
 		Try { $Signal = [System.Threading.EventWaitHandle]::OpenExisting('Local\SelfX.Tray.Command'); [void]$Signal.Set(); $Signal.Dispose() } Catch {}
 		If((Get-SelfXLanguageFileCulture -LanguageFolder $Global:SelfX_LanguageFolder -Language $Setting) -eq $SelfX_UI_Language.Culture) { return $False }
 		# A running repair would lose its result window: the new language is used the next time SelfX opens.
-		If($Global:SvcAction_Running -or $Global:FixAll_Active) { return $False }
+		If($Global:SvcAction_Running -or $Global:FixAll_Active -or $Global:FreeSpace_Active) { return $False }
 		$Global:SelfX_RestartPage = $(If($Nav_Status.IsChecked) { 'Status' } ElseIf($Nav_Info.IsChecked) { 'SystemInfo' } Else { 'Troubleshooting' })
 		return $True
 	}
@@ -2557,7 +2669,7 @@ Function Show-SelfXSettingsDialog
 					$Choice = $this.SelectedItem
 					If(-not $Choice) { return }
 					If(Set-SelfXUserLanguage $Choice.Culture) { [System.Windows.Window]::GetWindow($this).Close() }
-					ElseIf(($Global:SvcAction_Running -or $Global:FixAll_Active)) { $Hint = [System.Windows.Window]::GetWindow($this).FindName('LanguageHint'); $Hint.Text = Get-SelfXString 'Settings_Language_Later' }
+					ElseIf(($Global:SvcAction_Running -or $Global:FixAll_Active -or $Global:FreeSpace_Active)) { $Hint = [System.Windows.Window]::GetWindow($this).FindName('LanguageHint'); $Hint.Text = Get-SelfXString 'Settings_Language_Later' }
 				})
 			}
 		Else { $Dialog.FindName('LanguagePanel').Visibility = 'Collapsed' }

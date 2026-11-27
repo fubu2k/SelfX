@@ -207,6 +207,12 @@ Menü öffnet SelfX, prüft den Status oder sendet die Protokolle.
 - **Konfigurierbare Reparaturen:** jede Prüfung kann einem Reparaturskript
   zugeordnet werden; Sie legen fest, ob die Schaltfläche **Beheben** immer oder
   nur bei nicht erfüllter Prüfung erscheint.
+- **Speicherplatz freigeben:** Bei vollem Systemlaufwerk leert eine Schaltfläche
+  den Papierkorb und die temporären Dateien des Nutzers (und den Teams-Cache, wenn
+  Teams geschlossen ist) und bereinigt danach als SYSTEM den Komponentenspeicher,
+  den Delivery-Optimization-Cache und alte Dateien in `Windows\Temp` und der
+  Intune Management Extension. SelfX zählt vorher auf, was gelöscht wird, und
+  zeigt den freien Platz vorher und nachher.
 - **Protokollierung**
   - Alle Skripte protokollieren nach `%ProgramData%\SelfX\Logs`; die Protokolle
     jedes Nutzers liegen in einem eigenen, geschützten Ordner.

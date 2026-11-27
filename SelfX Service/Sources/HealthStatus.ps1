@@ -21,6 +21,8 @@
                                        (SelfXWinRT.ps1); a difference = no orchestrator information.
     3.1.0  2026-11-27  fubu2k          Health_Config.xml from the configuration folder; own health scripts of the company only from
                                        Config\HealthChecks with an entry in SelfX.Config.json (SelfXPaths.ps1)
+    3.1.0  2026-11-27  fubu2k          Remediation UserScript (part in the context of the user, started by SelfX before the
+                                       SYSTEM part): returned as UserRemediation, same name rule, never the same file as Script
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -501,18 +503,26 @@ function Get-SelfXHealth {
                 (-not $_.HasAttribute('Name') -or $_.GetAttribute('Name') -eq $result.Name)
             })
             $script = ''
+            $userScript = ''
             if ($matches.Count -gt 1) { throw "Ambiguous remediation for $($result.Id) / $($result.Name)." }
             if ($matches.Count -eq 1) {
                 $when = 'Always'
                 if ($matches[0].HasAttribute('When')) { $when = $matches[0].GetAttribute('When') }
                 if ($when -cnotin @('Always','NotOK')) { throw "Invalid remediation When value for $($result.Id)." }
                 $script = $matches[0].GetAttribute('Script')
+                # Read before the first -match/-notmatch below: they overwrite the automatic variable $Matches (= $matches).
+                $userScript = $matches[0].GetAttribute('UserScript')
                 if ($script -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,90}\.ps1$' -or $script.Contains('..')) {
                     throw "Invalid remediation filename for $($result.Id)."
                 }
-                if ($when -eq 'NotOK' -and $result.Status -eq 'OK') { $script = '' }
+                # Optional first part in the context of the user (SelfX starts it itself, the service never runs it).
+                if ($userScript -and ($userScript -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,90}\.ps1$' -or $userScript.Contains('..') -or $userScript -eq $script)) {
+                    throw "Invalid remediation UserScript for $($result.Id)."
+                }
+                if ($when -eq 'NotOK' -and $result.Status -eq 'OK') { $script = ''; $userScript = '' }
             }
             $result | Add-Member -NotePropertyName Remediation -NotePropertyValue $script
+            $result | Add-Member -NotePropertyName UserRemediation -NotePropertyValue $userScript
         }
         return $results
     } catch { New-SelfXHealthResult Collection Error $_.Exception.Message }

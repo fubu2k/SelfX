@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows 업데이트가 완료되었습니다. 디바이스 상태를 다시 확인하여 다시 시작이 필요한지 표시합니다.</Health_Updates_Done>
 		<Health_Apps_Button>다시 시도</Health_Apps_Button>
 		<Health_Apps_Started>실패한 앱의 설치를 다시 시작합니다. 몇 분 정도 걸릴 수 있으며 회사 포털에서 확인할 수 있습니다.</Health_Apps_Started>
+		<Health_FreeSpace_Button>공간 확보</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>공간 확보</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX가 드라이브 {0}의 공간을 확보합니다. 다음 항목이 삭제됩니다:&#10;• 휴지통의 내용 (되돌릴 수 없음)&#10;• 사용자의 임시 파일&#10;• Teams 캐시, Teams가 닫혀 있을 때만 (Teams에 다시 로그인해야 할 수 있음)&#10;• 더 이상 필요 없는 Windows 파일: 오래된 업데이트 구성 요소, 다운로드 캐시, 오래된 임시 시스템 파일, 회사 앱의 오래된 설치 파일&#10;&#10;문서, 설정, 프로그램은 그대로 유지됩니다. 최대 1시간이 걸릴 수 있으며, 계속 작업할 수 있습니다.&#10;&#10;지금 공간을 확보할까요?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>공간 확보가 완료되었습니다. {0}의 여유 공간: 이전 {1}GB, 현재 {2}GB.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>공간 확보가 완료되었지만 일부 단계가 성공하지 못했습니다. {0}의 여유 공간: 이전 {1}GB, 현재 {2}GB. 문제가 계속되면 IT 지원팀에 문의하세요.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams가 열려 있어 캐시를 유지했습니다. 공간을 더 확보하려면 Teams를 닫고 공간 확보를 다시 실행하세요.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>빠른 검사가 완료되었습니다. Microsoft Defender가 위협을 찾지 못했습니다.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>빠른 검사가 완료되었습니다. Microsoft Defender가 위협을 찾았으며 회사의 설정에 따라 처리합니다. 자세한 내용은 Windows 보안에서 확인하세요.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>확인</Health_Check_Button>

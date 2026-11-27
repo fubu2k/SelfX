@@ -53,6 +53,7 @@
     3.1.0    2026-11-27  fubu2k               Configuration package: New-SelfXConfigManifest -MinCodeVersion (writes MinCodeVersion, reads only the folder Config),
                                               Get-SelfXConfigFolderHashes, Convert-SelfXPackageToConfigOnly; New-SelfXDetectionScript -Kind (Full,
                                               FullWithoutConfig, ConfigOnly)
+    3.1.0    2026-11-27  fubu2k               Code files SelfX_Device_FreeSpace.ps1 and SelfX_Device_FreeSpaceUser.ps1 (free up space)
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -76,6 +77,7 @@ $script:SelfXCodeFileNames = @(
     'Scripts_to_run/SelfX_Defender_UpdateSignature.ps1', 'Scripts_to_run/SelfX_Device_AirePlaneMode.ps1',
     'Scripts_to_run/SelfX_Device_BringWindowsBack.ps1', 'Scripts_to_run/SelfX_Device_ClearCache.ps1',
     'Scripts_to_run/SelfX_Device_CollectLogs.ps1', 'Scripts_to_run/SelfX_Device_DeviceSlow.ps1',
+    'Scripts_to_run/SelfX_Device_FreeSpace.ps1', 'Scripts_to_run/SelfX_Device_FreeSpaceUser.ps1',
     'Scripts_to_run/SelfX_Device_GpUpdate.ps1', 'Scripts_to_run/SelfX_Device_Restart.ps1',
     'Scripts_to_run/SelfX_Device_SyncTime.ps1', 'Scripts_to_run/SelfX_Excel_NewInstance.ps1',
     'Scripts_to_run/SelfX_Excel_Reboot.ps1', 'Scripts_to_run/SelfX_Intune_RestartService.ps1',

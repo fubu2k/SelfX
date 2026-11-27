@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update เสร็จแล้ว สถานะอุปกรณ์จะถูกตรวจสอบอีกครั้งและแสดงว่าจำเป็นต้องรีสตาร์ตหรือไม่</Health_Updates_Done>
 		<Health_Apps_Button>ลองอีกครั้ง</Health_Apps_Button>
 		<Health_Apps_Started>เริ่มการติดตั้งแอปที่ล้มเหลวอีกครั้ง อาจใช้เวลาสักครู่ คุณสามารถติดตามได้ในพอร์ทัลบริษัท</Health_Apps_Started>
+		<Health_FreeSpace_Button>เพิ่มพื้นที่ว่าง</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>เพิ่มพื้นที่ว่าง</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX เพิ่มพื้นที่ว่างบนไดรฟ์ {0} โดยจะลบ:&#10;• เนื้อหาในถังรีไซเคิลของคุณ (ยกเลิกไม่ได้)&#10;• ไฟล์ชั่วคราวของคุณ&#10;• แคชของ Teams เฉพาะเมื่อปิด Teams อยู่ (คุณอาจต้องลงชื่อเข้า Teams ใหม่)&#10;• ไฟล์ Windows ที่ไม่จำเป็นแล้ว: ส่วนประกอบการอัปเดตเก่า แคชการดาวน์โหลด ไฟล์ระบบชั่วคราวเก่า และไฟล์ติดตั้งเก่าของแอปบริษัท&#10;&#10;เอกสาร การตั้งค่า และโปรแกรมของคุณยังคงอยู่ อาจใช้เวลาถึงหนึ่งชั่วโมง คุณทำงานต่อได้&#10;&#10;เพิ่มพื้นที่ว่างตอนนี้หรือไม่</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>เพิ่มพื้นที่ว่างเสร็จแล้ว พื้นที่ว่างบน {0}: ก่อนหน้า {1} GB ตอนนี้ {2} GB</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>เพิ่มพื้นที่ว่างเสร็จแล้ว แต่บางขั้นตอนไม่สำเร็จ พื้นที่ว่างบน {0}: ก่อนหน้า {1} GB ตอนนี้ {2} GB หากปัญหายังอยู่ โปรดติดต่อฝ่ายสนับสนุนไอที</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams เปิดอยู่ จึงเก็บแคชไว้ ปิด Teams แล้วเรียกใช้ เพิ่มพื้นที่ว่าง อีกครั้งเพื่อได้พื้นที่เพิ่ม</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>การสแกนด่วนเสร็จสิ้น Microsoft Defender ไม่พบภัยคุกคาม</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>การสแกนด่วนเสร็จสิ้น Microsoft Defender พบภัยคุกคามและจัดการตามที่บริษัทของคุณกำหนด เปิดความปลอดภัยของ Windows เพื่อดูรายละเอียด</Defender_Scan_Threats_Text>
 		<Health_Check_Button>ตกลง</Health_Check_Button>

@@ -366,6 +366,7 @@ The checks only read. For a row to show the *Fix* button, store a repair script 
 | `When` | `NotOK`: offer only while the row is not OK. `Always` (default): always offer. |
 | `TimeoutSeconds` | Time limit, 1 to 7200 seconds. Default 900. |
 | `OtherSessions` | `Block` as for actions. The bundled configuration sets it for `Updates` and `PendingReboot`. |
+| `UserScript` | Optional. A first part that SelfX runs **as the signed-in user** before `Script`. The service never runs it. It must be a script with `Context : User` and must not be the same file as `Script`. A repair with `UserScript` has its own confirmation and is never part of *Fix all problems*. |
 
 **How a repair runs:** The user confirms. The service checks whether the script is in the protected list
 and runs it as SYSTEM. Users cannot pass their own scripts, paths or arguments. After the repair, SelfX
@@ -382,6 +383,36 @@ checks only the affected row again. The result of that check counts, not the exi
   after confirmation. The restart is never part of *Fix all problems*.
 - **App retry** (`SelfX_Apps_RetryInstall.ps1`): resets the retry plan of a failed Intune app. No app is
   uninstalled.
+- **Free up space** (`SelfX_Device_FreeSpaceUser.ps1`, then `SelfX_Device_FreeSpace.ps1`): on the row of drive
+  `C:` while it is not OK. The user sees one confirmation that lists what is deleted. Then:
+  1. As the user: empties the own recycle bin (cannot be undone), deletes the own temporary files, and deletes
+     the own Teams cache only while Teams is closed. Teams is never closed; when it runs, its cache is kept
+     and SelfX says so.
+  2. As SYSTEM: `Dism.exe /Online /Cleanup-Image /StartComponentCleanup` with fixed arguments (never
+     `/ResetBase`, so installed updates can still be uninstalled), the Delivery Optimization cache
+     (`Delete-DeliveryOptimizationCache`, pinned files stay), and entries older than `MinimumAgeDays` in
+     `Windows\Temp` and in the Intune content folders (`Content\Incoming`, `Content\Staging`,
+     `Windows\IMECache`). The old entries are deleted by `SelfXService.exe /cleanold:`: it opens every
+     entry once without following a link and deletes it through that handle, only below these four fixed
+     folders. The Intune folders are skipped while `AgentExecutor.exe` or `msiexec.exe` runs or when
+     something there changed during the last `ImeQuietMinutes`. This is a heuristic; Windows has no query
+     for "no installation runs".
+
+  At the end SelfX shows the free space before and after. It can take up to an hour (DISM). It is never
+  part of *Fix all problems*. On another system drive than `C:`, change `Name` of the remediation.
+  Thresholds in `Health_Config.xml`:
+
+  ```xml
+  <DiskCleanup MinimumAgeDays="7" ImeQuietMinutes="60" />
+  ```
+
+  | Attribute | Default | Meaning |
+  |---|---|---|
+  | `MinimumAgeDays` | `7` | Only entries older than this are deleted in `Windows\Temp` and in the Intune content (1 to 365). |
+  | `ImeQuietMinutes` | `60` | The Intune content is skipped when something there changed during this time (1 to 1440). |
+
+  An invalid value stops the SYSTEM part before anything is deleted. A file counts as old only when its
+  creation, write and change time are all older than `MinimumAgeDays`.
 
 ## Device logs for support
 

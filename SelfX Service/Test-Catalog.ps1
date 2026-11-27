@@ -27,13 +27,15 @@
     Name    : Test-Catalog.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator before building the package; not installed)
-    Version : 2.6.10
+    Version : 3.1.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.6.10   2026-11-22  fubu2k               Initial version.
+    3.1.0    2026-11-27  fubu2k               Remediation UserScript: plain file name, exists, declares 'Context : User', is not a SYSTEM
+                                              script of the catalogue or of another remediation and has no mandatory parameter.
 #>
 param(
 	[string]$SourcesFolder = (Join-Path $PSScriptRoot 'Sources')
@@ -174,6 +176,20 @@ foreach ($name in ($systemScripts | Sort-Object -Unique)) {
 	Assert-True ($info.ParseErrors -eq 0) "$($file.Name) parses"
 	Assert-True ($info.HeaderContext -ceq 'System') "$($file.Name) declares 'Context : System' in its header (found '$($info.HeaderContext)')"
 	Assert-True ($info.MandatoryParameters.Count -eq 0) "$($file.Name) has no mandatory script parameter, the service starts it without parameters (found: $($info.MandatoryParameters -join ', '))"
+}
+
+# --- Parts of the user of two-part repairs (Health_Config.xml UserScript) ----------------------------
+# SelfX starts them with the rights of the user; one script has one context, so a UserScript is never a SYSTEM script.
+foreach ($remediation in @($health.SelectNodes('//Remediation[@UserScript]'))) {
+	$userName = $remediation.GetAttribute('UserScript')
+	Assert-True (Test-PlainScriptName $userName) "Remediation $($remediation.GetAttribute('Id')) UserScript is a plain script file name (found '$userName')"
+	Assert-True ($systemScripts -notcontains $userName.ToLowerInvariant()) "UserScript $userName is not a SYSTEM script (catalogue or remediation)"
+	$file = Get-ChildItem -LiteralPath $scripts -Filter '*.ps1' | Where-Object { $_.Name -ieq $userName } | Select-Object -First 1
+	Assert-True ([bool]$file) "UserScript exists: $userName"
+	if (-not $file) { continue }
+	$info = Get-ScriptInfo $file.Name
+	Assert-True ($info.HeaderContext -ceq 'User') "UserScript $($file.Name) declares 'Context : User' in its header (found '$($info.HeaderContext)')"
+	Assert-True ($info.MandatoryParameters.Count -eq 0) "UserScript $($file.Name) has no mandatory parameter (found: $($info.MandatoryParameters -join ', '))"
 }
 
 # --- User scripts ----------------------------------------------------------------------------------

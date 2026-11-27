@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update has finished. The device status is checked again and shows whether a restart is needed.</Health_Updates_Done>
 		<Health_Apps_Button>Try again</Health_Apps_Button>
 		<Health_Apps_Started>The installation of the failed apps starts again. This can take a few minutes; you can follow it in the Company Portal.</Health_Apps_Started>
+		<Health_FreeSpace_Button>Free up space</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>Free up space</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX frees up space on drive {0}. It deletes:&#10;• the content of your recycle bin (cannot be undone)&#10;• your temporary files&#10;• the Teams cache, only when Teams is closed (you may have to sign in to Teams again)&#10;• Windows files that are no longer needed: old update components, the download cache, old temporary system files and old installation files of company apps&#10;&#10;Your documents, settings and programs stay. This can take up to an hour; you can keep working.&#10;&#10;Free up space now?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>Free up space has finished. Free space on {0}: {1} GB before, {2} GB now.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>Free up space has finished, but not every step worked. Free space on {0}: {1} GB before, {2} GB now. If the problem stays, contact IT support.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams was open, so its cache was kept. Close Teams and run Free up space again to free more space.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>The quick scan has finished. Microsoft Defender found no threats.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>The quick scan has finished. Microsoft Defender found threats and handles them as set by your company. Open Windows Security for details.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>

@@ -12,10 +12,13 @@
     Also checks the headers, the logging and the catalog / Health_Config references of all scripts.
     Run in Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-Scripts.ps1
 .NOTES
-    Version: 2.6.9
+    Version: 3.1.0
     History:
     2.6.0  2026-11-06  Wolfgang Baeck  Initial version: sandbox tests of all action, repair and check scripts.
     2.6.9  2026-11-19  Wolfgang Baeck  Updates: simulated Windows Update orchestrator; WUA skips feature updates.
+    3.1.0  2026-11-27  fubu2k          Free up space: part of the user (recycle bin, TEMP, Teams cache only while Teams is closed) and SYSTEM
+                                       part (fixed DISM arguments, Delivery Optimization cache, fixed folders of the delete helper,
+                                       Intune check, thresholds); header versions 2.x.y or 3.x.y; UserScript of Health_Config.xml.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -164,7 +167,8 @@ try {
 	#------------------------------------------------------------------------------------------------
 	$catalog = [xml][IO.File]::ReadAllText("$sources\Issues_List.xml")
 	$health = [xml][IO.File]::ReadAllText("$sources\Health_Config.xml")
-	$referenced = @($catalog.SelectNodes('//Action/Script') | ForEach-Object { $_.InnerText.Trim() }) + @($health.SelectNodes('//Remediation') | ForEach-Object { $_.GetAttribute('Script') })
+	$referenced = @($catalog.SelectNodes('//Action/Script') | ForEach-Object { $_.InnerText.Trim() }) + @($health.SelectNodes('//Remediation') | ForEach-Object { $_.GetAttribute('Script') }) +
+		@($health.SelectNodes('//Remediation[@UserScript]') | ForEach-Object { $_.GetAttribute('UserScript') })
 	$script:unused = @()
 	foreach ($name in ($referenced | Sort-Object -Unique)) { Assert-Equal (Test-Path -LiteralPath (Join-Path $scripts $name)) $true "Referenced script exists: $name" }
 	foreach ($file in Get-ChildItem -LiteralPath $scripts -Filter '*.ps1') {
@@ -175,7 +179,7 @@ try {
 		$errors = $null
 		[void][Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$errors)
 		Assert-Equal @($errors).Count 0 "$($file.Name) parses"
-		Assert-Equal ($text -match 'Version\s*:\s*2\.\d+\.\d+') $true "$($file.Name) header version 2.x.y"
+		Assert-Equal ($text -match 'Version\s*:\s*[23]\.\d+\.\d+') $true "$($file.Name) header version 2.x.y or 3.x.y"
 		Assert-Equal ($code.Contains('Initialize-SelfXLog')) $true "$($file.Name) initializes the logging"
 		Assert-Equal ($code -match '(?i)-like\s+"\*(word|teams)\*"') $false "$($file.Name) uses no *word* / *teams* wildcards"
 		Assert-Equal ($code.Contains('echo Y|')) $false "$($file.Name) does not answer prompts in English only"
@@ -197,6 +201,9 @@ try {
 	}
 	foreach ($remediation in $health.SelectNodes('//Remediation')) {
 		Assert-Equal ([IO.File]::ReadAllText((Join-Path $scripts $remediation.GetAttribute('Script'))) -match 'Context\s*:\s*System') $true "$($remediation.GetAttribute('Script')) runs as System"
+		if ($remediation.HasAttribute('UserScript')) {
+			Assert-Equal ([IO.File]::ReadAllText((Join-Path $scripts $remediation.GetAttribute('UserScript'))) -match 'Context\s*:\s*User') $true "$($remediation.GetAttribute('UserScript')) runs as the user"
+		}
 	}
 
 	#------------------------------------------------------------------------------------------------
@@ -241,6 +248,25 @@ try {
 	Assert-Equal $run.ExitCode 0 'Device slow: an empty recycle bin is no error'
 	Assert-Equal @(Get-ChildItem -LiteralPath $env:TEMP -Force | Where-Object { $_.Name -ne 'SelfX' }).Count 0 'Device slow: TEMP emptied'
 	Assert-Equal ((Get-SandboxLog 'SelfX_Device_DeviceSlow') -match 'TEMP: 2 item\(s\) removed') $true 'Device slow: logged'
+
+	# Free up space, part of the user: recycle bin, TEMP; the Teams cache only while no Teams process of the session runs.
+	$classicTeams = Join-Path $env:APPDATA 'Microsoft\Teams'
+	$newTeams = Join-Path $env:LOCALAPPDATA 'Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams'
+	New-SandboxFile (Join-Path $env:TEMP 'c.tmp'); New-SandboxFile (Join-Path $classicTeams 'GPUcache\x'); New-SandboxFile (Join-Path $classicTeams 'desktop-config.json'); New-SandboxFile (Join-Path $newTeams 'EBWebView\y')
+	New-FakeProcess 'ms-teams' 'C:\Program Files\WindowsApps\MSTeams\ms-teams.exe'
+	$run = Invoke-TestScript 'SelfX_Device_FreeSpaceUser.ps1'
+	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '2|Clear-RecycleBin' "Free up space (user): Teams runs = exit 2, Teams not closed ($($run.Error))"
+	Assert-Equal "$(Test-Path (Join-Path $env:TEMP 'c.tmp'))/$(Test-Path (Join-Path $classicTeams 'GPUcache'))/$(Test-Path (Join-Path $newTeams 'EBWebView'))" 'False/True/True' 'Free up space (user): TEMP emptied, Teams cache kept while Teams runs'
+	$global:FakeProcesses.Clear()
+	$run = Invoke-TestScript 'SelfX_Device_FreeSpaceUser.ps1'
+	Assert-Equal $run.ExitCode 0 "Free up space (user): exit 0 when Teams is closed ($($run.Error))"
+	Assert-Equal "$(Test-Path (Join-Path $classicTeams 'GPUcache'))/$(Test-Path (Join-Path $classicTeams 'desktop-config.json'))/$(Test-Path (Join-Path $newTeams 'EBWebView'))" 'False/True/False' 'Free up space (user): Teams cache removed, Teams settings kept'
+	Assert-Equal @($script:calls | Where-Object { $_ -match 'Stop-Process|Start-Process' }).Count 0 'Free up space (user): no process closed or started'
+	$freeUserLog = Get-SandboxLog 'SelfX_Device_FreeSpaceUser'
+	Assert-Equal "$($freeUserLog -match 'Teams cache skipped')/$($freeUserLog -match 'Teams cache: 2 item')" 'True/True' 'Free up space (user): logged'
+	$freeUserText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Device_FreeSpaceUser.ps1'))
+	$freeUserCode = $freeUserText.Substring($freeUserText.IndexOf('#>') + 2)
+	Assert-Equal ($freeUserCode -match '(?i)Stop-Process|Start-Process|SystemRoot|windir|Invoke-Expression|iex\b') $false 'Free up space (user): only the profile of the user, nothing is closed or started'
 
 	# Outlook auto-complete list (SelfXOffice.ps1): program path independent of the Office version, bitness and installation type;
 	# only a file below Program Files is used; registry reads are simulated, nothing outside the sandbox is read.
@@ -595,6 +621,84 @@ try {
 	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)|$($script:calls[0] -like '*\System32\w32tm.exe /resync /force')" '0|1|True' "Time sync: w32tm called once with fixed arguments ($($run.Error))"
 	$run = Invoke-TestScript 'SelfX_Intune_RestartService.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" '0|Restart-Service IntuneManagementExtension' 'IME restart'
+
+	# Free up space, SYSTEM part. Static: no parameter, DISM only with the three fixed arguments (never /ResetBase), the delete
+	# helper only with the fixed folder names, nothing from the caller or the environment.
+	$freeText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Device_FreeSpace.ps1'))
+	$freeCode = $freeText.Substring($freeText.IndexOf('#>') + 2)
+	Assert-Equal ($null -eq ([Management.Automation.Language.Parser]::ParseInput($freeText, [ref]$null, [ref]$null)).ParamBlock) $true 'Free up space: script has no parameters'
+	Assert-Equal ([regex]::Matches($freeCode, '(?i)Start-Process').Count) 1 'Free up space: exactly one program start with Start-Process (DISM)'
+	Assert-Equal ($freeCode.Contains('Start-Process -FilePath $dism -ArgumentList ''/Online'', ''/Cleanup-Image'', ''/StartComponentCleanup'' -Wait')) $true 'Free up space: DISM only with /Online /Cleanup-Image /StartComponentCleanup'
+	Assert-Equal ($freeCode.Contains('$dism = Join-Path $system32 ''Dism.exe''') -and $freeCode.Contains('$system32 = [Environment]::SystemDirectory')) $true 'Free up space: DISM by its full path in System32'
+	# Without comments (they name what is not done).
+	$freeTokens = $null
+	[void][Management.Automation.Language.Parser]::ParseInput($freeCode, [ref]$freeTokens, [ref]$null)
+	$freeCodeOnly = (@($freeTokens | Where-Object { $_.Kind -ne 'Comment' } | ForEach-Object { $_.Text })) -join ' '
+	Assert-Equal ($freeCodeOnly -match '(?i)ResetBase|RestoreHealth|/Remove|/Disable|/Defer|Remove-Item|Clear-RecycleBin|\$env:|\$args|Invoke-Expression|iex\b|-IncludePinnedFiles|Restart-Computer|shutdown') $false 'Free up space: no /ResetBase, no own deletion, no environment, no caller input'
+	Assert-Equal ([regex]::Matches($freeCode, '& \$helper ').Count) 1 'Free up space: one call of the delete helper'
+	Assert-Equal ($freeCode.Contains('& $helper "/cleanold:$root" "/minage:$($settings.MinimumAgeDays)"')) $true 'Free up space: helper arguments are only /cleanold: and /minage:'
+	Assert-Equal ($freeCode.Contains('$roots = @(''WindowsTemp'')') -and $freeCode.Contains('$roots += @(''ImeIncoming'', ''ImeStaging'', ''ImeCache'')')) $true 'Free up space: only the four fixed folder names of the helper'
+	# Functions of the script, tested alone.
+	$freeAst = [Management.Automation.Language.Parser]::ParseInput($freeText, [ref]$null, [ref]$null)
+	foreach ($fn in 'Read-SelfXDiskCleanupSettings', 'Get-SelfXImeBusyReason', 'ConvertFrom-SelfXCleanOldOutput') {
+		$def = $freeAst.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $fn }, $true)
+		. ([scriptblock]::Create($def.Extent.Text))
+	}
+	$settingsFile = Join-Path $sandbox 'Health_Config_FreeSpace.xml'
+	[IO.File]::WriteAllText($settingsFile, '<HealthConfig><Disk UsedPercentError="90" MinimumFreeGB="20"/></HealthConfig>')
+	$read = Read-SelfXDiskCleanupSettings -Path $settingsFile
+	Assert-Equal "$($read.MinimumAgeDays)/$($read.ImeQuietMinutes)" '7/60' 'Free up space: defaults without DiskCleanup'
+	$read = Read-SelfXDiskCleanupSettings -Path (Join-Path $sources 'Health_Config.xml')
+	Assert-Equal "$($read.MinimumAgeDays)/$($read.ImeQuietMinutes)" '7/60' 'Free up space: delivered thresholds'
+	[IO.File]::WriteAllText($settingsFile, '<HealthConfig><DiskCleanup MinimumAgeDays="30" ImeQuietMinutes="5"/></HealthConfig>')
+	$read = Read-SelfXDiskCleanupSettings -Path $settingsFile
+	Assert-Equal "$($read.MinimumAgeDays)/$($read.ImeQuietMinutes)" '30/5' 'Free up space: own thresholds'
+	foreach ($case in @('MinimumAgeDays="0"', 'MinimumAgeDays="366"', 'MinimumAgeDays="-1"', 'MinimumAgeDays="7.5"', 'MinimumAgeDays=" 7"', 'MinimumAgeDays=""', 'ImeQuietMinutes="0"', 'ImeQuietMinutes="1441"', 'ImeQuietMinutes="abc"')) {
+		[IO.File]::WriteAllText($settingsFile, "<HealthConfig><DiskCleanup $case /></HealthConfig>")
+		$thrown = ''
+		try { $null = Read-SelfXDiskCleanupSettings -Path $settingsFile } catch { $thrown = $_.Exception.Message }
+		Assert-Equal ($thrown -like 'DiskCleanup *') $true "Free up space: invalid setting refused ($case)"
+	}
+	[IO.File]::WriteAllText($settingsFile, '<?xml version="1.0"?><!DOCTYPE HealthConfig [<!ENTITY x "7">]><HealthConfig><DiskCleanup MinimumAgeDays="&x;"/></HealthConfig>')
+	$thrown = ''
+	try { $null = Read-SelfXDiskCleanupSettings -Path $settingsFile } catch { $thrown = $_.Exception.Message }
+	Assert-Equal ($thrown -match '(?i)DTD') $true 'Free up space: settings are read without DTD'
+	$imeFolder = Join-Path $sandbox 'IME\Incoming'
+	New-SandboxFile (Join-Path $imeFolder 'old.bin')
+	foreach ($item in @((Get-Item -LiteralPath (Join-Path $imeFolder 'old.bin')), (Get-Item -LiteralPath $imeFolder))) { $item.CreationTimeUtc = [datetime]::UtcNow.AddDays(-3); $item.LastWriteTimeUtc = [datetime]::UtcNow.AddDays(-3) }
+	$global:FakeProcesses.Clear()
+	Assert-Equal (Get-SelfXImeBusyReason -Folders @($imeFolder, (Join-Path $sandbox 'IME\Missing')) -QuietMinutes 60 -NowUtc ([datetime]::UtcNow)) '' 'Free up space: Intune content may be cleaned when nothing runs and nothing changed'
+	New-FakeProcess 'AgentExecutor' 'C:\Program Files (x86)\Microsoft Intune Management Extension\AgentExecutor.exe'
+	Assert-Equal (Get-SelfXImeBusyReason -Folders @($imeFolder) -QuietMinutes 60 -NowUtc ([datetime]::UtcNow)) 'AgentExecutor runs' 'Free up space: skipped while AgentExecutor runs'
+	$global:FakeProcesses.Clear()
+	New-FakeProcess 'msiexec' 'C:\Windows\System32\msiexec.exe'
+	Assert-Equal (Get-SelfXImeBusyReason -Folders @($imeFolder) -QuietMinutes 60 -NowUtc ([datetime]::UtcNow)) 'msiexec runs' 'Free up space: skipped while msiexec runs'
+	$global:FakeProcesses.Clear()
+	New-SandboxFile (Join-Path $imeFolder 'new.bin')
+	Assert-Equal ((Get-SelfXImeBusyReason -Folders @($imeFolder) -QuietMinutes 60 -NowUtc ([datetime]::UtcNow)) -like 'changes during the last 60 minutes*') $true 'Free up space: skipped after a recent change'
+	Assert-Equal (Get-SelfXImeBusyReason -Folders @($imeFolder) -QuietMinutes 60 -NowUtc ([datetime]::UtcNow.AddHours(2))) '' 'Free up space: quiet time over'
+	$parsed = ConvertFrom-SelfXCleanOldOutput -Lines @('noise', 'SELFX-CLEANOLD-OK removed=12 kept=3 bytes=4096')
+	Assert-Equal "$($parsed.Removed)/$($parsed.Kept)/$($parsed.Bytes)" '12/3/4096' 'Free up space: helper result read'
+	Assert-Equal ($null -eq (ConvertFrom-SelfXCleanOldOutput -Lines @('SELFX-CLEANOLD-ERROR: unknown folder.', 'SELFX-CLEANOLD-OK removed=1 kept=0 bytes=x'))) $true 'Free up space: an error or a malformed line is no result'
+	# Run with mocks: DISM and the Delivery Optimization cache are simulated; the delete helper is missing in the repository
+	# layout, so the old files are skipped and the run counts as failed (exit 1) after the other steps ran.
+	function global:Import-Module { param([string]$Name, $ErrorAction) $global:SelfXTestCalls.Add("Import-Module $([IO.Path]::GetFileName($Name))") }
+	function global:Delete-DeliveryOptimizationCache { param([switch]$Force, [switch]$IncludePinnedFiles, $ErrorAction) $global:SelfXTestCalls.Add("Delete-DeliveryOptimizationCache Force=$Force Pinned=$IncludePinnedFiles") }
+	try {
+		$global:ProcExit = 0
+		$run = Invoke-TestScript 'SelfX_Device_FreeSpace.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '1|3' "Free up space: three steps simulated, missing helper = exit 1 ($($run.Error) $($run.Output -join ' '))"
+		Assert-Equal ($script:calls[0] -like '*\System32\Dism.exe /Online /Cleanup-Image /StartComponentCleanup') $true "Free up space: DISM from System32 with fixed arguments ($($script:calls[0]))"
+		Assert-Equal "$($script:calls[1])|$($script:calls[2])" 'Import-Module DeliveryOptimization.psd1|Delete-DeliveryOptimizationCache Force=True Pinned=False' 'Free up space: Delivery Optimization cache without pinned files'
+		$freeLog = Get-SandboxLog 'SelfX_Device_FreeSpace'
+		Assert-Equal "$($freeLog -match 'Free space before: .* GB\. MinimumAgeDays 7, ImeQuietMinutes 60')/$($freeLog -match 'SelfXService\.exe of the installation is missing')/$($freeLog -match 'Free space after')" 'True/True/True' 'Free up space: logged'
+		$global:ProcExit = 1
+		$run = Invoke-TestScript 'SelfX_Device_FreeSpace.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '1|3' 'Free up space: a DISM error does not stop the other steps'
+	} finally {
+		$global:ProcExit = $null
+		Remove-Item -LiteralPath 'Function:\Import-Module', 'Function:\Delete-DeliveryOptimizationCache' -ErrorAction SilentlyContinue
+	}
 
 	$run = Invoke-TestScript 'SelfX_OneDrive_CHKDSK.ps1'
 	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Repair $("$env:SystemDrive".TrimEnd(':', '\')) offline=True" 'Disk check: offline scan and fix scheduled through CIM (language independent)'
