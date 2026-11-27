@@ -65,6 +65,7 @@ try {
     if ($paths.Count -eq 0) { throw 'No program file given.' }
     foreach ($path in $paths) { if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "File not found: $path" } }
     if ($Mode -eq 'Publisher') {
+        if (-not (Get-Command -Name Get-AuthenticodeSignature -ErrorAction SilentlyContinue)) { throw 'The cmdlet Get-AuthenticodeSignature is missing (module Microsoft.PowerShell.Security). Run the script in Windows PowerShell 5.1 (powershell.exe).' }
         # The signature of every file must be valid, all files must have the same signer, and AppLocker must name a publisher.
         $problem = Get-SelfXSignerSetProblem -State @($paths | ForEach-Object { Get-SelfXFileSignerState -Path $_ }) -RequireSigned
         if ($problem) { throw $problem }

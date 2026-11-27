@@ -104,6 +104,11 @@ foreach ($cmdlet in 'New-CIPolicy', 'Set-CIPolicyIdInfo', 'Set-CIPolicyVersion',
     }
 }
 
+# The level Publisher reads the signatures with Get-AuthenticodeSignature. Without it every file would look unreadable: stop with a clear text.
+if ($Level -eq 'Publisher' -and -not (Get-Command -Name Get-AuthenticodeSignature -ErrorAction SilentlyContinue)) {
+    throw 'The cmdlet Get-AuthenticodeSignature is missing (module Microsoft.PowerShell.Security). Run the script in Windows PowerShell 5.1 (powershell.exe).'
+}
+
 $versionPath = Join-Path $PackageFolder 'Version.txt'
 if (-not (Test-Path -LiteralPath $versionPath -PathType Leaf)) { throw "Version.txt not found in '$PackageFolder'." }
 $toolVersion = Get-SelfXVersionFromFile -Path $versionPath

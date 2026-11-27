@@ -51,6 +51,7 @@ Assert-True ($toolText -match 'Version\.txt' -and $toolText -notmatch 'Tool_Vers
 Assert-True ($toolText -match [regex]::Escape("[ValidateSet('Hash', 'Publisher')][string]`$Level = 'Hash'")) 'the level is Hash or Publisher and Hash is the default'
 Assert-True ($toolText -match '-Level Publisher -Fallback Hash') 'the level Publisher uses signer rules with a hash fallback for unsigned files'
 Assert-True ($toolText -match 'AllowMultipleSigners') 'several signers need an explicit switch'
+Assert-True ($toolText -match 'Get-AuthenticodeSignature is missing') 'the level Publisher stops with a clear text when the signature cmdlet is missing'
 Assert-True ($toolText -notmatch '(?i)-User\s+(Everyone|Jeder)') 'no account is addressed by name'
 
 # Functions of the level Publisher (checks of the policy, signature states); only definitions, run on any computer.
@@ -151,7 +152,14 @@ else {
 				$outFile = Join-Path $root 'publisher.out'
 				$errFile = Join-Path $root 'publisher.err'
 				$arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"{0}"' -f $tool), '-BasePolicyId', $base.ToString(), '-PackageFolder', ('"{0}"' -f $signedPackage), '-OutputFolder', ('"{0}"' -f $signedOut), '-Level', 'Publisher')
-				$process = Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -PassThru -NoNewWindow -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+				# Windows PowerShell 5.1 started from PowerShell 7 inherits the module path of PowerShell 7, which hides the 5.1 module
+				# Microsoft.PowerShell.Security (Get-AuthenticodeSignature). The child gets the module path of Windows PowerShell for this run.
+				$savedModulePath = $env:PSModulePath
+				try {
+					$env:PSModulePath = (Join-Path $env:ProgramFiles 'WindowsPowerShell\Modules') + ';' + (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\Modules')
+					$process = Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -PassThru -NoNewWindow -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+				}
+				finally { $env:PSModulePath = $savedModulePath }
 				if (-not $process.WaitForExit([int][Math]::Min(120000, 285000 - $stopwatch.ElapsedMilliseconds))) {
 					& taskkill.exe /PID $process.Id /T /F | Out-Null
 					Write-Output 'SKIPPED: the run with a signed test script needed too much time on this machine.'
