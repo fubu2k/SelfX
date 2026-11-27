@@ -14,6 +14,11 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` üb
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Dokumentation, Architektur:** Neu `docs/de/Architecture.md` (Englisch: `docs/Architecture.md`): die drei Dateiklassen (Code,
+  Konfiguration, eigener Code der Firma), die Zuordnung jeder Datei des Pakets SelfX Service, die geplanten Listen `SelfX.Code.json`
+  und `SelfX.Config.json`, die Vertrauensmodi Hash und Signatur, der Vertrauensanker und die Grenze der Prüfungen gegenüber einem
+  lokalen Administrator. Sie nennt auch die Dateien, deren Klasse noch offen ist. Verlinkt aus README und Installationsanleitung.
+  Keine Codeänderung.
 - **Sicherheit, Berichtsdatei (`Collect-DeviceLogs.ps1` 1.3.6):** Eine Berichtsdatei wird nur noch überschrieben, wenn sie vorhanden war
   und als vertrauenswürdig geprüft wurde. Nach dem Entfernen einer untergeschobenen Datei wird immer neu angelegt (`CreateNew`), sodass
   eine Datei, die ein Nutzer in der Lücke anlegt, nicht beschrieben wird. Ein Standardbericht (`-Protect`) wird ohne Freigabe geöffnet:

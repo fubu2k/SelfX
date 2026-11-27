@@ -446,6 +446,9 @@ again with every build; you do not have to maintain anything by hand.
   not an attacker with administrator rights. The folder rights and App Control help against
   that.
 
+Which file belongs to which class, the planned split into a code list and a configuration list and
+the trust modes are described in [Architecture](Architecture.md).
+
 ### Execution policy `-ExecutionPolicy Bypass`
 
 The service, the starter, the window, the status icon and the health check start PowerShell with

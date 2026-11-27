@@ -242,6 +242,7 @@ Report vulnerabilities privately as described in [security policy](SECURITY.en.m
 - [Package wizard](docs/Guided-Setup.md): guided configuration up to the Intune package
 - [Installation](docs/Installation.md), including the release checklist of SelfX Service
 - [Configuration](docs/Configuration.md)
+- [Architecture](docs/Architecture.md): file classes, file lists, trust modes and their limits
 - [User manual](docs/User-Manual.md)
 - [Package notes of SelfX Service](SelfX%20Service/README.en.md)
 - [Changelog](CHANGELOG.en.md)
@@ -254,7 +255,7 @@ Report vulnerabilities privately as described in [security policy](SECURITY.en.m
 | `SelfX Service` | The package: installer, local Windows service (C# source), action catalogue with User and System actions, WPF application, scripts and tests |
 | `tools` | `New-SelfXIntuneWin.ps1`, which builds the Intune package with Microsoft's signed Win32 Content Prep Tool (see [Building the Intune packages](docs/Installation.md#step-2-build-the-package)), and `Build-SelfXBinaries.ps1`, which builds the .NET 10 programs of SelfX Service (see [Building the programs](docs/Installation.md#step-2-build-the-package)) |
 | `offline-feed` | NuGet packages for the offline build with `SelfX.OfflineFeed.json` (SHA512 of each file); created by `tools\Export-SelfXOfflineFeed.ps1`. `NuGet.config` in the root allows only this folder. |
-| `docs` | Installation, configuration and user manual (English); `docs/de` contains the German versions, `docs/images` the screenshots |
+| `docs` | Installation, configuration, architecture and user manual (English); `docs/de` contains the German versions, `docs/images` the screenshots |
 | `.github` | GitHub Actions workflow (compile, tests, script analysis), `CODEOWNERS`, Dependabot configuration |
 | `build` | Not committed. Output of `New-SelfXIntuneWin.ps1`: `SelfX-Service-<version>.intunewin`; and of `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 

@@ -14,6 +14,11 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 
 ## Unreleased (SelfX Service)
 
+- **Documentation, architecture:** New `docs/Architecture.md` (German: `docs/de/Architecture.md`): the three file classes (code,
+  configuration, company code), the assignment of every file of the package SelfX Service, the planned lists `SelfX.Code.json` and
+  `SelfX.Config.json`, the trust modes hash and signature, the trust anchor and the limit of the checks against a local
+  administrator. It also names the files whose class is still open. Linked from the README and the installation guide. No code
+  change.
 - **Security, report file (`Collect-DeviceLogs.ps1` 1.3.6):** A report file is only overwritten when it existed and was checked as
   trusted. After a planted file was removed the report is always created new (`CreateNew`), so a file that a user creates in the gap
   is never written. A default report (`-Protect`) is opened without sharing: until the access rights are set nobody can hold a read

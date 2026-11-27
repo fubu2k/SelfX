@@ -264,6 +264,7 @@ beschrieben.
 - [Paketassistent](docs/de/Assistent.md): geführte Konfiguration bis zum Intune-Paket
 - [Installation](docs/de/Installation.md), mit der Release-Checkliste von SelfX Service
 - [Konfiguration](docs/de/Configuration.md)
+- [Architektur](docs/de/Architecture.md): Dateiklassen, Dateilisten, Vertrauensmodi und ihre Grenzen
 - [Benutzerhandbuch](docs/de/User-Manual.md)
 - [Pakethinweise zu SelfX Service](SelfX%20Service/README.md)
 - [Änderungsprotokoll](CHANGELOG.md)
@@ -279,7 +280,7 @@ beschrieben.
 | `SelfX Service` | Das Paket: Installer, lokaler Windows-Dienst (C#-Quelltext), Aktionskatalog mit Nutzer- und Systemaktionen, WPF-Anwendung, Skripte und Tests |
 | `tools` | `New-SelfXIntuneWin.ps1`, das das Intune-Paket mit dem signierten Win32 Content Prep Tool von Microsoft erstellt (siehe [Intune-Paket erstellen](docs/de/Installation.md#schritt-2-paket-bauen)), und `Build-SelfXBinaries.ps1`, das die .NET-10-Programme von SelfX Service baut (siehe [Programme bauen](docs/de/Installation.md#schritt-2-paket-bauen)) |
 | `offline-feed` | NuGet-Pakete für den Offline-Bau mit `SelfX.OfflineFeed.json` (SHA512 je Datei); erzeugt von `tools\Export-SelfXOfflineFeed.ps1`. `NuGet.config` im Hauptordner erlaubt nur diesen Ordner. |
-| `docs` | Installation, Konfiguration und Benutzerhandbuch (Englisch); `docs/de` enthält die deutschen Fassungen, `docs/images` die Bildschirmfotos |
+| `docs` | Installation, Konfiguration, Architektur und Benutzerhandbuch (Englisch); `docs/de` enthält die deutschen Fassungen, `docs/images` die Bildschirmfotos |
 | `.github` | GitHub-Actions-Workflow (Kompilieren, Tests, Skriptanalyse), `CODEOWNERS`, Dependabot-Konfiguration |
 | `build` | Nicht eingecheckt. Ausgabe von `New-SelfXIntuneWin.ps1`: `SelfX-Service-<Version>.intunewin`; und von `Build-SelfXBinaries.ps1`: `SelfX.AppLocker.xml` |
 
