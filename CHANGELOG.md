@@ -14,6 +14,33 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Vertrauensmodus Signatur in `Install.ps1` (`-TrustedSigner`, Version 3.1.0):** `Install.ps1 -TrustedSigner <Fingerabdruck>[,<Fingerabdruck>]`
+  installiert ein signiertes Paket (docs/de/Architecture.md, „Der Modus Signatur in `Install.ps1`“). Die Liste enthält SHA1-Fingerabdrücke
+  mit 40 Hexadezimalzeichen (höchstens 10, durch Kommas getrennt; alles andere bricht die Installation ab, auch ein angegebener, aber
+  leerer Parameter). Vor jeder Änderung am Gerät, auch bevor der Datenordner vorbereitet wird: keine Verknüpfung im Paket; jede `.exe`,
+  `.dll`, `.ps1`, `.psm1` und `.psd1` trägt eine Signatur mit dem Status `Valid` eines Signierers der Liste; `Config\SelfX.Config.cat`
+  ist von einem Signierer der Liste signiert, verwendet SHA256 und passt zum Ordner `Config`; der neue Katalog `SelfX.Code.cat` oben im
+  Paket ist von einem Signierer der Liste signiert und passt zu allem außerhalb von `Config` (damit sind auch `SelfX.Code.json`, die
+  Sprachdateien, die Bilder, `SelfX.Binaries.json` und die Quellen abgedeckt). Die Prüfungen von `SelfX.Binaries.json`,
+  `SelfX.Code.json` und `SelfX.Config.json` bleiben; nach dem Kopieren müssen die installierten Listen die Listen sein, die die Kataloge
+  abgedeckt haben. Die Kataloge werden im Paket geprüft und nicht installiert. Neue Funktionen: `ConvertTo-SelfXTrustedSignerList`,
+  `Resolve-SelfXTrustMode`, `Test-SelfXFileSignature`, `Test-SelfXPackageCatalog`, `Test-SelfXPackageSignatures`,
+  `Test-SelfXInstalledLists`, `Get-SelfXTrustAnchor`, `Set-SelfXTrustAnchor`, `Test-SelfXTrustAnchorState`. **Vertrauensanker:** In
+  beiden Modi schreibt `Install.ps1` `HKLM\SOFTWARE\SelfX\Trust` (`Mode` = `Hash` oder `Signature`; `Signers` als `REG_MULTI_SZ` im Modus
+  Signatur), bevor der Dienst registriert wird: Besitzer Administratoren (`S-1-5-32-544`), Rechte nicht vererbt, SYSTEM (`S-1-5-18`) und
+  Administratoren Vollzugriff, Benutzer (`S-1-5-32-545`) lesen; der Anker wird zurückgelesen und seine Rechte werden geprüft.
+  **Herabstufung:** Ein Gerät, dessen Anker `Signature` sagt (oder sich nicht deuten lässt), wird ohne `-TrustedSigner` nur mit dem
+  neuen Schalter `-AllowHashMode` installiert; beides zusammen ist ein Fehler. Ein signiertes Paket ohne `-TrustedSigner` wird mit einem
+  Hinweis abgelehnt. Ohne `-TrustedSigner` arbeitet der Modus Hash wie bisher. **Geändertes Verhalten:** Die Parameter von `Install.ps1`
+  werden nur über ihren Namen gebunden (`-InstallFolder <Pfad>` statt eines Pfads ohne Namen). `Detection.ps1` verlangt den Anker
+  (`Test-SelfXTrustAnchor`, 64-Bit-Sicht; der Modus wird protokolliert und nicht bewertet); eine Installation eines früheren Stands wird
+  deshalb einmal erneut installiert. `Uninstall.ps1` entfernt den Anker (`HKLM\SOFTWARE\SelfX\Support` bleibt). Sperrprüfung: Es wird die
+  Prüfung von Windows verwendet; neu `tools\Measure-SelfXRevocationDelay.ps1` misst auf einem Gerät, wie lange
+  `Get-AuthenticodeSignature` braucht, wenn die Sperrlisten-Adresse des Zertifikats nicht erreichbar ist. Tests:
+  `Test-InstallBinaries.ps1` (Liste der Signierer, Modus und Herabstufung, alle Ablehnungen von Signaturen und Katalogen mit ersetzten
+  Cmdlets, Kopierschritt, Anker in einem Testschlüssel unter HKCU, gleiche Antworten wie `tools\SelfXSigning.ps1`; mit vertrauenswürdigem
+  Teststamm auch echte Signaturen und Kataloge), `Test-Detection.ps1` (Anker). Nicht Teil dieser Änderung: Die Paketwerkzeuge signieren
+  noch nicht, und der Dienst liest den Anker noch nicht.
 - **Signaturbibliothek (`tools\SelfXSigning.ps1`, nur Werkzeuge, nicht Teil des Pakets):** Funktionen für den Vertrauensmodus „Signatur“
   (docs/de/Architecture.md), lauffähig in Windows PowerShell 5.1 und PowerShell 7: `Get-SelfXSigningCertificate` (Zertifikate aus
   `Cert:\CurrentUser\My` und `Cert:\LocalMachine\My` mit privatem Schlüssel, Schlüsselverwendung Codesignatur und gültigem Zeitraum, oder

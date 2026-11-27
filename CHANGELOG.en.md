@@ -14,6 +14,32 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Trust mode signature in `Install.ps1` (`-TrustedSigner`, version 3.1.0):** `Install.ps1 -TrustedSigner <thumbprint>[,<thumbprint>]`
+  installs a signed package (docs/Architecture.md, "The mode signature in `Install.ps1`"). The list holds SHA1 thumbprints of 40
+  hexadecimal characters (at most 10, separated by commas; anything else stops the installation, also a given but empty parameter).
+  Before anything on the device is changed, also before the data folder is prepared: no link in the package; every `.exe`, `.dll`,
+  `.ps1`, `.psm1` and `.psd1` has a signature with the status `Valid` of a signer of the list; `Config\SelfX.Config.cat` is signed by
+  a signer of the list, uses SHA256 and matches the folder `Config`; the new catalog `SelfX.Code.cat` at the top of the package is
+  signed by a signer of the list and matches everything outside `Config` (so `SelfX.Code.json`, the language files, the images,
+  `SelfX.Binaries.json` and the sources are covered too). The checks of `SelfX.Binaries.json`, `SelfX.Code.json` and
+  `SelfX.Config.json` stay; after the copy the installed lists must be the lists that the catalogs covered. The catalogs are checked
+  in the package and are not installed. New functions: `ConvertTo-SelfXTrustedSignerList`, `Resolve-SelfXTrustMode`,
+  `Test-SelfXFileSignature`, `Test-SelfXPackageCatalog`, `Test-SelfXPackageSignatures`, `Test-SelfXInstalledLists`,
+  `Get-SelfXTrustAnchor`, `Set-SelfXTrustAnchor`, `Test-SelfXTrustAnchorState`. **Trust anchor:** in both modes `Install.ps1` writes
+  `HKLM\SOFTWARE\SelfX\Trust` (`Mode` = `Hash` or `Signature`; `Signers` as `REG_MULTI_SZ` in the mode signature) before the service is
+  registered: owner Administrators (`S-1-5-32-544`), rights not inherited, SYSTEM (`S-1-5-18`) and Administrators full control, users
+  (`S-1-5-32-545`) read; the anchor is read back and its rights are checked. **Downgrade:** a device whose anchor says `Signature` (or
+  cannot be understood) is installed without `-TrustedSigner` only with the new switch `-AllowHashMode`; both together are an error.
+  A signed package without `-TrustedSigner` is refused with a hint. Without `-TrustedSigner` the mode hash works as before.
+  **Changed behaviour:** the parameters of `Install.ps1` are bound by name only (`-InstallFolder <path>` instead of a path without a
+  name). `Detection.ps1` requires the anchor (`Test-SelfXTrustAnchor`, 64-bit view; the mode is logged and not judged), so an
+  installation of an earlier build is installed again once. `Uninstall.ps1` removes the anchor (`HKLM\SOFTWARE\SelfX\Support` stays).
+  Revocation: the check of Windows is used; new `tools\Measure-SelfXRevocationDelay.ps1` measures on a device how long
+  `Get-AuthenticodeSignature` takes when the revocation list address of the certificate cannot be reached. Tests:
+  `Test-InstallBinaries.ps1` (list of signers, mode and downgrade, all refusals of signatures and catalogs with replaced cmdlets, copy
+  step, anchor in a test key below HKCU, the same answers as `tools\SelfXSigning.ps1`; with a trusted test root also real signatures and
+  catalogs), `Test-Detection.ps1` (anchor). Not part of this change: the package tools do not sign yet, and the service does not read
+  the anchor yet.
 - **Signing library (`tools\SelfXSigning.ps1`, tools only, not part of the package):** Functions for the trust mode "signature"
   (docs/Architecture.md), working in Windows PowerShell 5.1 and PowerShell 7: `Get-SelfXSigningCertificate` (certificates of
   `Cert:\CurrentUser\My` and `Cert:\LocalMachine\My` with private key, key usage Code Signing and a valid period, or a PFX file with a

@@ -29,6 +29,7 @@
                                               version, code files and configuration detected separately; an old Tool_Version in Tool_Config.xml is ignored).
     3.1.0    2026-11-27  fubu2k               Layout App/Config: lists in App and Config, the old layout is not detected, paths of the programs and of
                                               Tool_Config.xml.
+    3.1.0    2026-11-27  fubu2k               Trust anchor: Test-SelfXTrustAnchor against a test key in HKCU (missing, Hash, Signature, other values).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -240,6 +241,42 @@ try {
 	foreach ($expected in @("`$AppFolder = Join-Path `$InstallFolder 'App'", "(Join-Path `$AppFolder 'SelfXService.exe')", "(Join-Path `$AppFolder 'SelfX.exe')", "`$ToolConfigFile = Join-Path `$InstallFolder 'Config\Tool_Config.xml'")) {
 		Assert-Equal $repoText.Contains($expected) $true "Detection.ps1 contains: $expected"
 	}
+
+	# The trust anchor (HKLM\SOFTWARE\SelfX\Trust in the script; here a test key of the current user): the key must exist and Mode must
+	# be Hash or Signature. Neither mode is a problem.
+	Import-DetectionFunction $detectionScript @('Test-SelfXTrustAnchor')
+	if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { Write-Output 'Skipped: the trust anchor checks need the Windows registry.' }
+	else {
+		$anchorRoot = 'Software\SelfXDetectionTest_' + [guid]::NewGuid().ToString('N')
+		$anchorKey = $anchorRoot + '\Trust'
+		try {
+			$missing = Det_Test-SelfXTrustAnchor -Hive CurrentUser -SubKey $anchorKey
+			Assert-Equal $missing.Reason 'trust anchor missing' 'anchor: a missing key is not detected'
+			$key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($anchorKey)
+			try {
+				Assert-Equal (Det_Test-SelfXTrustAnchor -Hive CurrentUser -SubKey $anchorKey).Reason 'trust anchor has no valid mode' 'anchor: a key without the value Mode is not detected'
+				foreach ($mode in 'Hash', 'Signature') {
+					$key.SetValue('Mode', $mode, [Microsoft.Win32.RegistryValueKind]::String)
+					$anchor = Det_Test-SelfXTrustAnchor -Hive CurrentUser -SubKey $anchorKey
+					Assert-Equal $null $anchor.Reason "anchor: the mode $mode is not a problem"
+					Assert-Equal $anchor.Mode $mode "anchor: the mode $mode is returned for the log"
+				}
+				foreach ($bad in 'hash', 'SIGNATURE', 'None', '', ' Hash') {
+					$key.SetValue('Mode', $bad, [Microsoft.Win32.RegistryValueKind]::String)
+					Assert-Equal (Det_Test-SelfXTrustAnchor -Hive CurrentUser -SubKey $anchorKey).Reason 'trust anchor has no valid mode' "anchor: the value '$bad' is not a mode"
+				}
+				$key.SetValue('Mode', 1, [Microsoft.Win32.RegistryValueKind]::DWord)
+				Assert-Equal (Det_Test-SelfXTrustAnchor -Hive CurrentUser -SubKey $anchorKey).Reason 'trust anchor has no valid mode' 'anchor: a number is not a mode'
+			} finally { $key.Dispose() }
+		} finally {
+			[Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($anchorRoot, $false)
+		}
+	}
+	$anchorText = [IO.File]::ReadAllText($detectionScript)
+	Assert-Equal $anchorText.Contains('$Anchor = Test-SelfXTrustAnchor') $true 'Detection.ps1 checks the trust anchor'
+	Assert-Equal $anchorText.Contains('If($Anchor.Reason) { Exit-Detection 1') $true 'Detection.ps1: a missing trust anchor is "not detected"'
+	Assert-Equal $anchorText.Contains('[Microsoft.Win32.RegistryView]::Registry64') $true 'Detection.ps1 reads the trust anchor from the 64-bit view'
+	Assert-Equal ([regex]::Matches($anchorText, 'Exit-Detection 1[^\r\n]*(Signature|Hash)').Count) 0 'Detection.ps1: no exit with an error because of the mode'
 } finally {
 	Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }

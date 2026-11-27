@@ -170,8 +170,37 @@ file `SelfX-Service-<version>.intunewin`.
 | Requirement | Windows 11 25H2, see 3.3 |
 | Dependency | App "PowerShell 7", *Automatically install* = Yes, see 3.2 |
 
-The detection reports "installed" only if the version, the registered service **and** the file
-list match. So an update with changed files but the same version number is also detected.
+The detection reports "installed" only if the version, the registered service, the file
+list **and** the trust anchor (`HKLM\SOFTWARE\SelfX\Trust`, written by `Install.ps1`) match. So an
+update with changed files but the same version number is also detected. An installation of a
+version without the anchor is not detected and is installed again once.
+
+#### Optional: signed package (trust mode signature)
+
+For a package whose files are signed with the code signing certificate of the company, add the
+thumbprint of the signing certificate to the install command:
+
+`%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -TrustedSigner <thumbprint>`
+
+- The thumbprint is the SHA1 thumbprint of the **signing certificate** (40 hexadecimal characters,
+  no spaces), not the one of the certification authority. Several thumbprints are separated by
+  commas without spaces (`-TrustedSigner <old>,<new>`), so a renewed certificate can be allowed
+  before the switch.
+- `Install.ps1` then installs only when every program and script of the package is signed by one of
+  these certificates and the two signed catalogs (`Config\SelfX.Config.cat`, `SelfX.Code.cat`) match
+  the package. Otherwise it stops before anything on the device is changed
+  ([Architecture](Architecture.md#the-mode-signature-in-installps1)).
+- The certificate chain (root and intermediate certificates) must be trusted on the device
+  **before** SelfX is installed, also during Autopilot: assign the certificate profile so that it
+  arrives first.
+- A device that was installed with `-TrustedSigner` refuses an installation without the parameter.
+  To go back to an unsigned package, add the switch `-AllowHashMode` once.
+- Revocation list: Windows asks the address that is named in the certificate. For devices outside
+  the company network it should be an HTTP address that is reachable from the internet. A list
+  that cannot be reached does not stop the installation (default setting of Windows) but can slow
+  it down; `tools\Measure-SelfXRevocationDelay.ps1` measures this on a test device.
+- The package tools do not sign yet: the package has to be signed with `tools\SelfXSigning.ps1`
+  until the wizard does it.
 
 ### 3.2 PowerShell 7 as its own Win32 app
 
@@ -516,6 +545,12 @@ deployment.
 | `The folder Bin is missing …` | Step 2.3 was not run before building the package. Repeat steps 2.3 and 2.5. |
 | `Bin was not built from the current …` | A source file was changed after building. Repeat steps 2.3 and 2.5. |
 | Installation ends with exit code 1 | The last line of `Install.log` names the reason. The existing installation stays unchanged. |
+| `Trust mode Signature: … have no valid signature of an allowed signer` | A program or script of the package is not signed, was changed after signing, is signed by a certificate that is not in `-TrustedSigner`, or its certificate chain is not trusted on the device (reason in brackets: `NotSigned`, `HashMismatch`, `SignerNotAllowed`, `NotTrusted`). This message is not in `Install.log`: run the install command in an elevated console to read it. |
+| `… is not a valid signed catalog …` | A file was changed, added or removed after the catalog was signed (the message names it), or the catalog is missing or signed by another certificate. Sign the package again. |
+| `This device is in the trust mode Signature …` | The device was installed with `-TrustedSigner` and the install command has no such parameter. Add `-TrustedSigner`, or `-AllowHashMode` to change to an unsigned package on purpose. |
+| `The package is signed … but -TrustedSigner was not given` | A signed package was installed without `-TrustedSigner`. Add the parameter to the install command. |
+| `-TrustedSigner: every entry must be a SHA1 thumbprint …` | The value contains a space, another character or an empty entry. Use 40 hexadecimal characters per thumbprint and commas without spaces. |
+| Intune does not detect SelfX after the update of this version | The trust anchor is missing (`Detection_<date>.log`: `trust anchor missing`). Intune installs the package again; afterwards the anchor exists. |
 | Intune does not detect an update | `Version.txt` and `$ExpectedVersion` stayed the same, or you uploaded the copy from the repository instead of `build\SelfX-Service-<version>.Detection.ps1`. |
 | SelfX starts no action | PowerShell 7.6 is missing (warning in `Install.log`), or event 4005 reports a deviating file. The SelfX log names the details. |
 

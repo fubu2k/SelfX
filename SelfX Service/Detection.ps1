@@ -14,6 +14,9 @@
     The copy in the repository still has the placeholders: it checks the version only and logs that.
     An installation in the layout of an older version (all files directly in ProgramFiles\SelfX) is not detected, so Intune
     installs the update.
+    The trust anchor that Install.ps1 writes must exist: HKLM\SOFTWARE\SelfX\Trust (64-bit view) with the value Mode = Hash or
+    Signature. The mode itself is not a problem (both are valid and it is only written to the log); a missing key or another
+    value is "not detected", so an installation of a version without the anchor is installed again.
     Does not start the service, contact the pipe, verify that it is running or execute
     remediation scripts. Writes an installed message and exits 0 when checks pass; exits
     1 for a missing prerequisite or version mismatch. XML read/parse errors are not caught.
@@ -40,6 +43,8 @@
                                               the check is the function Test-SelfXInstalledPackage (version, code digest, configuration digest)
     3.1.0    2026-11-27  fubu2k               Detect version 3.1.0 in the layout App\ and Config\ (programs and SelfX.Code.json in App, Tool_Config.xml
                                               and SelfX.Config.json in Config); the old layout is not detected
+    3.1.0    2026-11-27  fubu2k               The trust anchor HKLM\SOFTWARE\SelfX\Trust must exist with Mode = Hash or Signature (function
+                                              Test-SelfXTrustAnchor); the mode is logged, not judged
 #>
 
 $ExpectedVersion = '3.1.0'
@@ -149,6 +154,31 @@ function Test-SelfXInstalledPackage {
 	return [pscustomobject]@{ Reason = $null; Notes = $notes.ToArray() }
 }
 
+# The trust anchor of Install.ps1: the key must exist and Mode must be the text Hash or Signature. Returns an object with Reason ($null
+# when the anchor is there) and Mode. Which of the two modes is set is not a problem. Read from the 64-bit view of the registry, also
+# when the script runs in a 32-bit process. Hive and SubKey are parameters for the tests only.
+function Test-SelfXTrustAnchor {
+	param(
+		[ValidateSet('LocalMachine', 'CurrentUser')][string]$Hive = 'LocalMachine',
+		[string]$SubKey = 'SOFTWARE\SelfX\Trust'
+	)
+	Try
+	{
+		$mode = $null
+		$base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]$Hive, [Microsoft.Win32.RegistryView]::Registry64)
+		Try
+		{
+			$key = $base.OpenSubKey($SubKey, $false)
+			If($null -eq $key) { return [pscustomobject]@{ Reason = 'trust anchor missing'; Mode = $null } }
+			Try { $mode = $key.GetValue('Mode', $null) } Finally { $key.Dispose() }
+		}
+		Finally { $base.Dispose() }
+		If(($mode -is [string]) -and (($mode -ceq 'Hash') -or ($mode -ceq 'Signature'))) { return [pscustomobject]@{ Reason = $null; Mode = $mode } }
+		return [pscustomobject]@{ Reason = 'trust anchor has no valid mode'; Mode = $null }
+	}
+	Catch { return [pscustomobject]@{ Reason = 'trust anchor cannot be read'; Mode = $null } }
+}
+
 function Exit-Detection {
 	param([int]$Code, [string]$Reason)
 	Write-DetectionLog ("SelfX {0}: {1}" -f $ExpectedVersion, $Reason)
@@ -166,5 +196,10 @@ If(-not (Get-Service -Name 'SelfXService' -ErrorAction SilentlyContinue)) { Exit
 $Result = Test-SelfXInstalledPackage -InstallFolder $InstallFolder -ExpectedVersion $ExpectedVersion -ExpectedCodeHash $ExpectedCodeHash -ExpectedConfigHash $ExpectedConfigHash
 ForEach($Note in @($Result.Notes)) { Write-DetectionLog $Note }
 If($Result.Reason) { Exit-Detection 1 "not detected ($($Result.Reason))" }
+
+# The trust anchor must exist; the mode (Hash or Signature) is only logged.
+$Anchor = Test-SelfXTrustAnchor
+If($Anchor.Reason) { Exit-Detection 1 "not detected ($($Anchor.Reason))" }
+Write-DetectionLog "Trust mode: $($Anchor.Mode)."
 
 Exit-Detection 0 'detected'

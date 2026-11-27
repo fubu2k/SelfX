@@ -9,6 +9,11 @@
     source, a broken or missing manifest, an unknown manifest format and the manifest format of the old
     on-device compiler (version 1) are refused. The copy step (Clear-SelfXInstallFolder, Copy-SelfXPayload, Test-SelfXInstalledFiles)
     is run against a package in the layout App/Config and an install folder in the old layout (update 3.0.2 -> 3.1.0).
+    Trust mode Signature: the functions for -TrustedSigner, the mode and the downgrade check, the signatures and the two signed
+    catalogs of the package and the trust anchor are taken out of Install.ps1. Part 1 replaces Get-AuthenticodeSignature and
+    Test-FileCatalog by functions of this test; the anchor is written to a test key below HKCU\Software (removed at the end).
+    Part 2 signs a small package with two self-signed test certificates of the current user and needs them as trusted roots
+    (Cert:\CurrentUser\Root): it runs in CI or with SELFX_TEST_ALLOW_ROOT_IMPORT=1 and removes the certificates at the end.
     Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-InstallBinaries.ps1
 
 .NOTES
@@ -26,6 +31,8 @@
     2.8.21   2026-11-23  fubu2k               N4: the check returns the verified hashes (Install.ps1 loads SelfXSessionStarter.dll from checked bytes).
     3.1.0    2026-11-27  fubu2k               Layout App/Config: update from the old layout (3.0.2) and from the new layout, mixed state, empty left-over
                                               folder, locked file, package in the old layout, paths of service, starter, shortcut and uninstall entry.
+    3.1.0    2026-11-27  fubu2k               Trust mode Signature: list of -TrustedSigner, mode and downgrade, signatures and both catalogs of the package
+                                              (replaced cmdlets and, with a trusted test root, real certificates), copy step, trust anchor in a test key.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -402,8 +409,503 @@ else {
 	Assert-Equal ('pwsh.exe -File "C:\Program Files\SelfX\SelfX_Tray.ps1"' -match $trayPattern) $true 'tray pattern: old layout'
 	Assert-Equal ('pwsh.exe -File "C:\Program Files\SelfX\App\SelfX_Tray.ps1"' -match $trayPattern) $true 'tray pattern: new layout'
 	Assert-Equal ('pwsh.exe -File "C:\Program Files\SelfX\Config\SelfX_Tray.ps1"' -match $trayPattern) $false 'tray pattern: not below Config'
+
+	# --- Trust mode Signature: -TrustedSigner, signatures of the package, signed catalogs, trust anchor, downgrade ---
+	# Part 1 replaces Get-AuthenticodeSignature and Test-FileCatalog by functions of this test (a function is found before a cmdlet),
+	# so every status can be produced without a certificate. Part 2 (further down) uses real test certificates.
+	foreach ($name in 'ConvertTo-SelfXTrustedSignerList', 'Get-SelfXTrustAnchor', 'Resolve-SelfXTrustMode', 'Test-SelfXFileSignature', 'Test-SelfXPackageCatalog', 'Test-SelfXPackageSignatures', 'Test-SelfXInstalledLists', 'Set-SelfXTrustAnchor', 'Test-SelfXTrustAnchorState') {
+		$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
+		Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
+		if ($definition) { . ([scriptblock]::Create($definition.Extent.Text)) }
+	}
+	. (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\SelfXSigning.ps1')
+	function Get-Refusal([scriptblock]$Action) { try { $null = & $Action; return 'accepted' } catch { return "$($_.Exception.Message)" } }
+	$signerA = 'A' * 40
+	$signerB = 'B' * 40
+	$signerC = '0123456789abcdef0123456789abcdef01234567'
+
+	# 1. The list of -TrustedSigner.
+	Assert-Equal ((ConvertTo-SelfXTrustedSignerList -TrustedSigner $signerC) -join '|') $signerC.ToUpperInvariant() 'signers: one thumbprint, returned in upper case'
+	Assert-Equal ((ConvertTo-SelfXTrustedSignerList -TrustedSigner "$signerA,$signerC") -join '|') "$signerA|$($signerC.ToUpperInvariant())" 'signers: "A,B" as one string (powershell.exe -File) gives two entries'
+	Assert-Equal ((ConvertTo-SelfXTrustedSignerList -TrustedSigner @($signerA, $signerB)) -join '|') "$signerA|$signerB" 'signers: an array gives two entries'
+	Assert-Equal ((ConvertTo-SelfXTrustedSignerList -TrustedSigner " $signerA , $signerB ") -join '|') "$signerA|$signerB" 'signers: spaces around an entry are ignored'
+	Assert-Equal @(ConvertTo-SelfXTrustedSignerList -TrustedSigner @($signerA, $signerA.ToLowerInvariant(), "$signerA,$signerA")).Count 1 'signers: duplicates are removed (any case)'
+	$badLists = [ordered]@{
+		'empty string'               = @('')
+		'empty list'                 = @()
+		'39 characters'              = @('A' * 39)
+		'41 characters'              = @('A' * 41)
+		'not hexadecimal'            = @('G' * 40)
+		'trailing comma'             = @("$signerA,")
+		'space inside a thumbprint'  = @(('A' * 20) + ' ' + ('A' * 20))
+		'two thumbprints with space' = @("$signerA $signerB")
+		'SHA256 thumbprint'          = @('A' * 64)
+		'one bad entry of two'       = @($signerA, 'xyz')
+		'eleven entries'             = @(0..10 | ForEach-Object { '{0:X40}' -f $_ })
+	}
+	foreach ($case in $badLists.Keys) {
+		$list = $badLists[$case]
+		$answer = Get-Refusal { ConvertTo-SelfXTrustedSignerList -TrustedSigner $list }
+		Assert-Equal ($answer -match '^-TrustedSigner') $true "signers: $case stops ($answer)"
+	}
+	Assert-Equal @(ConvertTo-SelfXTrustedSignerList -TrustedSigner @(0..9 | ForEach-Object { '{0:X40}' -f $_ })).Count 10 'signers: ten entries are allowed'
+
+	# 2. The mode of the installation and the protection against a downgrade.
+	foreach ($installed in '', 'Hash', 'Signature', 'Invalid') {
+		Assert-Equal (Resolve-SelfXTrustMode -InstalledMode $installed -SignatureRequested $true -AllowHashMode $false) 'Signature' "mode: -TrustedSigner gives Signature (device: '$installed')"
+		Assert-Equal ((Get-Refusal { Resolve-SelfXTrustMode -InstalledMode $installed -SignatureRequested $true -AllowHashMode $true }) -match 'cannot be used together') $true "mode: -TrustedSigner with -AllowHashMode stops (device: '$installed')"
+	}
+	Assert-Equal (Resolve-SelfXTrustMode -InstalledMode '' -SignatureRequested $false -AllowHashMode $false) 'Hash' 'mode: no anchor and no -TrustedSigner gives Hash (as before)'
+	Assert-Equal (Resolve-SelfXTrustMode -InstalledMode 'Hash' -SignatureRequested $false -AllowHashMode $false) 'Hash' 'mode: Hash stays Hash'
+	Assert-Equal (Resolve-SelfXTrustMode -InstalledMode '' -SignatureRequested $false -AllowHashMode $true) 'Hash' 'mode: -AllowHashMode without an anchor is harmless'
+	foreach ($installed in 'Signature', 'Invalid', 'hash') {
+		$answer = Get-Refusal { Resolve-SelfXTrustMode -InstalledMode $installed -SignatureRequested $false -AllowHashMode $false }
+		Assert-Equal ($answer -match '-AllowHashMode' -and $answer -match 'Nothing was changed') $true "downgrade: device '$installed', no -TrustedSigner, no -AllowHashMode stops ($answer)"
+		Assert-Equal (Resolve-SelfXTrustMode -InstalledMode $installed -SignatureRequested $false -AllowHashMode $true) 'Hash' "downgrade: device '$installed' with -AllowHashMode gives Hash"
+	}
+
+	# 3. Replacements for the two cmdlets. A "signature" is an entry in a table (status, thumbprint, hash of the file when it was
+	#    "signed"); a "catalog" is a JSON file with the relative names and SHA256 of the files of its folder.
+	$script:fakeSignatures = @{}
+	$script:fakeSignatureError = ''
+	$script:fakeCatalogError = $false
+	function Get-FakeKey([string]$Path) { return (Get-Item -LiteralPath $Path -Force).FullName.ToLowerInvariant() }
+	function Set-FakeSignature([string]$Path, [string]$Thumbprint, [string]$Status = 'Valid') {
+		$script:fakeSignatures[(Get-FakeKey $Path)] = @{ Status = $Status; Thumbprint = $Thumbprint; Hash = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash }
+	}
+	function Get-AuthenticodeSignature {
+		param([string]$LiteralPath, $ErrorAction)
+		if ($script:fakeSignatureError -and ($LiteralPath -like $script:fakeSignatureError)) { throw 'simulated error of Get-AuthenticodeSignature' }
+		$entry = $script:fakeSignatures[(Get-FakeKey $LiteralPath)]
+		if (-not $entry) { return [pscustomobject]@{ Status = 'NotSigned'; SignerCertificate = $null } }
+		$status = $entry.Status
+		# A file changed after it was signed has the status HashMismatch, like a real signature.
+		if (($status -eq 'Valid') -and ($entry.Hash -ne (Get-FileHash -LiteralPath $LiteralPath -Algorithm SHA256).Hash)) { $status = 'HashMismatch' }
+		$certificate = $null
+		if ($entry.Thumbprint) { $certificate = [pscustomobject]@{ Thumbprint = $entry.Thumbprint } }
+		return [pscustomobject]@{ Status = $status; SignerCertificate = $certificate }
+	}
+	function Test-FileCatalog {
+		param([string]$Path, [string]$CatalogFilePath, [switch]$Detailed, [string[]]$FilesToSkip, $ErrorAction)
+		if ($script:fakeCatalogError) { throw 'simulated error of Test-FileCatalog' }
+		$catalog = Get-Content -LiteralPath $CatalogFilePath -Raw | ConvertFrom-Json
+		$catalogItems = New-Object 'System.Collections.Generic.Dictionary[string,string]'
+		foreach ($property in @($catalog.Files.PSObject.Properties)) { $catalogItems[$property.Name] = "$($property.Value)" }
+		$pathItems = New-Object 'System.Collections.Generic.Dictionary[string,string]'
+		$folder = (Get-Item -LiteralPath $Path -Force).FullName.TrimEnd('\')
+		foreach ($file in @(Get-ChildItem -LiteralPath $folder -Recurse -File -Force)) {
+			$relative = $file.FullName.Substring($folder.Length + 1)
+			if ($FilesToSkip -contains $relative) { continue }
+			$pathItems[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+		}
+		return [pscustomobject]@{ Status = 'Valid'; HashAlgorithm = "$($catalog.HashAlgorithm)"; CatalogItems = $catalogItems; PathItems = $pathItems }
+	}
+	function New-FakeCatalog([string]$Folder, [string]$CatalogPath, [string]$Thumbprint, [string[]]$Skip = @(), [string]$Algorithm = 'SHA256', [switch]$Empty) {
+		$rootFolder = (Get-Item -LiteralPath $Folder -Force).FullName.TrimEnd('\')
+		$entries = [ordered]@{}
+		if (-not $Empty) {
+			foreach ($file in @(Get-ChildItem -LiteralPath $rootFolder -Recurse -File -Force | Sort-Object FullName)) {
+				$relative = $file.FullName.Substring($rootFolder.Length + 1)
+				if ($file.FullName -ieq $CatalogPath) { continue }
+				if (@($Skip | Where-Object { $relative.StartsWith($_ + '\', [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0) { continue }
+				$entries[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+			}
+		}
+		[IO.File]::WriteAllText($CatalogPath, (([ordered]@{ HashAlgorithm = $Algorithm; Files = $entries }) | ConvertTo-Json -Depth 4))
+		if ($Thumbprint) { Set-FakeSignature $CatalogPath $Thumbprint }
+	}
+	$signedPackage = Join-Path $root 'signed\package'
+	$configCatalog = Join-Path $signedPackage 'Config\SelfX.Config.cat'
+	$codeCatalog = Join-Path $signedPackage 'SelfX.Code.cat'
+	function New-SignedPackage([string]$Signer = $signerA) {
+		# The package of the layout tests plus Install.ps1, Detection.ps1 and a source file; every program and script "signed" by
+		# Signer, the catalog of Config and the catalog of everything else "signed" by Signer.
+		$script:fakeSignatures = @{}
+		$script:fakeSignatureError = ''
+		$script:fakeCatalogError = $false
+		if (Test-Path -LiteralPath $signedPackage) { Remove-Item -LiteralPath $signedPackage -Recurse -Force }
+		New-Item -ItemType Directory -Path (Split-Path -Parent $signedPackage) -Force | Out-Null
+		Copy-Item -LiteralPath $layoutPackage -Destination $signedPackage -Recurse
+		New-Item -ItemType Directory -Path (Join-Path $signedPackage 'Service') -Force | Out-Null
+		[IO.File]::WriteAllText((Join-Path $signedPackage 'Install.ps1'), "# installer`r`n")
+		[IO.File]::WriteAllText((Join-Path $signedPackage 'Detection.ps1'), "# detection`r`n")
+		[IO.File]::WriteAllText((Join-Path $signedPackage 'Service\SelfXService.cs'), '// source')
+		foreach ($file in @(Get-ChildItem -LiteralPath $signedPackage -Recurse -File -Force | Where-Object { $_.Extension -in '.exe', '.dll', '.ps1' })) { Set-FakeSignature $file.FullName $Signer }
+		New-FakeCatalog (Join-Path $signedPackage 'Config') $configCatalog $Signer
+		New-FakeCatalog $signedPackage $codeCatalog $Signer -Skip @('Config')
+	}
+	function Test-Signed([string[]]$Allowed = @($signerA)) { return (Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $Allowed }) }
+
+	# 4. A completely signed package is accepted.
+	New-SignedPackage
+	$signableCount = @(Get-ChildItem -LiteralPath $signedPackage -Recurse -File -Force | Where-Object { $_.Extension -in '.exe', '.dll', '.ps1' }).Count
+	$verified = Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $signerA
+	Assert-Equal $verified.Files $signableCount "signature: every program and script of the package was checked ($signableCount)"
+	Assert-Equal ($signableCount -gt 60) $true 'signature: the test package holds the scripts of the project'
+	Assert-Equal $verified.CodeListHash (Get-FileHash -LiteralPath (Join-Path $signedPackage 'App\SelfX.Code.json') -Algorithm SHA256).Hash 'signature: the SHA256 of the checked SelfX.Code.json is returned'
+	Assert-Equal $verified.ConfigListHash (Get-FileHash -LiteralPath (Join-Path $signedPackage 'Config\SelfX.Config.json') -Algorithm SHA256).Hash 'signature: the SHA256 of the checked SelfX.Config.json is returned'
+	Assert-Equal (Test-Signed @($signerB, $signerA.ToLowerInvariant())) 'accepted' 'signature: the signer is one of several allowed signers (any case)'
+	Assert-Equal ((Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint @('') }) -match '^-TrustedSigner') $true 'signature: an empty list of signers never means "everything is allowed"'
+
+	# 5. Negative cases of the signatures (the cases of the signing library: not signed, changed, wrong signer, not trusted).
+	$answer = Test-Signed @($signerB)
+	Assert-Equal ($answer -match 'SignerNotAllowed' -and $answer -match "$signableCount of $signableCount" -and $answer -match 'Nothing was changed') $true "wrong signer: valid signatures of a signer that is not allowed are refused ($answer)"
+	Assert-Equal ($answer -match ' and \d+ more') $true 'many problems: the message names ten files and the number of the rest'
+	New-SignedPackage
+	$script:fakeSignatures.Remove((Get-FakeKey (Join-Path $signedPackage 'App\Self_X.ps1')))
+	$answer = Test-Signed
+	Assert-Equal ($answer -match 'App\\Self_X\.ps1 \(NotSigned\)' -and $answer -match '^Trust mode Signature: 1 of ') $true "not signed: one unsigned script stops ($answer)"
+	New-SignedPackage
+	Add-Content -LiteralPath (Join-Path $signedPackage 'App\Scripts_to_run\SelfX_Device_Restart.ps1') -Value '# changed after signing'
+	$answer = Test-Signed
+	Assert-Equal ($answer -match 'SelfX_Device_Restart\.ps1 \(HashMismatch\)') $true "changed file: a script changed after signing stops ($answer)"
+	foreach ($status in 'NotTrusted', 'UnknownError', 'Incompatible') {
+		New-SignedPackage
+		Set-FakeSignature (Join-Path $signedPackage 'Bin\SelfXService.exe') $signerA $status
+		$answer = Test-Signed
+		Assert-Equal ($answer -match 'Bin\\SelfXService\.exe \(NotTrusted\)') $true "status $status (untrusted root, expired without time stamp): the program is refused ($answer)"
+	}
+	New-SignedPackage
+	Set-FakeSignature (Join-Path $signedPackage 'Bin\SelfXService.exe') $signerA 'NotSupportedFileFormat'
+	Assert-Equal ((Test-Signed) -match 'SelfXService\.exe \(NotSupported\)') $true 'status NotSupportedFileFormat is refused'
+	New-SignedPackage
+	Set-FakeSignature (Join-Path $signedPackage 'Bin\WinRT\SelfXWinRT.dll') $signerB
+	$answer = Test-Signed
+	Assert-Equal ($answer -match 'Bin\\WinRT\\SelfXWinRT\.dll \(SignerNotAllowed\)') $true "library of another publisher: a valid signature of another signer is refused ($answer)"
+	New-SignedPackage
+	$script:fakeSignatures.Remove((Get-FakeKey (Join-Path $signedPackage 'Install.ps1')))
+	Assert-Equal ((Test-Signed) -match 'Install\.ps1 \(NotSigned\)') $true 'Install.ps1 itself must be signed'
+	New-SignedPackage
+	$script:fakeSignatures.Remove((Get-FakeKey (Join-Path $signedPackage 'Bin\SelfXSessionStarter.dll')))
+	Assert-Equal ((Test-Signed) -match 'SelfXSessionStarter\.dll \(NotSigned\)') $true 'a library that is loaded but not installed must be signed'
+	New-SignedPackage
+	$script:fakeSignatureError = '*\Uninstall.ps1'
+	Assert-Equal ((Test-Signed) -match 'Uninstall\.ps1 \(Error\)') $true 'an error of the signature check is a refusal (fail closed)'
+	New-SignedPackage
+	Set-FakeSignature (Join-Path $signedPackage 'Uninstall.ps1') '' 'Valid'
+	Assert-Equal ((Test-Signed) -match 'Uninstall\.ps1 \(Error\)') $true 'status Valid without a signer certificate is refused'
+	New-SignedPackage
+	[IO.File]::WriteAllText((Join-Path $signedPackage 'App\Scripts_to_run\Added.psm1'), '# module')
+	Assert-Equal ((Test-Signed) -match 'Added\.psm1 \(NotSigned\)') $true 'a module file (.psm1) must be signed too'
+
+	# 6. Negative cases of the catalog of the configuration.
+	New-SignedPackage
+	Remove-Item -LiteralPath $configCatalog -Force
+	$answer = Test-Signed
+	Assert-Equal ($answer -match 'Config\\SelfX\.Config\.cat is not a valid signed catalog.*FileMissing') $true "configuration catalog missing: refused ($answer)"
+	New-SignedPackage
+	Set-FakeSignature $configCatalog $signerB
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*CatalogSignature:SignerNotAllowed') $true 'configuration catalog of another signer: refused'
+	New-SignedPackage
+	$script:fakeSignatures.Remove((Get-FakeKey $configCatalog))
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*CatalogSignature:NotSigned') $true 'unsigned configuration catalog: refused'
+	New-SignedPackage
+	Add-Content -LiteralPath $configCatalog -Value ' '
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*CatalogSignature:HashMismatch') $true 'configuration catalog changed after signing: refused'
+	New-SignedPackage
+	Add-Content -LiteralPath (Join-Path $signedPackage 'Config\Tool_Config.xml') -Value '<!-- changed -->'
+	$answer = Test-Signed
+	Assert-Equal ($answer -match 'SelfX\.Config\.cat.*FilesDiffer \(changed: tool_config\.xml\)') $true "changed XML: a configuration file changed after the catalog was signed stops ($answer)"
+	New-SignedPackage
+	New-Item -ItemType Directory -Path (Join-Path $signedPackage 'Config\Branding') -Force | Out-Null
+	[IO.File]::WriteAllText((Join-Path $signedPackage 'Config\Branding\added.png'), 'png')
+	$answer = Test-Signed
+	Assert-Equal ($answer -match 'SelfX\.Config\.cat.*not in the catalog: branding\\added\.png') $true "added file: a file in Config that the catalog does not list stops ($answer)"
+	New-SignedPackage
+	Remove-Item -LiteralPath (Join-Path $signedPackage 'Config\Health_Config.xml') -Force
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*missing: health_config\.xml') $true 'missing file: a configuration file of the catalog that is not in the package stops'
+	New-SignedPackage
+	New-FakeCatalog (Join-Path $signedPackage 'Config') $configCatalog $signerA -Algorithm 'SHA1'
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*HashAlgorithm') $true 'a catalog that does not use SHA256 is refused'
+	New-SignedPackage
+	New-FakeCatalog (Join-Path $signedPackage 'Config') $configCatalog $signerA -Empty
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*NoDetails') $true 'an empty catalog is refused'
+	New-SignedPackage
+	$script:fakeCatalogError = $true
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*: Error\.') $true 'an error of the catalog check is a refusal (fail closed)'
+
+	# 7. Negative cases of the catalog of the code: everything outside Config, also files that cannot carry a signature.
+	New-SignedPackage
+	Remove-Item -LiteralPath $codeCatalog -Force
+	$answer = Test-Signed
+	Assert-Equal ($answer -match '^Trust mode Signature: SelfX\.Code\.cat is not a valid signed catalog.*FileMissing') $true "code catalog missing: refused ($answer)"
+	New-SignedPackage
+	Set-FakeSignature $codeCatalog $signerB
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Code\.cat.*CatalogSignature:SignerNotAllowed') $true 'code catalog of another signer: refused'
+	foreach ($name in 'App\SelfX.Code.json', 'App\Languages\de.xml', 'App\logo.png', 'Bin\SelfX.Binaries.json', 'Service\SelfXService.cs') {
+		New-SignedPackage
+		Add-Content -LiteralPath (Join-Path $signedPackage $name) -Value ' '
+		$answer = Test-Signed
+		Assert-Equal ($answer -match ('SelfX\.Code\.cat.*FilesDiffer \(changed: ' + [regex]::Escape($name.ToLowerInvariant()) + '\)')) $true "code catalog: a changed $name stops ($answer)"
+	}
+	New-SignedPackage
+	[IO.File]::WriteAllText((Join-Path $signedPackage 'readme.txt'), 'added')
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Code\.cat.*not in the catalog: readme\.txt') $true 'code catalog: an added file at the top of the package stops'
+	New-SignedPackage
+	Remove-Item -LiteralPath (Join-Path $signedPackage 'App\Languages\fr.xml') -Force
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Code\.cat.*missing: app\\languages\\fr\.xml') $true 'code catalog: a missing language file stops'
+	New-SignedPackage
+	New-FakeCatalog $signedPackage $codeCatalog $signerA
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Code\.cat.*missing: config\\') $true 'code catalog: a catalog that also lists the files of Config is refused (the two catalogs are separate)'
+	New-SignedPackage
+	Remove-Item -LiteralPath (Join-Path $signedPackage 'App\SelfX.Code.json') -Force
+	New-FakeCatalog $signedPackage $codeCatalog $signerA -Skip @('Config')
+	Assert-Equal ((Test-Signed) -match 'SelfX\.Code\.json is missing') $true 'a signed package without SelfX.Code.json is refused'
+
+	# 8. A link in the package.
+	New-SignedPackage
+	$linkTarget = Join-Path $root 'signed\target'
+	New-Item -ItemType Directory -Path $linkTarget -Force | Out-Null
+	$link = Join-Path $signedPackage 'App\Linked'
+	$null = & cmd.exe /c mklink /J "`"$link`"" "`"$linkTarget`"" 2>&1
+	if ($LASTEXITCODE -eq 0) {
+		try { Assert-Equal ((Test-Signed) -match 'contains a link \(App\\Linked\)') $true 'a junction in the package stops the check' }
+		finally { $null = & cmd.exe /c rmdir "`"$link`"" 2>&1 }
+	}
+	else { Write-Output 'Skipped: the junction for the link test could not be created.' }
+
+	# 9. The same answers as Test-SelfXSignature of tools\SelfXSigning.ps1 (two copies of one rule).
+	New-SignedPackage
+	$probe = Join-Path $signedPackage 'Uninstall.ps1'
+	$probes = @(
+		@{ Status = 'Valid'; Thumbprint = $signerA }, @{ Status = 'Valid'; Thumbprint = $signerB }, @{ Status = 'Valid'; Thumbprint = '' },
+		@{ Status = 'NotSigned'; Thumbprint = '' }, @{ Status = 'HashMismatch'; Thumbprint = $signerA }, @{ Status = 'NotSupportedFileFormat'; Thumbprint = '' },
+		@{ Status = 'NotTrusted'; Thumbprint = $signerA }, @{ Status = 'UnknownError'; Thumbprint = $signerA }, @{ Status = 'Incompatible'; Thumbprint = $signerA }
+	)
+	foreach ($case in $probes) {
+		Set-FakeSignature $probe $case.Thumbprint $case.Status
+		$fromLibrary = (Test-SelfXSignature -Path $probe -AllowedThumbprint $signerA).Reason
+		Assert-Equal (Test-SelfXFileSignature -Path $probe -AllowedThumbprint @($signerA)) $fromLibrary "same answer as the signing library: status $($case.Status), signer '$($case.Thumbprint)' ($fromLibrary)"
+	}
+	$missingProbe = Join-Path $signedPackage 'NoSuchFile.ps1'
+	Assert-Equal (Test-SelfXFileSignature -Path $missingProbe -AllowedThumbprint @($signerA)) (Test-SelfXSignature -Path $missingProbe -AllowedThumbprint $signerA).Reason 'same answer as the signing library: missing file'
+
+	# 10. The lists and the copy step with a signed package: the catalog of Config is accepted only in the mode Signature and is
+	#     not installed; the installed lists are the checked ones.
+	New-SignedPackage
+	$verified = Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $signerA
+	Assert-Equal (Get-Refusal { Test-SelfXFileManifest -PackageFolder $signedPackage -SignedPackage }) 'accepted' 'mode Signature: the lists accept Config\SelfX.Config.cat'
+	Assert-Equal (Test-SelfXFileManifest -PackageFolder $signedPackage -SignedPackage) $packageCount 'mode Signature: the catalog is not counted as a file of the lists'
+	$answer = Get-Refusal { Test-SelfXFileManifest -PackageFolder $signedPackage }
+	Assert-Equal ($answer -match 'package is signed' -and $answer -match '-TrustedSigner') $true "mode Hash: a signed package without -TrustedSigner is refused with a hint ($answer)"
+	Assert-Equal (Get-Refusal { Test-SelfXFileManifest -PackageFolder $signedPackage -SignedPackage:$false }) $answer 'mode Hash: -SignedPackage:$false is the same as no switch'
+	if (Test-Path -LiteralPath $device) { Remove-Item -LiteralPath $device -Recurse -Force }
+	Clear-SelfXInstallFolder -InstallFolder $device -Attempts 1 -DelaySeconds 0
+	Copy-SelfXPayload -PackageFolder $signedPackage -InstallFolder $device
+	Assert-Equal (Get-TopEntries) 'App,Config' 'signed package: the install folder holds only App and Config'
+	Assert-Equal (Test-Path -LiteralPath (Join-Path $device 'Config\SelfX.Config.cat')) $false 'signed package: the catalog of the configuration is not installed'
+	Assert-Equal @(Get-ChildItem -LiteralPath $device -Recurse -File -Force -Filter '*.cat').Count 0 'signed package: no catalog is installed'
+	try { $installedCount = Test-SelfXInstalledFiles -InstallFolder $device } catch { $installedCount = "refused: $($_.Exception.Message)" }
+	Assert-Equal $installedCount $packageCount 'signed package: the installed folders match both lists (the file check of the service sees no unlisted file)'
+	Assert-Equal (Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) 'accepted' 'signed package: the installed lists are the checked lists'
+	Add-Content -LiteralPath (Join-Path $device 'App\SelfX.Code.json') -Value ' '
+	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) -match 'App\\SelfX\.Code\.json.*changed between check and copy') $true 'a code list changed between check and copy is found'
+	Copy-Item -LiteralPath (Join-Path $signedPackage 'App\SelfX.Code.json') -Destination (Join-Path $device 'App\SelfX.Code.json') -Force
+	Add-Content -LiteralPath (Join-Path $device 'Config\SelfX.Config.json') -Value ' '
+	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) -match 'Config\\SelfX\.Config\.json.*changed between check and copy') $true 'a configuration list changed between check and copy is found'
+	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified ([pscustomobject]@{ CodeListHash = ''; ConfigListHash = '' }) }) -match 'checked SHA256.*is missing') $true 'installed lists without checked hashes are refused'
+
+	# 11. The trust anchor, in a test key of the current user (Install.ps1 uses HKLM\SOFTWARE\SelfX\Trust). The current user gets full
+	#     control here so that the test can run without administrator rights and can remove the key again.
+	$trustTestRoot = 'Software\SelfXInstallTest_' + [guid]::NewGuid().ToString('N')
+	$trustKey = $trustTestRoot + '\Trust'
+	$me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+	$place = @{ Hive = 'CurrentUser'; SubKey = $trustKey }
+	$write = @{ Hive = 'CurrentUser'; SubKey = $trustKey; OwnerSid = $me; FullControlSids = @('S-1-5-18', 'S-1-5-32-544', $me) }
+	$trusted = @('S-1-5-18', 'S-1-5-32-544', $me)
+	Assert-Equal ($null -eq (Get-SelfXTrustAnchor @place)) $true 'anchor: no key gives no anchor'
+	Set-SelfXTrustAnchor -Mode Signature -Signers @($signerC, $signerA) @write
+	$anchor = Get-SelfXTrustAnchor @place
+	Assert-Equal $anchor.Mode 'Signature' 'anchor: the mode Signature is written'
+	Assert-Equal (@($anchor.Signers) -join '|') "$($signerC.ToUpperInvariant())|$signerA" 'anchor: the signers are written in upper case, in the given order'
+	$rawKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($trustKey, $false)
+	try {
+		Assert-Equal $rawKey.GetValueKind('Mode') 'String' 'anchor: Mode is REG_SZ'
+		Assert-Equal $rawKey.GetValueKind('Signers') 'MultiString' 'anchor: Signers is REG_MULTI_SZ'
+		$acl = $rawKey.GetAccessControl([Security.AccessControl.AccessControlSections]'Access, Owner')
+		Assert-Equal $acl.AreAccessRulesProtected $true 'anchor: the rights are not inherited'
+		Assert-Equal $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value $me 'anchor: the owner is set (Install.ps1: Administrators, S-1-5-32-544)'
+		$rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+		Assert-Equal ((@($rules | ForEach-Object { $_.IdentityReference.Value } | Sort-Object -Unique)) -join ',') ((@('S-1-5-18', 'S-1-5-32-544', 'S-1-5-32-545', $me) | Sort-Object -Unique) -join ',') 'anchor: rules only for SYSTEM, Administrators, Users (and the test user), all by SID'
+		$userRule = @($rules | Where-Object { $_.IdentityReference.Value -eq 'S-1-5-32-545' })
+		Assert-Equal $userRule.Count 1 'anchor: one rule for Users'
+		Assert-Equal ([int]$userRule[0].RegistryRights) ([int][Security.AccessControl.RegistryRights]::ReadKey) 'anchor: Users can only read'
+		foreach ($sid in 'S-1-5-18', 'S-1-5-32-544') { Assert-Equal ([int](@($rules | Where-Object { $_.IdentityReference.Value -eq $sid })[0].RegistryRights)) ([int][Security.AccessControl.RegistryRights]::FullControl) "anchor: full control for $sid" }
+	} finally { $rawKey.Dispose() }
+	Assert-Equal ($null -eq (Test-SelfXTrustAnchorState -Mode Signature -Signers @($signerC.ToUpperInvariant(), $signerA) -TrustedSids $trusted @place)) $true 'anchor: the state check accepts what was written'
+	Assert-Equal ((Test-SelfXTrustAnchorState -Mode Signature -Signers @($signerC.ToUpperInvariant(), $signerA) @place) -match "can be changed by $me") $true 'anchor: an identity other than SYSTEM and Administrators with write rights is found'
+	Assert-Equal (Test-SelfXTrustAnchorState -Mode Hash -TrustedSids $trusted @place) 'the mode is Signature' 'anchor: another mode than expected is found'
+	Assert-Equal (Test-SelfXTrustAnchorState -Mode Signature -Signers @($signerA) -TrustedSids $trusted @place) 'the signers differ' 'anchor: other signers than expected are found'
+	# Downgrade with the anchor of the registry: Signature -> Hash only with the switch.
+	$answer = Get-Refusal { Resolve-SelfXTrustMode -InstalledMode (Get-SelfXTrustAnchor @place).Mode -SignatureRequested $false -AllowHashMode $false }
+	Assert-Equal ($answer -match '-AllowHashMode') $true 'downgrade: an update without -TrustedSigner on a device with the anchor Signature stops'
+	Assert-Equal (Get-SelfXTrustAnchor @place).Mode 'Signature' 'downgrade: the refused update leaves the anchor unchanged'
+	Assert-Equal (Resolve-SelfXTrustMode -InstalledMode (Get-SelfXTrustAnchor @place).Mode -SignatureRequested $false -AllowHashMode $true) 'Hash' 'downgrade: with -AllowHashMode the mode is Hash'
+	# A renewal: a second signer is added, the mode stays.
+	Set-SelfXTrustAnchor -Mode Signature -Signers @("$signerA,$signerB") @write
+	Assert-Equal (@((Get-SelfXTrustAnchor @place).Signers) -join '|') "$signerA|$signerB" 'anchor: a new list of signers replaces the old one'
+	Assert-Equal ((Get-Refusal { Set-SelfXTrustAnchor -Mode Signature -Signers @('xyz') @write }) -match '^-TrustedSigner') $true 'anchor: the mode Signature is not written with an invalid list'
+	Assert-Equal ((Get-Refusal { Set-SelfXTrustAnchor -Mode Signature @write }) -match '^-TrustedSigner') $true 'anchor: the mode Signature is not written without signers'
+	Assert-Equal (@((Get-SelfXTrustAnchor @place).Signers) -join '|') "$signerA|$signerB" 'anchor: a refused write leaves the anchor unchanged'
+	# Mode Hash: Signers is removed, also every other value and sub key.
+	$rawKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($trustKey, $true)
+	try { $rawKey.SetValue('Other', 'x'); $rawKey.CreateSubKey('Sub').Dispose() } finally { $rawKey.Dispose() }
+	Set-SelfXTrustAnchor -Mode Hash -Signers @($signerA) @write
+	$anchor = Get-SelfXTrustAnchor @place
+	Assert-Equal $anchor.Mode 'Hash' 'anchor: the mode Hash is written'
+	Assert-Equal @($anchor.Signers).Count 0 'anchor: the mode Hash has no signers'
+	$rawKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($trustKey, $true)
+	try {
+		Assert-Equal ((@($rawKey.GetValueNames()) | Sort-Object) -join ',') 'Mode' 'anchor: only the value Mode is left in the mode Hash'
+		Assert-Equal @($rawKey.GetSubKeyNames()).Count 0 'anchor: a sub key is removed'
+		# Content that Install.ps1 does not write counts as Invalid (and is treated like Signature by the downgrade check).
+		$rawKey.SetValue('Mode', 'hash', [Microsoft.Win32.RegistryValueKind]::String)
+		Assert-Equal (Get-SelfXTrustAnchor @place).Mode 'Invalid' 'anchor: another text than Hash or Signature is Invalid'
+		$rawKey.SetValue('Mode', 1, [Microsoft.Win32.RegistryValueKind]::DWord)
+		Assert-Equal (Get-SelfXTrustAnchor @place).Mode 'Invalid' 'anchor: a number as Mode is Invalid'
+		$rawKey.DeleteValue('Mode')
+		Assert-Equal (Get-SelfXTrustAnchor @place).Mode 'Invalid' 'anchor: a key without Mode is Invalid'
+		$rawKey.SetValue('Mode', 'Signature', [Microsoft.Win32.RegistryValueKind]::String)
+		$rawKey.SetValue('Signers', $signerA, [Microsoft.Win32.RegistryValueKind]::String)
+		Assert-Equal (Get-SelfXTrustAnchor @place).Mode 'Invalid' 'anchor: Signers of another type than REG_MULTI_SZ is Invalid'
+	} finally { $rawKey.Dispose() }
+	Assert-Equal ((Get-Refusal { Resolve-SelfXTrustMode -InstalledMode (Get-SelfXTrustAnchor @place).Mode -SignatureRequested $false -AllowHashMode $false }) -match '-AllowHashMode') $true 'downgrade: an anchor that cannot be understood counts as Signature (fail closed)'
+
+	# 12. The main part of Install.ps1: order of the steps and the parameters.
+	$parameters = @{}
+	foreach ($parameter in $ast.ParamBlock.Parameters) { $parameters[$parameter.Name.VariablePath.UserPath] = $parameter.StaticType.Name }
+	Assert-Equal $parameters['TrustedSigner'] 'String[]' 'Install.ps1 has the parameter -TrustedSigner (string[])'
+	Assert-Equal $parameters['AllowHashMode'] 'SwitchParameter' 'Install.ps1 has the switch -AllowHashMode'
+	Assert-Equal $installText.Contains('[CmdletBinding(PositionalBinding = $false)]') $true 'Install.ps1 binds parameters by name only'
+	$order = @(
+		'$TrustMode = Resolve-SelfXTrustMode',
+		'$VerifiedSignatures = Test-SelfXPackageSignatures -PackageFolder $PackageFolder',
+		'Initialize-SelfXDataFolder -Path $DataFolder',
+		'Start-Transcript',
+		'Stop-Service -Name $ServiceName',
+		'Clear-SelfXInstallFolder -InstallFolder $InstallFolder',
+		'$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder',
+		'Test-SelfXInstalledLists -InstallFolder $InstallFolder -Verified $VerifiedSignatures',
+		'Set-SelfXTrustAnchor -Mode $TrustMode -Signers $AllowedSigners',
+		'New-Service -Name $ServiceName'
+	)
+	$position = -1
+	foreach ($step in $order) {
+		$found = $installText.IndexOf($step, [StringComparison]::Ordinal)
+		Assert-Equal ($found -gt $position) $true "Install.ps1: '$step' comes after the step before it (mode and signatures before any change, anchor before the service)"
+		if ($found -gt $position) { $position = $found }
+	}
+	Assert-Equal $installText.Contains('$SignatureRequested = $PSBoundParameters.ContainsKey(''TrustedSigner'')') $true 'Install.ps1: a given but empty -TrustedSigner is not the mode Hash'
+	Assert-Equal $installText.Contains('Test-SelfXFileManifest -PackageFolder $PackageFolder -SignedPackage:($TrustMode -eq ''Signature'')') $true 'Install.ps1: the lists are checked in both modes'
+	Assert-Equal ($installText -match '(?i)BUILTIN\\|NT AUTHORITY|Administratoren|''Everyone''|''Jeder''') $false 'Install.ps1 names accounts by SID only'
+
+	# 13. Part 2: real signatures and real catalogs (test certificates of the current user). This part shows that the names of
+	#     Test-FileCatalog, the hash algorithm and the status values are the ones the functions expect.
+	Remove-Item -LiteralPath Function:\Get-AuthenticodeSignature, Function:\Test-FileCatalog
+	$canTrust = ($env:GITHUB_ACTIONS -eq 'true') -or ($env:SELFX_TEST_ALLOW_ROOT_IMPORT -eq '1')
+	if (-not $canTrust) {
+		Write-Output 'Skipped: real signatures and catalogs need a trusted test root; set SELFX_TEST_ALLOW_ROOT_IMPORT=1 (adds two test certificates to Cert:\CurrentUser\Root until the end of the test) or run in CI.'
+	}
+	else {
+		$testCertificates = New-Object System.Collections.Generic.List[string]
+		$testRoots = New-Object System.Collections.Generic.List[string]
+		function New-TestSigner([string]$Name) {
+			$created = New-SelfSignedCertificate -Subject "CN=SelfX Install Test $Name $([guid]::NewGuid().ToString('N'))" -CertStoreLocation 'Cert:\CurrentUser\My' -Type CodeSigningCert -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -KeyUsage DigitalSignature
+			$testCertificates.Add($created.Thumbprint)
+			return (Get-Item -LiteralPath "Cert:\CurrentUser\My\$($created.Thumbprint)")
+		}
+		function Add-TestRoot($Certificate) {
+			$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+			$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+			try { $store.Add((New-Object System.Security.Cryptography.X509Certificates.X509Certificate2(, $Certificate.RawData))) } finally { $store.Close() }
+			$testRoots.Add($Certificate.Thumbprint)
+		}
+		try {
+			$certA = New-TestSigner 'A'
+			$certB = New-TestSigner 'B'
+			# A third certificate that is never added to the trusted roots.
+			$certC = New-TestSigner 'C'
+			Add-TestRoot $certA
+			Add-TestRoot $certB
+			$real = Join-Path $root 'real\package'
+			$realCatalogs = Join-Path $root 'real\catalogs'
+			function New-RealPackage($Certificate) {
+				foreach ($folder in $real, $realCatalogs) { if (Test-Path -LiteralPath $folder) { Remove-Item -LiteralPath $folder -Recurse -Force } }
+				New-Item -ItemType Directory -Path (Join-Path $real 'App\Languages'), (Join-Path $real 'App\Scripts_to_run'), (Join-Path $real 'Bin'), (Join-Path $real 'Service'), $realCatalogs -Force | Out-Null
+				$scripts = @('Install.ps1', 'Uninstall.ps1', 'App\Self_X.ps1', 'App\Scripts_to_run\SelfX_Device_Restart.ps1') | ForEach-Object { Join-Path $real $_ }
+				foreach ($scriptFile in $scripts) { [IO.File]::WriteAllText($scriptFile, "Write-Output 'SelfX install test'`r`n", (New-Object System.Text.UTF8Encoding($false))) }
+				[IO.File]::WriteAllText((Join-Path $real 'App\SelfX.Code.json'), '{ "ManifestVersion": 1, "ToolVersion": "3.1.0", "Files": {} }')
+				[IO.File]::WriteAllText((Join-Path $real 'App\Languages\de.xml'), '<Language />')
+				[IO.File]::WriteAllText((Join-Path $real 'Bin\SelfX.Binaries.json'), '{}')
+				[IO.File]::WriteAllText((Join-Path $real 'Service\SelfXService.cs'), '// source')
+				$null = Set-SelfXCodeSignature -Path $scripts -Certificate $Certificate
+				# The catalog of the code is written before the folder Config exists, so it lists everything outside Config.
+				$null = New-SelfXSignedCatalog -Path $real -CatalogFilePath (Join-Path $realCatalogs 'SelfX.Code.cat') -Certificate $Certificate
+				New-Item -ItemType Directory -Path (Join-Path $real 'Config\Branding') -Force | Out-Null
+				[IO.File]::WriteAllText((Join-Path $real 'Config\Tool_Config.xml'), '<GUI_Config />')
+				[IO.File]::WriteAllText((Join-Path $real 'Config\Branding\logo.png'), 'png')
+				[IO.File]::WriteAllText((Join-Path $real 'Config\SelfX.Config.json'), '{ "ManifestVersion": 1, "Files": {} }')
+				$null = New-SelfXSignedCatalog -Path (Join-Path $real 'Config') -CatalogFilePath (Join-Path $realCatalogs 'SelfX.Config.cat') -Certificate $Certificate
+				Move-Item -LiteralPath (Join-Path $realCatalogs 'SelfX.Config.cat') -Destination (Join-Path $real 'Config\SelfX.Config.cat')
+				Move-Item -LiteralPath (Join-Path $realCatalogs 'SelfX.Code.cat') -Destination (Join-Path $real 'SelfX.Code.cat')
+			}
+			function Test-Real([string[]]$Allowed) { return (Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $real -AllowedThumbprint $Allowed }) }
+			New-RealPackage $certA
+			$watch = [Diagnostics.Stopwatch]::StartNew()
+			$answer = Test-Real @($certA.Thumbprint)
+			$watch.Stop()
+			Assert-Equal $answer 'accepted' 'real signatures: a signed package with both catalogs is accepted'
+			Write-Output "Real signatures: the check of the small test package took $($watch.ElapsedMilliseconds) ms."
+			Assert-Equal (Test-SelfXSignedCatalog -CatalogFilePath (Join-Path $real 'Config\SelfX.Config.cat') -Path (Join-Path $real 'Config') -AllowedThumbprint $certA.Thumbprint).Reason 'Ok' 'real signatures: the signing library accepts the same configuration catalog'
+			Assert-Equal ((Test-Real @($certB.Thumbprint)) -match 'SignerNotAllowed') $true 'real signatures: another allowed signer than the one that signed is refused'
+			Add-Content -LiteralPath (Join-Path $real 'App\Self_X.ps1') -Value '# changed'
+			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'App\\Self_X\.ps1 \(HashMismatch\)') $true 'real signatures: a script changed after signing is refused'
+			New-RealPackage $certA
+			[IO.File]::WriteAllText((Join-Path $real 'App\Scripts_to_run\Added.ps1'), "Write-Output 'unsigned'`r`n")
+			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'Added\.ps1 \(NotSigned\)') $true 'real signatures: an added unsigned script is refused'
+			New-RealPackage $certA
+			Add-Content -LiteralPath (Join-Path $real 'Config\Tool_Config.xml') -Value '<!-- changed -->'
+			$answer = Test-Real @($certA.Thumbprint)
+			Assert-Equal ($answer -match 'SelfX\.Config\.cat.*FilesDiffer \(changed: tool_config\.xml\)') $true "real catalog: a changed XML is refused ($answer)"
+			New-RealPackage $certA
+			[IO.File]::WriteAllText((Join-Path $real 'Config\Branding\added.png'), 'png')
+			$answer = Test-Real @($certA.Thumbprint)
+			Assert-Equal ($answer -match 'SelfX\.Config\.cat.*not in the catalog: branding\\added\.png') $true "real catalog: an added file in Config is refused ($answer)"
+			New-RealPackage $certA
+			Add-Content -LiteralPath (Join-Path $real 'App\Languages\de.xml') -Value '<!-- changed -->'
+			$answer = Test-Real @($certA.Thumbprint)
+			Assert-Equal ($answer -match 'SelfX\.Code\.cat.*FilesDiffer \(changed: app\\languages\\de\.xml\)') $true "real catalog: a changed language file is refused ($answer)"
+			New-RealPackage $certA
+			Add-Content -LiteralPath (Join-Path $real 'App\SelfX.Code.json') -Value ' '
+			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'SelfX\.Code\.cat.*changed: app\\selfx\.code\.json') $true 'real catalog: a changed SelfX.Code.json is refused'
+			New-RealPackage $certA
+			$bytes = [IO.File]::ReadAllBytes((Join-Path $real 'SelfX.Code.cat'))
+			$bytes[[int]($bytes.Length / 2)] = $bytes[[int]($bytes.Length / 2)] -bxor 0xFF
+			[IO.File]::WriteAllBytes((Join-Path $real 'SelfX.Code.cat'), $bytes)
+			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'SelfX\.Code\.cat is not a valid signed catalog.*(CatalogSignature|Error)') $true 'real catalog: a damaged catalog is refused'
+			New-RealPackage $certB
+			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'SignerNotAllowed') $true 'real signatures: a package signed by another trusted certificate is refused'
+			Assert-Equal (Test-Real @($certA.Thumbprint, $certB.Thumbprint)) 'accepted' 'real signatures: the same package is accepted when its signer is in the list'
+			# A script signed by a certificate whose root the device does not trust: the status is not Valid, also when the thumbprint is allowed.
+			New-RealPackage $certA
+			$null = Set-AuthenticodeSignature -LiteralPath (Join-Path $real 'App\Self_X.ps1') -Certificate $certC -HashAlgorithm SHA256
+			$answer = Test-Real @($certA.Thumbprint, $certC.Thumbprint)
+			Assert-Equal ($answer -match 'App\\Self_X\.ps1 \(NotTrusted\)') $true "real signatures: a signer whose root the device does not trust is refused ($answer)"
+		}
+		finally {
+			foreach ($thumbprint in $testRoots) {
+				$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+				$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+				try { foreach ($entry in @($store.Certificates | Where-Object { $_.Thumbprint -eq $thumbprint })) { $store.Remove($entry) } } finally { $store.Close() }
+			}
+			foreach ($thumbprint in $testCertificates) { Remove-Item -LiteralPath "Cert:\CurrentUser\My\$thumbprint" -DeleteKey -Force -ErrorAction SilentlyContinue }
+			Assert-Equal @(Get-ChildItem Cert:\CurrentUser\Root | Where-Object { $testRoots -contains $_.Thumbprint }).Count 0 'no test certificate is left in Cert:\CurrentUser\Root'
+			Assert-Equal @(Get-ChildItem Cert:\CurrentUser\My | Where-Object { $testCertificates -contains $_.Thumbprint }).Count 0 'no test certificate is left in Cert:\CurrentUser\My'
+		}
+	}
 }
 finally {
+	if ($trustTestRoot) { try { [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($trustTestRoot, $false) } catch { Write-Output "The test key HKCU\$trustTestRoot could not be removed: $($_.Exception.Message)" } }
 	Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
 }
 

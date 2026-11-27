@@ -177,8 +177,38 @@ Dependabot-Vorschläge für NuGet-Pakete ändern den Ordner nicht: Nach einer Ü
 | Voraussetzung (Requirement) | Windows 11 25H2, siehe 3.3 |
 | Abhängigkeit | App „PowerShell 7“, *Automatisch installieren* = Ja, siehe 3.2 |
 
-Die Erkennung meldet „installiert“ nur, wenn Version, registrierter Dienst **und** Dateiliste
-passen. So wird auch ein Update mit geänderten Dateien, aber gleicher Versionsnummer, erkannt.
+Die Erkennung meldet „installiert“ nur, wenn Version, registrierter Dienst, Dateiliste **und**
+Vertrauensanker (`HKLM\SOFTWARE\SelfX\Trust`, von `Install.ps1` geschrieben) passen. So wird auch
+ein Update mit geänderten Dateien, aber gleicher Versionsnummer, erkannt. Eine Installation einer
+Version ohne Anker wird nicht erkannt und einmal erneut installiert.
+
+#### Optional: signiertes Paket (Vertrauensmodus Signatur)
+
+Für ein Paket, dessen Dateien mit dem Codesignatur-Zertifikat des Unternehmens signiert sind,
+kommt der Fingerabdruck des Signaturzertifikats in den Installationsbefehl:
+
+`%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -TrustedSigner <Fingerabdruck>`
+
+- Der Fingerabdruck ist der SHA1-Fingerabdruck des **Signaturzertifikats** (40 Hexadezimalzeichen,
+  ohne Leerzeichen), nicht der der Zertifizierungsstelle. Mehrere Fingerabdrücke werden durch
+  Kommas ohne Leerzeichen getrennt (`-TrustedSigner <alt>,<neu>`); so lässt sich ein erneuertes
+  Zertifikat schon vor dem Wechsel erlauben.
+- `Install.ps1` installiert dann nur, wenn jedes Programm und jedes Skript des Pakets von einem
+  dieser Zertifikate signiert ist und die beiden signierten Kataloge (`Config\SelfX.Config.cat`,
+  `SelfX.Code.cat`) zum Paket passen. Andernfalls bricht es vor jeder Änderung am Gerät ab
+  ([Architektur](Architecture.md#der-modus-signatur-in-installps1)).
+- Die Zertifikatskette (Stamm- und Zwischenzertifikate) muss auf dem Gerät vertrauenswürdig sein,
+  **bevor** SelfX installiert wird, auch bei Autopilot: Das Zertifikatsprofil so zuweisen, dass es
+  zuerst ankommt.
+- Ein Gerät, das mit `-TrustedSigner` installiert wurde, lehnt eine Installation ohne den
+  Parameter ab. Für den Weg zurück zu einem unsignierten Paket einmal den Schalter
+  `-AllowHashMode` angeben.
+- Sperrliste: Windows fragt die Adresse ab, die im Zertifikat steht. Für Geräte außerhalb des
+  Firmennetzes sollte das eine aus dem Internet erreichbare HTTP-Adresse sein. Eine nicht
+  erreichbare Liste bricht die Installation nicht ab (Standardeinstellung von Windows), kann sie
+  aber verlangsamen; `tools\Measure-SelfXRevocationDelay.ps1` misst das auf einem Testgerät.
+- Die Paketwerkzeuge signieren noch nicht: Das Paket wird mit `tools\SelfXSigning.ps1` signiert,
+  bis der Assistent das übernimmt.
 
 ### 3.2 PowerShell 7 als eigene Win32-App
 
@@ -541,6 +571,12 @@ einmal auf einem Testgerät.
 | `The folder Bin is missing …` | Schritt 2.3 fehlt oder wurde vor dem Paketbau nicht ausgeführt. Schritt 2.3 und 2.5 wiederholen. |
 | `Bin was not built from the current …` | Ein Quelltext wurde nach dem Bauen geändert. Schritt 2.3 und 2.5 wiederholen. |
 | Installation endet mit Exitcode 1 | Den Grund nennt die letzte Zeile von `Install.log`. Die bisherige Installation bleibt unverändert. |
+| `Trust mode Signature: … have no valid signature of an allowed signer` | Ein Programm oder Skript des Pakets ist nicht signiert, wurde nach dem Signieren geändert, ist von einem Zertifikat signiert, das nicht in `-TrustedSigner` steht, oder seine Zertifikatskette ist auf dem Gerät nicht vertrauenswürdig (Grund in Klammern: `NotSigned`, `HashMismatch`, `SignerNotAllowed`, `NotTrusted`). Diese Meldung steht nicht in `Install.log`: zum Lesen den Installationsbefehl in einer Konsole mit erhöhten Rechten ausführen. |
+| `… is not a valid signed catalog …` | Eine Datei wurde nach dem Signieren des Katalogs geändert, hinzugefügt oder entfernt (die Meldung nennt sie), oder der Katalog fehlt oder ist von einem anderen Zertifikat signiert. Das Paket neu signieren. |
+| `This device is in the trust mode Signature …` | Das Gerät wurde mit `-TrustedSigner` installiert, und der Installationsbefehl enthält den Parameter nicht. `-TrustedSigner` ergänzen, oder `-AllowHashMode`, um bewusst auf ein unsigniertes Paket zu wechseln. |
+| `The package is signed … but -TrustedSigner was not given` | Ein signiertes Paket wurde ohne `-TrustedSigner` installiert. Den Parameter im Installationsbefehl ergänzen. |
+| `-TrustedSigner: every entry must be a SHA1 thumbprint …` | Der Wert enthält ein Leerzeichen, ein anderes Zeichen oder einen leeren Eintrag. Je Fingerabdruck 40 Hexadezimalzeichen verwenden, Kommas ohne Leerzeichen. |
+| Intune erkennt SelfX nach dem Update auf diese Version nicht | Der Vertrauensanker fehlt (`Detection_<Datum>.log`: `trust anchor missing`). Intune installiert das Paket erneut; danach ist der Anker vorhanden. |
 | Intune erkennt ein Update nicht | `Version.txt` und `$ExpectedVersion` sind gleich geblieben, oder Sie haben die Kopie aus dem Repository statt `build\SelfX-Service-<Version>.Detection.ps1` hochgeladen. |
 | SelfX startet keine Aktion | PowerShell 7.6 fehlt (Warnung im `Install.log`), oder Ereignis 4005 meldet eine abweichende Datei. Das SelfX-Protokoll nennt die Einzelheiten. |
 

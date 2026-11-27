@@ -45,6 +45,8 @@
     3.1.0    2026-11-27  fubu2k               Both layouts: Tool_Config.xml, the delete helper and the open windows are found in App and Config
                                               and, for an installation of an older version, directly in InstallFolder; Tool_Config.xml is read
                                               without DTD
+    3.1.0    2026-11-27  fubu2k               Removes the trust anchor HKLM\SOFTWARE\SelfX\Trust (written by Install.ps1); HKLM\SOFTWARE\SelfX\Support
+                                              is kept
 #>
 
 [CmdletBinding()]
@@ -141,6 +143,14 @@ ForEach($Folder in @((Join-Path $env:PUBLIC 'Desktop'), (Join-Path $env:ProgramD
 
 Remove-Item -Path $UninstallKey -Recurse -Force -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -Name 'SelfXTray' -ErrorAction SilentlyContinue
+# The trust anchor of Install.ps1 (mode and allowed signers, 64-bit view). HKLM\SOFTWARE\SelfX\Support (ticket routing, set by
+# Intune) is not touched. After the removal a later installation starts without an anchor (mode Hash needs no -AllowHashMode).
+Try
+{
+	$TrustBase = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)
+	Try { $TrustBase.DeleteSubKeyTree('SOFTWARE\SelfX\Trust', $false) } Finally { $TrustBase.Dispose() }
+}
+Catch { Write-Output "The trust anchor HKLM\SOFTWARE\SelfX\Trust could not be removed: $($_.Exception.GetType().Name)" }
 
 # Close open SelfX windows and status icons of all signed-in users: they use the install folder (working
 # directory, scripts) and would otherwise make the uninstallation fail.
