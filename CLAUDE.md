@@ -29,7 +29,7 @@ on a row, and say so when a needed tool is missing instead of working around it.
 | `microsoft-docs:microsoft-docs`, `microsoft-docs:microsoft-code-reference` | skills | The first for concepts, limits and configuration; the second before writing or reviewing C# / .NET / Win32 API calls (signatures, deprecated patterns). |
 | `claude-security:claude-security`, `:threat-model`, `:attack-surface-analysis`, `:ci-review` | skills (plugin Claude Security) | Scan of a branch or diff, threat model, audit of what a normal user can reach through the pipe. |
 | `git` (development PC) | CLI through `Windows-MCP` | Branches, commits, diff, log. `gh` is not installed on the development PC. |
-| `gh` (cloud workspace) + `add_repo` | CLI | Pull requests, issues, CI logs. Works only after the repository was attached to the session with `add_repo` (access `push` for write operations). |
+| `gh` (cloud workspace) + `add_repo` | CLI | Pull requests, issues, CI logs through the REST API (`gh api repos/fubu2k/SelfX/...`); `gh pr create` and other GraphQL commands are blocked there. Works only after the repository was attached to the session with `add_repo` (access `push` for write operations). |
 | `github-cli-health-check` | skill (plugin) | Only to find out why `gh` does not work. |
 | Project documents (`Projects` tool, `claude/selfx-*.md`) | project knowledge | Architecture plan, security reviews, device test checklists, decisions. Read the matching document before a step of the plan. |
 | `Explore`, `Plan`, `general-purpose` | subagents | Only when the user asks for a subagent. |
@@ -50,7 +50,7 @@ Filesystem MCP server. Present but **never** to be used for this repository: `ho
 | Any change to `Service\*.cs` | `Windows-MCP` PowerShell, `microsoft-docs:microsoft-code-reference` | Verify every Windows / .NET API against the documentation first; then `tools\Build-SelfXBinaries.ps1`, `Test-ServicePipe.ps1`, `Test-SafeDelete.ps1`, `Test-InstallBinaries.ps1`. |
 | Question about .NET 10, named pipes, ACLs, signatures, AppLocker, WDAC, ASR, Intune, Autopilot | `Microsoft Learn` | Look it up; do not answer from memory. Name the source in the pull request when a design decision rests on it. |
 | Change to the pipe protocol, the trust check, `Install.ps1`, `Uninstall.ps1`, file or registry rights | `claude-security:claude-security` on the diff (or `:threat-model`) | In addition to the tests, before the pull request. |
-| Pull request, issue, CI log | `gh` after `add_repo` | Without access: write title and description into the chat and say that the pull request was not created. |
+| Pull request, issue, CI log | `gh api` after `add_repo` | Create a pull request with `gh api repos/fubu2k/SelfX/pulls -f title=... -f head=<branch> -f base=main -F body=@<file>`. Without access: write title and description into the chat and say that the pull request was not created. |
 | Tests | development PC only | Never run the PowerShell tests in the Linux cloud workspace: it has neither `pwsh` nor `dotnet`, and the code is Windows-only. |
 | Step of the architecture plan | `Projects` tool | Read the plan document and its addenda first. |
 
