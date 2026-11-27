@@ -483,6 +483,83 @@ What a publisher rule does **not** do:
 The scripts are covered by automatic tests; the generated policies have not yet been tried on a
 device. Test them in audit mode first.
 
+### Defender ASR: rule for executable files
+
+If your devices use the attack surface reduction (ASR) rule **Block executable files from running unless they meet a prevalence,
+age, or trusted list criterion** (ID `01443614-cd74-433a-b99e-2ecdc07bfc25`), Defender can block programs of SelfX. This section
+explains the cause, how to find the blocked file and what you can do about it. It follows the documentation of Microsoft and the
+way the package is built; **it has not been tried on a device on which the rule is active.**
+
+**What the rule does.** It stops executable files (for example `.exe`, `.dll`, `.scr`) from starting unless they meet a trust
+criterion. It needs cloud-delivered protection. The cloud protection of Microsoft decides from prevalence, age and a trusted list;
+you cannot set these criteria. The user sees a notification, the rule creates no alert in the Defender portal ([ASR rules
+reference](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference), [ASR
+FAQ](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-faq)).
+
+**Why SelfX can be affected.** `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll` and `SelfXAudio.dll` are built on your build machine (step 2.3) and
+exist only on your devices. A program that Microsoft has not seen before may not meet the criteria, and the FAQ says that a new
+version of an app can be blocked while it builds reputation. This is a conclusion from the way SelfX is built, not a statement of
+Microsoft about SelfX.
+
+**1. Find the blocked file.** Copy `tools\Get-SelfXAsrEvents.ps1` to the device and run it there (read only; elevated if the log
+cannot be read otherwise):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Get-SelfXAsrEvents.ps1 -SelfXOnly
+```
+
+The script reads the events 1121 (rule fired in block mode) and 1122 (rule fired in audit mode) of the log `Microsoft-Windows-Windows
+Defender/Operational` for this one rule and shows `Time`, `Mode` (`Block` or `Audit`), `File` (the blocked file),
+`StartedBy` (the process that wanted to start it) and `InSelfXFolder`. Without `-SelfXOnly` it shows the events for all programs;
+`-Days` (default 30) and `-MaxEvents` (default 100) limit the list. It changes nothing and shows no user name: it never reads the
+fields `User` and the command lines, and the profile folder of a user in a path is shown as `<user>`. A path outside the local
+profile folders is shown as the event reports it, so look at the output before you pass it on. In Defender for Endpoint the same
+events are available in advanced hunting as `AsrUntrustedExecutableBlocked` and `AsrUntrustedExecutableAudited`.
+
+No events can mean that the rule is off, that the file is excluded (excluded files write no events) or that nothing was blocked.
+The names of the event fields (`ID`, `Path`, `Process Name`) are not described by Microsoft; they come from an example event. If
+the script reports events that it could not assign to a rule, the layout of the events differs from that example.
+
+**2. Audit mode first.** Set the rule to **Audit** on the pilot devices. The rule then writes event 1122 and blocks nothing. The
+FAQ recommends audit mode for rules in general to find the programs that need an exclusion, and for this rule if you update apps
+often.
+
+**3. Exclude exactly the SelfX files, for this rule only.** In Intune open *Endpoint security > Attack surface reduction* and the
+policy of the type *Attack surface reduction rules*. After the rule is set to Audit, Block or Warn, the setting **ASR Only Per Rule
+Exclusions** appears for this rule ([configure ASR rules and
+exclusions](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-configure)). Add only the files that
+the events name, at most these four:
+
+```
+C:\Program Files\SelfX\App\SelfXService.exe
+C:\Program Files\SelfX\App\SelfX.exe
+C:\Program Files\SelfX\App\WinRT\SelfXWinRT.dll
+C:\Program Files\SelfX\App\Audio\SelfXAudio.dll
+```
+
+- Do **not** exclude the folder `C:\Program Files\SelfX` and do not use a wildcard. Do **not** use the global setting *Attack
+  Surface Reduction Only Exclusions*: it applies to every ASR rule on the device.
+- If an event names another library of `App\WinRT` (the Windows SDK projection), exclude exactly that file, and only after you
+  compared its SHA256 with `SelfX.Code.json`.
+- The rule honors per-rule exclusions ([ASR rules overview](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-overview)).
+  An exclusion applies only when the program starts: restart the service `SelfXService` or the device. Excluded files write no
+  events, so the list of the script gets shorter after the exclusion; the proof is that the notification stops and SelfX starts.
+- An exclusion lowers the protection. It applies to the path: another file at the same path would not be checked by this rule
+  either. Users have only read and execute rights in the folder; the file lists, the file check of the service and, if you use
+  them, AppLocker or App Control still protect the content. A local administrator can change both (see
+  [Architecture](Architecture.md#the-limit-local-administrator)).
+
+**4. Programs from the release.** The release workflow builds the programs once and delivers them inside the `.intunewin` of the
+release (built with the settings of the repository, not with yours). Everybody who uses that file has the same programs. A package
+with your own settings contains the programs of your own build; whether two builds on different machines give identical files is
+not verified (the CI compares two builds on one runner). Only identical files can build up a shared reputation; Microsoft documents
+no way to rely on it.
+
+**5. Signing is no guarantee.** The documentation of Microsoft for this rule does not say that signed files pass. A signed package
+(trust mode Signature) can therefore still be blocked, and there is no guarantee that signing solves the block: test your signed
+package in audit mode. According to the ASR rules overview the rule honors indicators of compromise for files and certificates, so an
+*Allow* indicator for the signing certificate in Defender for Endpoint is one more option. This was not tried with SelfX.
+
 ## Background: what the installation does
 
 `Install.ps1` runs with administrator rights, in Intune as SYSTEM. It checks **right at the
@@ -636,6 +713,7 @@ deployment.
 | `-TrustedSigner: every entry must be a SHA1 thumbprint …` | The value contains a space, another character or an empty entry. Use 40 hexadecimal characters per thumbprint and commas without spaces. |
 | Intune does not detect SelfX after the update of this version | The trust anchor is missing (`Detection_<date>.log`: `trust anchor missing`). Intune installs the package again; afterwards the anchor exists. |
 | Intune does not detect an update | `Version.txt` and `$ExpectedVersion` stayed the same, or you uploaded the copy from the repository instead of `build\SelfX-Service-<version>.Detection.ps1`. |
+| Defender blocks a SelfX program (Defender notification, event 1121 for the rule `01443614-cd74-433a-b99e-2ecdc07bfc25`) | The ASR rule for executable files decided against the file. Find the file with `tools\Get-SelfXAsrEvents.ps1` and follow [Defender ASR: rule for executable files](#defender-asr-rule-for-executable-files). |
 | SelfX starts no action | PowerShell 7.6 is missing (warning in `Install.log`), or event 4005 reports a deviating file. The SelfX log names the details. |
 | SelfX starts no action, event 4006 | The trust anchor `HKLM\SOFTWARE\SelfX\Trust` is missing (installation of an earlier build), was changed, or its rights allow other identities than SYSTEM and Administrators to change it. Install the package again; `Install.ps1` writes the anchor with the correct rights. |
 | SelfX starts no action, event 4007 | Device installed with `-TrustedSigner`: the SelfX log (`SelfXService.log`) names the file and the reason. `UntrustedRoot` or `Chaining`: the certificate chain of the signer is not (or no longer) trusted on the device. `Expired`: the certificate expired and the signature has no time stamp. `Revoked`: the certificate was revoked. `SignerNotAllowed`: the signer is not in `Signers` of the anchor (install again with the new thumbprint in `-TrustedSigner`). `NoSignature`, `BadDigest`, `NotInCatalogOrCatalogUnsigned`: a file was changed or is not signed; install the package again. |
@@ -649,5 +727,6 @@ deployment.
 5. Package built; `.intunewin` **and** `…Detection.ps1` from `build` used.
 6. PowerShell 7 set up as a Win32 app and as a dependency; requirement rule Windows 11 25H2
    set; neither SelfX nor PowerShell 7 blocks the ESP.
-7. Checked on a test device (new installation, update, uninstall, standard user, Autopilot).
+7. Checked on a test device (new installation, update, uninstall, standard user, Autopilot; if your tenant uses the ASR rule for
+   executable files, also its events: [Defender ASR](#defender-asr-rule-for-executable-files)).
 8. Deploy to a pilot group first, then broadly.

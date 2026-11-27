@@ -14,6 +14,23 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Defender-ASR-Regel für ausführbare Dateien: Diagnose und Ausschluss (`tools\Get-SelfXAsrEvents.ps1` 3.1.0):** Ist die ASR-Regel
+  „Block executable files from running unless they meet a prevalence, age, or trusted list criterion“ (`01443614-cd74-433a-b99e-2ecdc07bfc25`)
+  aktiv, kann Defender Programme von SelfX blockieren. Das neue, nur lesende Skript `Get-SelfXAsrEvents.ps1` (Windows PowerShell 5.1 und
+  PowerShell 7) liest die Ereignisse 1121 (Blockmodus) und 1122 (Überwachungsmodus) aus `Microsoft-Windows-Windows Defender/Operational`
+  nur für diese eine Regel und zeigt Zeit, Modus, blockierte Datei, startenden Prozess und ob die Datei im Programmordner von SelfX liegt
+  (`-SelfXOnly`, `-Days`, `-MaxEvents`). Protokoll, Regel und Felder stehen fest im Skript (kein Parameter nennt ein Protokoll, einen
+  Rechner oder eine Datei). Es ändert nichts, liest die Felder `User` und die Befehlszeilen nie, zeigt den Profilordner eines Benutzers als
+  `<user>`, liest die Ereignis-XML ohne DTD und meldet Ereignisse, die es keiner Regel zuordnen kann, statt sie zu verbergen. Doku:
+  docs/de/Installation.md, „Defender ASR: Regel für ausführbare Dateien“ (Ursache, Prüfweg, Überwachungsmodus, Ausschluss je Regel für
+  höchstens die vier SelfX-Dateien `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll` und `SelfXAudio.dll`, nicht der Ordner und nicht der
+  globale Ausschluss, Programme des Releases, Signieren ist keine Zusage; Quellen: Microsoft Learn „ASR rules reference“ und „ASR FAQ“).
+  Die Intune-Kurzanleitung des Paketassistenten bekommt vier neue Texte (`guide.asr`, `guide.asr1` bis `guide.asr3` in `Wizard.de.xml`
+  und `Wizard.en.xml`, Sprachdateien 1.1.0) und einen weiteren Schritt vor dem Teststep. Neuer Test `tools\Test-SelfXAsrEvents.ps1`
+  (nachgebildete Ereignisse statt des Protokolls: nur diese Regel, Block und Audit, unlesbare Ereignisse, DTD und Entität, kein
+  Benutzername, Steuerzeichen, Grenzen, Fehler des Protokolls, nur lesende Befehle, Texte der Doku und des Assistenten), in beiden
+  Testjobs der CI eingetragen. Die Feldnamen der Ereignisse stammen aus einem Beispielereignis, nicht aus der Dokumentation von
+  Microsoft. Nicht auf einem Gerät erprobt, auf dem die Regel aktiv ist.
 - **Herausgeberregeln für AppLocker und App Control (`tools\New-SelfXAppLockerRules.ps1` 1.1.0, `tools\New-SelfXWdacPolicy.ps1` 1.1.0):**
   Für ein mit dem Zertifikat der Organisation signiertes Paket ändern sich die Regeln nicht mehr mit jeder Version. `New-SelfXAppLockerRules.ps1
   -Mode Publisher` liest den Herausgeber aus der Signatur der übergebenen Dateien (alle müssen mit dem Status `Valid` vom selben
