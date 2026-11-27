@@ -69,6 +69,7 @@ function New-ToolConfig([string]$Name = 'SelfX Support', [string]$Desktop = 'Fal
 	return "<?xml version=`"1.0`" encoding=`"utf-8`"?><GUI_Config><Shortcut_Name>$Name</Shortcut_Name><Shortcut_Desktop>$Desktop</Shortcut_Desktop><Shortcut_StartMenu>True</Shortcut_StartMenu><Show_Tray_Icon>True</Show_Tray_Icon><Service_Privileges>$Privileges</Service_Privileges></GUI_Config>"
 }
 function Write-ConfigFolder([string]$Folder, [hashtable]$Content, [string]$MinCode = '3.1.0', [switch]$WithCatalog) {
+	if (Test-Path -LiteralPath $Folder) { Remove-Item -LiteralPath $Folder -Recurse -Force }
 	New-Item -ItemType Directory -Path $Folder -Force | Out-Null
 	$files = [ordered]@{}
 	foreach ($name in ($Content.Keys | Sort-Object)) {
