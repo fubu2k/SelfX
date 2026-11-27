@@ -212,8 +212,8 @@ Programme.
 
 ## Der Vertrauensanker
 
-Der Anker legt fest, welche Signierer ein Gerät akzeptiert. `Install.ps1` schreibt ihn heute (siehe
-nächster Abschnitt); der Dienst liest ihn in einer späteren Version (**Ziel**).
+Der Anker legt fest, welche Signierer ein Gerät akzeptiert. `Install.ps1` schreibt ihn (siehe
+nächster Abschnitt); der Dienst liest ihn vor jedem Start (siehe „Der Modus Signatur im Dienst“).
 
 - Er stammt **nicht** aus dem Paket, denn ein Paket mit eigenem Anker belegt nur sich selbst. Er
   kommt aus der Intune-Befehlszeile: `Install.ps1 -TrustedSigner <Fingerabdruck>[,<Fingerabdruck>]`
@@ -256,7 +256,8 @@ nächster Abschnitt); der Dienst liest ihn in einer späteren Version (**Ziel**)
 
 Danach folgen unverändert die Prüfungen des Modus Hash (`SelfX.Binaries.json`, `SelfX.Code.json`,
 `SelfX.Config.json`), und nach dem Kopieren müssen die installierten Listen Byte für Byte die Listen
-sein, die die Kataloge abgedeckt haben. Jede Abweichung bricht die Installation ab.
+sein, die die Kataloge abgedeckt haben, und die installierten Kataloge Byte für Byte die geprüften
+Kataloge. Jede Abweichung bricht die Installation ab.
 
 | Thema | Verhalten |
 |---|---|
@@ -264,7 +265,7 @@ sein, die die Kataloge abgedeckt haben. Jede Abweichung bricht die Installation 
 | Anker | Wird geschrieben, nachdem die installierten Dateien geprüft wurden und bevor der Dienst registriert wird: `Mode` (`REG_SZ`) und im Modus Signatur `Signers` (`REG_MULTI_SZ`); im Modus Hash wird `Signers` entfernt. Besitzer Administratoren, Rechte nicht vererbt, alle Konten per SID. Der Anker wird zurückgelesen und seine Rechte werden geprüft. |
 | Herabstufung | Steht im Anker des Geräts `Signature` (oder lässt er sich nicht deuten) und fehlt `-TrustedSigner`, bricht die Installation ab. Der ausdrückliche Schalter `-AllowHashMode` erlaubt den Wechsel in den Modus Hash. `-AllowHashMode` zusammen mit `-TrustedSigner` ist ein Fehler. |
 | Signiertes Paket ohne `-TrustedSigner` | Wird abgelehnt (der Katalog in `Config` steht in keiner Liste), mit Hinweis auf den Parameter. |
-| Kataloge auf dem Gerät | Die beiden Kataloge werden im Paket geprüft und **nicht** installiert: Die Dateiprüfung des Dienstes lässt nur gelistete Dateien zu. Installieren und Prüfen im Dienst ist ein späterer Schritt (**Ziel**). |
+| Kataloge auf dem Gerät | Im Modus Signatur werden beide Kataloge neben ihren Listen installiert: `SelfX.Code.cat` (oben im Paket) nach `App`, `Config\SelfX.Config.cat` nach `Config`. Der Dienst prüft die Listen vor jedem Start gegen sie. Im Modus Hash wird kein Katalog installiert. |
 | `Detection.ps1` | Der Anker muss mit `Mode` = `Hash` oder `Signature` vorhanden sein; der Modus selbst wird nicht bewertet. Eine Installation ohne Anker wird nicht erkannt und erneut installiert. |
 | `Uninstall.ps1` | Entfernt `HKLM\SOFTWARE\SelfX\Trust`. |
 | Meldung bei Ablehnung | Die Signaturprüfung läuft, bevor der Protokollordner vorbereitet wird; ihre Meldung steht deshalb nicht in `Install.log`. Sie geht in den Fehlerstrom; zum Lesen den Installationsbefehl in einer Konsole mit erhöhten Rechten ausführen. |
@@ -285,13 +286,66 @@ Sperrliste ab.
 Datei) und das Erzeugen der beiden Kataloge. `SelfX.Code.cat` wird aus dem Paket erzeugt, bevor der
 Ordner `Config` hinzukommt.
 
+### Der Modus Signatur im Dienst
+
+Vor **jedem** Start eines Skripts (Aktion, Gesundheitsprüfung, Hintergrundprüfung) liest
+`SelfXService.exe` den Anker `HKLM\SOFTWARE\SelfX\Trust` (64-Bit-Sicht der Registrierung).
+
+| Anker | Verhalten des Dienstes |
+|---|---|
+| Der Schlüssel fehlt; `Mode` ist nicht der Text `Hash` oder `Signature`; im Modus Signatur fehlt `Signers` oder ist keine Liste von 1 bis 10 SHA1-Fingerabdrücken | Nichts wird gestartet, Ereignis 4006. |
+| Der Schlüssel gehört einer anderen Identität als SYSTEM (`S-1-5-18`) oder Administratoren (`S-1-5-32-544`), oder eine andere Identität darf einen Wert setzen, einen Unterschlüssel oder eine Verknüpfung anlegen, den Schlüssel löschen, seine Rechte ändern oder den Besitz übernehmen | Nichts wird gestartet, Ereignis 4006. |
+| `Mode` = `Hash` | Die Dateiprüfung mit beiden Listen wie bisher (Ereignis 4005, `Service_FileCheck`). Ein Katalog in `App` oder `Config` ist dann eine Datei ohne Eintrag. |
+| `Mode` = `Signature` | Die hier beschriebene Signaturprüfung (Ereignis 4007). |
+
+Im Modus Signatur tut der Dienst vor jedem Start Folgendes:
+
+1. Er öffnet die zwei Listen, die zwei Kataloge (`App\SelfX.Code.cat`, `Config\SelfX.Config.cat`) und
+   jede gelistete Datei **einmal**: Andere Prozesse können die Datei lesen, aber niemand kann sie
+   schreiben, ersetzen, umbenennen oder löschen, solange das Handle offen ist. SHA256 und Signatur
+   werden von diesen Handles gelesen, und die Handles bleiben offen, bis das gestartete Skript beendet
+   ist. Der geprüfte Inhalt ist damit der Inhalt, den PowerShell liest; es gibt keinen zweiten Blick
+   auf eine Datei über ihren Pfad, der einen anderen Inhalt finden könnte.
+2. `SelfX.Code.json` muss Mitglied des signierten Katalogs `SelfX.Code.cat` sein, `SelfX.Config.json`
+   Mitglied des signierten Katalogs `SelfX.Config.cat`. Die Namen in `SelfX.Code.cat` sind Pfade des
+   Pakets (`App\...`, `Bin\...`), deshalb wird die Liste über ihren Hash gefunden; die Liste bindet
+   dann jeden installierten Namen an seinen SHA256.
+3. Die Dateiprüfung mit beiden Listen wie im Modus Hash: jede gelistete Datei mit ihrem SHA256, keine
+   Datei ohne Eintrag, keine Verknüpfung.
+4. Jede gelistete `.ps1`, `.psm1`, `.psd1` und `.dll` muss eine eingebettete Authenticode-Signatur
+   tragen: das Skript, das gestartet wird, die Skripte, die es lädt, die Bibliotheken und die eigenen
+   Skripte der Firma in `Config`.
+5. Jede Einstellungsdatei in `Config` (`Issues_List.xml`, `Health_Config.xml`, `Tool_Config.xml`,
+   `Ticket_Config.xml`, `Network_Test_Config.xml`) muss Mitglied von `SelfX.Config.cat` sein.
+
+Eine Signatur zählt, wenn Windows sie akzeptiert (`WinVerifyTrust`: Inhalt unverändert,
+Zertifikatskette auf dem Gerät vertrauenswürdig, nicht ohne Zeitstempel abgelaufen, nicht als gesperrt
+bekannt) **und** der Fingerabdruck des Signierers in `Signers` des Ankers steht. Schlägt Schritt 2, 4
+oder 5 fehl, wird nichts gestartet und Ereignis 4007 geschrieben, auch mit `Service_FileCheck` =
+`Audit`. `Audit` gilt nur für eine Abweichung aus Schritt 3, die kein Signaturproblem ist (zum
+Beispiel eine Datei ohne Eintrag), wie im Modus Hash.
+
+| Thema | Verhalten |
+|---|---|
+| Sperrprüfung | Geprüft wird die Zertifikatskette ohne die Wurzel, nur aus dem lokalen Zwischenspeicher von Windows. Der Dienst fragt nie im Netz nach einer Sperrliste, er wartet also auf einem Gerät ohne Netz nicht. Ein Zertifikat, das der Zwischenspeicher als gesperrt kennt, wird abgelehnt; eine Sperrliste, die nicht im Zwischenspeicher liegt, macht eine Signatur nicht ungültig. `Install.ps1` fragt bei der Installation online (siehe oben). |
+| Zwischenspeicher | Ein positives Ergebnis wird je Datei 60 Minuten behalten. Es wird nur verwendet, wenn Pfad, Schreibzeit, Größe und der vom offenen Handle gelesene SHA256 gleich sind; bei einem Katalogmitglied gehört der SHA256 des Katalogs dazu. Gespeichert wird der Fingerabdruck des Signierers: Ob dieser Signierer erlaubt ist, entscheidet bei jedem Start der Anker. Negative Ergebnisse werden nie behalten. Die 60 Minuten begrenzen, was sich ändern kann, ohne dass sich die Datei ändert (ein Zertifikat läuft ab, wird gesperrt oder ist nicht mehr vertrauenswürdig). |
+| Programme | `SelfXService.exe` und `SelfX.exe` sind über ihren SHA256 in der signierten `SelfX.Code.json` gebunden; ihre eingebettete Signatur prüft der Dienst nicht bei jedem Start (ein ausgetauschter Dienst würde sich nicht selbst prüfen). AppLocker oder App Control prüfen die Signatur von Programmen beim Start. |
+| PowerShell 7 | `pwsh.exe` ist nicht von der Firma signiert. Wie bisher prüft der Dienst vor jedem Start, dass nur SYSTEM, Administratoren und TrustedInstaller es ändern dürfen. |
+| Reihenfolge | Der Dienst entscheidet anhand von `Issues_List.xml`, ob ein Skript eine erlaubte Aktion ist, und prüft danach die Installation. Eine geänderte Katalog-XML führt deshalb nie zu einem Start: Die Prüfung lehnt sie ab. |
+
+`tools\Measure-SelfXTrustCheck.ps1` (mit der Testklasse `tools\SelfXTrustProbe.cs`) ist der Versuch
+hinter dieser Prüfung: Es führt die zwei Aufrufe von Windows gegen bekannte Fälle aus (Dateien von
+Windows, ein Testsignierer, geänderte und unsignierte Dateien, geänderte, unsignierte und fehlende
+Kataloge) und misst die Zeit je Prüfung auf einem Gerät.
+
 ## Die Signaturbibliothek
 
 `tools\SelfXSigning.ps1` enthält die Funktionen, mit denen die Dateien eines Pakets signiert und Signaturen geprüft werden. Sie
 läuft in Windows PowerShell 5.1 und in PowerShell 7, definiert nur Funktionen und gehört nicht zum Paket (auf einem Gerät wird
 nichts davon installiert). `Install.ps1` hat eine eigene Kopie der Prüfung (`Test-SelfXFileSignature`,
-`Test-SelfXPackageCatalog`; `Test-InstallBinaries.ps1` prüft, dass beide gleich antworten); der Dienst prüft
-noch keine Signaturen.
+`Test-SelfXPackageCatalog`; `Test-InstallBinaries.ps1` prüft, dass beide gleich antworten). Der Dienst prüft
+Signaturen direkt mit den Funktionen von Windows (`WinVerifyTrust`, Klasse `SelfXTrust` in `SelfXService.cs`), weil er offene
+Handles prüft und nicht im Netz nachfragen darf.
 
 | Funktion | Zweck |
 |---|---|
@@ -354,7 +408,7 @@ Siehe [Installation](Installation.md#app-control-for-business-wdac).
 | Komponente | Läuft als | Heute | Ziel |
 |---|---|---|---|
 | `Install.ps1` | SYSTEM, von Intune gestartet, Windows PowerShell 5.1 | vergleicht das Paket vor dem Kopieren und den installierten Ordner nach dem Kopieren mit beiden Listen | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signaturen und der Signierer |
-| `SelfXService.exe` | SYSTEM | vergleicht vor jedem Start `App` mit `SelfX.Code.json` und `Config` mit `SelfX.Config.json`; keine Datei ohne Eintrag, keine Datei neben den zwei Ordnern und keine Verknüpfung darf im Weg sein (Ereignis 4005); ein eigenes Skript unter `Config` nur mit Eintrag und aktuellem SHA256 | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signatur der Skripte und des Katalogs |
+| `SelfXService.exe` | SYSTEM | vergleicht vor jedem Start `App` mit `SelfX.Code.json` und `Config` mit `SelfX.Config.json`; keine Datei ohne Eintrag, keine Datei neben den zwei Ordnern und keine Verknüpfung darf im Weg sein (Ereignis 4005); ein eigenes Skript unter `Config` nur mit Eintrag und aktuellem SHA256 | liest vor jedem Start den Vertrauensanker (Ereignis 4006). Modus Signatur: Listen gegen die signierten Kataloge, eingebettete Signatur jedes gelisteten Skripts und jeder Bibliothek, Einstellungsdateien gegen `SelfX.Config.cat`, alles über Handles, die während des Laufs offen bleiben (Ereignis 4007) |
 | `Detection.ps1` | Intune, Windows PowerShell 5.1 | Version und die Digests beider Listen | Code-Version und Konfigurations-Digest, getrennt |
 | SelfX-Fenster, Statussymbol | der angemeldete Nutzer | nur lesend | nur lesend |
 

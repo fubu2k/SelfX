@@ -14,6 +14,29 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Vertrauensmodus im Dienst (`SelfXService.exe`, Version 3.1.0):** Vor jedem Start eines Skripts liest der Dienst den Vertrauensanker
+  `HKLM\SOFTWARE\SelfX\Trust` (64-Bit-Sicht). Ein Anker, der fehlt, ungültig ist (`Mode` nicht `Hash` oder `Signature`; im Modus Signatur
+  `Signers` keine Liste von 1 bis 10 SHA1-Fingerabdrücken) oder nicht geschützt ist (Besitzer nicht SYSTEM `S-1-5-18` oder
+  Administratoren `S-1-5-32-544`, oder eine andere Identität darf den Schlüssel ändern), startet nichts: neues **Ereignis 4006**.
+  `Mode` = `Hash`: Verhalten wie bisher. `Mode` = `Signature` (docs/de/Architecture.md, „Der Modus Signatur im Dienst“): Die Listen, die
+  Kataloge und jede gelistete Datei werden einmal geöffnet (lesbar, nicht schreibbar, ersetzbar, umbenennbar oder löschbar) und
+  bleiben offen, bis das gestartete Skript beendet ist; `SelfX.Code.json` muss Mitglied der signierten `App\SelfX.Code.cat` sein und
+  `SelfX.Config.json` Mitglied der signierten `Config\SelfX.Config.cat`; die Dateiprüfung läuft auf den offenen Handles; jede gelistete
+  `.ps1`, `.psm1`, `.psd1` und `.dll` muss eine eingebettete Signatur tragen; jede Einstellungsdatei muss Mitglied von
+  `SelfX.Config.cat` sein. Eine Signatur zählt, wenn Windows sie akzeptiert (`WinVerifyTrust`) und der Signierer in `Signers` steht.
+  Eine fehlgeschlagene Signaturprüfung startet nichts, auch mit `Service_FileCheck` = `Audit`: neues **Ereignis 4007**. Die
+  Sperrprüfung nutzt nur den lokalen Zwischenspeicher (kein Netzabruf). Positive Ergebnisse werden je Datei 60 Minuten behalten (Pfad,
+  Schreibzeit, Größe und SHA256 des offenen Handles; nie negative Ergebnisse; die Liste der Signierer gilt bei jedem Start). Kein
+  neues Paket: Die Aufrufe von Windows erfolgen direkt (Klasse `SelfXTrust`). **`Install.ps1`:** Im Modus Signatur werden die zwei
+  Kataloge jetzt neben ihren Listen installiert (`SelfX.Code.cat` nach `App`, `Config\SelfX.Config.cat` nach `Config`) und nach dem
+  Kopieren mit den geprüften Katalogen verglichen (`Copy-SelfXPayload -SignedPackage`, `Test-SelfXInstalledFiles -SignedPackage`,
+  `Test-SelfXInstalledLists`); im Modus Hash wird kein Katalog installiert. **Geändertes Verhalten:** Eine Installation ohne Anker
+  (installiert, bevor es den Anker gab; Dienst von Hand ersetzt) startet keine Aktion, bis das Paket neu installiert ist. Neu für den
+  Versuch hinter der Prüfung: `tools\SelfXTrustProbe.cs` und `tools\Measure-SelfXTrustCheck.ps1` (Fälle und Zeit je Prüfung auf einem
+  Gerät). Tests: `Test-ServicePipe.ps1` (Anker fehlt, ungültig und unsicher; festgehaltene Dateien; mit Testzertifikaten: falscher
+  Signierer, veränderte XML, fehlender und unsignierter Katalog, unsigniertes und verändertes Skript, unsignierte Bibliothek,
+  Zwischenspeicher), `Test-InstallBinaries.ps1` (Kopierschritt mit Katalogen). Nicht Teil dieser Änderung: Die Paketwerkzeuge
+  signieren noch nicht.
 - **Vertrauensmodus Signatur in `Install.ps1` (`-TrustedSigner`, Version 3.1.0):** `Install.ps1 -TrustedSigner <Fingerabdruck>[,<Fingerabdruck>]`
   installiert ein signiertes Paket (docs/de/Architecture.md, „Der Modus Signatur in `Install.ps1`“). Die Liste enthält SHA1-Fingerabdrücke
   mit 40 Hexadezimalzeichen (höchstens 10, durch Kommas getrennt; alles andere bricht die Installation ab, auch ein angegebener, aber
