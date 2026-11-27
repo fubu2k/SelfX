@@ -46,6 +46,9 @@
     3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml in the configuration list, nothing below Texts in the code list.
     3.1.0    2026-11-27  fubu2k               Trust mode: the anchor (missing, invalid, unsafe rights), pinned files, signatures and signed catalogs with
                                               test certificates (wrong signer, changed XML, missing catalog, unsigned script and library), the cache.
+    3.1.0    2026-11-27  fubu2k               Environment_Mode: RUN in both modes through ProcessRequest of a test instance (Hide, not classified,
+                                              different values per script, remediation, administrator, invalid or missing value, unreadable
+                                              Tool_Config.xml), the check of other sessions in both modes, session host detection; nothing is started.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -955,6 +958,102 @@ if ($countMethod) {
 	$result = $countMethod.Invoke($null, @('S-1-5-21-1-2-3-1001', $own))
 	Assert-True ($result -ge -1) "N5: the check for the own session returns a number (got $result)"
 }
+
+# --- Environment_Mode (Tool_Config.xml): TerminalServer refuses actions that are not classified Show, for every caller -----------
+# A test instance gets its code, configuration and catalogue folders set to a test folder; ProcessRequest is called directly. Every
+# case ends before a script could start: a refusal, "Script not found" (the script file does not exist: the request passed the
+# TerminalServer check) or "OtherSessions" (unknown caller session, fail closed).
+$sourceText = [IO.File]::ReadAllText($source)
+$instanceFlags = [Reflection.BindingFlags]'NonPublic,Instance'
+$staticFlags = [Reflection.BindingFlags]'NonPublic,Static'
+$modeMethod = [SelfX.SelfXService].GetMethod('IsTerminalServerMode', $staticFlags)
+$productMethod = [SelfX.SelfXService].GetMethod('IsSessionHostProduct', $staticFlags)
+$hostMethod = [SelfX.SelfXService].GetMethod('IsSessionHost', $staticFlags)
+Assert-True ($null -ne $modeMethod -and $null -ne $productMethod -and $null -ne $hostMethod) 'Environment_Mode: the service has the mode and session host checks'
+foreach ($case in @(@('TerminalServer', $true, $true), @(' terminalserver ', $true, $true), @('Client', $false, $true), @('', $false, $true), @($null, $false, $true), @('Foo', $false, $false), @('TerminalServer2', $false, $false))) {
+	$arguments = [object[]]@($case[0], $null)
+	$result = $modeMethod.Invoke($null, $arguments)
+	Assert-True (($result -eq $case[1]) -and ($arguments[1] -eq $case[2])) "Environment_Mode '$($case[0])' = $(if ($case[1]) { 'TerminalServer' } else { 'Client' }), valid $($case[2]) (got $result, $($arguments[1]))"
+}
+# wProductType 1 = workstation, 2 = domain controller, 3 = server (Windows Enterprise multi-session reports 3); suite 0x10 = terminal
+# services, 0x100 = single user (not set in application server mode).
+foreach ($case in @(@(1, 0x0110, $false), @(1, 0x0010, $true), @(3, 0x0110, $true), @(3, 0x0010, $true), @(2, 0x0000, $true), @(1, 0x0000, $false))) {
+	$result = $productMethod.Invoke($null, [object[]]@([byte]$case[0], [uint16]$case[1]))
+	Assert-True ($result -eq $case[2]) "Session host: product type $($case[0]), suite 0x$('{0:X4}' -f $case[1]) = $($case[2])"
+}
+$hostNow = $hostMethod.Invoke($null, @())
+Assert-True ($hostNow -is [bool]) "Session host: the version data of this Windows can be read (got '$hostNow')"
+Assert-True ($sourceText.IndexOf('return "ERROR TerminalServer"') -gt 0 -and $sourceText.IndexOf('return "ERROR TerminalServer"') -lt $sourceText.IndexOf('ResolveScriptPath(installRoot, configRoot, "Scripts_to_run", scriptName)')) 'Environment_Mode: the refusal comes before the script is resolved or started'
+Assert-True ($sourceText.Contains('if (blockOtherSessions && !callerIsAdmin)') -and $sourceText -notmatch 'blockOtherSessions\s*&&\s*[^;]*TerminalServer') 'Environment_Mode: the check of other sessions does not depend on the mode'
+Assert-True ($sourceText -match 'EventTerminalServerRefused\s*=\s*4008' -and $sourceText -match 'EventSessionHostClient\s*=\s*4009') 'Environment_Mode: events 4008 and 4009 are defined'
+
+$envRoot = Join-Path $dataRoot 'EnvironmentMode'
+$envApp = Join-Path $envRoot 'App'
+$envConfig = Join-Path $envRoot 'Config'
+New-Item -ItemType Directory -Path (Join-Path $envApp 'Scripts_to_run'), $envConfig -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $envApp 'Scripts_to_run\Ts_Block.ps1') -Value 'exit 0'
+Set-Content -LiteralPath (Join-Path $envConfig 'Issues_List.xml') -Value @'
+<Actions><Quick_Solution>
+<Action Id="S_Hide"><Script>Ts_Hide.ps1</Script><Context>System</Context><TerminalServer>Hide</TerminalServer></Action>
+<Action Id="S_Show"><Script>Ts_Show.ps1</Script><Context>System</Context><TerminalServer>Show</TerminalServer></Action>
+<Action Id="S_None"><Script>Ts_None.ps1</Script><Context>System</Context></Action>
+<Action Id="S_Lower"><Script>Ts_Lower.ps1</Script><Context>System</Context><TerminalServer>show</TerminalServer></Action>
+<Action Id="S_Two"><Script>Ts_Two.ps1</Script><Context>System</Context><TerminalServer>Show</TerminalServer><TerminalServer>Hide</TerminalServer></Action>
+<Action Id="S_Mixed1"><Script>Ts_Mixed.ps1</Script><Context>System</Context><TerminalServer>Show</TerminalServer></Action>
+<Action Id="S_Mixed2"><Script>Ts_Mixed.ps1</Script><Context>System</Context><TerminalServer>Hide</TerminalServer></Action>
+<Action Id="S_Block"><Script>Ts_Block.ps1</Script><Context>System</Context><OtherSessions>Block</OtherSessions><TerminalServer>Show</TerminalServer></Action>
+<Action Id="U_User"><Script>Ts_User.ps1</Script><Context>User</Context><TerminalServer>Show</TerminalServer></Action>
+</Quick_Solution></Actions>
+'@
+Set-Content -LiteralPath (Join-Path $envConfig 'Health_Config.xml') -Value @'
+<HealthConfig><Remediations>
+<Remediation Id="Disk" Script="Ts_RemHide.ps1" TerminalServer="Hide" />
+<Remediation Id="Updates" Script="Ts_RemShow.ps1" TerminalServer="Show" />
+<Remediation Id="Defender" Script="Ts_RemNone.ps1" />
+</Remediations></HealthConfig>
+'@
+$envService = New-Object SelfX.SelfXService(('SelfX.EnvTest.' + [guid]::NewGuid().ToString('N')), $logDirectory)
+[SelfX.SelfXService].GetField('installRoot', $instanceFlags).SetValue($envService, $envApp)
+[SelfX.SelfXService].GetField('configRoot', $instanceFlags).SetValue($envService, $envConfig)
+[SelfX.SelfXService].GetField('catalogPath', $instanceFlags).SetValue($envService, (Join-Path $envConfig 'Issues_List.xml'))
+$processMethod = [SelfX.SelfXService].GetMethod('ProcessRequest', $instanceFlags)
+function Invoke-EnvRequest([string]$Script, [bool]$Admin = $false, [long]$Session = -1) {
+	return [string]$processMethod.Invoke($envService, [object[]]@("RUN $Script", 'TEST\user', 'S-1-5-21-1-2-3-1001', $Admin, $Session))
+}
+function Set-EnvMode([string]$Text) { Set-Content -LiteralPath (Join-Path $envConfig 'Tool_Config.xml') -Value $Text }
+
+Set-EnvMode '<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>'
+foreach ($case in @(
+	@('Ts_Hide.ps1', $false, 'ERROR TerminalServer', 'an action classified Hide is refused'),
+	@('Ts_Hide.ps1', $true, 'ERROR TerminalServer', 'an action classified Hide is refused for an elevated administrator too'),
+	@('Ts_None.ps1', $false, 'ERROR TerminalServer', 'an action without classification is refused (fail closed)'),
+	@('Ts_Lower.ps1', $false, 'ERROR TerminalServer', 'a classification other than exactly Show is refused'),
+	@('Ts_Two.ps1', $false, 'ERROR TerminalServer', 'two TerminalServer elements (Show, Hide) are refused'),
+	@('Ts_Mixed.ps1', $false, 'ERROR TerminalServer', 'a script with Show and Hide entries is refused'),
+	@('Ts_RemHide.ps1', $false, 'ERROR TerminalServer', 'a remediation classified Hide is refused'),
+	@('Ts_RemNone.ps1', $true, 'ERROR TerminalServer', 'a remediation without classification is refused, also for an administrator'),
+	@('Ts_Show.ps1', $false, 'ERROR Script not found', 'an action classified Show passes the check'),
+	@('Ts_RemShow.ps1', $false, 'ERROR Script not found', 'a remediation classified Show passes the check'),
+	@('Ts_User.ps1', $false, 'ERROR Action is not allowed', 'a User action is still not a System action'),
+	@('Unknown.ps1', $false, 'ERROR Action is not allowed', 'an unknown script is still refused by the whitelist'),
+	@('Ts_Block.ps1', $false, 'ERROR OtherSessions', 'the check of other sessions still applies (unknown session = fail closed)'))) {
+	$answer = Invoke-EnvRequest $case[0] $case[1]
+	Assert-True ($answer -ceq $case[2]) "Environment_Mode TerminalServer: $($case[3]) ($($case[0]): '$answer')"
+}
+foreach ($mode in @(@('<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>', 'Client'), @('<GUI_Config><Environment_Mode>Foo</Environment_Mode></GUI_Config>', 'an invalid value (= Client)'), @('<GUI_Config />', 'a missing element (= Client)'))) {
+	Set-EnvMode $mode[0]
+	foreach ($case in @(@('Ts_Hide.ps1', 'ERROR Script not found'), @('Ts_None.ps1', 'ERROR Script not found'), @('Ts_RemHide.ps1', 'ERROR Script not found'), @('Ts_Block.ps1', 'ERROR OtherSessions'), @('Ts_User.ps1', 'ERROR Action is not allowed'))) {
+		$answer = Invoke-EnvRequest $case[0]
+		Assert-True ($answer -ceq $case[1]) "Environment_Mode $($mode[1]): $($case[0]) gives '$($case[1])' (got '$answer')"
+	}
+}
+Set-EnvMode '<GUI_Config><Environment_Mode>Client'
+Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Environment_Mode: an unreadable Tool_Config.xml counts as TerminalServer (fail closed)'
+Assert-True ((Invoke-EnvRequest 'Ts_Show.ps1') -ceq 'ERROR Script not found') 'Environment_Mode: with an unreadable Tool_Config.xml an action classified Show still passes the check'
+Remove-Item -LiteralPath (Join-Path $envConfig 'Tool_Config.xml')
+Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Environment_Mode: a missing Tool_Config.xml counts as TerminalServer (fail closed)'
+$envLog = Join-Path $logDirectory 'SelfXService.log'
+Assert-True ((Test-Path -LiteralPath $envLog) -and ([IO.File]::ReadAllText($envLog) -match 'not available in Environment_Mode TerminalServer')) 'Environment_Mode: a refusal is logged'
 
 # Report housekeeping: only old DeviceLogs-* files in SID-named folders are deleted, empty SID folders are removed.
 $reportRoot = Join-Path $dataRoot 'Reports'

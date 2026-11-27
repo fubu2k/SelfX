@@ -69,6 +69,7 @@ Marke: `SelfX.Config.json` enthält `ConfigRevision`, die UTC-Zeit des Paketlauf
 | `Tool_Language` | `de` | Standardsprache. `Auto` nimmt die Anzeigesprache von Windows. Sie können auch `en`, `fr-CH` oder `zh-Hans` schreiben. |
 | `Show_Language_Setting` | `True` | Nutzer können die Sprache selbst wählen. `False`: immer `Tool_Language`. |
 | `Tool_Name` | SelfX | Name in der Titelleiste. |
+| `Environment_Mode` | `Client` | Wo SelfX läuft. `Client`: PC oder Notebook einer Person. `TerminalServer`: Terminalserver oder Sitzungshost mit mehreren Nutzern gleichzeitig. Siehe [Terminalserver und Sitzungshost](#terminalserver-und-sitzungshost-environment_mode). Jeder andere Wert gilt als `Client`. |
 | `Tool_Theme` | `Auto` | Standardfarbe: `Auto` (folgt Windows), `Dark` oder `Light`. |
 | `Show_Theme_Button` | `True` | Nutzer können das Design selbst wählen. |
 | `Default_Solution_Mode` | `Simplified` | Startansicht der Fehlerbehebung: `Simplified` (einfach) oder `Detailed` (ausführlich). |
@@ -121,6 +122,7 @@ Aktion hat eine eindeutige `Id`. Die Übersetzungen werden über diese `Id` zuge
 | `Link` | Nur bei `Link`: Name der Einstellung (`Link_<Name>`) in `Tool_Config.xml`. |
 | `TimeoutSeconds` | Nur bei `System`: Zeitlimit von 1 bis 7200 Sekunden, Standard 900. |
 | `OtherSessions` | Nur bei `System`: `Block` verhindert die Aktion für normale Nutzer, solange ein anderer Nutzer angemeldet ist. Administratoren sind nicht betroffen. |
+| `TerminalServer` | Pflicht. `Show`: Die Aktion betrifft nur die eigene Sitzung oder das eigene Profil und wird bei `Environment_Mode` = `TerminalServer` angeboten. `Hide`: Sie betrifft das ganze Gerät oder alle Nutzer und wird dort ausgeblendet. Verwenden Sie bei allen Einträgen desselben Skripts denselben Wert. |
 | `Post_Action` | Nur bei `System`: `MailReport` öffnet nach einem erfolgreichen Lauf eine E-Mail an den Support mit dem Bericht. |
 
 Beispiel:
@@ -153,7 +155,46 @@ Do you want to continue?</Alerte_MSG>
   nur, um einem Nutzer ein Ergebnis zu schicken, nie um über eine Erlaubnis zu entscheiden.
 
 **Neue Aktion anlegen:** Geben Sie ihr eine neue `Id` und ergänzen Sie die Texte in den
-Sprachdateien. Ohne Übersetzung erscheint der englische Text.
+Sprachdateien. Ohne Übersetzung erscheint der englische Text. Stufen Sie sie mit `TerminalServer`
+ein; ohne diese Angabe schlägt `Test-Catalog.ps1` fehl.
+
+### Terminalserver und Sitzungshost (`Environment_Mode`)
+
+Ein Paket funktioniert auf PCs und auf Sitzungshosts. Die Einstellung `Environment_Mode` in
+`Tool_Config.xml` sagt, wo SelfX läuft. Der Paket-Assistent fragt danach („Wo läuft SelfX?“). Bauen
+Sie je Geräteart ein eigenes Paket.
+
+- `Client` (Standard): ein PC oder Notebook einer Person. Alle Aktionen werden angezeigt.
+- `TerminalServer`: ein Terminalserver oder Sitzungshost, an dem mehrere Personen gleichzeitig
+  arbeiten, zum Beispiel Windows Enterprise multi-session. Angezeigt werden nur Aktionen und
+  Reparaturen mit `TerminalServer` = `Show`. Sie betreffen nur die eigene Sitzung oder das eigene
+  Profil. Aktionen mit `Hide` betreffen das ganze Gerät oder alle Nutzer, zum Beispiel ein Neustart,
+  Windows-Updates oder die Netzwerkadapter.
+
+Bei `TerminalServer` lehnt auch der Dienst jede `System`-Aktion und jede Reparatur ab, die nicht als
+`Show` eingestuft ist, auch für Administratoren (Ereignis 4008). Das Ausblenden im Fenster reicht nicht,
+weil das Fenster keine Sicherheitsgrenze ist. Eine Aktion ohne Einstufung gilt als `Hide`. Kann der
+Dienst `Tool_Config.xml` nicht lesen, behandelt er Anfragen wie bei `TerminalServer`.
+
+Die Prüfung anderer aktiver Sitzungen (`OtherSessions`) gilt in beiden Modi gleich.
+
+Ist Windows ein Sitzungshost, steht `Environment_Mode` aber auf `Client`, schreibt der Dienst beim Start
+eine Warnung (Ereignis 4009). Er ändert die Einstellung nicht selbst.
+
+Einstufung der mitgelieferten Aktionen:
+
+| Aktion (Skript) | Betrifft | `TerminalServer` |
+|---|---|---|
+| Teams, Word, Excel, Outlook, OneDrive (Neustart, Cache, Zurücksetzen, Add-in, AutoVervollständigen) | eigene Sitzung und eigenes Profil | `Show` |
+| Cache von Edge, Chrome und Firefox | Browser der eigenen Sitzung | `Show` |
+| Gerät langsam, Fenster zurückholen, Citrix Workspace neu starten | eigene Sitzung | `Show` |
+| Office-Lizenz zurücksetzen, Gruppenrichtlinien aktualisieren | eigenes Profil (vorher auf Ihrem Sitzungshost testen) | `Show` |
+| Kennwort zurücksetzen, Sicherheitsinformationen (Links) | Browser des Nutzers | `Show` |
+| Kein Ton (`SelfX_Audio_Restore.ps1`) | umgeleiteter Ton einer Remotesitzung, nicht getestet | `Hide` |
+| DNS-Cache leeren (`SelfX_Device_ClearCache.ps1`) | DNS-Cache des ganzen Geräts | `Hide` |
+| Microsoft Store zurücksetzen (`SelfX_Poste_WSReset.ps1`) | Store gibt es auf Servern nicht | `Hide` |
+| Uhrzeit, Netzwerkadapter, Datenträgerprüfung, Intune-Neustart, Defender-Scan, Geräteprotokolle | ganzes Gerät oder alle Nutzer | `Hide` |
+| Alle Reparaturen des Gerätestatus (Defender, Updates, Neustart, Apps, Speicherplatz freigeben) | ganzes Gerät | `Hide` |
 
 **Konto-Aktionen mit Internetadresse (`Context` = `Link`):** Sie öffnen eine Adresse aus
 `Tool_Config.xml` im Webbrowser. Mitgeliefert sind zwei Konto-Aktionen:
@@ -374,6 +415,7 @@ es in `Health_Config.xml` ein:
 | `When` | `NotOK`: nur anbieten, solange die Zeile nicht in Ordnung ist. `Always` (Standard): immer anbieten. |
 | `TimeoutSeconds` | Zeitlimit, 1 bis 7200 Sekunden. Standard 900. |
 | `OtherSessions` | `Block` wie bei Aktionen. Die mitgelieferte Konfiguration setzt es für `Updates` und `PendingReboot`. |
+| `TerminalServer` | Pflicht: `Show` oder `Hide` wie bei Aktionen. `Hide` blendet auch den Teil `UserScript` aus. Alle mitgelieferten Reparaturen sind `Hide`. |
 | `UserScript` | Optional. Ein erster Teil, den SelfX **als angemeldeter Nutzer** vor `Script` ausführt. Der Dienst führt ihn nie aus. Es muss ein Skript mit `Context : User` sein und darf nicht dieselbe Datei wie `Script` sein. Eine Reparatur mit `UserScript` hat eine eigene Bestätigung und ist nie Teil von *Alle Probleme beheben*. |
 
 **So läuft eine Reparatur:** Der Nutzer bestätigt. Der Dienst prüft, ob das Skript in der

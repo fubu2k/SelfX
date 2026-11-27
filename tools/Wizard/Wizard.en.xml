@@ -7,7 +7,7 @@
 	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
 	the same placeholders.
 -->
-<Wizard_Language Culture="en" Name="English" Version="1.4.0">
+<Wizard_Language Culture="en" Name="English" Version="1.5.0">
 	<T Id="title">SelfX package wizard</T>
 	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
 	<T Id="rec">Recommendation: </T>
@@ -33,6 +33,8 @@
 	<T Id="OrgName.rec">The short name of your company or authority, for example Contoso.</T>
 	<T Id="ToolName.ask">Name of the tool in the title bar and the shortcuts</T>
 	<T Id="ToolName.rec">Keep SelfX. Users find it faster when the name is the same everywhere.</T>
+	<T Id="EnvironmentMode.ask">Where does SelfX run? Client (PC or notebook of one person) or TerminalServer (terminal server or session host with several users at the same time)</T>
+	<T Id="EnvironmentMode.rec">Client for PCs and notebooks. TerminalServer for Windows Enterprise multi-session or a Remote Desktop session host: SelfX then hides actions and repairs that affect the whole device or all users, and the service refuses them. Use one package per kind of device.</T>
 	<T Id="SupportMail.ask">Support e-mail address (shared mailbox)</T>
 	<T Id="SupportMail.rec">Use a shared (functional) mailbox, never a personal one. The address is also the recipient of the device logs e-mail.</T>
 	<T Id="SupportPhone.ask">Support phone number (empty = hide)</T>

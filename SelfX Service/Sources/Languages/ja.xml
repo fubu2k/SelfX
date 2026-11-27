@@ -89,6 +89,7 @@
 		<Service_Unavailable_Text>SelfX サービスが実行されていません: 盾のアイコンが付いたアクションは利用できません。</Service_Unavailable_Text>
 		<Service_Busy_Text>別のアクションがまだ実行中です。完了するまでお待ちください。</Service_Busy_Text>
 		<Service_OtherSessions_Text>別のユーザーがこのデバイスにサインインしている間は、この操作は実行できません。IT サポートに問い合わせるか、自分だけになってからもう一度お試しください。</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>このコンピューターは複数のユーザーが同時に使用しているため、この操作は利用できません。IT サポートに問い合わせてください。</Service_TerminalServer_Text>
 		<Action_Running_Text>アクションを実行中: {0}</Action_Running_Text>
 		<Action_Running_Label>実行中…</Action_Running_Label>
 		<Action_Success_Text>アクションが完了しました: {0}</Action_Success_Text>

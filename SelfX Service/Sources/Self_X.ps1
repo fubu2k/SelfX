@@ -54,6 +54,8 @@
     3.1.0    2026-11-27  fubu2k               Repairs with two parts (Health_Config.xml UserScript): one confirmation, the part of the user, then the SYSTEM part
                                               through the service; "Free up space" lists what is deleted and shows the free space before and after;
                                               such repairs are never part of "Fix all problems"
+    3.1.0    2026-11-27  fubu2k               Environment_Mode TerminalServer (Tool_Config.xml): actions and repairs not classified TerminalServer Show are not
+                                              shown (SelfXEnvironment.ps1); a refusal of the service (ERROR TerminalServer) has its own message
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -182,6 +184,7 @@ $Global:SelfXClient_Script = Get-Content -LiteralPath "$Current_Folder\SelfXServ
 $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\SupportReport.ps1" -Raw
 # Paths of the configuration (folder Config next to App), the images and the own scripts of the company
 . "$Current_Folder\SelfXPaths.ps1"
+. "$Current_Folder\SelfXEnvironment.ps1"
 . "$Current_Folder\SelfXServiceClient.ps1"
 . "$Current_Folder\Branding.ps1"
 . "$Current_Folder\Localization.ps1"
@@ -281,6 +284,25 @@ If($SelfX_Needs_Domain)
 	}
 $Global:SelfX_Quick_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Quick_Actions $SelfX_Domain_Joined)
 $Global:SelfX_Detailed_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Detailed_Actions $SelfX_Domain_Joined)
+# Environment_Mode (Tool_Config.xml): on a terminal server or session host (TerminalServer) only actions classified
+# <TerminalServer>Show</TerminalServer> are shown; they affect only the own session or profile. The service refuses the other
+# System actions for every caller, so hiding them here keeps the list clear; it is not the security boundary (SelfXEnvironment.ps1).
+$Global:SelfX_Environment = ConvertTo-SelfXEnvironmentMode (Get-SelfXText 'Environment_Mode' '')
+If(-not $Global:SelfX_Environment.Valid) { Write-SelfXLog "Environment_Mode in Tool_Config.xml is not Client or TerminalServer; Client is used." 'Warning' }
+Function Select-SelfXEnvironmentActions
+	{
+		param($Actions, [string]$Mode)
+		foreach($Action in $Actions)
+			{
+				If(Test-SelfXShownInEnvironment $Mode $Action.TerminalServer) { $Action; continue }
+				Write-SelfXLog "Action '$($Action.Id)' is not shown: it is not classified TerminalServer Show (Environment_Mode TerminalServer)."
+			}
+	}
+$Global:SelfX_Quick_Actions = @(Select-SelfXEnvironmentActions $Global:SelfX_Quick_Actions $Global:SelfX_Environment.Mode)
+$Global:SelfX_Detailed_Actions = @(Select-SelfXEnvironmentActions $Global:SelfX_Detailed_Actions $Global:SelfX_Environment.Mode)
+# Repairs of the device status: with TerminalServer only those classified TerminalServer="Show" in Health_Config.xml. The health
+# collection clears the others too; this second check also covers a status cache written before the mode was changed.
+$Global:SelfX_RemediationClassification = Get-SelfXRemediationClassification -HealthConfigPath (Get-SelfXConfigPath -Name 'Health_Config.xml' -CodeRoot $Current_Folder)
 
 # The version of the code: ToolVersion of SelfX.Code.json in the install folder (Tool_Config.xml no longer carries it; an old Tool_Version
 # element there is ignored). Display only: a missing or unreadable list shows '?' and is logged, it never stops the window.
@@ -1678,6 +1700,7 @@ $SvcAction_Timer.Add_Tick({
 			}
 			'Busy'        { $msgbar.SetWarningAlert($Service_Busy_Text) }
 			'OtherSessions' { $msgbar.SetWarningAlert($Service_OtherSessions_Text) }
+			'TerminalServer' { $msgbar.SetWarningAlert((Get-SelfXString 'Service_TerminalServer_Text')) }
 			'Timeout'     { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Timeout_Text' $Global:SvcAction_Name)) }
 			'Unavailable' { $msgbar.SetDangerAlert($Service_Unavailable_Text); Update-SelfXServiceStatus }
 			Default       { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_Text' "$Global:SvcAction_Name ($($Result.Message))")) }
@@ -1971,6 +1994,10 @@ Function Update-SelfXStatusView
 		$Order = @{ Error = 0; Pending = 1; Unknown = 2; OK = 3 }
 		$Index = 0
 		$Cards = @($Global:Health_Items | ForEach-Object {
+			# Environment_Mode TerminalServer: a repair that is not classified Show has no button (and its part of the user is not offered).
+			$Offered = Test-SelfXRemediationOffered -Mode "$($Global:SelfX_Environment.Mode)" -Script "$($_.Remediation)" -Classification $Global:SelfX_RemediationClassification
+			$Remediation = $(If($Offered) { "$($_.Remediation)" } Else { '' })
+			$UserRemediation = $(If($Offered) { "$($_.UserRemediation)" } Else { '' })
 			$Glyph = $Global:SelfX_HealthGlyphs["$($_.HealthId)"]
 			If(-not $Glyph) { $Glyph = 0xE9D9 }
 			$Fix_Text = Get-SelfXString 'Health_Fix'
@@ -1984,7 +2011,7 @@ Function Update-SelfXStatusView
 			If($Fix_Running) { $Fix_Text = Get-SelfXString 'Action_Running_Label' }
 			[pscustomobject]@{
 				Property = $_.Property; Detail = $(If("$($_.Detail)") { "$($_.Detail)" } Else { "$($_.Value)" }); Status = "$($_.Status)"
-				Remediation = "$($_.Remediation)"; UserRemediation = "$($_.UserRemediation)"; HasFix = [bool]"$($_.Remediation)"; HealthId = "$($_.HealthId)"; HealthName = "$($_.HealthName)"
+				Remediation = $Remediation; UserRemediation = $UserRemediation; HasFix = [bool]$Remediation; HealthId = "$($_.HealthId)"; HealthName = "$($_.HealthName)"
 				FixText = $Fix_Text; FixGlyph = [string][char]$Fix_Glyph; Running = $Fix_Running
 				Glyph = [string][char]$Glyph; Rank = $Order["$($_.Status)"]; Index = $Index++
 			}

@@ -68,6 +68,7 @@ and changing the settings does not change the version.
 | `Tool_Language` | `de` | Default language. `Auto` takes the display language of Windows. You can also write `en`, `fr-CH` or `zh-Hans`. |
 | `Show_Language_Setting` | `True` | Users can choose the language. `False`: always `Tool_Language`. |
 | `Tool_Name` | SelfX | Name in the title bar. |
+| `Environment_Mode` | `Client` | Where SelfX runs. `Client`: PC or notebook of one person. `TerminalServer`: terminal server or session host with several users at the same time. See [Terminal server and session host](#terminal-server-and-session-host-environment_mode). Any other value counts as `Client`. |
 | `Tool_Theme` | `Auto` | Default color scheme: `Auto` (follows Windows), `Dark` or `Light`. |
 | `Show_Theme_Button` | `True` | Users can choose the design themselves. |
 | `Default_Solution_Mode` | `Simplified` | Start view of troubleshooting: `Simplified` (easy) or `Detailed`. |
@@ -120,6 +121,7 @@ has a unique `Id`. The translations are linked through this `Id`.
 | `Link` | Only for `Link`: name of the setting (`Link_<Name>`) in `Tool_Config.xml`. |
 | `TimeoutSeconds` | Only for `System`: time limit from 1 to 7200 seconds, default 900. |
 | `OtherSessions` | Only for `System`: `Block` prevents the action for normal users while another user is signed in. Administrators are not affected. |
+| `TerminalServer` | Required. `Show`: the action only affects the own session or profile and is offered with `Environment_Mode` = `TerminalServer`. `Hide`: it affects the whole device or all users and is hidden there. Use the same value on every entry of the same script. |
 | `Post_Action` | Only for `System`: `MailReport` opens an e-mail to support with the report after a successful run. |
 
 Example:
@@ -152,7 +154,45 @@ Do you want to continue?</Alerte_MSG>
   send a result to that user, never to decide whether something is allowed.
 
 **Add a new action:** Give it a new `Id` and add the texts to the language files. Without a
-translation, the English text appears.
+translation, the English text appears. Classify it with `TerminalServer`; `Test-Catalog.ps1` fails
+without it.
+
+### Terminal server and session host (`Environment_Mode`)
+
+One package works on PCs and on session hosts. The setting `Environment_Mode` in `Tool_Config.xml`
+says where SelfX runs. The package wizard asks for it ("Where does SelfX run?"). Build one package per
+kind of device.
+
+- `Client` (default): a PC or notebook of one person. All actions are shown.
+- `TerminalServer`: a terminal server or session host where several people work at the same time, for
+  example Windows Enterprise multi-session. Only actions and repairs with `TerminalServer` = `Show`
+  are shown. They affect only the own session or profile. Actions with `Hide` affect the whole device
+  or all users, such as a restart, Windows updates or the network adapters.
+
+With `TerminalServer` the service also refuses every `System` action and repair that is not classified
+`Show`, also for administrators (event 4008). Hiding them in the window is not enough, because the
+window is not a security boundary. An action without a classification counts as `Hide`. If the service
+cannot read `Tool_Config.xml`, it handles requests as with `TerminalServer`.
+
+The check of other active sessions (`OtherSessions`) works the same in both modes.
+
+When Windows is a session host but `Environment_Mode` is `Client`, the service writes a warning at the
+start (event 4009). It does not change the setting itself.
+
+Classification of the bundled actions:
+
+| Action (script) | Affects | `TerminalServer` |
+|---|---|---|
+| Teams, Word, Excel, Outlook, OneDrive (restart, cache, reset, add-in, AutoComplete) | own session and profile | `Show` |
+| Edge, Chrome and Firefox cache | browser of the own session | `Show` |
+| Device slow, bring windows back, Citrix Workspace restart | own session | `Show` |
+| Office licence reset, group policy update | own profile (test them on your session host first) | `Show` |
+| Password reset, security info (links) | browser of the user | `Show` |
+| No sound (`SelfX_Audio_Restore.ps1`) | redirected audio of a remote session, not tested | `Hide` |
+| Clear DNS cache (`SelfX_Device_ClearCache.ps1`) | DNS cache of the whole device | `Hide` |
+| Microsoft Store reset (`SelfX_Poste_WSReset.ps1`) | Store is not available on servers | `Hide` |
+| Time sync, network adapters, disk check, Intune restart, Defender scan, device logs | whole device or all users | `Hide` |
+| All repairs of the device status (Defender, updates, restart, apps, free up space) | whole device | `Hide` |
 
 
 **Account actions with a web address (`Context` = `Link`):** They open an address from
@@ -366,6 +406,7 @@ The checks only read. For a row to show the *Fix* button, store a repair script 
 | `When` | `NotOK`: offer only while the row is not OK. `Always` (default): always offer. |
 | `TimeoutSeconds` | Time limit, 1 to 7200 seconds. Default 900. |
 | `OtherSessions` | `Block` as for actions. The bundled configuration sets it for `Updates` and `PendingReboot`. |
+| `TerminalServer` | Required: `Show` or `Hide` as for actions. `Hide` also hides the `UserScript` part. All bundled repairs are `Hide`. |
 | `UserScript` | Optional. A first part that SelfX runs **as the signed-in user** before `Script`. The service never runs it. It must be a script with `Context : User` and must not be the same file as `Script`. A repair with `UserScript` has its own confirmation and is never part of *Fix all problems*. |
 
 **How a repair runs:** The user confirms. The service checks whether the script is in the protected list

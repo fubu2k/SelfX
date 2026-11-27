@@ -256,7 +256,9 @@ November 2026 and hardened in versions 2.6.10 and 2.6.11; the details are in the
   data of the requesting user, unless an elevated administrator asks for it.
   Actions that would disturb others (restart, Windows updates, disk check,
   restart of the network adapters) are not available to a normal user while
-  another user is signed in (`OtherSessions`).
+  another user is signed in (`OtherSessions`). On a terminal server or session host
+  (`Environment_Mode` = `TerminalServer`) actions that affect the whole device are
+  hidden, and the service refuses them.
 - **Careful file handling.** SYSTEM does not read logs from folders that users
   can change, and the uninstallation does not follow junctions.
 - **Controlled build and deployment.** The .NET 10 programs are built once

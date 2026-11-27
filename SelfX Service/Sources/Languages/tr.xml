@@ -89,6 +89,7 @@ Basit görünüm sorununuzu çözmezse veya içermiyorsa ayrıntılı görünüm
 		<Service_Unavailable_Text>SelfX hizmeti çalışmıyor: kalkanla işaretli eylemler kullanılamaz.</Service_Unavailable_Text>
 		<Service_Busy_Text>Başka bir eylem çalışıyor. Tamamlanmasını bekleyin.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Bu cihazda başka bir kullanıcı oturum açmışken bu eylem yapılamaz. BT desteğine başvurun veya tek kullanıcı olduğunuzda yeniden deneyin.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>Bu bilgisayarı aynı anda birden fazla kişi kullandığı için bu eylem burada kullanılamaz. BT desteğine başvurun.</Service_TerminalServer_Text>
 		<Action_Running_Text>Eylem çalışıyor: {0}</Action_Running_Text>
 		<Action_Running_Label>Çalışıyor…</Action_Running_Label>
 		<Action_Success_Text>Eylem tamamlandı: {0}</Action_Success_Text>

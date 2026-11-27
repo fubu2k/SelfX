@@ -89,6 +89,7 @@ Jeśli widok uproszczony nie rozwiązuje problemu, wybierz widok szczegółowy.<
 		<Service_Unavailable_Text>Usługa SelfX nie działa: działania oznaczone tarczą są niedostępne.</Service_Unavailable_Text>
 		<Service_Busy_Text>Trwa inne działanie. Poczekaj na jego zakończenie.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Ta czynność nie jest możliwa, gdy na tym urządzeniu zalogowany jest inny użytkownik. Skontaktuj się z pomocą techniczną IT lub spróbuj ponownie, gdy będziesz jedynym użytkownikiem.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>Ta czynność nie jest dostępna na tym komputerze, ponieważ korzysta z niego jednocześnie kilka osób. Skontaktuj się z pomocą techniczną IT.</Service_TerminalServer_Text>
 		<Action_Running_Text>Uruchamianie działania: {0}</Action_Running_Text>
 		<Action_Running_Label>Trwa…</Action_Running_Label>
 		<Action_Success_Text>Działanie zakończone: {0}</Action_Success_Text>

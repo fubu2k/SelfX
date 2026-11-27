@@ -89,6 +89,7 @@ Chúng tôi khuyên bạn nên dùng giao diện chi tiết nếu giao diện đ
 		<Service_Unavailable_Text>Dịch vụ SelfX không chạy: các thao tác có biểu tượng chiếc khiên hiện không khả dụng.</Service_Unavailable_Text>
 		<Service_Busy_Text>Một thao tác khác vẫn đang chạy. Vui lòng đợi thao tác đó hoàn tất.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Không thể thực hiện thao tác này khi người dùng khác đang đăng nhập trên thiết bị. Hãy liên hệ bộ phận hỗ trợ CNTT hoặc thử lại khi chỉ có mình bạn sử dụng.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>Thao tác này không khả dụng trên máy tính này, vì nhiều người đang dùng máy cùng lúc. Hãy liên hệ bộ phận hỗ trợ CNTT.</Service_TerminalServer_Text>
 		<Action_Running_Text>Đang chạy thao tác: {0}</Action_Running_Text>
 		<Action_Running_Label>Đang chạy…</Action_Running_Label>
 		<Action_Success_Text>Đã hoàn tất thao tác: {0}</Action_Success_Text>

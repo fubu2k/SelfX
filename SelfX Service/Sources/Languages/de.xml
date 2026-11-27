@@ -89,6 +89,7 @@ Probieren Sie zuerst die einfache Ansicht. Hilft sie nicht oder finden Sie Ihr P
 		<Service_Unavailable_Text>Der SelfX-Dienst läuft nicht. Lösungen mit Schild-Symbol sind deshalb nicht möglich. Starten Sie Ihr Gerät neu oder wenden Sie sich an den Support.</Service_Unavailable_Text>
 		<Service_Busy_Text>Es läuft gerade eine andere Lösung mit Schild-Symbol. Bitte warten Sie, bis sie fertig ist, und versuchen Sie es dann noch einmal.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Diese Lösung ist gerade nicht möglich, weil noch eine andere Person an diesem Gerät angemeldet ist. Sie würde diese Person stören, zum Beispiel durch einen Neustart. Versuchen Sie es erneut, wenn Sie allein angemeldet sind, oder fragen Sie den Support.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>Diese Lösung ist auf diesem Computer nicht verfügbar, weil ihn mehrere Personen gleichzeitig nutzen. Fragen Sie den Support.</Service_TerminalServer_Text>
 		<Action_Running_Text>Läuft: {0}</Action_Running_Text>
 		<Action_Running_Label>Läuft…</Action_Running_Label>
 		<Action_Success_Text>Fertig: {0}</Action_Success_Text>

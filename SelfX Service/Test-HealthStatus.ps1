@@ -12,6 +12,8 @@
         2.6.12 2026-11-23  fubu2k          Test the CSV export against formula injection (finding N7).
         3.1.0  2026-11-27  fubu2k          Repairs with two parts (UserScript / UserRemediation): collection, client check, service whitelist,
                                            "Free up space" in SelfX (user part, then SYSTEM part, result text, never in "Fix all problems").
+        3.1.0  2026-11-27  fubu2k          Environment_Mode: repairs not classified Show are not returned with TerminalServer (also with a
+                                           missing or unreadable Tool_Config.xml); SelfXEnvironment.ps1; classification in the service whitelist.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -85,6 +87,8 @@ $originalRoot = $env:SystemRoot
 $env:SystemRoot = 'Z:\SelfX-Nonexistent-Test-Windows'
 $temp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXHealthTests-' + [guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($temp)
+# Environment_Mode Client: the repairs are offered (a missing Tool_Config.xml counts as TerminalServer, see the tests below).
+[IO.File]::WriteAllText((Join-Path $temp 'Tool_Config.xml'), '<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>')
 try {
     $script:serviceState = 'Running'
     Assert-Equal (Get-SelfXServiceHealth IME).Status OK 'Running service'
@@ -343,6 +347,39 @@ try {
     Assert-Equal (($diskRows | ForEach-Object { "$($_.Name)=$($_.Remediation)+$($_.UserRemediation)" }) -join ';') 'C:=SelfX_Device_FreeSpace.ps1+SelfX_Device_FreeSpaceUser.ps1;D:=+' 'Free up space offered on the full system drive only'
     $script:disks = @([pscustomobject]@{ DeviceID='C:'; Size=500GB; FreeSpace=100GB })
     Assert-Equal "$(@(Get-SelfXHealth -Root $temp -OnlyId Disk)[0].Remediation)/$(@(Get-SelfXHealth -Root $temp -OnlyId Disk)[0].UserRemediation)" '/' 'Free up space hidden while the disk is OK'
+    # Environment_Mode TerminalServer: a repair is offered only when it is classified TerminalServer="Show"; Hide, a missing or other
+    # value and a missing or unreadable Tool_Config.xml offer nothing (also no part of the user). Client offers every repair.
+    foreach ($case in @(@('TerminalServer','TerminalServer',$true), @(' terminalserver ','TerminalServer',$true), @('Client','Client',$true), @('','Client',$true), @($null,'Client',$true), @('Server','Client',$false))) {
+        $mode = ConvertTo-SelfXEnvironmentMode $case[0]
+        Assert-Equal "$($mode.Mode)/$($mode.Valid)" "$($case[1])/$($case[2])" "Environment_Mode '$($case[0])'"
+    }
+    Assert-Equal "$(Test-SelfXShownInEnvironment 'Client' 'Hide')/$(Test-SelfXShownInEnvironment 'Client' '')" 'True/True' 'Environment_Mode Client: every entry is shown'
+    Assert-Equal "$(Test-SelfXShownInEnvironment 'TerminalServer' 'Show')/$(Test-SelfXShownInEnvironment 'TerminalServer' 'Hide')/$(Test-SelfXShownInEnvironment 'TerminalServer' '')/$(Test-SelfXShownInEnvironment 'TerminalServer' $null)/$(Test-SelfXShownInEnvironment 'TerminalServer' 'show')" 'True/False/False/False/False' 'Environment_Mode TerminalServer: only exactly Show is shown'
+    [IO.File]::WriteAllText("$temp\Classify.xml", '<HealthConfig><Remediations><Remediation Id="Defender" Script="A.ps1" TerminalServer="Show"/><Remediation Id="Compliance" Script="A.ps1" TerminalServer="Hide"/><Remediation Id="Disk" Script="B.ps1" TerminalServer="Show"/></Remediations></HealthConfig>')
+    $classes = Get-SelfXRemediationClassification -HealthConfigPath "$temp\Classify.xml"
+    Assert-Equal "$($classes['a.ps1'])/$($classes['b.ps1'])" 'False/True' 'Repair classification: a script with one Hide entry is Hide'
+    Assert-Equal "$(Test-SelfXRemediationOffered -Mode TerminalServer -Script 'B.PS1' -Classification $classes)/$(Test-SelfXRemediationOffered -Mode TerminalServer -Script 'C.ps1' -Classification $classes)/$(Test-SelfXRemediationOffered -Mode Client -Script 'A.ps1' -Classification @{})" 'True/False/True' 'Repair offered: Show (any case of the name), unknown script, Client'
+    Assert-Equal @((Get-SelfXRemediationClassification -HealthConfigPath "$temp\Missing.xml").Keys).Count 0 'Repair classification: an unreadable file gives an empty table'
+    $script:disks = @([pscustomobject]@{ DeviceID='C:'; Size=500GB; FreeSpace=5GB })
+    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>')
+    $tsDisk = @(Get-SelfXHealth -Root $temp -OnlyId Disk)[0]
+    Assert-Equal "$($tsDisk.Status -ne 'OK')/$($tsDisk.Remediation)/$($tsDisk.UserRemediation)" 'True//' 'TerminalServer: the delivered Free up space (Hide) is not offered, also not its part of the user'
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'TerminalServer: a repair without classification is not offered'
+    $repair.SetAttribute('TerminalServer','Show')
+    $remConfig.Save("$temp\Health_Config.xml")
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) 'Repair-IME.ps1' 'TerminalServer: a repair classified Show is offered'
+    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>Client')
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) 'Repair-IME.ps1' 'TerminalServer: an unreadable Tool_Config.xml still offers a repair classified Show'
+    $repair.SetAttribute('TerminalServer','Hide')
+    $remConfig.Save("$temp\Health_Config.xml")
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'TerminalServer: an unreadable Tool_Config.xml offers no repair classified Hide (fail closed)'
+    [IO.File]::Delete("$temp\Tool_Config.xml")
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'TerminalServer: a missing Tool_Config.xml offers no repair classified Hide (fail closed)'
+    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>')
+    $clientDisk = @(Get-SelfXHealth -Root $temp -OnlyId Disk)[0]
+    Assert-Equal "$(@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation)/$($clientDisk.Remediation)/$($clientDisk.UserRemediation)" 'Repair-IME.ps1/SelfX_Device_FreeSpace.ps1/SelfX_Device_FreeSpaceUser.ps1' 'Client: repairs classified Hide are offered'
+    $repair.RemoveAttribute('TerminalServer')
+    $remConfig.Save("$temp\Health_Config.xml")
     $repair.SetAttribute('Script','..\outside.ps1')
     $remConfig.Save("$temp\Health_Config.xml")
     Assert-Equal (@(Get-SelfXHealth -Root $temp)[0].Status) Error 'Reject remediation traversal'
@@ -774,19 +811,28 @@ try {
             [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="IME" Script="Repair-IME.ps1"/></Remediations></HealthConfig>')
             $method = $type.GetMethod('TryGetSystemAction',$flags)
             foreach ($case in @(@('Repair-IME.ps1',$true), @('Catalog.ps1',$true), @('NotAllowed.ps1',$false))) {
-                $arguments = [object[]]@($case[0],0,$false)
+                $arguments = [object[]]@($case[0],0,$false,$false)
                 $allowed = $method.Invoke($instance,$arguments)
                 Assert-Equal $allowed $case[1] "Service whitelist: $($case[0])"
                 if ($case[1]) { Assert-Equal $arguments[1] 900 "Service default timeout: $($case[0])" }
             }
+            # Classification for Environment_Mode TerminalServer: only an explicit Show is not hidden (missing = Hide, fail closed).
+            [IO.File]::WriteAllText("$temp\Issues_List.xml", '<Actions><Detailed_Solution><Action><Script>Show.ps1</Script><Context>System</Context><TerminalServer>Show</TerminalServer></Action><Action><Script>Catalog.ps1</Script><Context>System</Context></Action></Detailed_Solution></Actions>')
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="IME" Script="Repair-IME.ps1"/><Remediation Id="Disk" Script="RemShow.ps1" TerminalServer="Show"/><Remediation Id="Updates" Script="RemHide.ps1" TerminalServer="Hide"/></Remediations></HealthConfig>')
+            foreach ($case in @(@('Show.ps1',$false), @('Catalog.ps1',$true), @('Repair-IME.ps1',$true), @('RemShow.ps1',$false), @('RemHide.ps1',$true))) {
+                $arguments = [object[]]@($case[0],0,$false,$false)
+                Assert-Equal $method.Invoke($instance,$arguments) $true "Service whitelist with classification: $($case[0]) allowed"
+                Assert-Equal $arguments[3] $case[1] "Service whitelist: $($case[0]) hidden in Environment_Mode TerminalServer = $($case[1])"
+            }
+            [IO.File]::WriteAllText("$temp\Issues_List.xml", '<Actions><Detailed_Solution><Action><Script>Catalog.ps1</Script><Context>System</Context></Action></Detailed_Solution></Actions>')
             # The part of the user of a two-part repair is never a SYSTEM action of the service.
             [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="Disk" Script="Free.ps1" UserScript="FreeUser.ps1"/></Remediations></HealthConfig>')
-            Assert-Equal $method.Invoke($instance,[object[]]@('FreeUser.ps1',0,$false)) $false 'Service whitelist: UserScript is not a SYSTEM action'
-            Assert-Equal $method.Invoke($instance,[object[]]@('Free.ps1',0,$false)) $true 'Service whitelist: Script of a two-part repair is a SYSTEM action'
+            Assert-Equal $method.Invoke($instance,[object[]]@('FreeUser.ps1',0,$false,$false)) $false 'Service whitelist: UserScript is not a SYSTEM action'
+            Assert-Equal $method.Invoke($instance,[object[]]@('Free.ps1',0,$false,$false)) $true 'Service whitelist: Script of a two-part repair is a SYSTEM action'
             [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="IME" Script="Repair-IME.ps1"/></Remediations></HealthConfig>')
             foreach ($case in @(@('3600',3600), @('99999',7200), @('0',900), @('abc',900))) {
                 [IO.File]::WriteAllText("$temp\Health_Config.xml", "<HealthConfig><Remediations><Remediation Id=`"Updates`" Script=`"Upd.ps1`" TimeoutSeconds=`"$($case[0])`"/></Remediations></HealthConfig>")
-                $arguments = [object[]]@('Upd.ps1',0,$false)
+                $arguments = [object[]]@('Upd.ps1',0,$false,$false)
                 Assert-Equal $method.Invoke($instance,$arguments) $true "Service remediation with TimeoutSeconds=$($case[0]) allowed"
                 Assert-Equal $arguments[1] $case[1] "Service remediation timeout TimeoutSeconds=$($case[0])"
             }
@@ -813,7 +859,7 @@ try {
             $logFile = Join-Path $temp 'SelfXService.log'
             if (Test-Path -LiteralPath $logFile) { [IO.File]::Delete($logFile) }
             $logRejected = $type.GetMethod('LogRejected',$flags)
-            foreach ($i in 1..100) { [void]$logRejected.Invoke($instance,@("Rejected invalid request from TEST: 'x$i`r`nINJECTED'.")) }
+            foreach ($i in 1..100) { [void]$logRejected.Invoke($instance,@("Rejected invalid request from TEST: 'x$i`r`nINJECTED'.", 4002, $null)) }
             $lines = @([IO.File]::ReadAllLines($logFile))
             Assert-Equal $lines.Count 20 'Rejected requests: only 20 log lines per minute'
             Assert-Equal @($lines | Where-Object { $_ -notmatch '^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d  Rejected invalid request from TEST' }).Count 0 'Rejected requests: no injected log lines'
