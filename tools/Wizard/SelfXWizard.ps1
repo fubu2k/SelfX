@@ -291,8 +291,8 @@ function New-SelfXIntuneGuide {
     param(
         [Parameter(Mandatory = $true)][hashtable]$Answers,
         [Parameter(Mandatory = $true)][string]$Version,
-        [Parameter(Mandatory = $true)][string]$PackageFile,
-        [Parameter(Mandatory = $true)][string]$DetectionFile,
+        [AllowEmptyString()][string]$PackageFile = '',
+        [AllowEmptyString()][string]$DetectionFile = '',
         [string[]]$ScriptFiles = @(),
         [string]$AnswersFile = '',
         [string[]]$TrustedSigner = @(),
