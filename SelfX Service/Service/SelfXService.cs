@@ -16,6 +16,19 @@ Description:
     only when it is listed in Config\SelfX.Config.json with its current SHA256 (also with
     Service_FileCheck=Audit). The file check compares App with SelfX.Code.json and Config with
     SelfX.Config.json; the install folder above them may hold nothing but App and Config.
+    Trust mode (docs\Architecture.md): before every start the service reads the anchor HKLM\SOFTWARE\SelfX\Trust that
+    Install.ps1 wrote (64-bit view; Mode = Hash or Signature, Signers = SHA1 thumbprints). The anchor counts only when the key
+    is owned by SYSTEM or Administrators and no other identity may change it; a missing, invalid or unprotected anchor starts
+    nothing (event 4006). Mode Hash: the file check as described above. Mode Signature: every file of the two lists is opened
+    once (readable for others, not writable, not replaceable) and stays open until the script has ended; SelfX.Code.json must be
+    a member of the signed catalog App\SelfX.Code.cat and SelfX.Config.json a member of Config\SelfX.Config.cat; the file check
+    runs on the open handles; every .ps1, .psm1, .psd1 and .dll of the lists (the script to start, the scripts it loads, the
+    libraries, own scripts of the company) must carry an Authenticode signature; Issues_List.xml, Health_Config.xml and the
+    other settings files must be members of SelfX.Config.cat. A signature counts when Windows accepts it (WinVerifyTrust) and
+    the signer is in the list of the anchor. Revocation is checked from the local cache only (no network request, so the
+    service does not wait without a network). A failed signature check starts nothing (event 4007), also with
+    Service_FileCheck=Audit. A positive result is kept for 60 minutes per file (path, write time, size and SHA256 of the open
+    handle), so the health runs do not repeat the signature check of unchanged files.
     RUN children receive the SID of the requesting pipe client in SELFX_CALLER_SID, read
     from the client token (identification level), so scripts can deliver results only to
     that user. The variable is absent when the caller cannot be identified.
@@ -81,6 +94,12 @@ Notes:
                                               it; the file check covers App (SelfX.Code.json), Config (SelfX.Config.json) and the folder above them
     3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is accepted in SelfX.Config.json (placement rule); nothing below
                                               Texts may be in SelfX.Code.json
+    3.1.0    2026-11-27  fubu2k               Trust mode: the anchor HKLM\SOFTWARE\SelfX\Trust is read before every start (event 4006 when it is
+                                              missing, invalid or can be changed by normal users). Mode Signature: files are checked through
+                                              handles that stay open during the run; lists against the signed catalogs SelfX.Code.cat and
+                                              SelfX.Config.cat, scripts and libraries by their embedded signature, settings files against
+                                              SelfX.Config.cat (WinVerifyTrust, signer from the anchor, revocation from the cache only; event
+                                              4007); positive results are cached for 60 minutes. Mode Hash: unchanged
 */
 
 using System;
@@ -92,12 +111,14 @@ using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Microsoft.Win32;
 using Microsoft.Win32.SafeHandles;
 using System.Xml;
 
@@ -206,6 +227,8 @@ namespace SelfX
         readonly string pipeName;
         readonly object logLock = new object();
         readonly SemaphoreSlim runLock = new SemaphoreSlim(1, 1);
+        // Positive results of the signature check (trust mode Signature), see SignatureCache.
+        readonly SignatureCache signatureCache = new SignatureCache();
         // Job object of the PowerShell children (N6); created in StartListening, ended in StopListening.
         volatile ChildJob childJob;
         // Serializes all health runs, because each of them writes the status cache.
@@ -233,6 +256,8 @@ namespace SelfX
         const int EventPowerShellUnprotected = 4003;
         const int EventDataFolderUnsafe = 4004;
         const int EventFilesChanged = 4005;
+        const int EventTrustAnchor = 4006;
+        const int EventSignature = 4007;
         const int EventSuppressed = 4099;
         sealed class EventWindow { public DateTime Start = DateTime.MinValue; public int Count; public int Suppressed; }
         volatile string backgroundState = "Active";
@@ -1180,14 +1205,25 @@ namespace SelfX
         /// </summary>
         static bool ReadFileList(string root, string listName, Dictionary<string, ListedFile> expected, out string problem)
         {
+            return ReadFileList(root, listName, expected, null, out problem);
+        }
+
+        /// <summary>
+        /// As above. With pins (trust mode Signature) the list is read through its pinned handle: the bytes are the ones whose
+        /// membership in the signed catalog was checked.
+        /// </summary>
+        static bool ReadFileList(string root, string listName, Dictionary<string, ListedFile> expected, PinnedFiles pins, out string problem)
+        {
             problem = null;
             string listPath = Path.Combine(root, listName);
             FileInfo listInfo = new FileInfo(listPath);
             if (!listInfo.Exists) { problem = "file list: " + listName + " missing"; return false; }
             if ((listInfo.Attributes & FileAttributes.ReparsePoint) != 0) { problem = "file list: " + listName + " is a link"; return false; }
             if (listInfo.Length > MaxFileListBytes) { problem = "file list: " + listName + " too large"; return false; }
+            byte[] content = pins == null ? File.ReadAllBytes(listPath) : pins.Open(listPath).ReadAll(MaxFileListBytes);
+            if (content == null) { problem = "file list: " + listName + " too large"; return false; }
             int count = 0;
-            using (JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(listPath), new JsonDocumentOptions { MaxDepth = 4 }))
+            using (JsonDocument document = JsonDocument.Parse(content, new JsonDocumentOptions { MaxDepth = 4 }))
             {
                 JsonElement top = document.RootElement;
                 JsonElement version, files;
@@ -1235,6 +1271,17 @@ namespace SelfX
         /// </summary>
         static bool VerifyInstalledLayout(string codeRoot, string configRoot, out List<string> problems)
         {
+            return VerifyLayout(codeRoot, configRoot, null, out problems);
+        }
+
+        /// <summary>
+        /// As above. With pins (trust mode Signature) every list and every listed file is opened once through pins, hashed from
+        /// that handle and stays open (nobody can change or replace it) until pins is disposed; the signed catalogs
+        /// SelfX.Code.cat (code folder) and SelfX.Config.cat (configuration folder) are then allowed next to the lists. Without
+        /// pins (trust mode Hash) a catalog is a file that is not listed.
+        /// </summary>
+        static bool VerifyLayout(string codeRoot, string configRoot, PinnedFiles pins, out List<string> problems)
+        {
             problems = new List<string>();
             bool truncated = false;
             try
@@ -1251,8 +1298,8 @@ namespace SelfX
                 }
                 Dictionary<string, ListedFile> expected = new Dictionary<string, ListedFile>(StringComparer.OrdinalIgnoreCase);
                 string listProblem;
-                if (!ReadFileList(code, CodeListName, expected, out listProblem)) { problems.Add(listProblem); return false; }
-                if (!ReadFileList(config, ConfigListName, expected, out listProblem)) { problems.Add(listProblem); return false; }
+                if (!ReadFileList(code, CodeListName, expected, pins, out listProblem)) { problems.Add(listProblem); return false; }
+                if (!ReadFileList(config, ConfigListName, expected, pins, out listProblem)) { problems.Add(listProblem); return false; }
 
                 // Configuration and catalog first, then the rest.
                 List<KeyValuePair<string, ListedFile>> ordered = new List<KeyValuePair<string, ListedFile>>();
@@ -1272,19 +1319,20 @@ namespace SelfX
                     if (!File.Exists(full)) { AddProblem(problems, "missing: " + entry.Key, ref truncated); continue; }
                     if (IsLinkBelow(root, full)) { AddProblem(problems, "link: " + entry.Key, ref truncated); continue; }
                     string actual;
-                    try { actual = HashFile(full); }
+                    try { actual = pins == null ? HashFile(full) : pins.Open(full).Hash; }
                     catch (IOException) { AddProblem(problems, "not readable: " + entry.Key, ref truncated); continue; }
                     if (!string.Equals(actual, entry.Value.Hash, StringComparison.OrdinalIgnoreCase)) AddProblem(problems, "changed: " + entry.Key, ref truncated);
                 }
+                bool signed = pins != null;
                 if (split)
                 {
-                    FindUnlistedFiles(new DirectoryInfo(code), code, "", expected, new[] { CodeListName }, problems, ref truncated);
-                    FindUnlistedFiles(new DirectoryInfo(config), config, "Config/", expected, new[] { ConfigListName }, problems, ref truncated);
+                    FindUnlistedFiles(new DirectoryInfo(code), code, "", expected, signed ? new[] { CodeListName, CodeCatalogName } : new[] { CodeListName }, problems, ref truncated);
+                    FindUnlistedFiles(new DirectoryInfo(config), config, "Config/", expected, signed ? new[] { ConfigListName, ConfigCatalogName } : new[] { ConfigListName }, problems, ref truncated);
                     FindForeignEntries(code, config, problems, ref truncated);
                 }
                 else
                 {
-                    FindUnlistedFiles(new DirectoryInfo(code), code, "", expected, FileListNames, problems, ref truncated);
+                    FindUnlistedFiles(new DirectoryInfo(code), code, "", expected, signed ? new[] { CodeListName, ConfigListName, CodeCatalogName, ConfigCatalogName } : FileListNames, problems, ref truncated);
                 }
                 if (truncated) problems.Add(TruncatedProblem);
                 return problems.Count == 0;
@@ -1389,7 +1437,55 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Called before every start of a script. Returns true when the installed files match SelfX.Code.json and SelfX.Config.json. Otherwise
+        /// Called before every start of a script. Reads the trust anchor and checks the installation in its mode. Returns false
+        /// when nothing may be started. Mode Hash: the file check (CheckInstalledFiles(scriptName)), pinned stays null. Mode
+        /// Signature: the signature check (VerifySignedLayout); on success pinned holds the open handles of all checked files and
+        /// the caller disposes it after the script has ended, so the files that were checked are the files that run. A failed
+        /// signature check never starts anything, also with Service_FileCheck=Audit; the setting only applies to differences
+        /// between the files and the two lists, as in the mode Hash. A missing, invalid or unprotected anchor starts nothing.
+        /// </summary>
+        bool CheckInstalledFiles(string scriptName, string scriptPath, out PinnedFiles pinned)
+        {
+            pinned = null;
+            string anchorProblem;
+            TrustAnchor anchor = ReadTrustAnchor(RegistryHive.LocalMachine, TrustKeyPath, TrustAnchorWriterSids, out anchorProblem);
+            if (anchor == null)
+            {
+                Log("The trust anchor HKLM\\" + TrustKeyPath + " cannot be used (" + anchorProblem + "); '" + scriptName + "' was not started.");
+                // Fixed text: the reason (it can name the SID of an account) is written to the SelfX log only.
+                SecurityEvent(EventTrustAnchor, EventLogEntryType.Error, "The trust anchor HKLM\\" + TrustKeyPath + " is missing, invalid or can be changed by normal users; SelfX actions as SYSTEM are not started. Install SelfX again. See the SelfX log.");
+                return false;
+            }
+            if (!anchor.Signature) return CheckInstalledFiles(scriptName);
+
+            PinnedFiles pins = new PinnedFiles();
+            bool keep = false;
+            try
+            {
+                List<string> fileProblems, signatureProblems;
+                VerifySignedLayout(installRoot, configRoot, anchor.Signers, signatureCache, pins, out fileProblems, out signatureProblems);
+                // The script that is started must itself be one of the files whose signature was accepted.
+                if (signatureProblems.Count == 0 && !pins.IsSignatureChecked(scriptPath)) signatureProblems.Add("signature: " + scriptName + " (not checked)");
+                if (signatureProblems.Count > 0)
+                {
+                    string shown = string.Join("; ", signatureProblems.GetRange(0, Math.Min(5, signatureProblems.Count)));
+                    Log("Trust mode Signature: the signature check failed (" + shown + (signatureProblems.Count > 5 ? "; and " + (signatureProblems.Count - 5) + " more" : "") + "). '" + scriptName + "' was not started.");
+                    SecurityEvent(EventSignature, EventLogEntryType.Error, "Trust mode Signature: an installed SelfX file has no valid signature of an allowed signer, or a signed catalog is missing or does not match; SelfX actions as SYSTEM are not started. See the SelfX log.");
+                    return false;
+                }
+                if (fileProblems.Count > 0 && !ReportFileProblems(scriptName, fileProblems)) return false;
+                pinned = pins;
+                keep = true;
+                return true;
+            }
+            finally
+            {
+                if (!keep) pins.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Trust mode Hash. Returns true when the installed files match SelfX.Code.json and SelfX.Config.json. Otherwise
         /// nothing is started (Enforce, default); with Service_FileCheck=Audit in Tool_Config.xml the problem is only logged.
         /// The setting counts only when the file list is intact, Tool_Config.xml itself is not among the problems and the check
         /// was not cut off at the problem limit (Tool_Config.xml is checked first, but a cut-off list cannot prove it).
@@ -1399,6 +1495,12 @@ namespace SelfX
         {
             List<string> problems;
             if (VerifyInstalledLayout(installRoot, configRoot, out problems)) return true;
+            return ReportFileProblems(scriptName, problems);
+        }
+
+        /// <summary>Logs the differences between the files and the lists (event 4005). Returns true when the script is started anyway (Audit).</summary>
+        bool ReportFileProblems(string scriptName, List<string> problems)
+        {
             bool audit = false;
             bool truncated = problems.Contains(TruncatedProblem);
             bool settingTrusted = !truncated && !problems.Exists(delegate(string p) { return p.StartsWith("file list:", StringComparison.Ordinal) || p.StartsWith("check failed:", StringComparison.Ordinal) || p.IndexOf("Tool_Config.xml", StringComparison.OrdinalIgnoreCase) >= 0; });
@@ -1410,6 +1512,368 @@ namespace SelfX
                 (audit ? "Installed SelfX files do not match SelfX.Code.json and SelfX.Config.json (Audit: actions as SYSTEM are still started). See the SelfX log."
                        : "Installed SelfX files do not match SelfX.Code.json and SelfX.Config.json; SelfX actions as SYSTEM are not started. See the SelfX log.") + cutOff);
             return audit;
+        }
+
+        // --- Trust mode (docs\Architecture.md). Install.ps1 writes the anchor; the service only reads it. ---
+        const string TrustKeyPath = @"SOFTWARE\SelfX\Trust";
+        const string CodeCatalogName = "SelfX.Code.cat";
+        const string ConfigCatalogName = "SelfX.Config.cat";
+        const int MaxTrustedSigners = 10;
+        const long MaxCatalogBytes = 4 * 1048576;
+        // The only identities that may own or change the anchor (same rule as Test-SelfXTrustAnchorState in Install.ps1).
+        static readonly string[] TrustAnchorWriterSids = { "S-1-5-18", "S-1-5-32-544" };
+        static readonly Regex ThumbprintPattern = new Regex(@"^[0-9A-Fa-f]{40}\z", RegexOptions.CultureInvariant);
+        // Files of the lists that carry an embedded signature and are loaded by a script that the service starts. The two
+        // programs (.exe) are not loaded by a script; they stay bound by their SHA256 in the signed list.
+        static readonly string[] SignedExtensions = { ".ps1", ".psm1", ".psd1", ".dll" };
+        static readonly TimeSpan SignatureCacheLifetime = TimeSpan.FromMinutes(60);
+        const int MaxSignatureCacheEntries = 2000;
+
+        /// <summary>The trust anchor as Install.ps1 wrote it.</summary>
+        sealed class TrustAnchor
+        {
+            public bool Signature;
+            public string[] Signers = new string[0];
+        }
+
+        /// <summary>
+        /// Reads the trust anchor (64-bit view of the registry). Returns null and the problem when the key is missing, when it is
+        /// owned by an identity outside writerSids, when any other identity may change it (set a value, create a sub key or a
+        /// link, delete, change rights, take ownership; generic write and generic all count too), when Mode is not the text Hash
+        /// or Signature, or when the mode Signature has no valid list of signers (REG_MULTI_SZ, 1 to 10 SHA1 thumbprints of 40
+        /// hexadecimal characters). Anything that cannot be read is a problem (fail closed). hive, subKey and writerSids are
+        /// parameters for the tests only; the service passes HKLM, TrustKeyPath and TrustAnchorWriterSids.
+        /// </summary>
+        static TrustAnchor ReadTrustAnchor(RegistryHive hive, string subKey, string[] writerSids, out string problem)
+        {
+            problem = null;
+            try
+            {
+                using (RegistryKey baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64))
+                using (RegistryKey key = baseKey.OpenSubKey(subKey, false))
+                {
+                    if (key == null) { problem = "the key is missing"; return null; }
+                    RegistrySecurity security = key.GetAccessControl(AccessControlSections.Owner | AccessControlSections.Access);
+                    SecurityIdentifier owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+                    if (owner == null || Array.IndexOf(writerSids, owner.Value) < 0) { problem = "the key is owned by " + (owner == null ? "an unknown identity" : owner.Value); return null; }
+                    const int write = (int)(RegistryRights.SetValue | RegistryRights.CreateSubKey | RegistryRights.CreateLink | RegistryRights.Delete | RegistryRights.ChangePermissions | RegistryRights.TakeOwnership) | 0x10000000 | 0x40000000;
+                    foreach (RegistryAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+                    {
+                        if (rule.AccessControlType != AccessControlType.Allow) continue;
+                        if (((int)rule.RegistryRights & write) == 0) continue;
+                        if (Array.IndexOf(writerSids, rule.IdentityReference.Value) >= 0) continue;
+                        problem = "the key can be changed by " + rule.IdentityReference.Value;
+                        return null;
+                    }
+                    string mode = key.GetValue("Mode", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
+                    if (mode == null || key.GetValueKind("Mode") != RegistryValueKind.String) { problem = "Mode is missing or not a text"; return null; }
+                    TrustAnchor anchor = new TrustAnchor();
+                    if (mode == "Hash") return anchor;
+                    if (mode != "Signature") { problem = "Mode is neither Hash nor Signature"; return null; }
+                    string[] signers = key.GetValue("Signers", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string[];
+                    if (signers == null || key.GetValueKind("Signers") != RegistryValueKind.MultiString || signers.Length == 0 || signers.Length > MaxTrustedSigners) { problem = "Signers is missing or not a list of 1 to " + MaxTrustedSigners + " thumbprints"; return null; }
+                    List<string> list = new List<string>();
+                    foreach (string signer in signers)
+                    {
+                        if (signer == null || !ThumbprintPattern.IsMatch(signer)) { problem = "Signers holds an entry that is not a SHA1 thumbprint"; return null; }
+                        list.Add(signer.ToUpperInvariant());
+                    }
+                    anchor.Signature = true;
+                    anchor.Signers = list.ToArray();
+                    return anchor;
+                }
+            }
+            catch (Exception ex)
+            {
+                problem = "the key cannot be read (" + ex.GetType().Name + ")";
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The files of one check, each opened once: others may read the file, nobody may write, replace, rename or delete it
+        /// while the handle is open (FileShare.Read). The SHA256, the size and the write time are read from that handle. The
+        /// handles stay open until Dispose, which the service calls after the started script has ended: what was checked is what
+        /// runs, without a second look at the file by path that could find other content.
+        /// </summary>
+        internal sealed class PinnedFiles : IDisposable
+        {
+            internal sealed class Entry
+            {
+                public FileStream Stream;
+                public string Hash;
+                public long Length;
+                public DateTime WriteTimeUtc;
+                public bool SignatureChecked;
+
+                /// <summary>The whole file from the handle, or null when it is larger than max.</summary>
+                public byte[] ReadAll(long max)
+                {
+                    if (Length > max) return null;
+                    byte[] content = new byte[(int)Length];
+                    Stream.Position = 0;
+                    int done = 0;
+                    while (done < content.Length)
+                    {
+                        int read = Stream.Read(content, done, content.Length - done);
+                        if (read <= 0) throw new IOException("The file ended early.");
+                        done += read;
+                    }
+                    return content;
+                }
+            }
+
+            readonly Dictionary<string, Entry> entries = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+
+            public int Count { get { return entries.Count; } }
+            public IEnumerable<KeyValuePair<string, Entry>> Entries { get { return entries; } }
+
+            /// <summary>Opens the file (full path) once and hashes it; a second call returns the same entry. Throws when it cannot be opened.</summary>
+            public Entry Open(string fullPath)
+            {
+                Entry entry;
+                if (entries.TryGetValue(fullPath, out entry)) return entry;
+                FileStream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                try
+                {
+                    entry = new Entry();
+                    entry.Stream = stream;
+                    entry.Length = stream.Length;
+                    entry.WriteTimeUtc = File.GetLastWriteTimeUtc(stream.SafeFileHandle);
+                    using (SHA256 sha = SHA256.Create()) { entry.Hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", ""); }
+                }
+                catch
+                {
+                    stream.Dispose();
+                    throw;
+                }
+                entries[fullPath] = entry;
+                return entry;
+            }
+
+            public Entry Find(string fullPath)
+            {
+                Entry entry;
+                return fullPath != null && entries.TryGetValue(fullPath, out entry) ? entry : null;
+            }
+
+            public bool IsSignatureChecked(string fullPath)
+            {
+                Entry entry = Find(fullPath);
+                return entry != null && entry.SignatureChecked;
+            }
+
+            public void Dispose()
+            {
+                foreach (Entry entry in entries.Values)
+                {
+                    try { entry.Stream.Dispose(); } catch { }
+                }
+                entries.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Positive results of the signature check, kept for SignatureCacheLifetime. An entry is used only when the path, the
+        /// write time, the size and the SHA256 read from the open handle are the same (and, for a member of a catalog, the SHA256
+        /// of the catalog, which is part of the key). The stored value is the thumbprint of the signer; whether that signer is
+        /// allowed is decided at every start from the anchor. Negative results are never kept. The lifetime bounds what can change
+        /// without the file changing: a certificate that expires, is revoked or is no longer trusted.
+        /// </summary>
+        internal sealed class SignatureCache
+        {
+            sealed class Item
+            {
+                public string Hash;
+                public long Length;
+                public DateTime WriteTimeUtc;
+                public string Thumbprint;
+                public DateTime Expires;
+            }
+
+            readonly Dictionary<string, Item> items = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
+            readonly object gate = new object();
+            public int Hits;
+            public int Misses;
+
+            public string Find(string key, PinnedFiles.Entry file, DateTime now)
+            {
+                lock (gate)
+                {
+                    Item item;
+                    if (items.TryGetValue(key, out item) && now < item.Expires && item.Length == file.Length && item.WriteTimeUtc == file.WriteTimeUtc &&
+                        string.Equals(item.Hash, file.Hash, StringComparison.Ordinal))
+                    {
+                        Hits++;
+                        return item.Thumbprint;
+                    }
+                    Misses++;
+                    return null;
+                }
+            }
+
+            public void Store(string key, PinnedFiles.Entry file, string thumbprint, DateTime now)
+            {
+                lock (gate)
+                {
+                    if (items.Count >= MaxSignatureCacheEntries) items.Clear();
+                    items[key] = new Item { Hash = file.Hash, Length = file.Length, WriteTimeUtc = file.WriteTimeUtc, Thumbprint = thumbprint, Expires = now + SignatureCacheLifetime };
+                }
+            }
+        }
+
+        static bool IsAllowedSigner(string thumbprint, string[] signers)
+        {
+            if (thumbprint == null || signers == null) return false;
+            foreach (string signer in signers)
+            {
+                if (string.Equals(signer, thumbprint, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Embedded Authenticode signature of a pinned file. Returns null when Windows accepts the signature and the signer is
+        /// allowed, otherwise the reason (NoSignature, BadDigest, UntrustedRoot, Expired, Revoked, SignerNotAllowed, ...).
+        /// </summary>
+        static string CheckEmbeddedSignature(string fullPath, PinnedFiles.Entry file, string[] signers, SignatureCache cache)
+        {
+            DateTime now = DateTime.UtcNow;
+            string key = "E|" + fullPath;
+            string thumbprint = cache == null ? null : cache.Find(key, file, now);
+            if (thumbprint == null)
+            {
+                SelfXTrust.Verdict verdict = SelfXTrust.VerifyEmbedded(fullPath, file.Stream);
+                if (verdict.Reason != "Ok") return verdict.Reason;
+                if (!ThumbprintPattern.IsMatch(verdict.Thumbprint)) return "SignerUnknown";
+                thumbprint = verdict.Thumbprint;
+                if (cache != null) cache.Store(key, file, thumbprint, now);
+            }
+            if (!IsAllowedSigner(thumbprint, signers)) return "SignerNotAllowed";
+            file.SignatureChecked = true;
+            return null;
+        }
+
+        /// <summary>
+        /// A pinned file as a member of a pinned, signed catalog: the catalog hash of the file (SHA256, from its handle) is in the
+        /// catalog, Windows accepts the signature of the catalog and its signer is allowed. Returns null or the reason.
+        /// </summary>
+        static string CheckCatalogMember(string catalogPath, PinnedFiles.Entry catalog, string fullPath, PinnedFiles.Entry file, string[] signers, SignatureCache cache)
+        {
+            DateTime now = DateTime.UtcNow;
+            string key = "C|" + catalog.Hash + "|" + fullPath;
+            string thumbprint = cache == null ? null : cache.Find(key, file, now);
+            if (thumbprint == null)
+            {
+                SelfXTrust.Verdict verdict = SelfXTrust.VerifyCatalogMember(catalogPath, fullPath, file.Stream);
+                if (verdict.Reason != "Ok") return verdict.Reason == "NoSignature" ? "NotInCatalogOrCatalogUnsigned" : verdict.Reason;
+                if (!ThumbprintPattern.IsMatch(verdict.Thumbprint)) return "SignerUnknown";
+                thumbprint = verdict.Thumbprint;
+                if (cache != null) cache.Store(key, file, thumbprint, now);
+            }
+            if (!IsAllowedSigner(thumbprint, signers)) return "SignerNotAllowed";
+            file.SignatureChecked = true;
+            return null;
+        }
+
+        /// <summary>Pins a list and its catalog and checks that the list is a member of the signed catalog. Returns the catalog entry or null (problem added).</summary>
+        static PinnedFiles.Entry CheckSignedList(string root, string listName, string catalogName, string[] signers, SignatureCache cache, PinnedFiles pins, List<string> problems)
+        {
+            string catalogPath = Path.Combine(root, catalogName);
+            string listPath = Path.Combine(root, listName);
+            PinnedFiles.Entry catalog = null, list = null;
+            foreach (string name in new[] { catalogName, listName })
+            {
+                string path = Path.Combine(root, name);
+                try
+                {
+                    FileInfo info = new FileInfo(path);
+                    if (!info.Exists) { problems.Add("signature: " + name + " (missing)"); return null; }
+                    if ((info.Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("signature: " + name + " (link)"); return null; }
+                    if (info.Length > MaxCatalogBytes) { problems.Add("signature: " + name + " (too large)"); return null; }
+                    PinnedFiles.Entry entry = pins.Open(path);
+                    if (name == catalogName) catalog = entry; else list = entry;
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is IOException) && !(ex is UnauthorizedAccessException)) throw;
+                    problems.Add("signature: " + name + " (not readable)");
+                    return null;
+                }
+            }
+            string reason = CheckCatalogMember(catalogPath, catalog, listPath, list, signers, cache);
+            if (reason != null) { problems.Add("signature: " + listName + " against " + catalogName + " (" + reason + ")"); return null; }
+            return catalog;
+        }
+
+        /// <summary>
+        /// Trust mode Signature, the whole check of one start. Every file is opened through pins and stays open:
+        ///  1. SelfX.Code.json is a member of the signed catalog SelfX.Code.cat next to it (code folder), SelfX.Config.json a member
+        ///     of SelfX.Config.cat (configuration folder); both catalogs are signed by an allowed signer. The names in SelfX.Code.cat
+        ///     are paths of the package, so the list is found by its hash, and the list binds the installed names.
+        ///  2. The file check (VerifyLayout) on the pinned handles: every listed file exists with the listed SHA256, no file
+        ///     without an entry, no link. Differences go to fileProblems (Service_FileCheck decides, as in the mode Hash).
+        ///  3. Every listed .ps1, .psm1, .psd1 and .dll that could be opened has an embedded signature of an allowed signer.
+        ///  4. Every settings file of the configuration folder (Issues_List.xml, Health_Config.xml, Tool_Config.xml, ...) is a member
+        ///     of SelfX.Config.cat.
+        /// Everything of 1, 3 and 4 that fails goes to signatureProblems (at most 20). Returns true when both lists are empty.
+        /// Anything unexpected is a signature problem (fail closed).
+        /// </summary>
+        static bool VerifySignedLayout(string codeRoot, string configRoot, string[] signers, SignatureCache cache, PinnedFiles pins, out List<string> fileProblems, out List<string> signatureProblems)
+        {
+            fileProblems = new List<string>();
+            signatureProblems = new List<string>();
+            try
+            {
+                if (signers == null || signers.Length == 0) { signatureProblems.Add("signature: no allowed signer"); return false; }
+                string code = Path.GetFullPath(codeRoot).TrimEnd('\\');
+                string config = Path.GetFullPath(configRoot).TrimEnd('\\');
+                PinnedFiles.Entry codeCatalog = CheckSignedList(code, CodeListName, CodeCatalogName, signers, cache, pins, signatureProblems);
+                PinnedFiles.Entry configCatalog = CheckSignedList(config, ConfigListName, ConfigCatalogName, signers, cache, pins, signatureProblems);
+                if (codeCatalog == null || configCatalog == null) return false;
+
+                VerifyLayout(code, config, pins, out fileProblems);
+
+                bool truncated = false;
+                List<KeyValuePair<string, PinnedFiles.Entry>> files = new List<KeyValuePair<string, PinnedFiles.Entry>>(pins.Entries);
+                foreach (KeyValuePair<string, PinnedFiles.Entry> file in files)
+                {
+                    string extension = Path.GetExtension(file.Key);
+                    bool signedType = false;
+                    foreach (string known in SignedExtensions)
+                    {
+                        if (string.Equals(known, extension, StringComparison.OrdinalIgnoreCase)) signedType = true;
+                    }
+                    if (!signedType) continue;
+                    string reason = CheckEmbeddedSignature(file.Key, file.Value, signers, cache);
+                    if (reason != null) AddProblem(signatureProblems, "signature: " + ShownName(code, config, file.Key) + " (" + reason + ")", ref truncated);
+                }
+                string configCatalogPath = Path.Combine(config, ConfigCatalogName);
+                foreach (string name in ConfigFileNames)
+                {
+                    string full = Path.Combine(config, name);
+                    PinnedFiles.Entry entry = pins.Find(full);
+                    // A settings file that is not listed or could not be opened is a problem of the file check (step 2).
+                    if (entry == null) continue;
+                    string reason = CheckCatalogMember(configCatalogPath, configCatalog, full, entry, signers, cache);
+                    if (reason != null) AddProblem(signatureProblems, "signature: " + name + " against " + ConfigCatalogName + " (" + reason + ")", ref truncated);
+                }
+                if (truncated) signatureProblems.Add(TruncatedProblem);
+                return fileProblems.Count == 0 && signatureProblems.Count == 0;
+            }
+            catch (Exception ex)
+            {
+                signatureProblems.Add("signature: check failed (" + ex.GetType().Name + ")");
+                return false;
+            }
+        }
+
+        /// <summary>Name of an installed file for the log: relative to the code folder, or Config/... for the configuration folder.</summary>
+        static string ShownName(string code, string config, string full)
+        {
+            if (full.StartsWith(code + "\\", StringComparison.OrdinalIgnoreCase)) return full.Substring(code.Length + 1).Replace('\\', '/');
+            if (full.StartsWith(config + "\\", StringComparison.OrdinalIgnoreCase)) return "Config/" + full.Substring(config.Length + 1).Replace('\\', '/');
+            return Path.GetFileName(full);
         }
 
         string ReadToolConfigValue(string name)
@@ -1546,11 +2010,29 @@ namespace SelfX
                 Log("PowerShell " + version.FileMajorPart + "." + version.FileMinorPart + " found; 7.6 or newer is required; '" + scriptName + "' was not started.");
                 return "ERROR PowerShell 7.6 or newer is required";
             }
-            // Scripts and configuration must be exactly what the package contained.
-            if (!CheckInstalledFiles(scriptName))
+            // Scripts and configuration must be exactly what the package contained (trust mode Hash) or what the allowed signer
+            // signed (trust mode Signature; the checked files then stay open until the script has ended).
+            PinnedFiles pinned;
+            if (!CheckInstalledFiles(scriptName, scriptPath, out pinned))
             {
                 return "ERROR Installed files are not intact";
             }
+            try
+            {
+                return StartScript(powershell, scriptPath, scriptName, timeoutSeconds, user, health, healthFilter, callerSid, background, callerIsAdmin);
+            }
+            finally
+            {
+                if (pinned != null) pinned.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// The second half of RunScript: starts PowerShell with the checked script, waits for the end or the timeout and
+        /// returns the protocol answer.
+        /// </summary>
+        string StartScript(string powershell, string scriptPath, string scriptName, int timeoutSeconds, string user, bool health, string healthFilter, string callerSid, bool background, bool callerIsAdmin)
+        {
             // Health runs also update the status cache; the path contains no quotes.
             ProcessStartInfo startInfo = new ProcessStartInfo(powershell,
                 "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"" + scriptPath + "\"" +
@@ -2577,6 +3059,248 @@ namespace SelfX
             if (result.Failed > 0) { Console.WriteLine("SELFX-SAFEDELETE-FAILED: " + result.Failed); return 1; }
             Console.WriteLine("SELFX-SAFEDELETE-OK");
             return 0;
+        }
+    }
+
+    /// <summary>
+    /// Authenticode checks of Windows (WinVerifyTrust) for the trust mode Signature. Every check works on a handle that the
+    /// caller keeps open, never shows a window and never asks the network: revocation is checked for the chain without the
+    /// root from the local cache only (WTD_CACHE_ONLY_URL_RETRIEVAL), so a device without a network does not wait. A revocation
+    /// list that is not in the cache does not make a signature invalid (the rule of Windows for Authenticode); a certificate that
+    /// is known as revoked does. The thumbprint (SHA1) of the signer is read from the state data of the same call.
+    /// </summary>
+    internal static class SelfXTrust
+    {
+        internal sealed class Verdict
+        {
+            public string Reason = "Error";
+            public string Thumbprint = "";
+        }
+
+        static readonly Guid GenericVerifyV2 = new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
+        const uint WTD_UI_NONE = 2;
+        const uint WTD_REVOKE_WHOLECHAIN = 1;
+        const uint WTD_CHOICE_FILE = 1;
+        const uint WTD_CHOICE_CATALOG = 2;
+        const uint WTD_STATEACTION_VERIFY = 1;
+        const uint WTD_STATEACTION_CLOSE = 2;
+        const uint WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT = 0x80;
+        const uint WTD_CACHE_ONLY_URL_RETRIEVAL = 0x1000;
+        const uint WTD_DISABLE_MD2_MD4 = 0x2000;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct WINTRUST_FILE_INFO
+        {
+            public uint cbStruct;
+            public IntPtr pcwszFilePath;
+            public IntPtr hFile;
+            public IntPtr pgKnownSubject;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct WINTRUST_CATALOG_INFO
+        {
+            public uint cbStruct;
+            public uint dwCatalogVersion;
+            public IntPtr pcwszCatalogFilePath;
+            public IntPtr pcwszMemberTag;
+            public IntPtr pcwszMemberFilePath;
+            public IntPtr hMemberFile;
+            public IntPtr pbCalculatedFileHash;
+            public uint cbCalculatedFileHash;
+            public IntPtr pcCatalogContext;
+            public IntPtr hCatAdmin;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct WINTRUST_DATA
+        {
+            public uint cbStruct;
+            public IntPtr pPolicyCallbackData;
+            public IntPtr pSIPClientData;
+            public uint dwUIChoice;
+            public uint fdwRevocationChecks;
+            public uint dwUnionChoice;
+            public IntPtr pInfo;
+            public uint dwStateAction;
+            public IntPtr hWVTStateData;
+            public IntPtr pwszURLReference;
+            public uint dwProvFlags;
+            public uint dwUIContext;
+            public IntPtr pSignatureSettings;
+        }
+
+        [DllImport("wintrust.dll", ExactSpelling = true)]
+        static extern int WinVerifyTrust(IntPtr window, ref Guid action, ref WINTRUST_DATA data);
+        [DllImport("wintrust.dll", ExactSpelling = true)]
+        static extern IntPtr WTHelperProvDataFromStateData(IntPtr stateData);
+        [DllImport("wintrust.dll", ExactSpelling = true)]
+        static extern IntPtr WTHelperGetProvSignerFromChain(IntPtr providerData, uint signerIndex, [MarshalAs(UnmanagedType.Bool)] bool counterSigner, uint counterSignerIndex);
+        [DllImport("wintrust.dll", ExactSpelling = true)]
+        static extern IntPtr WTHelperGetProvCertFromChain(IntPtr signer, uint certificateIndex);
+        [DllImport("wintrust.dll", ExactSpelling = true, SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool CryptCATAdminAcquireContext2(out IntPtr catAdmin, IntPtr subsystem, string hashAlgorithm, IntPtr strongHashPolicy, uint flags);
+        [DllImport("wintrust.dll", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool CryptCATAdminCalcHashFromFileHandle2(IntPtr catAdmin, SafeFileHandle file, ref uint hashSize, byte[] hash, uint flags);
+        [DllImport("wintrust.dll", ExactSpelling = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool CryptCATAdminReleaseContext(IntPtr catAdmin, uint flags);
+
+        /// <summary>Fixed text for a result of WinVerifyTrust (for the log; no text of the system is passed on).</summary>
+        static string ReasonOf(int code)
+        {
+            switch (unchecked((uint)code))
+            {
+                case 0: return "Ok";
+                case 0x800B0100: return "NoSignature";
+                case 0x80096010: return "BadDigest";
+                case 0x800B0109: return "UntrustedRoot";
+                case 0x800B010A: return "Chaining";
+                case 0x800B0101: return "Expired";
+                case 0x800B010C: return "Revoked";
+                case 0x800B0111: return "ExplicitDistrust";
+                case 0x800B0004: return "SubjectNotTrusted";
+                case 0x800B0003: return "SubjectFormUnknown";
+                case 0x800B0001: return "ProviderUnknown";
+                case 0x80092026: return "SecuritySettings";
+                default: return "Error 0x" + code.ToString("X8", CultureInfo.InvariantCulture);
+            }
+        }
+
+        /// <summary>WinVerifyTrust with the state data kept, the thumbprint of the signer read, the state data closed.</summary>
+        static void Verify(uint choice, IntPtr info, Verdict verdict)
+        {
+            Guid action = GenericVerifyV2;
+            WINTRUST_DATA data = new WINTRUST_DATA();
+            data.cbStruct = (uint)Marshal.SizeOf(typeof(WINTRUST_DATA));
+            data.dwUIChoice = WTD_UI_NONE;
+            data.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
+            data.dwUnionChoice = choice;
+            data.pInfo = info;
+            data.dwStateAction = WTD_STATEACTION_VERIFY;
+            data.dwProvFlags = WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT | WTD_CACHE_ONLY_URL_RETRIEVAL | WTD_DISABLE_MD2_MD4;
+            IntPtr noWindow = new IntPtr(-1);
+            try
+            {
+                int code = WinVerifyTrust(noWindow, ref action, ref data);
+                string thumbprint = "";
+                if (data.hWVTStateData != IntPtr.Zero)
+                {
+                    IntPtr provider = WTHelperProvDataFromStateData(data.hWVTStateData);
+                    IntPtr signer = provider == IntPtr.Zero ? IntPtr.Zero : WTHelperGetProvSignerFromChain(provider, 0, false, 0);
+                    IntPtr providerCert = signer == IntPtr.Zero ? IntPtr.Zero : WTHelperGetProvCertFromChain(signer, 0);
+                    if (providerCert != IntPtr.Zero)
+                    {
+                        // CRYPT_PROVIDER_CERT: DWORD cbStruct, then (aligned to the pointer size) PCCERT_CONTEXT pCert.
+                        IntPtr context = Marshal.ReadIntPtr(providerCert, IntPtr.Size);
+                        if (context != IntPtr.Zero)
+                        {
+                            using (X509Certificate2 certificate = new X509Certificate2(context)) { thumbprint = certificate.Thumbprint.ToUpperInvariant(); }
+                        }
+                    }
+                }
+                verdict.Thumbprint = thumbprint;
+                verdict.Reason = ReasonOf(code);
+            }
+            finally
+            {
+                data.dwStateAction = WTD_STATEACTION_CLOSE;
+                WinVerifyTrust(noWindow, ref action, ref data);
+            }
+        }
+
+        /// <summary>
+        /// Embedded signature of the file behind the open handle. The path names the file type (Windows chooses the reader for
+        /// .ps1 or .dll by the extension); the content is the one of the handle, which the caller keeps open without write and
+        /// delete sharing. Never throws: anything unexpected is the reason "Error".
+        /// </summary>
+        internal static Verdict VerifyEmbedded(string path, FileStream pinned)
+        {
+            Verdict verdict = new Verdict();
+            IntPtr pathText = IntPtr.Zero, info = IntPtr.Zero;
+            try
+            {
+                pinned.Position = 0;
+                pathText = Marshal.StringToHGlobalUni(path);
+                info = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WINTRUST_FILE_INFO)));
+                WINTRUST_FILE_INFO file = new WINTRUST_FILE_INFO();
+                file.cbStruct = (uint)Marshal.SizeOf(typeof(WINTRUST_FILE_INFO));
+                file.pcwszFilePath = pathText;
+                file.hFile = pinned.SafeFileHandle.DangerousGetHandle();
+                Marshal.StructureToPtr(file, info, false);
+                Verify(WTD_CHOICE_FILE, info, verdict);
+            }
+            catch (Exception)
+            {
+                verdict.Reason = "Error";
+                verdict.Thumbprint = "";
+            }
+            finally
+            {
+                if (info != IntPtr.Zero) Marshal.FreeHGlobal(info);
+                if (pathText != IntPtr.Zero) Marshal.FreeHGlobal(pathText);
+                GC.KeepAlive(pinned);
+            }
+            return verdict;
+        }
+
+        /// <summary>
+        /// The file behind the open handle is a member of the given catalog, and the catalog is signed: the catalog hash of the
+        /// handle (CryptCATAdminCalcHashFromFileHandle2, SHA256; for XML and JSON the SHA256 of the bytes) is looked up in the
+        /// catalog (WINTRUST_CATALOG_INFO with the calculated hash; the member tag is the hash as text, as New-FileCatalog writes
+        /// it). The thumbprint is the one of the signer of the catalog. The caller keeps the catalog file pinned too. Never
+        /// throws. A file that is not in the catalog and an unsigned catalog both give NoSignature.
+        /// </summary>
+        internal static Verdict VerifyCatalogMember(string catalogPath, string memberPath, FileStream pinned)
+        {
+            Verdict verdict = new Verdict();
+            IntPtr admin = IntPtr.Zero, catalogText = IntPtr.Zero, memberText = IntPtr.Zero, tagText = IntPtr.Zero, hashMemory = IntPtr.Zero, info = IntPtr.Zero;
+            try
+            {
+                if (!CryptCATAdminAcquireContext2(out admin, IntPtr.Zero, "SHA256", IntPtr.Zero, 0)) { admin = IntPtr.Zero; return verdict; }
+                pinned.Position = 0;
+                byte[] buffer = new byte[64];
+                uint size = (uint)buffer.Length;
+                if (!CryptCATAdminCalcHashFromFileHandle2(admin, pinned.SafeFileHandle, ref size, buffer, 0) || size != 32) return verdict;
+                StringBuilder tag = new StringBuilder(64);
+                for (int i = 0; i < 32; i++) tag.Append(buffer[i].ToString("X2", CultureInfo.InvariantCulture));
+                pinned.Position = 0;
+                catalogText = Marshal.StringToHGlobalUni(catalogPath);
+                memberText = Marshal.StringToHGlobalUni(memberPath);
+                tagText = Marshal.StringToHGlobalUni(tag.ToString());
+                hashMemory = Marshal.AllocHGlobal(32);
+                Marshal.Copy(buffer, 0, hashMemory, 32);
+                WINTRUST_CATALOG_INFO catalog = new WINTRUST_CATALOG_INFO();
+                catalog.cbStruct = (uint)Marshal.SizeOf(typeof(WINTRUST_CATALOG_INFO));
+                catalog.pcwszCatalogFilePath = catalogText;
+                catalog.pcwszMemberTag = tagText;
+                catalog.pcwszMemberFilePath = memberText;
+                catalog.hMemberFile = pinned.SafeFileHandle.DangerousGetHandle();
+                catalog.pbCalculatedFileHash = hashMemory;
+                catalog.cbCalculatedFileHash = 32;
+                catalog.hCatAdmin = admin;
+                info = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WINTRUST_CATALOG_INFO)));
+                Marshal.StructureToPtr(catalog, info, false);
+                Verify(WTD_CHOICE_CATALOG, info, verdict);
+            }
+            catch (Exception)
+            {
+                verdict.Reason = "Error";
+                verdict.Thumbprint = "";
+            }
+            finally
+            {
+                if (info != IntPtr.Zero) Marshal.FreeHGlobal(info);
+                if (hashMemory != IntPtr.Zero) Marshal.FreeHGlobal(hashMemory);
+                if (tagText != IntPtr.Zero) Marshal.FreeHGlobal(tagText);
+                if (memberText != IntPtr.Zero) Marshal.FreeHGlobal(memberText);
+                if (catalogText != IntPtr.Zero) Marshal.FreeHGlobal(catalogText);
+                if (admin != IntPtr.Zero) CryptCATAdminReleaseContext(admin, 0);
+                GC.KeepAlive(pinned);
+            }
+            return verdict;
         }
     }
 
