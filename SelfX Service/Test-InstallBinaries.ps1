@@ -12,8 +12,9 @@
     Trust mode Signature: the functions for -TrustedSigner, the mode and the downgrade check, the signatures and the two signed
     catalogs of the package and the trust anchor are taken out of Install.ps1. Part 1 replaces Get-AuthenticodeSignature and
     Test-FileCatalog by functions of this test; the anchor is written to a test key below HKCU\Software (removed at the end).
-    Part 2 signs a small package with two self-signed test certificates of the current user and needs them as trusted roots
-    (Cert:\CurrentUser\Root): it runs in CI or with SELFX_TEST_ALLOW_ROOT_IMPORT=1 and removes the certificates at the end.
+    Part 2 signs a small package with self-signed test certificates of the current user and needs two of them as trusted roots
+    (Cert:\LocalMachine\Root with administrator rights, otherwise Cert:\CurrentUser\Root, where Windows asks for confirmation): it
+    runs in CI or with SELFX_TEST_ALLOW_ROOT_IMPORT=1 and removes the certificates at the end.
     Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-InstallBinaries.ps1
 
 .NOTES
@@ -554,7 +555,8 @@ else {
 	Assert-Equal $verified.CodeListHash (Get-FileHash -LiteralPath (Join-Path $signedPackage 'App\SelfX.Code.json') -Algorithm SHA256).Hash 'signature: the SHA256 of the checked SelfX.Code.json is returned'
 	Assert-Equal $verified.ConfigListHash (Get-FileHash -LiteralPath (Join-Path $signedPackage 'Config\SelfX.Config.json') -Algorithm SHA256).Hash 'signature: the SHA256 of the checked SelfX.Config.json is returned'
 	Assert-Equal (Test-Signed @($signerB, $signerA.ToLowerInvariant())) 'accepted' 'signature: the signer is one of several allowed signers (any case)'
-	Assert-Equal ((Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint @('') }) -match '^-TrustedSigner') $true 'signature: an empty list of signers never means "everything is allowed"'
+	Assert-Equal ((Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint @('') }) -ne 'accepted') $true 'signature: an empty entry in the list of signers never means "everything is allowed"'
+	Assert-Equal ((Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint @('xyz') }) -match '^-TrustedSigner') $true 'signature: an invalid list of signers stops the check'
 
 	# 5. Negative cases of the signatures (the cases of the signing library: not signed, changed, wrong signer, not trusted).
 	New-SignedPackage
@@ -815,9 +817,13 @@ else {
 	# 13. Part 2: real signatures and real catalogs (test certificates of the current user). This part shows that the names of
 	#     Test-FileCatalog, the hash algorithm and the status values are the ones the functions expect.
 	Remove-Item -LiteralPath Function:\Get-AuthenticodeSignature, Function:\Test-FileCatalog
-	$canTrust = ($env:GITHUB_ACTIONS -eq 'true') -or ($env:SELFX_TEST_ALLOW_ROOT_IMPORT -eq '1')
+	# The test certificates must be trusted roots. With administrator rights they are added to Cert:\LocalMachine\Root (Windows asks
+	# nothing there); without, to Cert:\CurrentUser\Root, where Windows shows a question that somebody has to answer. So the part runs
+	# in CI only with administrator rights (a question would wait for ever) and elsewhere only when it is asked for.
+	$rootLocation = $(if ($isAdminTest) { 'LocalMachine' } else { 'CurrentUser' })
+	$canTrust = (($env:GITHUB_ACTIONS -eq 'true') -and $isAdminTest) -or ($env:SELFX_TEST_ALLOW_ROOT_IMPORT -eq '1')
 	if (-not $canTrust) {
-		Write-Output 'Skipped: real signatures and catalogs need a trusted test root; set SELFX_TEST_ALLOW_ROOT_IMPORT=1 (adds two test certificates to Cert:\CurrentUser\Root until the end of the test) or run in CI.'
+		Write-Output 'Skipped: real signatures and catalogs need a trusted test root; set SELFX_TEST_ALLOW_ROOT_IMPORT=1 (adds two test certificates to the trusted roots until the end of the test: Cert:\LocalMachine\Root with administrator rights, otherwise Cert:\CurrentUser\Root with a question of Windows) or run in CI.'
 	}
 	else {
 		$testCertificates = New-Object System.Collections.Generic.List[string]
@@ -828,7 +834,7 @@ else {
 			return (Get-Item -LiteralPath "Cert:\CurrentUser\My\$($created.Thumbprint)")
 		}
 		function Add-TestRoot($Certificate) {
-			$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+			$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', $rootLocation)
 			$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
 			try { $store.Add((New-Object System.Security.Cryptography.X509Certificates.X509Certificate2(, $Certificate.RawData))) } finally { $store.Close() }
 			$testRoots.Add($Certificate.Thumbprint)
@@ -907,12 +913,12 @@ else {
 		}
 		finally {
 			foreach ($thumbprint in $testRoots) {
-				$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+				$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', $rootLocation)
 				$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
 				try { foreach ($entry in @($store.Certificates | Where-Object { $_.Thumbprint -eq $thumbprint })) { $store.Remove($entry) } } finally { $store.Close() }
 			}
 			foreach ($thumbprint in $testCertificates) { Remove-Item -LiteralPath "Cert:\CurrentUser\My\$thumbprint" -DeleteKey -Force -ErrorAction SilentlyContinue }
-			Assert-Equal @(Get-ChildItem Cert:\CurrentUser\Root | Where-Object { $testRoots -contains $_.Thumbprint }).Count 0 'no test certificate is left in Cert:\CurrentUser\Root'
+			Assert-Equal @(Get-ChildItem "Cert:\$rootLocation\Root" | Where-Object { $testRoots -contains $_.Thumbprint }).Count 0 'no test certificate is left in the trusted roots'
 			Assert-Equal @(Get-ChildItem Cert:\CurrentUser\My | Where-Object { $testCertificates -contains $_.Thumbprint }).Count 0 'no test certificate is left in Cert:\CurrentUser\My'
 		}
 	}
