@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Creates an optional App Control for Business (WDAC) supplemental policy with hash rules for SelfX Service.
+    Creates an optional App Control for Business (WDAC) supplemental policy for SelfX Service: hash rules (default) or signer rules.
 
 .DESCRIPTION
     Nothing in the SelfX package depends on this script: WDAC support is optional. The script reads the package folder
@@ -19,6 +19,18 @@
 
     The scan of the whole package takes a few minutes.
 
+    Level Hash (default): hash rules for every file, as described above.
+
+    Level Publisher: for a signed package (docs\Installation.md, "Set up once instead of per version"). The policy gets a signer rule
+    (certification authority and publisher name of the signing certificate, no version) instead of the hash rules, so it stays the
+    same for every version of SelfX that is signed with the same certificate. A file without signature gets a hash rule instead (fallback
+    Hash). Before the scan the script reads the signature of every program, library and script: a file with an invalid signature (for
+    example changed after signing, or a certificate that is not trusted on this PC) stops the script, as do files of different signers
+    (unless -AllowMultipleSigners is set) and a package whose Install.ps1 is not signed (use the level Hash for it; signed libraries of
+    other publishers alone do not make a package signed). After the scan the policy is
+    checked: it has signer rules without a file attribute, no hash rule when every file is signed, and the publishers it trusts are listed
+    in the output. The policy ID stays fixed. The level Publisher trusts the signer: keep the signing certificate protected.
+
     Requirement: Windows PowerShell 5.1 on an administrator PC with the ConfigCI module (Windows 11 or Windows Server);
     the base policy must allow supplemental policies (rule option 17, "Allow Supplemental Policies"). Needs no
     administrator rights beyond reading the package folder; changes nothing on the PC.
@@ -30,6 +42,13 @@
     PolicyID (GUID) of the supplemental policy. Default: a fixed ID, so a new version replaces the old policy. Use another
     ID per version when devices with the old and the new SelfX version must run side by side during a rollout.
 
+.PARAMETER Level
+    Hash (default) or Publisher (see above).
+
+.PARAMETER AllowMultipleSigners
+    Only with the level Publisher: allows files that are signed by more than one certificate (for example while two certificates are in
+    use). Every signer of the package gets a signer rule.
+
 .PARAMETER PackageFolder
     Default: "SelfX Service" of the repository (with the folder Bin built by Build-SelfXBinaries.ps1).
 
@@ -40,7 +59,7 @@
     Name    : New-SelfXWdacPolicy.ps1
     Package : tools
     Context : Administrator PC (not installed, no device is changed)
-    Version : 1.0.1
+    Version : 1.1.0
     Exit code: 0 = policy created, an exception otherwise
 
     History:
@@ -48,12 +67,15 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-23  fubu2k               Initial version.
     1.0.1    2026-11-27  fubu2k               The policy version comes from Version.txt (no longer from Tool_Config.xml)
+    1.1.0    2026-11-27  fubu2k               New -Level Publisher: signer rule of the signing certificate, hash fallback for unsigned files
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][guid]$BasePolicyId,
     [guid]$PolicyId = '1377A178-96F8-49DD-B277-80F0F10BB383',
+    [ValidateSet('Hash', 'Publisher')][string]$Level = 'Hash',
+    [switch]$AllowMultipleSigners,
     [string]$PackageFolder,
     [string]$OutputFolder
 )
@@ -70,6 +92,9 @@ $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptFolder
 # Get-SelfXVersionFromFile (the version is read from Version.txt); the file only defines functions.
 . (Join-Path $ScriptFolder 'SelfXPackage.Common.ps1')
+# Functions of the level Publisher (signature state of the files, check of the signer rules); only definitions.
+. (Join-Path $ScriptFolder 'SelfXPublisherRules.ps1')
+if ($AllowMultipleSigners -and $Level -ne 'Publisher') { throw '-AllowMultipleSigners is only valid with -Level Publisher.' }
 if (-not $PackageFolder) { $PackageFolder = Join-Path $RepositoryRoot 'SelfX Service' }
 if (-not $OutputFolder) { $OutputFolder = Join-Path $RepositoryRoot 'build\wdac' }
 
@@ -77,6 +102,11 @@ foreach ($cmdlet in 'New-CIPolicy', 'Set-CIPolicyIdInfo', 'Set-CIPolicyVersion',
     if (-not (Get-Command -Name $cmdlet -ErrorAction SilentlyContinue)) {
         throw "The cmdlet $cmdlet is missing (module ConfigCI). Run the script in Windows PowerShell 5.1 (powershell.exe) on Windows 11 or Windows Server."
     }
+}
+
+# The level Publisher reads the signatures with Get-AuthenticodeSignature. Without it every file would look unreadable: stop with a clear text.
+if ($Level -eq 'Publisher' -and -not (Get-Command -Name Get-AuthenticodeSignature -ErrorAction SilentlyContinue)) {
+    throw 'The cmdlet Get-AuthenticodeSignature is missing (module Microsoft.PowerShell.Security). Run the script in Windows PowerShell 5.1 (powershell.exe).'
 }
 
 $versionPath = Join-Path $PackageFolder 'Version.txt'
@@ -98,6 +128,18 @@ try {
     Copy-Item -LiteralPath (Join-Path $PackageFolder 'Sources') -Destination (Join-Path $stage 'Sources') -Recurse
     Copy-Item -LiteralPath $bin -Destination (Join-Path $stage 'Bin') -Recurse
 
+    # Level Publisher: look at the signatures of the staged files before the scan (fail closed, nothing is written yet).
+    $signedFileNames = @()
+    $unsignedCount = 0
+    if ($Level -eq 'Publisher') {
+        $states = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object { $script:SelfXSignedFileExtensions -contains $_.Extension.ToLowerInvariant() } | ForEach-Object { Get-SelfXFileSignerState -Path $_.FullName })
+        $problem = Get-SelfXSignerSetProblem -State $states -AllowMultipleSigners:$AllowMultipleSigners
+        if (-not $problem) { $problem = Get-SelfXSignedPackageProblem -State $states }
+        if ($problem) { throw $problem }
+        $signedFileNames = @($states | Where-Object { $_.State -eq 'Signed' } | ForEach-Object { $_.Name })
+        $unsignedCount = @($states | Where-Object { $_.State -eq 'Unsigned' }).Count
+    }
+
     New-Item -ItemType Directory -Path $OutputFolder -Force | Out-Null
     $xmlPath = Join-Path $OutputFolder ("SelfX-$toolVersion-Supplemental.xml")
     $binaryPath = Join-Path $OutputFolder ("$SupplementalPolicyId.cip")
@@ -105,7 +147,9 @@ try {
     foreach ($old in $xmlPath, $binaryPath) { if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Force } }
 
     # Hash rules for every file (scripts are included: -NoScript is not set). Warnings of the scan go to a file.
-    New-CIPolicy -FilePath $xmlPath -ScanPath $stage -Level Hash -UserPEs -MultiplePolicyFormat 3> $warningsPath
+    # Level Publisher: signer rules for the signed files, hash rules only for the files without signature.
+    if ($Level -eq 'Publisher') { New-CIPolicy -FilePath $xmlPath -ScanPath $stage -Level Publisher -Fallback Hash -UserPEs -MultiplePolicyFormat 3> $warningsPath }
+    else { New-CIPolicy -FilePath $xmlPath -ScanPath $stage -Level Hash -UserPEs -MultiplePolicyFormat 3> $warningsPath }
     Set-CIPolicyIdInfo -FilePath $xmlPath -PolicyName "SelfX $toolVersion" -SupplementsBasePolicyID $BasePolicyId
     Set-CIPolicyVersion -FilePath $xmlPath -Version $policyVersion
 
@@ -136,14 +180,28 @@ try {
     if ($check.SelectSingleNode('/ci:SiPolicy/ci:BasePolicyID', $namespaces).InnerText.ToUpperInvariant() -ne $BasePolicyId.ToString('B').ToUpperInvariant()) { throw 'BasePolicyID does not match the given base policy.' }
     $hashRules = @($check.SelectNodes('/ci:SiPolicy/ci:FileRules/ci:Allow[@Hash]', $namespaces))
     $otherRules = @($check.SelectNodes('/ci:SiPolicy/ci:FileRules/*[not(self::ci:Allow[@Hash])]', $namespaces))
-    if ($hashRules.Count -eq 0) { throw 'The policy has no hash rules.' }
-    if ($otherRules.Count -gt 0) { Write-Warning "The policy has $($otherRules.Count) rule(s) that are not plain hash rules. Check '$xmlPath' before you deploy it." }
+    $signerNames = @()
+    if ($Level -eq 'Publisher') {
+        # Signer rules without file attribute, hash rules only for files without signature (see Get-SelfXWdacPublisherPolicyProblem).
+        $policyProblems = @(Get-SelfXWdacPublisherPolicyProblem -PolicyXml (Get-Content -LiteralPath $xmlPath -Raw) -ExpectHashRules ($unsignedCount -gt 0) -SignedFileName $signedFileNames)
+        if ($policyProblems.Count -gt 0) { throw "The publisher policy is not as expected: $($policyProblems -join ' ')" }
+        $signerNames = @(Get-SelfXWdacSignerName -PolicyXml (Get-Content -LiteralPath $xmlPath -Raw))
+    }
+    else {
+        if ($hashRules.Count -eq 0) { throw 'The policy has no hash rules.' }
+        if ($otherRules.Count -gt 0) { Write-Warning "The policy has $($otherRules.Count) rule(s) that are not plain hash rules. Check '$xmlPath' before you deploy it." }
+    }
     foreach ($option in @($check.SelectNodes('/ci:SiPolicy/ci:Rules/ci:Rule/ci:Option', $namespaces))) {
         if ($option.InnerText -ne $AllowedSupplementalOption) { throw "The supplemental policy must not set the rule option '$($option.InnerText)' (the base policy decides, for example the audit mode)." }
     }
 
     ConvertFrom-CIPolicy -XmlFilePath $xmlPath -BinaryFilePath $binaryPath | Out-Null
-    Write-Output "Supplemental policy for base policy $($BasePolicyId.ToString('B')), SelfX $toolVersion, $($hashRules.Count) hash rules:"
+    if ($Level -eq 'Publisher') {
+        Write-Output "Supplemental policy for base policy $($BasePolicyId.ToString('B')), SelfX $toolVersion, level Publisher: $(@($signerNames).Count) signer(s), $($hashRules.Count) hash rule(s) for $unsignedCount unsigned file(s)."
+        Write-Output 'The policy trusts these publishers (check that this is your signing certificate and nobody else):'
+        foreach ($signerName in $signerNames) { Write-Output "  $signerName" }
+    }
+    else { Write-Output "Supplemental policy for base policy $($BasePolicyId.ToString('B')), SelfX $toolVersion, $($hashRules.Count) hash rules:" }
     Write-Output "  $xmlPath"
     Write-Output "  $binaryPath"
     Write-Output "Scan warnings: $warningsPath"

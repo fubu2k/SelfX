@@ -14,6 +14,22 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Herausgeberregeln für AppLocker und App Control (`tools\New-SelfXAppLockerRules.ps1` 1.1.0, `tools\New-SelfXWdacPolicy.ps1` 1.1.0):**
+  Für ein mit dem Zertifikat der Organisation signiertes Paket ändern sich die Regeln nicht mehr mit jeder Version. `New-SelfXAppLockerRules.ps1
+  -Mode Publisher` liest den Herausgeber aus der Signatur der übergebenen Dateien (alle müssen mit dem Status `Valid` vom selben
+  Zertifikat signiert sein; nie ein Parameter) und schreibt **eine Herausgeberregel je Regelsammlung** (Exe, Dll, Script): Zulassen, SID
+  `S-1-1-0`, kein Produkt, Dateiname oder Versionsbereich, feste Regel-IDs, keine Hashregeln. `New-SelfXWdacPolicy.ps1 -Level Publisher`
+  erzeugt die ergänzende Richtlinie mit `New-CIPolicy -Level Publisher -Fallback Hash`: eine Signer-Regel des Signierzertifikats statt
+  Hashregeln, Hashregeln nur für Dateien ohne Signatur, feste Richtlinien-ID wie bisher. Vor dem Scan stoppt es bei einer Datei mit
+  ungültiger Signatur, bei mehreren Signierern (außer mit `-AllowMultipleSigners`) und bei einem Paket, dessen `Install.ps1` nicht
+  signiert ist; nach dem Scan prüft es die Richtlinie (Signer-Regeln ohne Dateiattribut, keine Hashregel neben einer signierten Datei,
+  kein gesperrter Signierer) und listet die Herausgeber, denen vertraut wird. **Standard unverändert:** ohne `-Mode` / `-Level` schreiben
+  beide Werkzeuge wie bisher Hashregeln. Neue Dateien: `tools\SelfXPublisherRules.ps1` (Funktionen des Herausgebermodus und die
+  Prüfungen, kein AppLocker- oder ConfigCI-Cmdlet), `tools\SelfXTestCertificate.ps1` (Testhilfe). Doku: docs/de/Installation.md,
+  „Einmal einrichten statt je Version“. Tests: `Test-SelfXAppLockerRules.ps1` (Aufbau, SID statt Name, keine Hashregel oder Version,
+  veränderte Richtlinien als Negativtests, nachgebildete Signaturzustände, Ablehnungen; mit vertrauenswürdigem Testzertifikat auch ein Lauf
+  mit signierten Dateien), `Test-WdacPolicy.ps1` (Prüfungen von Signer-Richtlinien an künstlichen Texten, Ablehnung ohne signierte Datei;
+  mit vertrauenswürdigem Testzertifikat auch ein Lauf). Nicht auf einem Gerät erprobt.
 - **Vertrauensmodus im Dienst (`SelfXService.exe`, Version 3.1.0):** Vor jedem Start eines Skripts liest der Dienst den Vertrauensanker
   `HKLM\SOFTWARE\SelfX\Trust` (64-Bit-Sicht). Ein Anker, der fehlt, ungültig ist (`Mode` nicht `Hash` oder `Signature`; im Modus Signatur
   `Signers` keine Liste von 1 bis 10 SHA1-Fingerabdrücken) oder nicht geschützt ist (Besitzer nicht SYSTEM `S-1-5-18` oder

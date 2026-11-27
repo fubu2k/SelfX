@@ -100,7 +100,8 @@ Repeat this step for every new version. Open PowerShell in the folder of the rep
    `SelfX.OfflineFeed.json` first (see "Offline build" below).
 4. **Adjust AppLocker** (only if you use AppLocker). The script writes
    `build\SelfX.AppLocker.xml`. Take over these rules and delete the rules of the previous
-   version before the package reaches the devices.
+   version before the package reaches the devices. For a **signed** package use publisher rules
+   instead, which you set up once ([Set up once instead of per version](#set-up-once-instead-of-per-version)).
 5. **Create the Intune package.** Set `-ToolPath` to the path from step 1:
 
    ```powershell
@@ -289,7 +290,9 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
 
 1. Always deploy the **whole package**. The window and the service must fit together.
 2. Raise `Version.txt` and `$ExpectedVersion` to the same new value.
-3. Build the programs and the package again (step 2) and replace the AppLocker rules.
+3. Build the programs and the package again (step 2) and replace the AppLocker rules (not needed
+   with publisher rules for a package signed by the same certificate, see
+   [Set up once instead of per version](#set-up-once-instead-of-per-version)).
 4. Upload the new `.intunewin` **and** the new detection script to the same Intune app.
 5. Before packaging, check the support contacts in `Tool_Config.xml` and `Health_Config.xml`
    (see [Configuration](Configuration.md)).
@@ -377,8 +380,9 @@ exit 0
 
 SelfX does not need WDAC, and nothing of it is switched on in the package. If your organization
 uses App Control for Business, you can use it in addition to prevent programs and scripts other
-than the delivered SelfX ones from running on the devices. SelfX stays unsigned and is allowed
-by hash.
+than the delivered SelfX ones from running on the devices. By default SelfX is allowed by hash;
+for a package signed with the certificate of your company a signer rule is available
+([Set up once instead of per version](#set-up-once-instead-of-per-version)).
 
 1. **Base policy.** It belongs to your organization. It must allow supplemental policies (rule
    option 17) and allow the files signed by Microsoft, including
@@ -407,6 +411,77 @@ by hash.
 Notes: switch on rule option 19 ("Dynamic Code Security") only after a test in audit mode,
 because SelfX scripts use `Add-Type`. A local administrator can replace an unsigned policy. The
 template has not yet been tried on a device.
+
+### Set up once instead of per version
+
+With the default hash rules, AppLocker and App Control have to be replaced for every new version,
+because every changed file has a new hash. For a package that is signed with the code signing
+certificate of your company, **publisher rules** replace them: you create them once, and they stay
+the same for every later version that is signed with the same certificate.
+
+Requirements:
+
+- The package is signed (trust mode signature, see
+  [Optional: signed package](#optional-signed-package-trust-mode-signature) and
+  [Architecture](Architecture.md#trust-modes-hash-and-signature)).
+- The certificate chain of the signing certificate is trusted on the PC where you create the rules.
+  A file whose signature Windows does not accept (changed after signing, certificate not trusted)
+  stops both scripts; so does a file without signature (AppLocker) or a package whose `Install.ps1`
+  is not signed (App Control).
+- Windows PowerShell 5.1 (`powershell.exe`). For App Control also the module ConfigCI.
+
+**AppLocker.** Give the script signed files of the package, separated by `|`: at least one program
+and one script, for example:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXAppLockerRules.ps1 -Mode Publisher -PathList "C:\Package\Bin\SelfXService.exe|C:\Package\Bin\SelfX.exe|C:\Package\Install.ps1" -OutputFile C:\Package\SelfX.AppLocker.Publisher.xml -RuleNamePrefix SelfX
+```
+
+- The script reads the publisher name from the signature (it is never a parameter) and writes
+  **one publisher rule for each rule collection** (Exe, Dll, Script): Allow, for the SID `S-1-1-0`
+  (Everyone), without product, file name or version range. No hash rules.
+- All files must be signed by the same certificate. The rules have fixed IDs: a second run for the
+  same publisher gives the same file.
+- Take over the rules once and delete the hash rules of earlier SelfX versions. A new version signed
+  with the same certificate needs no change. A renewed certificate with the same subject (same
+  publisher name) needs none either; with another subject create the rules again, add them before
+  the first package with the new certificate reaches the devices, and remove the old ones when all
+  devices are updated.
+- Without `-Mode` (or with `-Mode Hash`) the script writes hash rules as before; that stays the
+  default for a package that is not signed.
+
+**App Control for Business (WDAC).** Step 3 of [App Control for Business (WDAC)](#app-control-for-business-wdac)
+with the additional parameter `-Level Publisher`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXWdacPolicy.ps1 -BasePolicyId {GUID of the base policy} -Level Publisher
+```
+
+- The policy contains a signer rule (certification authority and publisher name of the signing
+  certificate, no version) instead of the hash rules. A file without signature gets a hash rule
+  instead (fallback); with a fully signed package the policy contains no hash rule at all.
+- The policy ID stays fixed. Deploy the policy once; a new signed version needs no new policy.
+  Only when the signing certificate changes, create the policy again (during the change both
+  certificates are in use: add `-AllowMultipleSigners`).
+- The script stops before the scan for a file with an invalid signature, for files signed by
+  different certificates (without `-AllowMultipleSigners`) and for a package whose `Install.ps1` is
+  not signed (use the level Hash for it). After the scan it checks the policy: signer rules without
+  file attribute, and no hash rule next to a signed file.
+- The output lists the publishers that the policy trusts. Check that this is your signing
+  certificate and nobody else.
+
+What a publisher rule does **not** do:
+
+- It trusts the **signer**, not a file or a version. Anyone who can sign with this certificate gets
+  files allowed, so keep the key protected (smart card, HSM or a restricted signing host). To
+  withdraw the trust, replace the certificate and the rules.
+- It does not stop an older, still correctly signed SelfX version from running. The version bound
+  comes from the file lists and, in the mode signature, from the checks of `Install.ps1` and of the
+  service ([Architecture](Architecture.md#the-limit-local-administrator)).
+- The limit for a local administrator stays: only App Control in enforce mode helps against them.
+
+The scripts are covered by automatic tests; the generated policies have not yet been tried on a
+device. Test them in audit mode first.
 
 ## Background: what the installation does
 
