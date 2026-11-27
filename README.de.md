@@ -203,7 +203,7 @@ Menü öffnet SelfX, prüft den Status oder sendet die Protokolle.
 - **Bereitstellung mit Intune**
   - Ein Win32-App-Paket, erstellt mit `tools\New-SelfXIntuneWin.ps1`.
   - Skripte für Installation, Deinstallation und Erkennung. Erhöhen Sie bei jedem
-    Release `Tool_Version` und `$ExpectedVersion` in `Detection.ps1`, sonst
+    Release `Version.txt` und `$ExpectedVersion` in `Detection.ps1`, sonst
     verteilt Intune das Update nicht.
   - Dienst und Starter sind .NET-10-Programme (self-contained, LTS), die einmal auf
     einem Build-Rechner gebaut werden (`tools\Build-SelfXBinaries.ps1`, mit

@@ -126,7 +126,7 @@ Die 89 Dateien unter `Sources` ergeben sich aus den Zeilen oben: 22 + 5 + 1 + 24
 ### Heute: `SelfX.Code.json` und `SelfX.Config.json`
 
 Jede Liste ist ein JSON-Objekt mit `ManifestVersion` (1) und `Files`; `SelfX.Code.json` hat außerdem
-`ToolVersion`, `SelfX.Config.json` außerdem `BuiltUtc`. Die Code-Liste hat keine Bauzeit, derselbe
+`ToolVersion`, `SelfX.Config.json` außerdem `ConfigRevision` (UTC-Zeit des Paketlaufs). Die Code-Liste hat keine Bauzeit, derselbe
 Code ergibt also immer dieselben Bytes. `Files`
 ordnet dem relativen Namen jeder Datei (Schrägstriche) ihren SHA256 zu. Ein Name besteht aus
 Buchstaben, Ziffern, `_`, Leerzeichen, `.`, `(`, `)` und `-`, und jeder Abschnitt beginnt mit
@@ -175,9 +175,13 @@ dieselbe Funktion.
   Konfigurationsliste. Ein neues Logo ändert nur den zweiten Wert.
 - `SelfX.Binaries.json` bleibt. Sie bindet die Programme an die C#-Quelltexte, aus denen sie
   gebaut wurden.
-- Die Version des Codes ist `ToolVersion` in `SelfX.Code.json`. **Heute** ist es `Tool_Version`
-  in `Tool_Config.xml`, einer Konfigurationsdatei; `Detection.ps1`, der Release-Workflow und der
-  Paketbau lesen sie dort.
+- Die Version des Codes ist `ToolVersion` in `SelfX.Code.json`. Der Bau füllt sie aus der Datei
+  `SelfX Service\Version.txt` (eine Zeile). `Detection.ps1`, `Install.ps1`, das Fenster, der
+  Release-Workflow und der Paketbau lesen die Version von dort; `Tool_Config.xml` enthält sie nicht
+  mehr (ein altes Element `Tool_Version` wird ignoriert). Die Konfiguration hat eine eigene Marke,
+  `ConfigRevision` in `SelfX.Config.json`; sie ist nicht Teil des Digests, den `Detection.ps1`
+  vergleicht. Eine neue Version ändert keine Konfigurationsdatei, und eine geänderte Konfiguration
+  ändert die Version nicht.
 
 ## Vertrauensmodi: Hash und Signatur
 

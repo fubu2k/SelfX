@@ -18,19 +18,25 @@
 
     SelfX.Code.json and SelfX.Config.json have the format of the former SelfX.Files.json: ManifestVersion 1 and Files (relative
     name with '/' -> SHA256). SelfX.Code.json also has ToolVersion; it has no build time, so the same package contents always
-    give the same bytes. SelfX.Config.json also has BuiltUtc.
+    give the same bytes. SelfX.Config.json also has ConfigRevision (UTC time of the packaging run).
+
+    The version is a property of the code: it comes from the file 'SelfX Service\Version.txt' of the repository (one line, read by
+    Get-SelfXVersionFromFile) and is written only into SelfX.Code.json. Tool_Config.xml does not carry it any more, so a change of
+    the version changes no configuration file and a change of the configuration does not change the version.
 
 .NOTES
     Name    : SelfXPackage.Common.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 1.0.0
+    Version : 1.1.0
     Works in Windows PowerShell 5.1 and PowerShell 7.
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-27  fubu2k               Initial version: file classes, SelfX.Code.json, SelfX.Config.json, digest and Detection.ps1 writer
+    1.1.0    2026-11-27  fubu2k               The version comes from Version.txt (Get-SelfXVersionFromFile) and is written only into SelfX.Code.json;
+                                              SelfX.Config.json has ConfigRevision (UTC time of the run) instead of BuiltUtc
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -76,6 +82,27 @@ $script:SelfXListedNamePattern = '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_]
 function Test-SelfXListedName {
     param([string]$Name)
     return ($Name -match $script:SelfXListedNamePattern -and $Name -notmatch '(^|/)\.\.?(/|$)')
+}
+
+# A version: letters, digits, '.' and '-', at most 30 characters. It becomes part of file names, a registry value and log lines.
+# Install.ps1, Detection.ps1 and Self_X.ps1 have a copy of the same pattern (Test-FileManifest.ps1 checks that they agree).
+$script:SelfXVersionPattern = '^[0-9A-Za-z.\-]{1,30}\z'
+
+function Test-SelfXVersionText {
+    param([string]$Text)
+    return ($Text -match $script:SelfXVersionPattern)
+}
+
+function Get-SelfXVersionFromFile {
+    # Reads the version of the code from Version.txt (the only source): exactly one non-empty line. A missing file, an empty
+    # file, more than one line and a version with other characters than Test-SelfXVersionText allows are errors (fail closed).
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "The version file is missing: $Path" }
+    $lines = @(([IO.File]::ReadAllText($Path) -split '\r?\n') | Where-Object { $_.Trim().Length -gt 0 })
+    if ($lines.Count -ne 1) { throw "The version file '$(Split-Path -Leaf $Path)' must contain exactly one line with the version." }
+    $version = $lines[0].Trim()
+    if (-not (Test-SelfXVersionText $version)) { throw "Invalid version '$version' in '$(Split-Path -Leaf $Path)'." }
+    return $version
 }
 
 function Test-SelfXConfigName {
@@ -177,6 +204,7 @@ function New-SelfXCodeManifest {
     # Writes SelfX.Code.json into the staged package: the SHA256 of every file of the class Code. Same contents give the same
     # bytes (no build time). Returns the number of files.
     param([Parameter(Mandatory = $true)][string]$Stage, [Parameter(Mandatory = $true)][string]$Version)
+    if (-not (Test-SelfXVersionText $Version)) { throw "Invalid version '$Version'." }
     $files = Get-SelfXClassHashes -Stage $Stage -Class Code
     $manifest = [ordered]@{
         ManifestVersion = 1
@@ -188,12 +216,16 @@ function New-SelfXCodeManifest {
 }
 
 function New-SelfXConfigManifest {
-    # Writes SelfX.Config.json into the staged package: the SHA256 of every file of the class Config. Returns the number of files.
-    param([Parameter(Mandatory = $true)][string]$Stage)
+    # Writes SelfX.Config.json into the staged package: the SHA256 of every file of the class Config and ConfigRevision, the UTC
+    # time of this packaging run (yyyy-MM-ddTHH:mm:ssZ; the caller may pass it, otherwise it is now). The revision is not part of the
+    # digest that Detection.ps1 compares. Returns the number of files.
+    param([Parameter(Mandatory = $true)][string]$Stage, [string]$ConfigRevision)
+    if (-not $ConfigRevision) { $ConfigRevision = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ', [Globalization.CultureInfo]::InvariantCulture) }
+    if ($ConfigRevision -notmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z') { throw "Invalid ConfigRevision '$ConfigRevision' (expected yyyy-MM-ddTHH:mm:ssZ, UTC)." }
     $files = Get-SelfXClassHashes -Stage $Stage -Class Config
     $manifest = [ordered]@{
         ManifestVersion = 1
-        BuiltUtc        = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+        ConfigRevision  = $ConfigRevision
         Files           = $files
     }
     [IO.File]::WriteAllText((Join-Path $Stage 'SelfX.Config.json'), ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))

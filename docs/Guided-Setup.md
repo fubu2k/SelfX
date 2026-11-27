@@ -61,7 +61,7 @@ refused at once. Values are written to the XML files as escaped text.
 | `selfx-answers.json` | Your answers for the next run. **Contains mailbox addresses: do not commit it.** |
 | `package\` | The configured package (input of the packaging). |
 
-The repository files are **not** changed. For an update raise `Tool_Version` and `$ExpectedVersion`
+The repository files are **not** changed. For an update raise `Version.txt` (in `SelfX Service`) and `$ExpectedVersion`
 and run the wizard with `-AnswerFile`.
 
 ## What to do in Intune

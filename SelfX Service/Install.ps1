@@ -37,7 +37,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.9.0
+    Version : 2.9.1
 
     History:
     Version  Date        Author               Change
@@ -54,6 +54,9 @@
     2.9.0    2026-11-27  fubu2k               Two file lists instead of SelfX.Files.json: SelfX.Code.json (programs, libraries, scripts, language
                                               files, images of the project) and SelfX.Config.json (settings, Branding, own scripts and language
                                               files); every file in exactly one list, a file in the wrong list is refused
+    2.9.1    2026-11-27  fubu2k               The version is read from ToolVersion of SelfX.Code.json (the version is a property of the code), no
+                                              longer from Tool_Version of Tool_Config.xml (an old element there is ignored); a package without
+                                              SelfX.Code.json has no version and is refused before anything is changed
 #>
 
 [CmdletBinding()]
@@ -244,7 +247,7 @@ function Test-SelfXFileManifest {
 	# Checks the package against SelfX.Code.json and SelfX.Config.json: every file below Sources, Uninstall.ps1, the DLLs of
 	# Bin\WinRT and Bin\Audio (listed as WinRT/<name> and Audio/<name>) and the programs SelfXService.exe and SelfX.exe (from Bin)
 	# must be listed in exactly one of the two lists and unchanged, and nothing may be in the package that is not listed. Returns
-	# the number of checked files, or $null when the package has neither list (older package: warning only). A mismatch, a
+	# the number of checked files, or $null when the package has neither list (the caller refuses it: no version). A mismatch, a
 	# missing list or a file in both lists throws before anything is installed.
 	param([Parameter(Mandatory = $true)][string]$PackageFolder)
 	$CodePath = Join-Path $PackageFolder 'SelfX.Code.json'
@@ -301,6 +304,20 @@ function Test-SelfXFileManifest {
 	If(-not $Listed.ContainsKey('uninstall.ps1')) { throw 'Uninstall.ps1 is not listed in SelfX.Code.json.' }
 	ForEach($Program in $ProgramNames) { If(-not $Listed.ContainsKey($Program.ToLowerInvariant())) { throw "$Program is not listed in SelfX.Code.json." } }
 	Return $Listed.Count
+}
+
+function Get-SelfXPackageToolVersion {
+	# The version of the package: ToolVersion of SelfX.Code.json (the only source; Tool_Config.xml is not read for it). It is written
+	# into the registry and the log, so it must be 1 to 30 letters, digits, '.' or '-'. A missing list, a missing or invalid version
+	# throws (fail closed).
+	param([Parameter(Mandatory = $true)][string]$PackageFolder)
+	$ListPath = Join-Path $PackageFolder 'SelfX.Code.json'
+	If(-not (Test-Path -LiteralPath $ListPath -PathType Leaf)) { throw 'SelfX.Code.json is missing in the package: the package has no version.' }
+	Try { $List = Get-Content -LiteralPath $ListPath -Raw | ConvertFrom-Json }
+	Catch { throw 'SelfX.Code.json is not valid JSON.' }
+	$Version = If($List) { "$($List.ToolVersion)".Trim() } Else { '' }
+	If($Version -notmatch '^[0-9A-Za-z.\-]{1,30}\z') { throw 'SelfX.Code.json has no valid ToolVersion.' }
+	Return $Version
 }
 
 function Test-SelfXInstalledFiles {
@@ -435,17 +452,19 @@ Start-Transcript -Path (Join-Path $LogFolder 'Install.log') -Append | Out-Null
 
 Try
 {
+	# Tool_Config.xml is a configuration file: the version is not read from it (an old Tool_Version element is ignored).
 	$ToolConfig = [xml](Get-Content -LiteralPath (Join-Path $SourcesFolder 'Tool_Config.xml') -Raw)
-	$ToolVersion = $ToolConfig.GUI_Config.Tool_Version.Trim()
 	$ShortcutName = $ToolConfig.GUI_Config.Shortcut_Name.Trim()
-	Write-Output "Installing SelfX $ToolVersion to '$InstallFolder'."
 
 	# The programs of the package are checked first: when they are missing or do not match, the existing
 	# installation stays untouched and still works.
 	Write-Output 'Programs in Bin checked against the manifest (before the data folder was prepared).'
 	$CheckedFiles = Test-SelfXFileManifest -PackageFolder $PackageFolder
-	If($null -eq $CheckedFiles) { Write-Warning 'SelfX.Code.json and SelfX.Config.json are missing in the package: the files are not checked against a hash list. The installation continues.' }
-	Else { Write-Output "Package files checked against SelfX.Code.json and SelfX.Config.json ($CheckedFiles files)." }
+	If($null -eq $CheckedFiles) { throw 'SelfX.Code.json and SelfX.Config.json are missing in the package: it has no version and its files cannot be checked. Build the package with tools\New-SelfXIntuneWin.ps1. The existing installation was not changed.' }
+	Write-Output "Package files checked against SelfX.Code.json and SelfX.Config.json ($CheckedFiles files)."
+	# The version of the code, from the checked list.
+	$ToolVersion = Get-SelfXPackageToolVersion -PackageFolder $PackageFolder
+	Write-Output "Installing SelfX $ToolVersion to '$InstallFolder'."
 	$PowerShell7 = Test-SelfXPowerShell7
 	If($PowerShell7.Ready) { Write-Output "PowerShell $($PowerShell7.Version) found (machine-wide)." }
 	Else { Write-Warning "$($PowerShell7.Reason) The installation continues." }
@@ -484,7 +503,7 @@ Try
 	If($Locked.Count -gt 0) { throw "Files in '$InstallFolder' are in use and cannot be replaced: $($Locked -join ', ')" }
 	Copy-Item -Path (Join-Path $SourcesFolder '*') -Destination $InstallFolder -Recurse -Force
 	Copy-Item -LiteralPath (Join-Path $PackageFolder 'Uninstall.ps1') -Destination $InstallFolder -Force
-	If($null -ne $CheckedFiles) { ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json')) { Copy-Item -LiteralPath (Join-Path $PackageFolder $ListName) -Destination $InstallFolder -Force } }
+	ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json')) { Copy-Item -LiteralPath (Join-Path $PackageFolder $ListName) -Destination $InstallFolder -Force }
 	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM.
 	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$InstallFolder' (exit code $LASTEXITCODE)." }
@@ -512,11 +531,8 @@ Try
 	If(-not (Test-Path -LiteralPath $ServiceExe)) { throw 'SelfXService.exe is missing after the installation step.' }
 	If(-not (Test-Path -LiteralPath $LauncherExe)) { throw 'SelfX.exe is missing after the installation step.' }
 	# The installed folder must equal the checked package (scripts, configuration, WinRT libraries, both programs).
-	If($null -ne $CheckedFiles)
-	{
-		$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder
-		Write-Output "Installed files checked against SelfX.Code.json and SelfX.Config.json ($InstalledFiles files)."
-	}
+	$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder
+	Write-Output "Installed files checked against SelfX.Code.json and SelfX.Config.json ($InstalledFiles files)."
 
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null
 	& sc.exe description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null

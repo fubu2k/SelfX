@@ -67,7 +67,7 @@ Im Ausgabeordner:
 | `selfx-answers.json` | Ihre Antworten für den nächsten Lauf. **Enthält Postfachadressen: nicht in Git einchecken.** |
 | `package\` | Das konfigurierte Paket (Eingabe der Paketierung). |
 
-Die Dateien im Repository werden **nicht** verändert. Für ein Update erhöhen Sie `Tool_Version` und
+Die Dateien im Repository werden **nicht** verändert. Für ein Update erhöhen Sie `Version.txt` (in `SelfX Service`) und
 `$ExpectedVersion` und starten den Assistenten mit `-AnswerFile`.
 
 ## Was Sie in Intune tun

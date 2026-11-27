@@ -35,8 +35,10 @@ ein dunkles Design; SelfX folgt der Windows-Einstellung.*
 - Auf den Geräten müssen **Windows 11 25H2** (Build 26200 oder neuer) und
   **PowerShell 7.6 oder neuer** vorhanden sein.
 - Verteilt wird immer das **ganze Paket**, nie einzelne Dateien.
-- Die Versionsnummer `Tool_Version` und der Wert `$ExpectedVersion` in
-  `Detection.ps1` müssen **gleich** sein. Sonst erkennt Intune das Update nicht.
+- Die Versionsnummer in `SelfX Service\Version.txt` und der Wert `$ExpectedVersion` in
+  `Detection.ps1` müssen **gleich** sein. Sonst erkennt Intune das Update nicht. Die Version
+  ist eine Eigenschaft des Codes: Der Bau schreibt sie in `SelfX.Code.json`; die
+  Einstellungsdatei `Tool_Config.xml` enthält sie nicht.
 - Fehlt PowerShell 7, wird SelfX trotzdem installiert. So bleibt Autopilot ungestört.
 
 ## Voraussetzungen
@@ -86,10 +88,12 @@ des Repositorys.
    `SelfX Service\Sources\Tool_Config.xml` (siehe [Konfiguration](Configuration.md)).
 2. **Versionsnummer prüfen.** Bei einem neuen Release tragen Sie dieselbe Nummer an zwei
    Stellen ein:
-   - `Tool_Version` in `Sources\Tool_Config.xml`
+   - `SelfX Service\Version.txt` (eine Zeile, zum Beispiel `3.0.3`)
    - `$ExpectedVersion` in `Detection.ps1`
 
-   Das Paketskript bricht ab, wenn beide Werte verschieden sind.
+   Das Paketskript bricht ab, wenn beide Werte verschieden sind. Eine geänderte Einstellung
+   (zum Beispiel ein Logo) ändert die Version nicht, und eine neue Version ändert keine
+   Einstellungsdatei.
 3. **Programme bauen.** Der Befehl erzeugt den Ordner `SelfX Service\Bin`:
 
    ```powershell
@@ -119,12 +123,12 @@ Das Skript prüft vorher: Die Setup-Datei ist da, alle XML-Dateien sind gültig,
 zu den Quelltexten, die beiden Versionen sind gleich und `IntuneWinAppUtil.exe` hat die
 Microsoft-Signatur. Es lädt nichts nach Intune hoch.
 
-**Alternative: Release auf GitHub.** Setzen Sie nach dem Merge das Tag `v<Tool_Version>`
-(zum Beispiel `v3.0.0`) auf `main`. Der Workflow `.github/workflows/release.yml` baut
+**Alternative: Release auf GitHub.** Setzen Sie nach dem Merge das Tag `v<Version>`
+(die Nummer aus `Version.txt`, zum Beispiel `v3.0.0`) auf `main`. Der Workflow `.github/workflows/release.yml` baut
 Programme, `.intunewin`, eine Stückliste (SBOM) und `SHA256SUMS.txt` und legt einen
 **Entwurf** unter *Releases* an. Er veröffentlicht nichts. Prüfen Sie die Hashes und
 veröffentlichen Sie den Entwurf erst danach. Der Workflow bricht ab, wenn Tag und
-`Tool_Version` nicht übereinstimmen.
+`Version.txt` nicht übereinstimmen.
 
 ### Offline-Build: Paketordner erneuern
 
@@ -265,7 +269,7 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
 ## Update auf eine neue Version
 
 1. Verteilen Sie immer das **ganze Paket**. Oberfläche und Dienst müssen zusammenpassen.
-2. Erhöhen Sie `Tool_Version` und `$ExpectedVersion` auf denselben neuen Wert.
+2. Erhöhen Sie `Version.txt` und `$ExpectedVersion` auf denselben neuen Wert.
 3. Bauen Sie Programme und Paket neu (Schritt 2) und ersetzen Sie die AppLocker-Regeln.
 4. Laden Sie die neue `.intunewin` **und** das neue Erkennungsskript in dieselbe Intune-App
    hoch.
@@ -522,14 +526,14 @@ einmal auf einem Testgerät.
 | `The folder Bin is missing …` | Schritt 2.3 fehlt oder wurde vor dem Paketbau nicht ausgeführt. Schritt 2.3 und 2.5 wiederholen. |
 | `Bin was not built from the current …` | Ein Quelltext wurde nach dem Bauen geändert. Schritt 2.3 und 2.5 wiederholen. |
 | Installation endet mit Exitcode 1 | Den Grund nennt die letzte Zeile von `Install.log`. Die bisherige Installation bleibt unverändert. |
-| Intune erkennt ein Update nicht | `Tool_Version` und `$ExpectedVersion` sind gleich geblieben, oder Sie haben die Kopie aus dem Repository statt `build\SelfX-Service-<Version>.Detection.ps1` hochgeladen. |
+| Intune erkennt ein Update nicht | `Version.txt` und `$ExpectedVersion` sind gleich geblieben, oder Sie haben die Kopie aus dem Repository statt `build\SelfX-Service-<Version>.Detection.ps1` hochgeladen. |
 | SelfX startet keine Aktion | PowerShell 7.6 fehlt (Warnung im `Install.log`), oder Ereignis 4005 meldet eine abweichende Datei. Das SelfX-Protokoll nennt die Einzelheiten. |
 
 ## Checkliste für die Bereitstellung
 
 1. Konfiguration angepasst (Branding, Support-Kontakte, Funktionen) und alle XML-Dateien
    gültig.
-2. `Tool_Version` und `$ExpectedVersion` sind gleich und neu; Verlauf in beiden Dateien
+2. `Version.txt` und `$ExpectedVersion` sind gleich und neu; Verlauf in `Detection.ps1`
    ergänzt.
 3. Alle Tests laufen ohne Fehler.
 4. Programme gebaut, AppLocker-Regeln ersetzt (falls genutzt).

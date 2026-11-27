@@ -27,15 +27,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: The tag matches Tool_Version
+      - name: The tag matches Version.txt
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $xml = New-Object System.Xml.XmlDocument
-          $xml.XmlResolver = $null
-          $xml.Load((Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Sources\Tool_Config.xml'))
-          $version = $xml.SelectSingleNode('/GUI_Config/Tool_Version').InnerText.Trim()
-          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag $env:GITHUB_REF_NAME does not match Tool_Version $version." }
+          # The version of the code is the only line of 'SelfX Service/Version.txt' (the build writes it into SelfX.Code.json).
+          $lines = @((Get-Content -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service/Version.txt')) | Where-Object { $_.Trim().Length -gt 0 })
+          if ($lines.Count -ne 1) { throw 'Version.txt must contain exactly one line with the version.' }
+          $version = $lines[0].Trim()
+          if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { throw "Invalid version '$version' in Version.txt (expected <major>.<minor>.<patch>)." }
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag $env:GITHUB_REF_NAME does not match Version.txt $version." }
           "Release $version"
 
       - name: Build the programs (tools\Build-SelfXBinaries.ps1)

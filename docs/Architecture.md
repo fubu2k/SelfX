@@ -123,7 +123,7 @@ The 89 files of `Sources` are: 22 + 5 + 1 + 24 + 1 + 3 + 33 from the rows above.
 ### Today: `SelfX.Code.json` and `SelfX.Config.json`
 
 Each list is a JSON object with `ManifestVersion` (1) and `Files`; `SelfX.Code.json` also has
-`ToolVersion`, `SelfX.Config.json` also has `BuiltUtc`. The code list has no build time, so the same
+`ToolVersion`, `SelfX.Config.json` also has `ConfigRevision` (UTC time of the packaging run). The code list has no build time, so the same
 code always gives the same bytes. `Files` maps the
 relative name of each file (forward slashes) to its SHA256. A name consists of letters, digits,
 `_`, space, `.`, `(`, `)` and `-`, and every segment starts with a letter, digit or `_`; a segment
@@ -167,9 +167,13 @@ of the project has to be added to `$script:SelfXCodeFileNames`, otherwise the te
 - `Detection.ps1` receives two values from the wizard: the code version and the digest of the
   configuration list. A new logo changes only the second value.
 - `SelfX.Binaries.json` stays. It binds the programs to the C# sources they were built from.
-- The version of the code is `ToolVersion` in `SelfX.Code.json`. **Today** it is `Tool_Version`
-  in `Tool_Config.xml`, which is a configuration file; `Detection.ps1`, the release workflow and
-  the package build read it there.
+- The version of the code is `ToolVersion` in `SelfX.Code.json`. The build fills it from the file
+  `SelfX Service\Version.txt` (one line). `Detection.ps1`, `Install.ps1`, the window, the release
+  workflow and the package build read the version from there; `Tool_Config.xml` does not carry it
+  any more (an old `Tool_Version` element is ignored). The configuration has its own marker,
+  `ConfigRevision` in `SelfX.Config.json`, which is not part of the digest that `Detection.ps1`
+  compares. A new version changes no configuration file and a changed configuration does not
+  change the version.
 
 ## Trust modes: hash and signature
 

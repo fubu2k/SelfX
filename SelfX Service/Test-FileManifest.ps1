@@ -11,14 +11,17 @@
     SelfX.Config.json (SelfX.Code.json stays byte-identical); a changed file, an extra file (also in Scripts_to_run), a missing
     file, a changed Uninstall.ps1, a file in both lists, a settings file in the code list, a program in the configuration list,
     a broken JSON, an unknown format and names with a path traversal are refused; a package without the lists is reported as
-    not checked. Nothing is installed.
+    not checked. The version is a property of the code: the test checks that a new version changes no configuration file, that a
+    changed configuration changes neither the version nor a code file, that an old Tool_Version element is ignored, that Version.txt,
+    ConfigRevision and the version in the package are validated (fail closed), and that no script, tool or workflow reads Tool_Version.
+    Nothing is installed.
     Windows PowerShell 5.1 or PowerShell 7: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-FileManifest.ps1
 
 .NOTES
     Name    : Test-FileManifest.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.9.0
+    Version : 2.9.1
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -29,6 +32,8 @@
                                               and the .exe entry of the service file check.
     2.9.0    2026-11-27  fubu2k               Two lists (SelfX.Code.json, SelfX.Config.json) by file class; logo test, placement and
                                               class tests, negative tests for a file in both lists, in none and in the wrong list.
+    2.9.1    2026-11-27  fubu2k               Version in the code list: version and configuration are independent, Version.txt, ConfigRevision, Install.ps1 reads the
+                                              version from SelfX.Code.json, no reader of Tool_Version is left.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -57,7 +62,7 @@ function Get-FunctionText($Path, $Name) {
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\SelfXPackage.Common.ps1')
 # The placement rule of the generator keeps its own name; Install.ps1 has a copy of the same rule under the same name.
 ${function:Common_Test-SelfXListPlacement} = ${function:Test-SelfXListPlacement}
-foreach ($name in 'Test-SelfXListPlacement', 'Read-SelfXFileList', 'Test-SelfXFileManifest', 'Test-SelfXInstalledFiles') {
+foreach ($name in 'Test-SelfXListPlacement', 'Read-SelfXFileList', 'Test-SelfXFileManifest', 'Get-SelfXPackageToolVersion', 'Test-SelfXInstalledFiles') {
 	. ([scriptblock]::Create((Get-FunctionText (Join-Path $PSScriptRoot 'Install.ps1') $name)))
 }
 
@@ -71,6 +76,10 @@ function Reset-Package {
 # Writes a list file of the package (or of the installed folder) from a name -> hash table.
 function Set-List([string]$Path, $Files, $Version = 1) {
 	Set-Content -LiteralPath $Path -Value ([ordered]@{ ManifestVersion = $Version; Files = $Files } | ConvertTo-Json)
+}
+# ConfigRevision as written in the file (PowerShell 7 turns an ISO 8601 string into a DateTime in ConvertFrom-Json, so the text is read).
+function Get-ConfigRevisionText([string]$Path) {
+	return [regex]::Match([IO.File]::ReadAllText($Path), '"ConfigRevision"\s*:\s*"([^"]*)"').Groups[1].Value
 }
 function Get-ListFiles([string]$Path) {
 	$list = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
@@ -149,7 +158,10 @@ try {
 	Assert-Equal $configManifest.ManifestVersion 1 'configuration list: format 1'
 	Assert-Equal $manifest.ToolVersion '9.9.9' 'code list: version'
 	Assert-Equal ($null -eq $manifest.BuiltUtc) $true 'code list: no build time (same contents give the same bytes)'
-	Assert-Equal ($null -ne $configManifest.BuiltUtc) $true 'configuration list: build time'
+	Assert-Equal ($null -eq $manifest.ConfigRevision) $true 'code list: no configuration revision'
+	Assert-Equal ($null -eq $configManifest.ToolVersion) $true 'configuration list: no version (the version is a property of the code)'
+	Assert-Equal ($null -eq $configManifest.BuiltUtc) $true 'configuration list: no BuiltUtc any more'
+	Assert-Equal ((Get-ConfigRevisionText (Join-Path $pristine 'SelfX.Config.json')) -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$') $true 'configuration list: ConfigRevision is a UTC time (yyyy-MM-ddTHH:mm:ssZ)'
 	foreach ($name in 'Uninstall.ps1', 'Self_X.ps1', 'Scripts_to_run/SelfX_Device_SyncTime.ps1', 'Languages/de.xml', 'logo.png', 'HealthChecks/Check-Compliance.ps1') {
 		Assert-Equal ($null -ne $manifest.Files.$name) $true "code list contains $name"
 		Assert-Equal ($null -eq $configManifest.Files.$name) $true "configuration list does not contain $name"
@@ -193,6 +205,117 @@ try {
 	Start-Sleep -Seconds 1
 	[void](New-SelfXCodeManifest -Stage $logoStage -Version '9.9.9')
 	Assert-Equal ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $logoStage 'SelfX.Code.json'))) -ceq [Convert]::ToBase64String($codeBefore)) $true 'rebuilt: SelfX.Code.json is byte-identical'
+
+	# The version is a property of the code: changing the version changes no configuration file, changing the configuration does not
+	# change the version.
+	$versionStage = Join-Path $root 'version'
+	function New-VersionStage([string]$Version, [string]$LegacyVersionElement) {
+		if (Test-Path -LiteralPath $versionStage) { Remove-Item -LiteralPath $versionStage -Recurse -Force }
+		Copy-Item -LiteralPath $pristine -Destination $versionStage -Recurse
+		Remove-Item -LiteralPath (Join-Path $versionStage 'SelfX.Code.json'), (Join-Path $versionStage 'SelfX.Config.json')
+		if ($LegacyVersionElement) {
+			# A Tool_Config.xml of a company that still has the old element: tolerated, but never evaluated.
+			$configFile = Join-Path $versionStage 'Sources\Tool_Config.xml'
+			$text = [IO.File]::ReadAllText($configFile)
+			[IO.File]::WriteAllText($configFile, $text.Replace('<GUI_Config>', "<GUI_Config><Tool_Version>$LegacyVersionElement</Tool_Version>"), (New-Object System.Text.UTF8Encoding($true)))
+		}
+		[void](New-SelfXCodeManifest -Stage $versionStage -Version $Version)
+		[void](New-SelfXConfigManifest -Stage $versionStage -ConfigRevision '2026-11-27T10:00:00Z')
+		return @{
+			CodeBytes   = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $versionStage 'SelfX.Code.json')))
+			ConfigBytes = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $versionStage 'SelfX.Config.json')))
+			CodeFiles   = (Get-ListFiles (Join-Path $versionStage 'SelfX.Code.json'))
+			ConfigFiles = (Get-ListFiles (Join-Path $versionStage 'SelfX.Config.json'))
+			CodeDigest  = (Get-SelfXListDigest -Stage $versionStage -ListName 'SelfX.Code.json')
+			ConfigDigest = (Get-SelfXListDigest -Stage $versionStage -ListName 'SelfX.Config.json')
+			Version     = (Get-Content -LiteralPath (Join-Path $versionStage 'SelfX.Code.json') -Raw | ConvertFrom-Json).ToolVersion
+		}
+	}
+	$versionA = New-VersionStage '3.0.2'
+	$versionB = New-VersionStage '3.0.3'
+	Assert-Equal $versionA.Version '3.0.2' 'version: the code list carries the version of the run'
+	Assert-Equal $versionB.Version '3.0.3' 'version: a new version is written into the code list'
+	Assert-Equal ($versionA.CodeBytes -ceq $versionB.CodeBytes) $false 'version: a new version changes SelfX.Code.json'
+	Assert-Equal ($versionA.ConfigBytes -ceq $versionB.ConfigBytes) $true 'version: a new version does not change SelfX.Config.json (same bytes)'
+	Assert-Equal $versionB.ConfigDigest $versionA.ConfigDigest 'version: a new version does not change the configuration digest'
+	Assert-Equal (($versionA.ConfigFiles.Keys | ForEach-Object { "$_=$($versionA.ConfigFiles[$_])" }) -join ';') (($versionB.ConfigFiles.Keys | ForEach-Object { "$_=$($versionB.ConfigFiles[$_])" }) -join ';') 'version: a new version changes no configuration file (all hashes the same)'
+	Assert-Equal (($versionA.CodeFiles.Keys | ForEach-Object { "$_=$($versionA.CodeFiles[$_])" }) -join ';') (($versionB.CodeFiles.Keys | ForEach-Object { "$_=$($versionB.CodeFiles[$_])" }) -join ';') 'version: a new version changes no file of the code either (the version is in no file of the package)'
+	Assert-Equal $versionB.CodeDigest $versionA.CodeDigest 'version: the code digest does not contain the version (only changed files change it)'
+	# The configuration changes (logo, a setting, a new own script): the version and the code files stay.
+	New-VersionStage '3.0.2' | Out-Null
+	[IO.File]::WriteAllBytes((Join-Path $versionStage 'Sources\Branding\company_logo.png'), [byte[]](4, 4, 4, 4))
+	Add-Content -LiteralPath (Join-Path $versionStage 'Sources\Ticket_Config.xml') -Value '<!-- changed -->'
+	[void](New-SelfXConfigManifest -Stage $versionStage -ConfigRevision '2026-11-27T11:00:00Z')
+	$configChanged = @{
+		CodeBytes    = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $versionStage 'SelfX.Code.json')))
+		ConfigDigest = (Get-SelfXListDigest -Stage $versionStage -ListName 'SelfX.Config.json')
+		Revision     = (Get-ConfigRevisionText (Join-Path $versionStage 'SelfX.Config.json'))
+	}
+	Assert-Equal ($configChanged.CodeBytes -ceq $versionA.CodeBytes) $true 'configuration changed: SelfX.Code.json is byte-identical (version and code files stay)'
+	Assert-Equal ($configChanged.ConfigDigest -ne $versionA.ConfigDigest) $true 'configuration changed: the configuration digest changes'
+	Assert-Equal $configChanged.Revision '2026-11-27T11:00:00Z' 'configuration changed: ConfigRevision is the time that the run was given'
+	# The ConfigRevision alone is not part of the digest: the same configuration at another time has the same digest.
+	[void](New-SelfXConfigManifest -Stage $versionStage -ConfigRevision '2030-01-01T00:00:00Z')
+	Assert-Equal (Get-SelfXListDigest -Stage $versionStage -ListName 'SelfX.Config.json') $configChanged.ConfigDigest 'configuration changed: another ConfigRevision with the same files gives the same digest'
+	# An old Tool_Version element in Tool_Config.xml is tolerated and never evaluated: the version is the one of the run, and the code list
+	# does not depend on it.
+	$legacyA = New-VersionStage '3.0.2' '1.1.1'
+	$legacyB = New-VersionStage '3.0.2' '2.2.2'
+	Assert-Equal $legacyA.Version '3.0.2' 'legacy Tool_Version: the code list has the version of the run, not the one of Tool_Config.xml'
+	Assert-Equal ($legacyA.CodeBytes -ceq $versionA.CodeBytes) $true 'legacy Tool_Version: SelfX.Code.json is the same as without the element'
+	Assert-Equal ($legacyA.CodeBytes -ceq $legacyB.CodeBytes) $true 'legacy Tool_Version: another value in Tool_Config.xml does not change SelfX.Code.json'
+	Assert-Equal ($legacyA.ConfigDigest -ne $legacyB.ConfigDigest) $true 'legacy Tool_Version: the element is only a changed configuration file (the configuration digest)'
+	# The generators refuse a version or revision that is not allowed (fail closed).
+	foreach ($bad in '', ' ', '3.0.2 beta', '..\x', '3.0.2;calc', ('1' * 31), "3.0.2`n3.0.3") {
+		Assert-Throws { New-SelfXCodeManifest -Stage $versionStage -Version $bad } 'Invalid version|Cannot bind' "generator: the version '$($bad -replace '\s', '_')' is refused"
+	}
+	foreach ($bad in 'now', '2026-11-27', '2026-11-27 10:00:00', '2026-11-27T10:00:00+01:00', "2026-11-27T10:00:00Z`n", '2026-11-27T10:00:00Z;x') {
+		Assert-Throws { New-SelfXConfigManifest -Stage $versionStage -ConfigRevision $bad } 'Invalid ConfigRevision' "generator: the ConfigRevision '$($bad -replace '\s', '_')' is refused"
+	}
+	[void](New-SelfXConfigManifest -Stage $versionStage)
+	$defaultRevision = Get-ConfigRevisionText (Join-Path $versionStage 'SelfX.Config.json')
+	Assert-Equal ($defaultRevision -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$') $true 'ConfigRevision: without a value it is written in the format yyyy-MM-ddTHH:mm:ssZ'
+	$revisionTime = [DateTime]::ParseExact($defaultRevision, "yyyy-MM-dd'T'HH:mm:ss'Z'", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AssumeUniversal -bor [Globalization.DateTimeStyles]::AdjustToUniversal)
+	Assert-Equal ([Math]::Abs(([DateTime]::UtcNow - $revisionTime).TotalMinutes) -lt 5) $true 'ConfigRevision: without a value it is the current UTC time'
+	Remove-Item -LiteralPath $versionStage -Recurse -Force
+
+	# Version.txt: one line, only the allowed characters.
+	$versionFiles = Join-Path $root 'versionfiles'
+	New-Item -ItemType Directory -Path $versionFiles -Force | Out-Null
+	$versionFile = Join-Path $versionFiles 'Version.txt'
+	foreach ($case in @(@("3.0.2`n", '3.0.2'), @("3.0.2`r`n", '3.0.2'), @('3.0.2', '3.0.2'), @("  3.0.2  `n`n", '3.0.2'), @("`n3.0.2-rc.1`n", '3.0.2-rc.1'))) {
+		[IO.File]::WriteAllText($versionFile, $case[0])
+		Assert-Equal (Get-SelfXVersionFromFile -Path $versionFile) $case[1] "Version.txt: '$($case[0] -replace '\s', '_')' gives $($case[1])"
+	}
+	[IO.File]::WriteAllText($versionFile, "3.0.2`n", (New-Object System.Text.UTF8Encoding($true)))
+	Assert-Equal (Get-SelfXVersionFromFile -Path $versionFile) '3.0.2' 'Version.txt: a byte order mark is accepted'
+	foreach ($bad in '', "`n", '   ', "3.0.2`n3.0.3", "3.0.2`n# comment", '3.0.2 beta', '..\evil', '3.0.2/../x', '$(calc)', ('1' * 31), '3,0,2') {
+		[IO.File]::WriteAllText($versionFile, $bad)
+		Assert-Throws { Get-SelfXVersionFromFile -Path $versionFile } 'exactly one line|Invalid version' "Version.txt: '$($bad -replace '\s', '_')' is refused"
+	}
+	Assert-Throws { Get-SelfXVersionFromFile -Path (Join-Path $versionFiles 'missing.txt') } 'version file is missing' 'Version.txt: a missing file is refused'
+	Assert-Throws { Get-SelfXVersionFromFile -Path $versionFiles } 'version file is missing' 'Version.txt: a folder is refused'
+	Remove-Item -LiteralPath $versionFiles -Recurse -Force
+
+	# Install.ps1 reads the version from the code list of the package (Get-SelfXPackageToolVersion).
+	Reset-Package
+	Assert-Equal (Get-SelfXPackageToolVersion -PackageFolder $package) '9.9.9' 'install: the version of the package is ToolVersion of SelfX.Code.json'
+	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'SelfX.Code.json')
+	Assert-Throws { Get-SelfXPackageToolVersion -PackageFolder $package } 'has no version' 'install: a package without SelfX.Code.json has no version (refused)'
+	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'SelfX.Code.json') -Value '{ not json'
+	Assert-Throws { Get-SelfXPackageToolVersion -PackageFolder $package } 'not valid JSON' 'install: a broken SelfX.Code.json is refused'
+	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'SelfX.Code.json') -Value '"9.9.9"'
+	Assert-Throws { Get-SelfXPackageToolVersion -PackageFolder $package } 'no valid ToolVersion' 'install: a list that is only a string is refused'
+	foreach ($bad in $null, '', ' ', '9.9.9 x', '..\evil', '9.9.9"; calc; "', ('1' * 31), "9.9.9`n9.9.10") {
+		Reset-Package
+		[IO.File]::WriteAllText((Join-Path $package 'SelfX.Code.json'), (([ordered]@{ ManifestVersion = 1; ToolVersion = $bad; Files = @{ 'Uninstall.ps1' = 'AA' } }) | ConvertTo-Json))
+		Assert-Throws { Get-SelfXPackageToolVersion -PackageFolder $package } 'no valid ToolVersion' "install: the ToolVersion '$("$bad" -replace '\s', '_')' is refused"
+	}
+	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'SelfX.Code.json') -Value '{"ManifestVersion":1,"Files":{"Uninstall.ps1":"AA"}}'
+	Assert-Throws { Get-SelfXPackageToolVersion -PackageFolder $package } 'no valid ToolVersion' 'install: a list without ToolVersion is refused'
+	Reset-Package; $codeListOnly = Get-Content -LiteralPath (Join-Path $package 'SelfX.Config.json') -Raw
+	Assert-Equal ($codeListOnly -match 'ToolVersion') $false 'install: the configuration list has no version that could be taken instead'
+
 	# An own script of the company is Code for nobody: it goes into SelfX.Config.json and the check accepts it.
 	[IO.File]::WriteAllText((Join-Path $logoStage 'Sources\Scripts_to_run\Own_Action.ps1'), 'Write-Output 1')
 	[void](New-SelfXCodeManifest -Stage $logoStage -Version '9.9.9'); [void](New-SelfXConfigManifest -Stage $logoStage)
@@ -341,6 +464,44 @@ try {
 	$serviceSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -Raw
 	Assert-Equal ($serviceSource -match 'CheckedExtensions') $false 'service: the file check has no extension filter'
 	Assert-Equal ($serviceSource -match '"not listed: "') $true 'service: the file check reports unlisted files'
+
+	# Readers of the version: nothing evaluates Tool_Version any more. The file Version.txt is the source, SelfX.Code.json carries it.
+	$repository = Split-Path -Parent $PSScriptRoot
+	$versionTextPath = Join-Path $PSScriptRoot 'Version.txt'
+	Assert-Equal (Test-Path -LiteralPath $versionTextPath -PathType Leaf) $true 'readers: SelfX Service\Version.txt exists'
+	$repositoryVersion = Get-SelfXVersionFromFile -Path $versionTextPath
+	Assert-Equal ($repositoryVersion -match '^[0-9]+\.[0-9]+\.[0-9]+$') $true 'readers: Version.txt is <major>.<minor>.<patch> (the tag of a release is v<version>)'
+	$detectionText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Detection.ps1'))
+	Assert-Equal ($detectionText -match "\`$ExpectedVersion\s*=\s*'([^']+)'") $true 'readers: Detection.ps1 has $ExpectedVersion'
+	Assert-Equal $Matches[1] $repositoryVersion 'readers: $ExpectedVersion in Detection.ps1 equals Version.txt (the packaging tool refuses a difference)'
+	$toolConfigText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Sources\Tool_Config.xml'))
+	Assert-Equal ($toolConfigText -match '<Tool_Version[\s>]') $false 'readers: Tool_Config.xml of the repository has no Tool_Version element'
+	$readerPattern = 'GUI_Config\.Tool_Version|/GUI_Config/Tool_Version|\.Tool_Version\b'
+	$scanned = New-Object System.Collections.Generic.List[object]
+	foreach ($folder in $PSScriptRoot, (Join-Path $repository 'tools'), (Join-Path $repository '.github')) {
+		foreach ($file in @(Get-ChildItem -LiteralPath $folder -Recurse -File | Where-Object { $_.Extension -in '.ps1', '.yml', '.cs' })) {
+			# Not the programs and build leftovers, and not the two tests that name the old element on purpose.
+			if ($file.FullName -match '[\\/](obj|bin|Bin)[\\/]' -or $file.Name -in 'Test-FileManifest.ps1', 'Test-Detection.ps1') { continue }
+			$scanned.Add($file)
+		}
+	}
+	Assert-Equal ($scanned.Count -gt 20) $true 'readers: the scan covers the scripts, the tools and the workflows'
+	foreach ($file in $scanned) {
+		$hits = @(Select-String -LiteralPath $file.FullName -Pattern $readerPattern)
+		Assert-Equal $hits.Count 0 "readers: $($file.FullName.Substring($repository.Length + 1)) does not read Tool_Version"
+	}
+	# The texts of the wizard name Version.txt for an update, not the old element.
+	foreach ($wizardText in @(Get-ChildItem -LiteralPath (Join-Path $repository 'tools\Wizard') -Filter '*.xml' -File)) {
+		Assert-Equal ([IO.File]::ReadAllText($wizardText.FullName).Contains('Tool_Version')) $false "readers: $($wizardText.Name) does not name Tool_Version"
+	}
+	$releaseText = [IO.File]::ReadAllText((Join-Path $repository '.github\workflows\release.yml'))
+	Assert-Equal ($releaseText.Contains('SelfX Service/Version.txt')) $true 'readers: release.yml compares the tag with Version.txt'
+	Assert-Equal ($releaseText.Contains('Tool_Config.xml')) $false 'readers: release.yml does not read Tool_Config.xml'
+	# The pattern of a version is the same text in Install.ps1, Detection.ps1, Self_X.ps1 and the package tools.
+	$versionPattern = [regex]::Escape('^[0-9A-Za-z.\-]{1,30}\z')
+	foreach ($copy in @(@('Install.ps1', 'Install.ps1'), @('Detection.ps1', 'Detection.ps1'), @('Self_X.ps1', 'Sources\Self_X.ps1'), @('SelfXPackage.Common.ps1', '..\tools\SelfXPackage.Common.ps1'))) {
+		Assert-Equal ([IO.File]::ReadAllText((Join-Path $PSScriptRoot $copy[1])) -match $versionPattern) $true "readers: $($copy[0]) has the version pattern"
+	}
 }
 finally { if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue } }
 

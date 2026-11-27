@@ -7,13 +7,29 @@ gegenüber seinem Upstream [wbaeck/SelfX](https://github.com/wbaeck/SelfX) bei S
 2.6.9 geändert hat. Alles bis Version 2.6.9 stammt aus dem Upstream und wird hier nicht
 als neu aufgeführt. Der Verlauf jeder Datei steht in ihrem Kopf.
 
-Die Paketversion ist `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`.
-`Detection.ps1` muss denselben Wert enthalten, sonst erkennt Intune das Update nicht
+Die Paketversion ist die eine Zeile in `SelfX Service\Version.txt`; der Bau schreibt sie in `SelfX.Code.json`
+(`ToolVersion`). `Detection.ps1` muss denselben Wert enthalten, sonst erkennt Intune das Update nicht
 (das Paketierungsskript prüft das). Ein Release bekommt das Tag `v<Version>` (zum
-Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Tool_Version` übereinstimmen.
+Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übereinstimmen.
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Paket, die Version ist eine Eigenschaft des Codes (`Version.txt`, `SelfX.Code.json`):** Die Version steht nicht mehr in der
+  Einstellungsdatei `Tool_Config.xml`. Die neue Datei `SelfX Service\Version.txt` (eine Zeile) ist die einzige Quelle; der Bau
+  schreibt sie in `ToolVersion` von `SelfX.Code.json`. Eine neue Version ändert damit keine Konfigurationsdatei, und eine geänderte
+  Konfiguration (zum Beispiel ein Logo) ändert die Version nicht. `SelfX.Config.json` hat `ConfigRevision` (UTC-Zeit des Paketlaufs,
+  nicht Teil des Digests) statt `BuiltUtc`. Leser angepasst: `Detection.ps1` 3.0.4 vergleicht `$ExpectedVersion` mit `ToolVersion` der
+  installierten `SelfX.Code.json` (neue Funktion `Test-SelfXInstalledPackage`: Code-Version, Code-Digest und Konfigurations-Digest
+  werden getrennt gemeldet); `Install.ps1` 2.9.1 liest die Version aus der geprüften `SelfX.Code.json` und lehnt ein Paket ohne sie ab,
+  bevor etwas geändert wird (ein Paket ohne die beiden Listen wurde bisher mit Warnung installiert); `Self_X.ps1` 2.8.27 zeigt die
+  Version aus `SelfX.Code.json` an (`?`, wenn sie nicht gelesen werden kann); `release.yml` vergleicht das Tag mit `Version.txt`;
+  `New-SelfXIntuneWin.ps1` 1.10.0, `New-SelfXPackage.ps1` 1.0.1, `Build-SelfXBinaries.ps1` 2.8.21 und `New-SelfXWdacPolicy.ps1`
+  1.0.1 lesen `Version.txt` (`Get-SelfXVersionFromFile` in `tools\SelfXPackage.Common.ps1` erlaubt eine Zeile mit höchstens 30
+  Buchstaben, Ziffern, `.` und `-`). `Version.txt` gehört nicht zum Paket. Ein altes Element `Tool_Version` in der `Tool_Config.xml`
+  einer Firma wird ignoriert. Kein Text der Oberfläche geändert. Tests: Versionswechsel lässt alle Konfigurationsdateien
+  unverändert, Konfigurationswechsel lässt Version und Code-Liste unverändert, getrennte Erkennung von Code-Version, Code-Dateien und
+  Konfiguration, Negativtests für `Version.txt`, `ConfigRevision`, `ToolVersion` und eine beschädigte Code-Liste sowie eine Prüfung,
+  dass kein Skript, Werkzeug oder Workflow `Tool_Version` liest.
 - **Paket, zwei Dateilisten (`SelfX.Code.json`, `SelfX.Config.json`):** `SelfX.Files.json` wird durch zwei Listen ersetzt.
   `SelfX.Code.json` enthält die Programme, Bibliotheken sowie die Skripte, Sprachdateien und Bilder des Projekts;
   `SelfX.Config.json` enthält die Einstellungsdateien, alles unter `Branding` sowie eigene Skripte und Sprachdateien. Jede Datei

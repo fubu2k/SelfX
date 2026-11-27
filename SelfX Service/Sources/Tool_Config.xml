@@ -11,9 +11,9 @@
 	3.0.0    2026-11-23  fubu2k               Release 3.0.0 (changes since the fork: see CHANGELOG.en.md)
 	3.0.1    2026-11-24  fubu2k               Release 3.0.1 (offline build, AppLocker rules: see CHANGELOG.en.md)
 	3.0.2    2026-11-24  fubu2k               Release 3.0.2 (security: report reader, PowerShell 7 rights check: see CHANGELOG.en.md)
+	3.0.3    2026-11-27  fubu2k               Tool_Version removed: the version is a property of the code (ToolVersion in SelfX.Code.json, built from Version.txt); an old Tool_Version element in a company file is ignored
 -->
 <GUI_Config>	
-	<Tool_Version>3.0.2</Tool_Version> <!-- Tool version -->
 	<!-- Language of the user interface. All texts are in Languages\<culture>.xml (see docs\Configuration.md) -->
 	<Tool_Language>de</Tool_Language> <!-- Default language (base language: German): a culture such as de, en, fr, es, zh-Hans, or Auto = Windows display language of the user (German if not available). Missing texts are shown in English. Users can choose another language in SelfX > Settings (see Show_Language_Setting) -->
 	<Tool_Name>SelfX (Self fix)</Tool_Name> <!-- Text displayed in the title bar --> 
