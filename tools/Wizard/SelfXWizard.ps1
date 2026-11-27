@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.2
+    Version : 3.1.3
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -27,6 +27,9 @@
                                               package, shared by New-SelfXPackage.ps1 and the window SelfXWizardGui.ps1; Read-WizardLogo (the
                                               check of Copy-WizardLogo, also used by the logo preview of the window); several platform scripts
                                               are listed one per line in the instructions and in the result (they were joined into one line)
+    3.1.3    2026-11-27  fubu2k               Instructions as steps with values to copy (Get-SelfXIntuneGuideSteps); trust mode Signature: events
+                                              4006/4007, refused signature without Install.log, change of the certificate; -AdditionalSigner;
+                                              Get-WizardCertificateInfo (certificate and revocation list addresses for the window)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -291,6 +294,85 @@ function New-SelfXSupportUnitScript {
     return ($lines -join "`r`n") + "`r`n"
 }
 
+# The requirement script of the guide (step 3) as its own value, so that the window can copy it.
+$script:SelfXRequirementScript = "[int](Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber)"
+
+# The instructions for Intune as steps: every step has its lines and the values that the window offers to copy (install command, detection
+# script, thumbprints ...). New-SelfXIntuneGuide joins the lines into the text file; both show the same text. OutputFolder (optional) makes
+# the copy values of files full paths. TrustedSigner: the thumbprints of -TrustedSigner (trust mode Signature), at most 10 as Install.ps1 allows.
+function Get-SelfXIntuneGuideSteps {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Answers,
+        [Parameter(Mandatory = $true)][string]$Version,
+        [AllowEmptyString()][string]$PackageFile = '',
+        [AllowEmptyString()][string]$DetectionFile = '',
+        [string[]]$ScriptFiles = @(),
+        [string]$AnswersFile = '',
+        [string[]]$TrustedSigner = @(),
+        [string[]]$RuleFiles = @(),
+        [string]$OutputFolder = ''
+    )
+    $ps = '%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
+    # Trust mode Signature: the install command names the signers (SHA1 thumbprints, 40 hex characters, separated by commas without a space).
+    $signers = @($TrustedSigner | Where-Object { $_ } | ForEach-Object { "$_".ToUpperInvariant() } | Select-Object -Unique)
+    foreach ($signer in $signers) { if ($signer -notmatch '^[0-9A-F]{40}\z') { throw 'A thumbprint for -TrustedSigner is not valid.' } }
+    if ($signers.Count -gt 10) { throw 'At most 10 thumbprints are allowed for -TrustedSigner.' }
+    $installArguments = $(if ($signers.Count) { ' -TrustedSigner ' + ($signers -join ',') } else { '' })
+    $installCommand = "$ps .\Install.ps1$installArguments"
+    $uninstallCommand = "$ps .\Uninstall.ps1"
+    $inOutput = { param([string]$name) if ($OutputFolder -and $name) { Join-Path $OutputFolder $name } else { $name } }
+    $org = $Answers.OrgName
+    $steps = New-Object System.Collections.Generic.List[object]
+    $add = {
+        param([string]$Id, [string[]]$Lines, [object[]]$Copies = @())
+        $steps.Add([pscustomobject]@{ Id = $Id; Lines = @($Lines); Copies = @($Copies | Where-Object { $null -ne $_ -and $_.Value }) })
+    }
+    $copy = { param([string]$Label, [string]$Value) [pscustomobject]@{ Label = $Label; Value = $Value } }
+
+    & $add 'app' @((Get-WText 'guide.s1' @($PackageFile, "SelfX Service - $org", $org))) @((& $copy 'gui.copy.name' "SelfX Service - $org"), (& $copy 'gui.copy.package' (& $inOutput $PackageFile)))
+    & $add 'program' @((Get-WText 'guide.s2' @($installCommand)), (Get-WText 'guide.s2b' @($uninstallCommand)), (Get-WText 'guide.s2c')) @((& $copy 'gui.copy.install' $installCommand), (& $copy 'gui.copy.uninstall' $uninstallCommand))
+    & $add 'requirements' @((Get-WText 'guide.s3')) @((& $copy 'gui.copy.requirement' $script:SelfXRequirementScript))
+    & $add 'detection' @((Get-WText 'guide.s4' @($DetectionFile))) @((& $copy 'gui.copy.detection' (& $inOutput $DetectionFile)))
+    & $add 'dependency' @((Get-WText 'guide.s5'))
+    & $add 'assignment' @((Get-WText 'guide.s6'))
+    if ($ScriptFiles.Count -gt 0) {
+        $lines = New-Object System.Collections.Generic.List[string]
+        $lines.Add((Get-WText 'guide.s7'))
+        foreach ($unit in @($Answers.Units)) {
+            $tags = if (@($unit.GroupTags).Count) { (@($unit.GroupTags) -join ', ') } else { '-' }
+            $classes = if (@($unit.Categories).Count) { (@($unit.Categories) -join ', ') } else { '-' }
+            $lines.Add((Get-WText 'guide.s7item' @($unit.Id, $tags, $classes)))
+        }
+        foreach ($file in $ScriptFiles) { $lines.Add("   - $file") }
+        $lines.Add((Get-WText 'guide.s7tag'))
+        & $add 'routing' $lines.ToArray() @((& $copy 'gui.copy.folder' $OutputFolder))
+    }
+    $step = if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }
+    if ($signers.Count) {
+        & $add 'trust' @((Get-WText 'guide.trust' @($step)), (Get-WText 'guide.trust2'), (Get-WText 'guide.trust3'), (Get-WText 'guide.trust4')) @((& $copy 'gui.copy.thumbprints' ($signers -join ',')))
+        $step++
+        & $add 'certchange' @((Get-WText 'guide.certchange' @($step)), (Get-WText 'guide.certchange1'), (Get-WText 'guide.certchange2'), (Get-WText 'guide.certchange3'))
+        $step++
+    }
+    if ($RuleFiles.Count -gt 0) {
+        $lines = @((Get-WText $(if ($signers.Count) { 'guide.rules.signed' } else { 'guide.rules' }) @($step))) + @($RuleFiles | ForEach-Object { "   - $_" })
+        & $add 'rules' $lines @((& $copy 'gui.copy.folder' $OutputFolder))
+        $step++
+    }
+    $lines = @((Get-WText 'guide.asr' @($step)), (Get-WText 'guide.asr1'), (Get-WText 'guide.asr2')) + @($script:SelfXAsrExclusionFiles | ForEach-Object { "   - $_" }) + @((Get-WText 'guide.asr3'))
+    & $add 'asr' $lines @((& $copy 'gui.copy.asr' ($script:SelfXAsrExclusionFiles -join "`r`n")))
+    & $add 'test' @((Get-WText 'guide.s8' @($step + 1)))
+    $footer = @()
+    if ($AnswersFile) { $footer = @((Get-WText 'guide.update' @($AnswersFile)), (Get-WText 'guide.answers' @($AnswersFile))) }
+    return [pscustomobject]@{
+        Header = @((Get-WText 'guide.title' @($org, $Version)), ('=' * 72), (Get-WText 'guide.intro'))
+        Steps  = $steps.ToArray()
+        Footer = $footer
+    }
+}
+
+# The instructions for Intune as text (the file SelfX-Intune-Guide.<language>.txt): the lines of Get-SelfXIntuneGuideSteps, one empty line
+# after the header and after every step.
 function New-SelfXIntuneGuide {
     param(
         [Parameter(Mandatory = $true)][hashtable]$Answers,
@@ -302,67 +384,12 @@ function New-SelfXIntuneGuide {
         [string[]]$TrustedSigner = @(),
         [string[]]$RuleFiles = @()
     )
-    $ps = '%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
-    # Trust mode Signature: the install command names the signer (SHA1 thumbprints, 40 hex characters, separated by commas without a space).
-    $signers = @($TrustedSigner | Where-Object { $_ } | ForEach-Object { "$_".ToUpperInvariant() })
-    foreach ($signer in $signers) { if ($signer -notmatch '^[0-9A-F]{40}\z') { throw 'A thumbprint for -TrustedSigner is not valid.' } }
-    $installArguments = $(if ($signers.Count) { ' -TrustedSigner ' + ($signers -join ',') } else { '' })
-    $org = $Answers.OrgName
+    $guide = Get-SelfXIntuneGuideSteps @PSBoundParameters
     $lines = New-Object System.Collections.Generic.List[string]
-    $lines.Add((Get-WText 'guide.title' @($org, $Version)))
-    $lines.Add(('=' * 72))
-    $lines.Add((Get-WText 'guide.intro'))
+    foreach ($line in $guide.Header) { $lines.Add($line) }
     $lines.Add('')
-    $lines.Add((Get-WText 'guide.s1' @($PackageFile, "SelfX Service - $org", $org)))
-    $lines.Add('')
-    $lines.Add((Get-WText 'guide.s2' @("$ps .\Install.ps1$installArguments")))
-    $lines.Add((Get-WText 'guide.s2b' @("$ps .\Uninstall.ps1")))
-    $lines.Add((Get-WText 'guide.s2c'))
-    $lines.Add('')
-    $lines.Add((Get-WText 'guide.s3'))
-    $lines.Add('')
-    $lines.Add((Get-WText 'guide.s4' @($DetectionFile)))
-    $lines.Add('')
-    $lines.Add((Get-WText 'guide.s5'))
-    $lines.Add('')
-    $lines.Add((Get-WText 'guide.s6'))
-    $lines.Add('')
-    if ($ScriptFiles.Count -gt 0) {
-        $lines.Add((Get-WText 'guide.s7'))
-        foreach ($unit in @($Answers.Units)) {
-            $tags = if (@($unit.GroupTags).Count) { (@($unit.GroupTags) -join ', ') } else { '-' }
-            $classes = if (@($unit.Categories).Count) { (@($unit.Categories) -join ', ') } else { '-' }
-            $lines.Add((Get-WText 'guide.s7item' @($unit.Id, $tags, $classes)))
-        }
-        foreach ($file in $ScriptFiles) { $lines.Add("   - $file") }
-        $lines.Add((Get-WText 'guide.s7tag'))
-        $lines.Add('')
-    }
-    $step = if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }
-    if ($signers.Count) {
-        $lines.Add((Get-WText 'guide.trust' @($step)))
-        $lines.Add((Get-WText 'guide.trust2'))
-        $lines.Add('')
-        $step++
-    }
-    if ($RuleFiles.Count -gt 0) {
-        $lines.Add((Get-WText $(if ($signers.Count) { 'guide.rules.signed' } else { 'guide.rules' }) @($step)))
-        foreach ($file in $RuleFiles) { $lines.Add("   - $file") }
-        $lines.Add('')
-        $step++
-    }
-    $lines.Add((Get-WText 'guide.asr' @($step)))
-    $lines.Add((Get-WText 'guide.asr1'))
-    $lines.Add((Get-WText 'guide.asr2'))
-    foreach ($file in $script:SelfXAsrExclusionFiles) { $lines.Add("   - $file") }
-    $lines.Add((Get-WText 'guide.asr3'))
-    $lines.Add('')
-    $lines.Add((Get-WText 'guide.s8' @($step + 1)))
-    $lines.Add('')
-    if ($AnswersFile) {
-        $lines.Add((Get-WText 'guide.update' @($AnswersFile)))
-        $lines.Add((Get-WText 'guide.answers' @($AnswersFile)))
-    }
+    foreach ($step in $guide.Steps) { foreach ($line in $step.Lines) { $lines.Add($line) }; $lines.Add('') }
+    foreach ($line in $guide.Footer) { $lines.Add($line) }
     return ($lines -join "`r`n") + "`r`n"
 }
 
@@ -789,8 +816,14 @@ function Invoke-SelfXPackageBuild {
         Progress: -OnProgress is called as & $OnProgress <step id> <text>. Step ids: check, copy, config, sign, catalog, pack,
         detection, rules, guide, finish.
 
+        -AdditionalSigner: SHA1 thumbprints of further signers that the devices shall accept besides the certificate (change of the
+        certificate: the new one is announced before the first package signed with it). They only go into -TrustedSigner of the install
+        command; nothing is signed with them. At most 9 (Install.ps1 accepts 10 thumbprints). Needs -Certificate.
+
     .OUTPUTS
-        An object with OutputFolder, Version, Mode (Hash or Signature), PackageFile, DetectionFile, RuleFiles, ScriptFiles, GuideFile.
+        An object with OutputFolder, Version, Mode (Hash or Signature), PackageFile, DetectionFile, RuleFiles, ScriptFiles, GuideFile, GuideText,
+        TrustedSigner (the thumbprints of the install command) and GuideSteps (Get-SelfXIntuneGuideSteps: the same instructions as steps with
+        the values to copy).
     #>
     [CmdletBinding()]
     param(
@@ -800,12 +833,14 @@ function Invoke-SelfXPackageBuild {
         [string]$ToolPath,
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
         [string]$TimestampServer,
+        [string[]]$AdditionalSigner = @(),
         [scriptblock]$OnProgress,
         [string]$Language = 'en',
         [switch]$ConfigureOnly
     )
     $progress = { param([string]$id) if ($null -ne $OnProgress) { & $OnProgress $id (Get-WText "step.$id") } }
     $signed = ($null -ne $Certificate)
+    $additional = @($AdditionalSigner | Where-Object { "$_".Trim() })
 
     # ---- input, before anything is written
     & $progress 'check'
@@ -817,6 +852,14 @@ function Invoke-SelfXPackageBuild {
         $problem = Get-SelfXSigningCertificateProblem $Certificate
         if ($null -ne $problem) { throw "The certificate cannot be used for code signing: $problem." }
         if ($TimestampServer -and -not (Test-SelfXTimestampUrl $TimestampServer)) { throw 'The time stamp server must be an absolute http or https address without user information.' }
+    }
+    # The signers of the install command: the certificate first, then the additional ones (normalized, duplicates removed, at most 10).
+    if ($additional.Count -and -not $signed) { throw 'Additional signers need a certificate (trust mode Signature).' }
+    $trustedSigners = @()
+    if ($signed) {
+        # ConvertTo-SelfXThumbprintList returns one array (return , ...): not wrapped in @() again.
+        $trustedSigners = [string[]](ConvertTo-SelfXThumbprintList -Thumbprint (@($Certificate.Thumbprint) + $additional))
+        if ($trustedSigners.Count -gt 10) { throw 'At most 9 additional signers are allowed (Install.ps1 accepts 10 thumbprints).' }
     }
     $final = Test-WizardOutputFolder -OutputFolder $OutputFolder -PayloadFolder $PayloadFolder
     $parent = Split-Path -Parent $final
@@ -928,8 +971,10 @@ function Invoke-SelfXPackageBuild {
         Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language
         $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
         $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })
-        $guideText = New-SelfXIntuneGuide -Answers $a -Version $version -PackageFile $packageName -DetectionFile $detectionName -ScriptFiles $scriptFiles `
-            -AnswersFile 'selfx-answers.json' -TrustedSigner $(if ($signed) { @($Certificate.Thumbprint) } else { @() }) -RuleFiles @($ruleFiles)
+        $guideArguments = @{ Answers = $a; Version = $version; PackageFile = $packageName; DetectionFile = $detectionName; ScriptFiles = $scriptFiles
+            AnswersFile = 'selfx-answers.json'; TrustedSigner = $trustedSigners; RuleFiles = @($ruleFiles) }
+        $guideText = New-SelfXIntuneGuide @guideArguments
+        $guideSteps = Get-SelfXIntuneGuideSteps @guideArguments -OutputFolder $final
         $guideFile = "SelfX-Intune-Guide.$guideLanguage.txt"
         [IO.File]::WriteAllText((Join-Path $out $guideFile), $guideText, (New-Object System.Text.UTF8Encoding($true)))
 
@@ -954,11 +999,78 @@ function Invoke-SelfXPackageBuild {
             ScriptFiles   = $scriptFiles
             GuideFile     = $guideFile
             GuideText     = $guideText
+            TrustedSigner = $trustedSigners
+            GuideSteps    = $guideSteps
         }
     }
     finally {
         if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue }
         if ($null -ne $backup -and (Test-Path -LiteralPath $backup)) { Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}
+
+# ---------------------------------------------------------------- certificate details for the window
+
+# Host names that only exist inside a company network: no dot, a reserved private suffix, localhost or a private IPv4 address.
+function Test-WizardInternalHost {
+    param([string]$HostName)
+    $name = "$HostName".Trim().TrimEnd('.').ToLowerInvariant()
+    if (-not $name -or $name -eq 'localhost' -or -not $name.Contains('.')) { return $true }
+    if ($name -match '\.(local|lan|internal|intranet|intra|corp|home|home\.arpa|localdomain)$') { return $true }
+    if ($name -match '^(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+)$') { return $true }
+    return $false
+}
+
+# What the window shows of a signing certificate: subject, issuer, end of validity, thumbprint and the addresses of the revocation lists
+# (CRL distribution points) of the certificate and its chain, with warnings: no address at all, no http address (devices outside the
+# network cannot reach an ldap or file address), only internal names. The chain is built without a revocation check and, where .NET
+# allows it, without downloads; nothing is sent to the addresses. Text ids of the warnings: wizard texts gui.crl.none, gui.crl.nohttp,
+# gui.crl.internal.
+function Get-WizardCertificateInfo {
+    param([Parameter(Mandatory = $true)][System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate)
+    $chain = New-Object System.Security.Cryptography.X509Certificates.X509Chain
+    $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+    $chain.ChainPolicy.VerificationFlags = [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::AllowUnknownCertificateAuthority
+    $chain.ChainPolicy.UrlRetrievalTimeout = [TimeSpan]::FromSeconds(2)
+    $downloads = $chain.ChainPolicy.GetType().GetProperty('DisableCertificateDownloads')
+    if ($null -ne $downloads) { $downloads.SetValue($chain.ChainPolicy, $true) }
+    $certificates = New-Object System.Collections.Generic.List[System.Security.Cryptography.X509Certificates.X509Certificate2]
+    try {
+        $null = $chain.Build($Certificate)
+        foreach ($element in $chain.ChainElements) { $certificates.Add($element.Certificate) }
+    }
+    catch { $certificates.Clear() }
+    finally { $chain.Reset() }
+    if ($certificates.Count -eq 0) { $certificates.Add($Certificate) }
+    $urls = New-Object System.Collections.Generic.List[string]
+    foreach ($certificate in $certificates) {
+        foreach ($extension in $certificate.Extensions) {
+            if ($extension.Oid.Value -ne '2.5.29.31') { continue }
+            foreach ($match in [regex]::Matches($extension.Format($false), '(?i)\b(?:https?|ldap|file|ftp)://[^\s,;]+')) {
+                $url = ($match.Value -replace '[\x00-\x1F\x7F]', '')
+                if ($url.Length -gt 300) { $url = $url.Substring(0, 300) }
+                if (-not $urls.Contains($url)) { $urls.Add($url) }
+            }
+        }
+    }
+    $warnings = New-Object System.Collections.Generic.List[string]
+    $http = @($urls | Where-Object { $_ -match '(?i)^https?://' })
+    if ($urls.Count -eq 0) { $warnings.Add('gui.crl.none') }
+    elseif ($http.Count -eq 0) { $warnings.Add('gui.crl.nohttp') }
+    if ($urls.Count -gt 0) {
+        $public = @($urls | Where-Object {
+                $uri = $null
+                [Uri]::TryCreate($_, [UriKind]::Absolute, [ref]$uri) -and -not (Test-WizardInternalHost $uri.Host)
+            })
+        if ($public.Count -eq 0) { $warnings.Add('gui.crl.internal') }
+    }
+    return [pscustomobject]@{
+        Subject    = $Certificate.Subject
+        Issuer     = $Certificate.Issuer
+        NotAfter   = $Certificate.NotAfter
+        Thumbprint = $Certificate.Thumbprint
+        CrlUrls    = $urls.ToArray()
+        Warnings   = $warnings.ToArray()
     }
 }
 
@@ -994,6 +1106,7 @@ function Invoke-SelfXWizardBuild {
         [string]$ToolPath,
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
         [string]$TimestampServer,
+        [string[]]$AdditionalSigner = @(),
         [scriptblock]$OnProgress,
         [string]$Language = 'en',
         [switch]$ConfigureOnly
@@ -1007,7 +1120,7 @@ function Invoke-SelfXWizardBuild {
             $source = $temporaryPayload
         }
         return (Invoke-SelfXPackageBuild -Answers $Answers -PayloadFolder $source -OutputFolder $OutputFolder -ToolPath $ToolPath -Certificate $Certificate `
-                -TimestampServer $TimestampServer -OnProgress $OnProgress -Language $Language -ConfigureOnly:$ConfigureOnly)
+                -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -OnProgress $OnProgress -Language $Language -ConfigureOnly:$ConfigureOnly)
     }
     finally {
         if ($temporaryPayload -and (Test-Path -LiteralPath $temporaryPayload)) { Remove-Item -LiteralPath $temporaryPayload -Recurse -Force -ErrorAction SilentlyContinue }

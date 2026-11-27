@@ -7,7 +7,7 @@
 	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
 	the same placeholders.
 -->
-<Wizard_Language Culture="en" Name="English" Version="1.3.0">
+<Wizard_Language Culture="en" Name="English" Version="1.4.0">
 	<T Id="title">SelfX package wizard</T>
 	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
 	<T Id="rec">Recommendation: </T>
@@ -244,4 +244,61 @@
 	<T Id="gui.kind.int">A whole number from {0} to {1}.</T>
 	<T Id="gui.kind.choice">Choose one of: {0}.</T>
 	<T Id="gui.kind.list">Separate the entries with commas: at most 100 entries of up to 150 characters.</T>
+	<!-- Signature page and steps of the instructions (step 15) -->
+	<T Id="guide.trust3">   If the signature is not accepted on a device, the service starts nothing: event 4006 (trust anchor missing or unsafe) or 4007 (a script, a library or a catalog has no valid signature of an allowed signer) in the Application log; SelfXService.log names the file and the reason (docs\Installation.md, Troubleshooting).</T>
+	<T Id="guide.trust4">   When Install.ps1 refuses the signatures of the package, it stops with exit code 1 before it writes Install.log and changes nothing. To see the reason, run the install command once in an elevated Windows PowerShell on a pilot device.</T>
+	<T Id="guide.certchange">{0}. Change of the signing certificate (renewal or new certificate): 1) build the package again with the old certificate and add the thumbprint of the new one as an additional signer, roll it out; 2) when all devices have it, build with the new certificate (the old thumbprint can stay as an additional signer for a while); 3) later build without the old thumbprint.</T>
+	<T Id="guide.certchange1">   Devices accept only signers named in -TrustedSigner of their last installation. A package signed with a certificate the devices do not know yet is refused.</T>
+	<T Id="guide.certchange2">   Use a time stamp service: without a time stamp the signatures become invalid when the certificate expires, and the service starts nothing (it notices an expired or revoked certificate after 60 minutes at the latest).</T>
+	<T Id="guide.certchange3">   AppLocker and App Control: a renewed certificate with the same subject needs no new rules; with another subject create the publisher rules again before the first package with the new certificate. Details: docs\Certificate-Guide.md.</T>
+	<T Id="gui.page.signing">Signature</T>
+	<T Id="gui.page.signing.intro">Sign the package with the code signing certificate of your organisation, or build it without a signature.</T>
+	<T Id="gui.sign.none">_No certificate</T>
+	<T Id="gui.sign.store">Certificate from the _store</T>
+	<T Id="gui.sign.file">Certificate _file (PFX)</T>
+	<T Id="gui.sign.none.info">Without a certificate the package is checked by hashes (trust mode Hash). It works, but every new version needs new AppLocker and App Control rules, and the devices only check that the files match the lists. Recommended: sign with the certificate of your organisation (docs\Certificate-Guide.md).</T>
+	<T Id="gui.sign.store.rec">Only certificates with a private key, the key usage Code Signing and a valid period are listed (certificate stores of your user and of the computer). Expired certificates are not offered.</T>
+	<T Id="gui.sign.store.empty">No suitable code signing certificate was found. Request one from your PKI (docs\Certificate-Guide.md) or use a PFX file.</T>
+	<T Id="gui.sign.store.none">Select a certificate.</T>
+	<T Id="gui.sign.refresh">_Refresh list</T>
+	<T Id="gui.sign.file.ask">PFX file</T>
+	<T Id="gui.sign.file.rec">The file is opened in memory only; it is not imported into a certificate store.</T>
+	<T Id="gui.sign.password.ask">Password of the PFX file</T>
+	<T Id="gui.sign.password.rec">The password is used once to open the file. It is never shown, saved or written to a file.</T>
+	<T Id="gui.sign.open">_Open certificate</T>
+	<T Id="gui.sign.file.failed">The certificate could not be opened: {0}</T>
+	<T Id="gui.sign.file.notloaded">Open the PFX file with its password first.</T>
+	<T Id="gui.sign.file.loaded">The certificate is open. The password field was emptied.</T>
+	<T Id="gui.sign.pfx.filter">PFX file (*.pfx;*.p12)|*.pfx;*.p12</T>
+	<T Id="gui.sign.details">Selected certificate</T>
+	<T Id="gui.sign.subject">Subject: {0}</T>
+	<T Id="gui.sign.issuer">Issuer: {0}</T>
+	<T Id="gui.sign.valid">Valid until: {0}</T>
+	<T Id="gui.sign.thumbprint">Thumbprint: {0}</T>
+	<T Id="gui.sign.crl">Revocation lists: {0}</T>
+	<T Id="gui.crl.none">The certificate names no revocation list. Windows cannot check whether it was revoked.</T>
+	<T Id="gui.crl.nohttp">No revocation list has an http address. Devices outside the company network cannot reach ldap or file addresses; ask your PKI team for a public http address in first place.</T>
+	<T Id="gui.crl.internal">The revocation lists have internal names only. Devices outside the company network cannot reach them; Windows then treats the signature as valid.</T>
+	<T Id="Timestamp.ask">Time stamp service (http:// or https://)</T>
+	<T Id="Timestamp.rec">Required. A time stamp keeps the signatures valid after the certificate expires. Use the time stamp service of the vendor of your certificate or the internal one of your PKI.</T>
+	<T Id="NoTimestamp.ask">Sign without a time stamp (not recommended)</T>
+	<T Id="NoTimestamp.rec">Only for tests. Without a time stamp the signatures become invalid when the certificate expires, and SelfX then starts nothing on the devices.</T>
+	<T Id="gui.kind.timestamp">Enter an http:// or https:// address without user name, or switch on signing without a time stamp.</T>
+	<T Id="Additional.ask">Additional allowed signers (thumbprints, separated by commas, optional)</T>
+	<T Id="Additional.rec">Only for a change of the certificate: the thumbprint of the next certificate, so that devices accept packages signed with it. Nothing is signed with it.</T>
+	<T Id="gui.sign.additional.invalid">Every entry must be a thumbprint of 40 hexadecimal characters; at most 9 entries.</T>
+	<T Id="gui.sign.configureonly">A package that is only configured is not signed: switch this off or choose No certificate on the page Signature.</T>
+	<T Id="gui.summary.sign.none">Signature: no certificate (trust mode Hash)</T>
+	<T Id="gui.summary.sign">Signature: {0} (thumbprint {1}), time stamp: {2}</T>
+	<T Id="gui.summary.sign.notimestamp">none</T>
+	<T Id="gui.copy.name">Copy app name</T>
+	<T Id="gui.copy.package">Copy package path</T>
+	<T Id="gui.copy.install">Copy install command</T>
+	<T Id="gui.copy.uninstall">Copy uninstall command</T>
+	<T Id="gui.copy.requirement">Copy requirement script</T>
+	<T Id="gui.copy.detection">Copy path of the detection script</T>
+	<T Id="gui.copy.folder">Copy output folder</T>
+	<T Id="gui.copy.thumbprints">Copy thumbprints</T>
+	<T Id="gui.copy.asr">Copy file list</T>
+	<T Id="gui.result.copied.value">In the clipboard: {0}</T>
 </Wizard_Language>

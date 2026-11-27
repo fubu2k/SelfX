@@ -4,8 +4,13 @@
 
 .DESCRIPTION
     Start: tools\Start-SelfXPackageWizard.cmd (Windows PowerShell 5.1, -STA). PowerShell 7 works as well (pwsh -STA -File ...).
-    Pages: language, basics, support, branding, ticket, further settings, summary (with the build settings), build (progress list) and
-    result (files and the instructions for Intune).
+    Pages: language, basics, support, branding, ticket, further settings, signature, summary (with the build settings), build (progress
+    list) and result (files and the instructions for Intune as steps with copy buttons).
+
+    Signature: the certificate comes from the stores (Get-SelfXSigningCertificate lists only certificates with a private key, the key usage
+    Code Signing and a valid period) or from a PFX file. The password of a PFX file is read from the password box as a SecureString only
+    (PasswordBox.SecurePassword; the property Password is never read), used once to open the file and disposed; the box is emptied. It never
+    reaches the state, the answers, a text, a log or the window title. The certificate lives in memory and is disposed when the window closes.
 
     The window only shows and collects: every value is checked with the functions of SelfXWizard.ps1 (ConvertTo-WizardValue,
     Test-WizardUnitValues, Read-WizardLogo) as soon as it is typed, the error is shown at the field. The answers are the same object the
@@ -23,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.0.0
+    Version : 1.1.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -32,6 +37,10 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-27  fubu2k               Initial version
+    1.1.0    2026-11-27  fubu2k               Page Signature: no certificate (trust mode Hash), certificate from the store (suitable ones only) or a
+                                              PFX file (password box, SecureString only, emptied after opening), time stamp service (required unless
+                                              switched off), additional signers for a change of the certificate, revocation list addresses with
+                                              warnings; result page with the instructions as steps and copy buttons
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -101,6 +110,7 @@ $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },
     [pscustomobject]@{ Id = 'more'; Questions = @('CopilotEnabled', 'CopilotAudience', 'CopilotClearClipboard', 'WikiEnabled', 'WikiUrl', 'WikiName', 'TrayIcon', 'ShortcutDesktop', 'ShortcutStartMenu', 'Expert', 'LogRetention', 'FileCheck', 'Privileges', 'AppLockerRules', 'WdacBasePolicyId') },
+    [pscustomobject]@{ Id = 'signing'; Questions = @() },
     [pscustomobject]@{ Id = 'summary'; Questions = @() },
     [pscustomobject]@{ Id = 'build'; Questions = @() },
     [pscustomobject]@{ Id = 'result'; Questions = @() }
@@ -114,10 +124,25 @@ $script:WizardGuiBuildQuestions = @(
     @{ Id = 'Tool'; Kind = 'text'; Max = 260; Required = $true; Browse = 'tool'; When = { param($b) -not $b.ConfigureOnly } }
 )
 
-# Step ids of Invoke-SelfXPackageBuild in the order of the progress list (sign and catalog only with a certificate: page of step 15).
+# The fields of the page signing (time stamp service, without time stamp, additional signers); the texts are <Id>.ask and <Id>.rec.
+$script:WizardGuiSigningQuestions = @(
+    @{ Id = 'Timestamp'; Kind = 'text'; Max = 500 },
+    @{ Id = 'NoTimestamp'; Kind = 'bool' },
+    @{ Id = 'Additional'; Kind = 'text'; Max = 500 }
+)
+
+# The index of a page by its id.
+function Get-WizardGuiPageIndex {
+    param([Parameter(Mandatory = $true)][string]$Id)
+    for ($i = 0; $i -lt $script:WizardGuiPages.Count; $i++) { if ($script:WizardGuiPages[$i].Id -eq $Id) { return $i } }
+    throw "Unknown page $Id."
+}
+
+# Step ids of Invoke-SelfXPackageBuild in the order of the progress list (sign and catalog only with a certificate).
 function Get-WizardGuiBuildSteps {
-    param([bool]$ConfigureOnly)
+    param([bool]$ConfigureOnly, [bool]$Signed)
     if ($ConfigureOnly) { return , @('check', 'copy', 'config', 'guide', 'finish') }
+    if ($Signed) { return , @('check', 'copy', 'config', 'sign', 'catalog', 'pack', 'detection', 'rules', 'guide', 'finish') }
     return , @('check', 'copy', 'config', 'pack', 'detection', 'rules', 'guide', 'finish')
 }
 
@@ -130,12 +155,18 @@ function Get-WizardGuiTextIds {
         'ConfigureOnly.ask', 'ConfigureOnly.rec', 'Output.ask', 'Output.rec', 'Tool.ask', 'Tool.rec', 'gui.build.start', 'gui.build.cancel', 'gui.build.running', 'gui.build.cancelling',
         'gui.build.cancelled', 'gui.build.failed', 'gui.build.done', 'gui.state.pending', 'gui.state.running', 'gui.state.done', 'gui.state.failed', 'gui.state.cancelled',
         'gui.result.text', 'gui.result.configured', 'gui.result.files', 'gui.result.open', 'gui.result.copy', 'gui.result.copied', 'gui.result.guide', 'gui.page.errors', 'gui.answers.loaded',
-        'gui.answers.saved', 'gui.answers.invalid', 'gui.answers.unreadable', 'gui.answers.filter', 'gui.logo.filter', 'gui.tool.filter', 'gui.close.build', 'gui.finish') {
+        'gui.answers.saved', 'gui.answers.invalid', 'gui.answers.unreadable', 'gui.answers.filter', 'gui.logo.filter', 'gui.tool.filter', 'gui.close.build', 'gui.finish',
+        'gui.sign.none', 'gui.sign.store', 'gui.sign.file', 'gui.sign.none.info', 'gui.sign.store.rec', 'gui.sign.store.empty', 'gui.sign.store.none', 'gui.sign.refresh',
+        'gui.sign.file.ask', 'gui.sign.file.rec', 'gui.sign.password.ask', 'gui.sign.password.rec', 'gui.sign.open', 'gui.sign.file.failed', 'gui.sign.file.notloaded',
+        'gui.sign.file.loaded', 'gui.sign.pfx.filter', 'gui.sign.details', 'gui.sign.subject', 'gui.sign.issuer', 'gui.sign.valid', 'gui.sign.thumbprint', 'gui.sign.crl',
+        'gui.crl.none', 'gui.crl.nohttp', 'gui.crl.internal', 'gui.kind.timestamp', 'gui.sign.additional.invalid', 'gui.sign.configureonly', 'gui.summary.sign.none',
+        'gui.summary.sign', 'gui.summary.sign.notimestamp', 'gui.copy.name', 'gui.copy.package', 'gui.copy.install', 'gui.copy.uninstall', 'gui.copy.requirement',
+        'gui.copy.detection', 'gui.copy.folder', 'gui.copy.thumbprints', 'gui.copy.asr', 'gui.result.copied.value') {
         $ids.Add($id)
     }
     foreach ($page in $script:WizardGuiPages) { $ids.Add("gui.page.$($page.Id)"); $ids.Add("gui.page.$($page.Id).intro") }
     foreach ($kind in 'bool', 'text', 'mail', 'url', 'teams', 'guid', 'phone', 'color', 'culture', 'tag', 'unitid', 'int', 'choice', 'list') { $ids.Add("gui.kind.$kind") }
-    foreach ($step in 'check', 'copy', 'config', 'pack', 'detection', 'rules', 'guide', 'finish') { $ids.Add("step.$step") }
+    foreach ($step in 'check', 'copy', 'config', 'sign', 'catalog', 'pack', 'detection', 'rules', 'guide', 'finish') { $ids.Add("step.$step") }
     return , $ids.ToArray()
 }
 
@@ -146,6 +177,7 @@ function Get-WizardGuiQuestionTable {
     $everyUnit = @{ UseGroupTags = $true; HybridJoin = $true; UseDeviceClass = $true }
     foreach ($question in (Get-WizardUnitQuestions -Answers $everyUnit)) { $table[$question.Id] = $question }
     foreach ($question in $script:WizardGuiBuildQuestions) { $table[$question.Id] = $question }
+    foreach ($question in $script:WizardGuiSigningQuestions) { $table[$question.Id] = $question }
     return $table
 }
 
@@ -163,7 +195,49 @@ function New-WizardGuiState {
         Build     = @{ Payload = $defaults.PayloadFolder; Output = $defaults.OutputFolder; Tool = $defaults.ToolPath; ConfigureOnly = $false }
         Questions = (Get-WizardGuiQuestionTable)
         ToolsFolder = $ToolsFolder
+        # Signature: Mode None | Store | File. The certificates are objects in memory (never saved); no password is kept anywhere.
+        Signing   = @{ Mode = 'None'; Timestamp = ''; NoTimestamp = $false; Additional = '' }
+        StoreCertificate = $null
+        StoreList        = @()
+        PfxCertificate   = $null
     }
+}
+
+# The certificate of the chosen mode, or $null (mode None, nothing selected or opened).
+function Get-WizardGuiCertificate {
+    param([Parameter(Mandatory = $true)]$State)
+    switch ($State.Signing.Mode) {
+        'Store' { return $State.StoreCertificate }
+        'File' { return $State.PfxCertificate }
+    }
+    return $null
+}
+
+# The additional signers as a list (comma separated text, empty entries ignored).
+function Get-WizardGuiAdditionalSigners {
+    param([Parameter(Mandatory = $true)]$State)
+    return , @("$($State.Signing.Additional)".Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+}
+
+# The values of the signature for Invoke-SelfXPackageBuild: certificate, time stamp service, additional signers.
+function Get-WizardGuiSigning {
+    param([Parameter(Mandatory = $true)]$State)
+    $certificate = Get-WizardGuiCertificate -State $State
+    if ($null -eq $certificate) { return [pscustomobject]@{ Certificate = $null; TimestampServer = ''; AdditionalSigner = @() } }
+    return [pscustomobject]@{
+        Certificate      = $certificate
+        TimestampServer  = $(if ($State.Signing.NoTimestamp) { '' } else { "$($State.Signing.Timestamp)".Trim() })
+        AdditionalSigner = (Get-WizardGuiAdditionalSigners -State $State)
+    }
+}
+
+# Disposes the certificates of the window (store selection and PFX file).
+function Clear-WizardGuiCertificates {
+    param([Parameter(Mandatory = $true)]$State, [switch]$StoreOnly)
+    if ($null -ne $State.StoreCertificate) { $State.StoreCertificate = $null }
+    foreach ($certificate in @($State.StoreList)) { if ($null -ne $certificate) { $certificate.Dispose() } }
+    $State | Add-Member -NotePropertyName StoreList -NotePropertyValue @() -Force
+    if (-not $StoreOnly -and $null -ne $State.PfxCertificate) { $State.PfxCertificate.Dispose(); $State.PfxCertificate = $null }
 }
 
 function New-WizardGuiUnit {
@@ -256,6 +330,17 @@ function Get-WizardGuiEvaluation {
         if ($null -ne $problem) { $buildErrors[$question.Id] = $problem }
     }
     if (-not $buildErrors.ContainsKey('Payload') -and -not (Test-Path -LiteralPath $State.Build.Payload -PathType Container)) { $buildErrors['Payload'] = (Get-WText 'Payload.missing') }
+    # Signature: a certificate for the mode, a time stamp service (or the switch without), valid additional signers.
+    $signingErrors = @{}
+    $signing = $State.Signing
+    if ($signing.Mode -ne 'None') {
+        if ($null -eq (Get-WizardGuiCertificate -State $State)) { $signingErrors[$signing.Mode] = (Get-WText $(if ($signing.Mode -eq 'Store') { 'gui.sign.store.none' } else { 'gui.sign.file.notloaded' })) }
+        if (-not $signing.NoTimestamp -and -not (Test-SelfXTimestampUrl "$($signing.Timestamp)".Trim())) { $signingErrors['Timestamp'] = (Get-WText 'gui.kind.timestamp') }
+        $additional = Get-WizardGuiAdditionalSigners -State $State
+        $badAdditional = ($additional.Count -gt 9) -or "$($signing.Additional)".Length -gt 500 -or (@($additional | Where-Object { $_ -notmatch '^[0-9A-Fa-f]{40}\z' }).Count -gt 0)
+        if ($badAdditional) { $signingErrors['Additional'] = (Get-WText 'gui.sign.additional.invalid') }
+        if ($State.Build.ConfigureOnly -and -not $buildErrors.ContainsKey('ConfigureOnly')) { $buildErrors['ConfigureOnly'] = (Get-WText 'gui.sign.configureonly') }
+    }
     return [pscustomobject]@{
         Answers       = $answers
         Errors        = $errors
@@ -266,6 +351,7 @@ function Get-WizardGuiEvaluation {
         UnitsError    = $unitsError
         BuildErrors   = $buildErrors
         BuildVisible  = $buildVisible
+        SigningErrors = $signingErrors
     }
 }
 
@@ -280,6 +366,7 @@ function Get-WizardGuiPageErrors {
         if ($Evaluation.UnitsError) { $list.Add('Units') }
         for ($i = 0; $i -lt $Evaluation.UnitErrors.Count; $i++) { if ($Evaluation.UnitErrors[$i].Count -gt 0) { $list.Add("Unit$i") } }
     }
+    if ($PageId -eq 'signing') { foreach ($id in $Evaluation.SigningErrors.Keys) { $list.Add($id) } }
     if ($PageId -eq 'summary') { foreach ($id in $Evaluation.BuildErrors.Keys) { $list.Add($id) } }
     return , $list.ToArray()
 }
@@ -517,6 +604,12 @@ function Update-WizardGuiView {
             $message = $evaluation.BuildErrors[$field.Id]
             $touched = $true
         }
+        elseif ($field.Scope -eq 'signing') {
+            $shown = $true
+            $message = $evaluation.SigningErrors[$field.Id]
+            $touched = ($field.Id -ne 'Timestamp') -or "$($state.Signing.Timestamp)" -ne '' -or $script:Gui.ShowAll.Contains('Timestamp')
+            if ($field.Id -eq 'Timestamp') { $field.Control.IsEnabled = -not $state.Signing.NoTimestamp }
+        }
         else { continue }
         $field.Row.Visibility = $(if ($shown) { 'Visible' } else { 'Collapsed' })
         Set-WizardGuiFieldError -Field $field -Message $(if ($touched) { $message } else { $null })
@@ -556,7 +649,96 @@ function Update-WizardGuiView {
     # Company color shown at once when it is valid.
     $accent = $(if ($evaluation.Errors.ContainsKey('AccentColor')) { '' } else { "$($evaluation.Answers['AccentColor'])" })
     if ($accent -ne $script:Gui.AppliedAccent) { Set-WizardGuiColors -Window $script:Gui.Window -AccentColor $accent -Theme $script:Gui.Theme; $script:Gui.AppliedAccent = $accent }
-    $ui.SaveButton.IsEnabled = ($script:Gui.Page -lt 7)
+    Update-WizardGuiSigningView -Evaluation $evaluation
+    $ui.SaveButton.IsEnabled = ($script:Gui.Page -lt (Get-WizardGuiPageIndex 'build'))
+}
+
+# Page signing: the panel of the mode, the list of the store, the state of the PFX file and the details of the chosen certificate.
+function Update-WizardGuiSigningView {
+    param($Evaluation)
+    $ui = $script:Gui.Ui
+    $state = $script:Gui.State
+    $mode = $state.Signing.Mode
+    $ui.SignNoneInfo.Visibility = $(if ($mode -eq 'None') { 'Visible' } else { 'Collapsed' })
+    $ui.SignStorePanel.Visibility = $(if ($mode -eq 'Store') { 'Visible' } else { 'Collapsed' })
+    $ui.SignFilePanel.Visibility = $(if ($mode -eq 'File') { 'Visible' } else { 'Collapsed' })
+    $ui.SignDetailsPanel.Visibility = $(if ($mode -ne 'None') { 'Visible' } else { 'Collapsed' })
+    $storeError = $Evaluation.SigningErrors['Store']
+    $ui.CertListError.Text = "$storeError"
+    $ui.CertListError.Visibility = $(if ($storeError -and $script:Gui.ShowAll.Contains('Store')) { 'Visible' } else { 'Collapsed' })
+    $fileError = $Evaluation.SigningErrors['File']
+    if ($fileError -and $script:Gui.ShowAll.Contains('File') -and -not $script:Gui.PfxMessage) { $ui.PfxError.Text = "$fileError"; $ui.PfxError.Visibility = 'Visible' }
+    elseif (-not $script:Gui.PfxMessage) { $ui.PfxError.Visibility = 'Collapsed' }
+    $certificate = Get-WizardGuiCertificate -State $state
+    $ui.CertDetailsTitle.Visibility = $(if ($null -ne $certificate) { 'Visible' } else { 'Collapsed' })
+    $ui.CertCard.Visibility = $(if ($null -ne $certificate) { 'Visible' } else { 'Collapsed' })
+    if ($null -eq $certificate) { return }
+    if ($null -eq $script:Gui.CertInfo -or $script:Gui.CertInfo.Thumbprint -ne $certificate.Thumbprint) { $script:Gui.CertInfo = Get-WizardCertificateInfo -Certificate $certificate }
+    $info = $script:Gui.CertInfo
+    $ui.CertSubject.Text = (Get-WText 'gui.sign.subject' @($info.Subject))
+    $ui.CertIssuer.Text = (Get-WText 'gui.sign.issuer' @($info.Issuer))
+    $ui.CertValid.Text = (Get-WText 'gui.sign.valid' @($info.NotAfter.ToString('d', [Globalization.CultureInfo]::CurrentCulture)))
+    $ui.CertThumbprint.Text = (Get-WText 'gui.sign.thumbprint' @($info.Thumbprint))
+    $ui.CertCrl.Text = (Get-WText 'gui.sign.crl' @($(if ($info.CrlUrls.Count) { $info.CrlUrls -join ', ' } else { '-' })))
+    $ui.CertCrlWarning.Text = ((@($info.Warnings) | ForEach-Object { Get-WText $_ }) -join ' ')
+    $ui.CertCrlWarningBox.Visibility = $(if ($info.Warnings.Count) { 'Visible' } else { 'Collapsed' })
+}
+
+# Fills the list of suitable certificates of the stores (Get-SelfXSigningCertificate: private key, Code Signing, valid period). The objects of
+# the previous list are disposed.
+function Update-WizardGuiCertificateList {
+    $ui = $script:Gui.Ui
+    $state = $script:Gui.State
+    $selected = $(if ($null -ne $state.StoreCertificate) { $state.StoreCertificate.Thumbprint } else { '' })
+    Clear-WizardGuiCertificates -State $state -StoreOnly
+    $list = @(Get-SelfXSigningCertificate)
+    $state.StoreList = $list
+    $script:Gui.Loading = $true
+    try {
+        $ui.CertList.Items.Clear()
+        foreach ($certificate in $list) {
+            $item = New-Object System.Windows.Controls.ListBoxItem
+            $text = '{0}{1}{2}  |  {3}  |  {4}' -f $certificate.Subject, [Environment]::NewLine, $certificate.Issuer, $certificate.NotAfter.ToString('d', [Globalization.CultureInfo]::CurrentCulture), $certificate.Thumbprint
+            $block = New-Object System.Windows.Controls.TextBlock
+            $block.Text = $text
+            $block.TextWrapping = 'Wrap'
+            $item.Content = $block
+            $item.Tag = $certificate.Thumbprint
+            [System.Windows.Automation.AutomationProperties]::SetName($item, $text.Replace([Environment]::NewLine, ', '))
+            $null = $ui.CertList.Items.Add($item)
+            if ($certificate.Thumbprint -eq $selected) { $ui.CertList.SelectedItem = $item; $state.StoreCertificate = $certificate }
+        }
+    }
+    finally { $script:Gui.Loading = $false }
+    $ui.CertListEmpty.Visibility = $(if ($list.Count -eq 0) { 'Visible' } else { 'Collapsed' })
+}
+
+# Opens the PFX file with the password of the password box. The password is a SecureString copy of the box (never the property Password),
+# disposed afterwards; the box is emptied in every case. Messages contain no password (Get-SelfXSigningCertificate guarantees that).
+function Open-WizardGuiPfx {
+    $ui = $script:Gui.Ui
+    $state = $script:Gui.State
+    $script:Gui.PfxMessage = $true
+    $secure = $ui.PfxPasswordBox.SecurePassword
+    try {
+        if ($null -ne $state.PfxCertificate) { $state.PfxCertificate.Dispose(); $state.PfxCertificate = $null }
+        $path = "$($ui.PfxPathBox.Text)".Trim()
+        $state.PfxCertificate = Get-SelfXSigningCertificate -PfxPath $path -PfxPassword $secure
+        $ui.PfxStatus.Text = (Get-WText 'gui.sign.file.loaded')
+        $ui.PfxStatus.Visibility = 'Visible'
+        $ui.PfxError.Visibility = 'Collapsed'
+    }
+    catch {
+        $ui.PfxStatus.Visibility = 'Collapsed'
+        $ui.PfxError.Text = (Get-WText 'gui.sign.file.failed' @((ConvertTo-SelfXSafeText $_.Exception.Message)))
+        $ui.PfxError.Visibility = 'Visible'
+    }
+    finally {
+        $secure.Dispose()
+        $ui.PfxPasswordBox.Clear()
+        $script:Gui.CertInfo = $null
+    }
+    Update-WizardGuiView
 }
 
 # Button text with an access key (_ before the letter). The button template of Self_X.ps1 does not read access keys from text, so the text is an
@@ -601,7 +783,28 @@ function Set-WizardGuiTexts {
     Set-WizardGuiButtonText -Button $ui.OpenFolderButton -Text (Get-WText 'gui.result.open')
     Set-WizardGuiButtonText -Button $ui.CopyGuideButton -Text (Get-WText 'gui.result.copy')
     $ui.GuideTitle.Text = (Get-WText 'gui.result.guide')
-    [System.Windows.Automation.AutomationProperties]::SetName($ui.GuideBox, $ui.GuideTitle.Text)
+    Set-WizardGuiButtonText -Button $ui.SignNone -Text (Get-WText 'gui.sign.none')
+    Set-WizardGuiButtonText -Button $ui.SignStore -Text (Get-WText 'gui.sign.store')
+    Set-WizardGuiButtonText -Button $ui.SignFile -Text (Get-WText 'gui.sign.file')
+    $ui.SignNoneText.Text = (Get-WText 'gui.sign.none.info')
+    $ui.CertListHint.Text = (Get-WText 'gui.sign.store.rec')
+    $ui.CertListEmpty.Text = (Get-WText 'gui.sign.store.empty')
+    [System.Windows.Automation.AutomationProperties]::SetName($ui.CertList, (Get-WText 'gui.sign.store').Replace('_', ''))
+    [System.Windows.Automation.AutomationProperties]::SetHelpText($ui.CertList, $ui.CertListHint.Text)
+    Set-WizardGuiButtonText -Button $ui.RefreshCertsButton -Text (Get-WText 'gui.sign.refresh')
+    $ui.PfxPathLabel.Text = (Get-WText 'gui.sign.file.ask')
+    $ui.PfxPathHint.Text = (Get-WText 'gui.sign.file.rec')
+    [System.Windows.Automation.AutomationProperties]::SetName($ui.PfxPathBox, $ui.PfxPathLabel.Text)
+    [System.Windows.Automation.AutomationProperties]::SetHelpText($ui.PfxPathBox, $ui.PfxPathHint.Text)
+    $ui.PfxBrowseButton.Content = (Get-WText 'gui.browse')
+    [System.Windows.Automation.AutomationProperties]::SetName($ui.PfxBrowseButton, "$(Get-WText 'gui.browse') $($ui.PfxPathLabel.Text)")
+    $ui.PfxPasswordLabel.Text = (Get-WText 'gui.sign.password.ask')
+    $ui.PfxPasswordHint.Text = (Get-WText 'gui.sign.password.rec')
+    [System.Windows.Automation.AutomationProperties]::SetName($ui.PfxPasswordBox, $ui.PfxPasswordLabel.Text)
+    [System.Windows.Automation.AutomationProperties]::SetHelpText($ui.PfxPasswordBox, $ui.PfxPasswordHint.Text)
+    Set-WizardGuiButtonText -Button $ui.PfxOpenButton -Text (Get-WText 'gui.sign.open')
+    $ui.CertDetailsTitle.Text = (Get-WText 'gui.sign.details')
+    $script:Gui.CertInfo = $null
     foreach ($field in $script:Gui.Fields.Values) {
         $ask = Get-WText "$($field.Id).ask"
         $field.Label.Text = $ask
@@ -669,11 +872,20 @@ function Set-WizardGuiPage {
     $ui.PageMessage.Visibility = 'Collapsed'
     $building = ($null -ne $script:Gui.Build)
     $ui.BackButton.IsEnabled = ($Index -gt 0 -and -not $building -and $page.Id -ne 'result')
-    $ui.LoadButton.IsEnabled = ($Index -lt 7 -and -not $building)
+    $ui.LoadButton.IsEnabled = ($Index -lt (Get-WizardGuiPageIndex 'build') -and -not $building)
     $ui.NextButton.Visibility = $(if ($page.Id -eq 'build' -and -not $script:Gui.Result) { 'Collapsed' } else { 'Visible' })
     Set-WizardGuiButtonText -Button $ui.NextButton -Text $(if ($page.Id -eq 'result') { Get-WText 'gui.finish' } else { Get-WText 'gui.next' })
     if ($page.Id -eq 'summary') {
-        try { $ui.SummaryBox.Text = ((Get-WizardSummary -A (Get-WizardGuiAnswers -State $script:Gui.State)) -join [Environment]::NewLine) }
+        try {
+            $lines = @(Get-WizardSummary -A (Get-WizardGuiAnswers -State $script:Gui.State))
+            $certificate = Get-WizardGuiCertificate -State $script:Gui.State
+            if ($null -eq $certificate) { $lines += ('  ' + (Get-WText 'gui.summary.sign.none')) }
+            else {
+                $signing = Get-WizardGuiSigning -State $script:Gui.State
+                $lines += ('  ' + (Get-WText 'gui.summary.sign' @($certificate.Subject, $certificate.Thumbprint, $(if ($signing.TimestampServer) { $signing.TimestampServer } else { Get-WText 'gui.summary.sign.notimestamp' }))))
+            }
+            $ui.SummaryBox.Text = ($lines -join [Environment]::NewLine)
+        }
         catch { $ui.SummaryBox.Text = $_.Exception.Message }
     }
     if ($page.Id -eq 'build') { Set-WizardGuiProgress }
@@ -685,6 +897,7 @@ function Set-WizardGuiPage {
         if ($page.Id -eq 'language') { $first = $ui.WizardLanguageBox }
         elseif ($page.Id -eq 'build') { $first = $ui.BuildButton }
         elseif ($page.Id -eq 'result') { $first = $ui.OpenFolderButton }
+        elseif ($page.Id -eq 'signing') { $first = $(if ($script:Gui.State.Signing.Mode -eq 'Store') { $ui.SignStore } elseif ($script:Gui.State.Signing.Mode -eq 'File') { $ui.SignFile } else { $ui.SignNone }) }
         else {
             $scopeIds = @($page.Questions)
             if ($page.Id -eq 'summary') { $scopeIds = @($script:WizardGuiBuildQuestions | ForEach-Object { $_.Id }) }
@@ -699,7 +912,7 @@ function Set-WizardGuiProgress {
     $ui = $script:Gui.Ui
     $ui.ProgressList.Children.Clear()
     $script:Gui.ProgressRows = @{}
-    $steps = Get-WizardGuiBuildSteps -ConfigureOnly ([bool]$script:Gui.State.Build.ConfigureOnly)
+    $steps = Get-WizardGuiBuildSteps -ConfigureOnly ([bool]$script:Gui.State.Build.ConfigureOnly) -Signed ($null -ne (Get-WizardGuiCertificate -State $script:Gui.State))
     foreach ($step in $steps) {
         $row = New-Object System.Windows.Controls.StackPanel
         $row.Orientation = 'Horizontal'
@@ -735,7 +948,8 @@ function Set-WizardGuiStepState {
 
 # The script of the runspace. Every value is a parameter (nothing is put together as code); progress goes into a queue that the window reads.
 $script:WizardGuiBuildScript = {
-    param([string]$WizardScript, [string]$Culture, [hashtable]$Source, [string]$PayloadFolder, [bool]$FromRepository, [string]$OutputFolder, [string]$ToolPath, [bool]$ConfigureOnly, $Sync)
+    param([string]$WizardScript, [string]$Culture, [hashtable]$Source, [string]$PayloadFolder, [bool]$FromRepository, [string]$OutputFolder, [string]$ToolPath, [bool]$ConfigureOnly,
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate, [string]$TimestampServer, [string[]]$AdditionalSigner, $Sync)
     $ErrorActionPreference = 'Stop'
     try {
         . $WizardScript
@@ -743,7 +957,8 @@ $script:WizardGuiBuildScript = {
         $queue = $Sync.Queue
         $progress = { param($id, $text) $queue.Enqueue([string]$id) }.GetNewClosure()
         $Sync.Result = Invoke-SelfXWizardBuild -Answers $Source -PayloadFolder $PayloadFolder -FromRepository:$FromRepository -OutputFolder $OutputFolder `
-            -ToolPath $ToolPath -Language $Culture -ConfigureOnly:$ConfigureOnly -OnProgress $progress
+            -ToolPath $ToolPath -Language $Culture -ConfigureOnly:$ConfigureOnly -Certificate $Certificate -TimestampServer $TimestampServer `
+            -AdditionalSigner $AdditionalSigner -OnProgress $progress
     }
     catch { $Sync.Error = $_.Exception.Message }
 }
@@ -755,6 +970,7 @@ function Start-WizardGuiBuild {
     $payload = "$($State.Build.Payload)".Trim()
     $fromRepository = (Test-Path -LiteralPath (Join-Path $payload 'Version.txt') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $payload 'Sources') -PathType Container) -and
         -not (Test-Path -LiteralPath (Join-Path $payload 'App\SelfX.Code.json') -PathType Leaf)
+    $signing = Get-WizardGuiSigning -State $State
     $sync = [hashtable]::Synchronized(@{ Queue = (New-Object System.Collections.Concurrent.ConcurrentQueue[string]); Result = $null; Error = $null })
     $runspace = [runspacefactory]::CreateRunspace()
     $runspace.Open()
@@ -763,7 +979,8 @@ function Start-WizardGuiBuild {
     $null = $shell.AddScript($script:WizardGuiBuildScript.ToString()).AddParameters(@{
             WizardScript = (Join-Path $script:GuiFolder 'SelfXWizard.ps1'); Culture = $State.Culture; Source = $source; PayloadFolder = $payload
             FromRepository = [bool]$fromRepository; OutputFolder = "$($State.Build.Output)".Trim(); ToolPath = "$($State.Build.Tool)".Trim()
-            ConfigureOnly = [bool]$State.Build.ConfigureOnly; Sync = $sync
+            ConfigureOnly = [bool]$State.Build.ConfigureOnly; Certificate = $signing.Certificate; TimestampServer = $signing.TimestampServer
+            AdditionalSigner = [string[]]$signing.AdditionalSigner; Sync = $sync
         })
     $handle = $shell.BeginInvoke()
     return [pscustomobject]@{ Shell = $shell; Runspace = $runspace; Handle = $handle; Sync = $sync; Steps = (New-Object System.Collections.Generic.List[string]); Cancelled = $false }
@@ -831,8 +1048,57 @@ function Show-WizardGuiResult {
     foreach ($name in @($result.PackageFile, $result.DetectionFile, $result.GuideFile, 'selfx-answers.json') + @($result.RuleFiles) + @($result.ScriptFiles)) { if ($name) { $files.Add($name) } }
     $files.Add('package\')
     $ui.ResultFilesBox.Text = ($files -join [Environment]::NewLine)
-    $ui.GuideBox.Text = "$($result.GuideText)"
-    Set-WizardGuiPage -Index 8
+    Set-WizardGuiGuideSteps -Guide $result.GuideSteps
+    Set-WizardGuiPage -Index (Get-WizardGuiPageIndex 'result')
+}
+
+# The instructions as cards: the lines of each step and one copy button per value (install command, detection script, thumbprints ...).
+# The value to copy is the Tag of the button; the click handler copies it and names it in the status line.
+function Set-WizardGuiGuideSteps {
+    param($Guide)
+    $ui = $script:Gui.Ui
+    $window = $script:Gui.Window
+    $ui.GuideSteps.Children.Clear()
+    if ($null -eq $Guide) { return }
+    foreach ($step in @($Guide.Steps)) {
+        $card = New-Object System.Windows.Controls.Border
+        $card.Style = $window.FindResource('Card')
+        $card.Padding = [System.Windows.Thickness]::new(16, 12, 16, 12)
+        $card.Margin = [System.Windows.Thickness]::new(0, 0, 0, 10)
+        $panel = New-Object System.Windows.Controls.StackPanel
+        $first = $true
+        foreach ($line in @($step.Lines)) {
+            $block = New-Object System.Windows.Controls.TextBlock
+            $block.Text = "$line".TrimStart()
+            $block.TextWrapping = 'Wrap'
+            if ($first) { $block.FontWeight = 'SemiBold'; $first = $false }
+            else { $block.Margin = [System.Windows.Thickness]::new(0, 4, 0, 0); $block.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, 'TextSecondary') }
+            $null = $panel.Children.Add($block)
+        }
+        if (@($step.Copies).Count) {
+            $buttons = New-Object System.Windows.Controls.WrapPanel
+            $buttons.Margin = [System.Windows.Thickness]::new(0, 10, 0, 0)
+            foreach ($copy in @($step.Copies)) {
+                $button = New-Object System.Windows.Controls.Button
+                $button.Style = $window.FindResource('BaseButton')
+                $button.Margin = [System.Windows.Thickness]::new(0, 0, 8, 6)
+                $button.Content = (Get-WText $copy.Label)
+                $button.Tag = [string]$copy.Value
+                $button.ToolTip = [string]$copy.Value
+                [System.Windows.Automation.AutomationProperties]::SetName($button, (Get-WText $copy.Label))
+                [System.Windows.Automation.AutomationProperties]::SetHelpText($button, [string]$copy.Value)
+                $button.Add_Click({
+                        param($sender)
+                        [System.Windows.Clipboard]::SetText([string]$sender.Tag)
+                        $script:Gui.Ui.StatusText.Text = (Get-WText 'gui.result.copied.value' @("$([System.Windows.Automation.AutomationProperties]::GetName($sender))"))
+                    })
+                $null = $buttons.Children.Add($button)
+            }
+            $null = $panel.Children.Add($buttons)
+        }
+        $card.Child = $panel
+        $null = $ui.GuideSteps.Children.Add($card)
+    }
 }
 
 function Start-WizardGuiBuildFromWindow {
@@ -905,16 +1171,20 @@ function New-WizardGuiWindow {
         Window = $window; Ui = @{}; Fields = [ordered]@{}; State = (New-WizardGuiState -ToolsFolder $script:GuiToolsFolder -Culture $Culture); Page = 0; Loading = $false
         Evaluation = $null; Extra = @{}; ShowAll = (New-Object System.Collections.Generic.HashSet[string]); Build = $null; Result = $null; ProgressRows = @{}
         Timer = $null; Theme = $Theme; AppliedAccent = $null; LogoChecked = $null; ToolCultures = (Get-WizardGuiToolCultures -CodeFolder $script:GuiCodeFolder)
+        CertInfo = $null; PfxMessage = $false
     }
     Set-WizardGuiColors -Window $window -AccentColor '' -Theme $Theme
     $script:Gui.AppliedAccent = ''
     $names = @('AppTitle', 'StepList', 'PageTitle', 'PageIntro', 'PageMessage', 'PageMessageText', 'PageScroll', 'WizardLanguageLabel', 'WizardLanguageHint', 'WizardLanguageBox',
         'PreviewTitle', 'LogoPreview', 'LogoPreviewText', 'AccentSwatch', 'AccentSample', 'AccentSampleLink', 'UnitsPanel', 'UnitsTitle', 'UnitsHint', 'UnitList', 'UnitsError',
         'AddUnitButton', 'RemoveUnitButton', 'UnitEditor', 'UnitEditorTitle', 'SummaryTitle', 'SummaryBox', 'BuildSettingsTitle', 'BuildButton', 'CancelBuildButton', 'ProgressList',
-        'BuildStatus', 'BuildError', 'ResultText', 'ResultFilesTitle', 'ResultFilesBox', 'OpenFolderButton', 'CopyGuideButton', 'GuideTitle', 'GuideBox', 'LoadButton', 'SaveButton',
-        'NextButton', 'BackButton', 'StatusText')
+        'BuildStatus', 'BuildError', 'ResultText', 'ResultFilesTitle', 'ResultFilesBox', 'OpenFolderButton', 'CopyGuideButton', 'GuideTitle', 'GuideSteps', 'LoadButton', 'SaveButton',
+        'NextButton', 'BackButton', 'StatusText', 'SignNone', 'SignStore', 'SignFile', 'SignNoneInfo', 'SignNoneText', 'SignStorePanel', 'CertListHint', 'CertList', 'CertListEmpty',
+        'CertListError', 'RefreshCertsButton', 'SignFilePanel', 'PfxPathLabel', 'PfxPathHint', 'PfxBrowseButton', 'PfxPathBox', 'PfxPasswordLabel', 'PfxPasswordHint', 'PfxOpenButton',
+        'PfxPasswordBox', 'PfxStatus', 'PfxError', 'SignDetailsPanel', 'CertDetailsTitle', 'CertCard', 'CertSubject', 'CertIssuer', 'CertValid', 'CertThumbprint', 'CertCrl',
+        'CertCrlWarningBox', 'CertCrlWarning')
     foreach ($page in $script:WizardGuiPages) { $names += "Page_$($page.Id)" }
-    foreach ($page in @('language', 'basics', 'support', 'branding', 'ticket', 'more', 'summary', 'unit')) { $names += "Fields_$page" }
+    foreach ($page in @('language', 'basics', 'support', 'branding', 'ticket', 'more', 'signing', 'summary', 'unit')) { $names += "Fields_$page" }
     foreach ($name in $names) {
         $element = $window.FindName($name)
         if ($null -eq $element) { throw "The window has no element $name." }
@@ -947,6 +1217,12 @@ function New-WizardGuiWindow {
         $null = $ui.Fields_summary.Children.Add($field.Row)
         $script:Gui.Fields[$question.Id] = $field
     }
+    foreach ($question in $script:WizardGuiSigningQuestions) {
+        $field = New-WizardGuiFieldRow -Question $question -Scope 'signing'
+        $null = $ui.Fields_signing.Children.Add($field.Row)
+        $script:Gui.Fields[$question.Id] = $field
+    }
+    $ui.SignNone.IsChecked = $true
     Register-WizardGuiEvents
     Set-WizardGuiAllValues
     Set-WizardGuiTexts
@@ -964,6 +1240,7 @@ function Set-WizardGuiAllValues {
     foreach ($field in $script:Gui.Fields.Values) {
         if ($field.Scope -eq 'answer') { Set-WizardGuiControlValue -Field $field -Value (Get-WizardGuiShownValue -State $state -Id $field.Id -Answers $evaluation.Answers) }
         elseif ($field.Scope -eq 'build') { Set-WizardGuiControlValue -Field $field -Value $state.Build[$field.Id] }
+        elseif ($field.Scope -eq 'signing') { Set-WizardGuiControlValue -Field $field -Value $state.Signing[$field.Id] }
     }
     Set-WizardGuiUnitValues
 }
@@ -985,6 +1262,7 @@ function Invoke-WizardGuiFieldChanged {
     switch ($Field.Scope) {
         'answer' { $state.Raw[$Field.Id] = $value }
         'build' { $state.Build[$Field.Id] = $value }
+        'signing' { $state.Signing[$Field.Id] = $value }
         'unit' {
             $index = $script:Gui.Ui.UnitList.SelectedIndex
             if ($index -lt 0) { return }
@@ -1062,6 +1340,34 @@ function Register-WizardGuiEvents {
             [System.Windows.Clipboard]::SetText("$($script:Gui.Result.GuideText)")
             $script:Gui.Ui.StatusText.Text = (Get-WText 'gui.result.copied')
         })
+    # Page signing: mode, list of the stores, PFX file. Enter in the password box opens the file (not the next page).
+    $mode = {
+        param($sender)
+        $script:Gui.State.Signing.Mode = $(if ([object]::ReferenceEquals($sender, $script:Gui.Ui.SignStore)) { 'Store' } elseif ([object]::ReferenceEquals($sender, $script:Gui.Ui.SignFile)) { 'File' } else { 'None' })
+        if ($script:Gui.State.Signing.Mode -eq 'Store' -and $script:Gui.Ui.CertList.Items.Count -eq 0) { Update-WizardGuiCertificateList }
+        $script:Gui.CertInfo = $null
+        Update-WizardGuiView
+    }
+    $ui.SignNone.Add_Checked($mode); $ui.SignStore.Add_Checked($mode); $ui.SignFile.Add_Checked($mode)
+    $ui.RefreshCertsButton.Add_Click({ Update-WizardGuiCertificateList; $script:Gui.CertInfo = $null; Update-WizardGuiView })
+    $ui.CertList.Add_SelectionChanged({
+            if ($script:Gui.Loading) { return }
+            $item = $script:Gui.Ui.CertList.SelectedItem
+            $script:Gui.State.StoreCertificate = $null
+            if ($null -ne $item) { foreach ($certificate in @($script:Gui.State.StoreList)) { if ($certificate.Thumbprint -eq $item.Tag) { $script:Gui.State.StoreCertificate = $certificate } } }
+            $script:Gui.CertInfo = $null
+            Update-WizardGuiView
+        })
+    $ui.PfxBrowseButton.Add_Click({
+            $target = Select-WizardGuiFile -FilterTextId 'gui.sign.pfx.filter' -Current $script:Gui.Ui.PfxPathBox.Text
+            if ($target) { $script:Gui.Ui.PfxPathBox.Text = $target; $null = $script:Gui.Ui.PfxPasswordBox.Focus() }
+        })
+    $ui.PfxOpenButton.Add_Click({ Open-WizardGuiPfx })
+    $ui.PfxPasswordBox.Add_KeyDown({
+            param($sender, $keys)
+            if ($keys.Key -eq [System.Windows.Input.Key]::Return) { $keys.Handled = $true; Open-WizardGuiPfx }
+        })
+    $ui.PfxPathBox.Add_TextChanged({ $script:Gui.PfxMessage = $false })
     $ui.LoadButton.Add_Click({ Invoke-WizardGuiLoad })
     $ui.SaveButton.Add_Click({ Invoke-WizardGuiSave })
     $script:Gui.Window.Add_Closing({
@@ -1071,6 +1377,7 @@ function Register-WizardGuiEvents {
                 if ($answer -ne 'Yes') { $closing.Cancel = $true; return }
                 Stop-WizardGuiBuild -Build $script:Gui.Build
             }
+            $script:Gui.Ui.PfxPasswordBox.Clear()
         })
 }
 
@@ -1078,7 +1385,7 @@ function Invoke-WizardGuiNext {
     $ui = $script:Gui.Ui
     $page = $script:WizardGuiPages[$script:Gui.Page]
     if ($page.Id -eq 'result') { $script:Gui.Window.Close(); return }
-    if ($page.Id -eq 'build') { if ($script:Gui.Result) { Set-WizardGuiPage -Index 8 }; return }
+    if ($page.Id -eq 'build') { if ($script:Gui.Result) { Set-WizardGuiPage -Index (Get-WizardGuiPageIndex 'result') }; return }
     $evaluation = Get-WizardGuiEvaluation -State $script:Gui.State
     $null = Update-WizardGuiLogo
     $extra = @{}; if ($script:Gui.Extra.ContainsKey('LogoPath')) { $extra['LogoPath'] = $script:Gui.Extra['LogoPath'] }
@@ -1095,6 +1402,8 @@ function Invoke-WizardGuiNext {
             if ($null -eq $field -and $id -match '^Unit\d+$') { $field = @($script:Gui.Fields.Values | Where-Object { $_.Scope -eq 'unit' -and $_.Error.Visibility -eq 'Visible' })[0] }
             if ($null -ne $field) { $null = $field.Control.Focus(); break }
             if ($id -eq 'Units') { $null = $ui.AddUnitButton.Focus(); break }
+            if ($id -eq 'Store') { $null = $ui.CertList.Focus(); break }
+            if ($id -eq 'File') { $null = $ui.PfxPathBox.Focus(); break }
         }
         return
     }
@@ -1140,8 +1449,12 @@ function Show-SelfXWizardGui {
     }
     $context = New-WizardGuiWindow -Culture $Culture
     Set-WizardGuiPage -Index 0
-    $null = $context.Window.ShowDialog()
-    if ($null -ne $context.Build) { Close-WizardGuiBuild -Build $context.Build }
+    try { $null = $context.Window.ShowDialog() }
+    finally {
+        if ($null -ne $context.Build) { Close-WizardGuiBuild -Build $context.Build }
+        # The certificates (and the key of an opened PFX file, which lives only in memory) are released.
+        Clear-WizardGuiCertificates -State $context.State
+    }
 }
 
 if (-not $script:GuiIsDotSourced) {
