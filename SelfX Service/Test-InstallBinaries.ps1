@@ -822,9 +822,11 @@ else {
 		'Set-SelfXTrustAnchor -Mode $TrustMode -Signers $AllowedSigners',
 		'New-Service -Name $ServiceName'
 	)
+	# The mode -ConfigOnly has its own branch before the full installation (Test-InstallConfigOnly.ps1 checks it): the order is that of the full flow.
+	$fullFlowText = $installText.Substring($installText.IndexOf('exit $ConfigOnlyExit', [StringComparison]::Ordinal))
 	$position = -1
 	foreach ($step in $order) {
-		$found = $installText.IndexOf($step, [StringComparison]::Ordinal)
+		$found = $fullFlowText.IndexOf($step, [StringComparison]::Ordinal)
 		Assert-Equal ($found -gt $position) $true "Install.ps1: '$step' comes after the step before it (mode and signatures before any change, anchor before the service)"
 		if ($found -gt $position) { $position = $found }
 	}
