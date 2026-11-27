@@ -185,7 +185,7 @@ menu opens SelfX, checks the status or sends the logs.
     changed or translated.
 - **Intune deployment**
   - One Win32 app package, built with `tools\New-SelfXIntuneWin.ps1`.
-  - Install, uninstall and detection scripts. Raise `Tool_Version` and
+  - Install, uninstall and detection scripts. Raise `Version.txt` and
     `$ExpectedVersion` of `Detection.ps1` for every release, otherwise Intune
     does not roll out the update.
   - The service and the starter are .NET 10 programs (self-contained, LTS) that

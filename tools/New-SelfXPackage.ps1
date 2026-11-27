@@ -45,7 +45,7 @@
     Name    : New-SelfXPackage.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 1.0.0
+    Version : 1.0.1
     Exit code: 0 = done, 1 = error or aborted
     Works in Windows PowerShell 5.1 and PowerShell 7. The wizard asks for no password and no secret and sends nothing.
 
@@ -53,6 +53,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-24  fubu2k               Initial version: guided configuration (de, en)
+    1.0.1    2026-11-27  fubu2k               The version in the file names comes from Version.txt (no longer from Tool_Config.xml)
 #>
 [CmdletBinding()]
 param(
@@ -70,6 +71,8 @@ $RepositoryRoot = Split-Path -Parent $ScriptFolder
 $PackageSource = Join-Path $RepositoryRoot 'SelfX Service'
 $WizardFolder = Join-Path $ScriptFolder 'Wizard'
 . (Join-Path $WizardFolder 'SelfXWizard.ps1')
+# Get-SelfXVersionFromFile (the version is read from Version.txt); the file only defines functions.
+. (Join-Path $ScriptFolder 'SelfXPackage.Common.ps1')
 
 try {
     $interactive = -not $AnswerFile
@@ -161,7 +164,7 @@ try {
     if (Test-Path -LiteralPath $projects) { Remove-Item -LiteralPath $projects -Recurse -Force }
     Get-ChildItem -LiteralPath $packageCopy -Recurse -File -Filter 'Test-*.ps1' | Remove-Item -Force
     Set-WizardPackageConfiguration -PackageFolder $packageCopy -Answers $answers
-    $version = (Select-Xml -Path (Join-Path $packageCopy 'Sources\Tool_Config.xml') -XPath '/GUI_Config/Tool_Version').Node.InnerText.Trim()
+    $version = Get-SelfXVersionFromFile -Path (Join-Path $packageCopy 'Version.txt')
 
     # ---- Intune package
     $packageName = "SelfX-Service-$version.intunewin"

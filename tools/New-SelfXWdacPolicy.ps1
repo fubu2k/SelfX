@@ -40,13 +40,14 @@
     Name    : New-SelfXWdacPolicy.ps1
     Package : tools
     Context : Administrator PC (not installed, no device is changed)
-    Version : 1.0.0
+    Version : 1.0.1
     Exit code: 0 = policy created, an exception otherwise
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2026-11-23  fubu2k               Initial version.
+    1.0.1    2026-11-27  fubu2k               The policy version comes from Version.txt (no longer from Tool_Config.xml)
 #>
 
 [CmdletBinding()]
@@ -65,7 +66,10 @@ $ErrorActionPreference = 'Stop'
 $SupplementalPolicyId = $PolicyId.ToString('B').ToUpperInvariant()
 $AllowedSupplementalOption = 'Enabled:Unsigned System Integrity Policy'
 
-$RepositoryRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RepositoryRoot = Split-Path -Parent $ScriptFolder
+# Get-SelfXVersionFromFile (the version is read from Version.txt); the file only defines functions.
+. (Join-Path $ScriptFolder 'SelfXPackage.Common.ps1')
 if (-not $PackageFolder) { $PackageFolder = Join-Path $RepositoryRoot 'SelfX Service' }
 if (-not $OutputFolder) { $OutputFolder = Join-Path $RepositoryRoot 'build\wdac' }
 
@@ -75,15 +79,10 @@ foreach ($cmdlet in 'New-CIPolicy', 'Set-CIPolicyIdInfo', 'Set-CIPolicyVersion',
     }
 }
 
-$settings = New-Object Xml.XmlReaderSettings
-$settings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
-$settings.XmlResolver = $null
-$configPath = Join-Path $PackageFolder 'Sources\Tool_Config.xml'
-if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) { throw "Tool_Config.xml not found in '$PackageFolder\Sources'." }
-$reader = [Xml.XmlReader]::Create($configPath, $settings)
-try { $config = New-Object Xml.XmlDocument; $config.XmlResolver = $null; $config.Load($reader) } finally { $reader.Dispose() }
-$toolVersion = $config.SelectSingleNode('/GUI_Config/Tool_Version').InnerText.Trim()
-if ($toolVersion -notmatch '^(\d{1,4})\.(\d{1,4})\.(\d{1,4})$') { throw "Unexpected version '$toolVersion' in Tool_Config.xml." }
+$versionPath = Join-Path $PackageFolder 'Version.txt'
+if (-not (Test-Path -LiteralPath $versionPath -PathType Leaf)) { throw "Version.txt not found in '$PackageFolder'." }
+$toolVersion = Get-SelfXVersionFromFile -Path $versionPath
+if ($toolVersion -notmatch '^(\d{1,4})\.(\d{1,4})\.(\d{1,4})$') { throw "Unexpected version '$toolVersion' in Version.txt." }
 $policyVersion = "$toolVersion.0"
 
 $bin = Join-Path $PackageFolder 'Bin'

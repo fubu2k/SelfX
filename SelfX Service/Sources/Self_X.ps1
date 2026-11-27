@@ -37,7 +37,7 @@
     Name    : Self_X.ps1
     Package : SelfX Service
     Context : User (started from the SelfX shortcut or the tray icon)
-    Version : 2.8.26
+    Version : 2.8.27
 
     History:
     Version  Date        Author               Change
@@ -46,6 +46,7 @@
     2.8.17   2026-11-23  fubu2k               Copilot Chat: optional clearing of the clipboard after a time (Copilot_Clear_Clipboard, Copilot_Clear_Clipboard_Seconds)
     2.8.18   2026-11-23  fubu2k               Calmer look: larger radii and spacing, three-step hint, status chips with icon, help buttons (ticket, Copilot) in the navigation
     2.8.26   2026-11-24  fubu2k               Optional wiki button in the navigation (Wiki_Enabled, Wiki_Url, Wiki_Name)
+    2.8.27   2026-11-27  fubu2k               The displayed version is ToolVersion of SelfX.Code.json (the version is a property of the code), no longer Tool_Version of Tool_Config.xml
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -270,7 +271,28 @@ If($SelfX_Needs_Domain)
 $Global:SelfX_Quick_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Quick_Actions $SelfX_Domain_Joined)
 $Global:SelfX_Detailed_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Detailed_Actions $SelfX_Domain_Joined)
 
-$Tool_Version = $GUI_Config.Tool_Version
+# The version of the code: ToolVersion of SelfX.Code.json in the install folder (Tool_Config.xml no longer carries it; an old Tool_Version
+# element there is ignored). Display only: a missing or unreadable list shows '?' and is logged, it never stops the window.
+Function Get-SelfXToolVersion
+	{
+		param([string]$InstallFolder)
+		Try
+			{
+				$ListPath = Join-Path $InstallFolder 'SelfX.Code.json'
+				$Item = Get-Item -LiteralPath $ListPath -Force -ErrorAction Stop
+				If($Item.PSIsContainer -or $Item.Length -gt 1048576) { return $null }
+				$Version = "$((Get-Content -LiteralPath $ListPath -Raw | ConvertFrom-Json).ToolVersion)".Trim()
+				If($Version -match '^[0-9A-Za-z.\-]{1,30}\z') { return $Version }
+			}
+		Catch {}
+		return $null
+	}
+$Tool_Version = Get-SelfXToolVersion $Current_Folder
+If(-not $Tool_Version)
+	{
+		$Tool_Version = '?'
+		Write-SelfXLog 'The version could not be read from SelfX.Code.json.' 'Warning'
+	}
 Write-SelfXLog "SelfX $Tool_Version opened: language $($SelfX_UI_Language.Culture) (setting $Global:SelfX_Language_Setting), page '$Page'."
 $Tool_Name = Get-SelfXText "Tool_Name" "SelfX"
 $Support_Phone_number = Get-SelfXText "Support_Phone_number" ""

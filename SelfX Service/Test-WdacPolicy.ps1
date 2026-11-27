@@ -13,13 +13,14 @@
     Name    : Test-WdacPolicy.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.3
+    Version : 2.8.4
     Exit code: 0 = all checks passed (or skipped), 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.3    2026-11-23  fubu2k               Initial version.
+    2.8.4    2026-11-27  fubu2k               The policy version comes from Version.txt: the test package gets Version.txt.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -39,6 +40,7 @@ $toolText = Get-Content -LiteralPath $tool -Raw
 Assert-True ($toolText -match 'Level Hash') 'the policy uses hash rules'
 Assert-True ($toolText -notmatch '(?m)^[^#\r\n]*-NoScript') 'scripts are included in the scan'
 Assert-True ($toolText -match '1377A178-96F8-49DD-B277-80F0F10BB383') 'the policy ID is fixed'
+Assert-True ($toolText -match 'Version\.txt' -and $toolText -notmatch 'Tool_Version') 'the policy version comes from Version.txt, not from Tool_Config.xml'
 
 $configCi = & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "[bool](Get-Module -ListAvailable -Name ConfigCI)"
 if ("$configCi".Trim() -ne 'True') {
@@ -50,7 +52,7 @@ else {
 		$package = Join-Path $root 'package'
 		$out = Join-Path $root 'out'
 		New-Item -ItemType Directory -Path (Join-Path $package 'Bin') -Force | Out-Null
-		foreach ($name in 'Install.ps1', 'Detection.ps1', 'Uninstall.ps1') { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $package }
+		foreach ($name in 'Install.ps1', 'Detection.ps1', 'Uninstall.ps1', 'Version.txt') { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $package }
 		# A small part of the real files: the scan of the whole package takes minutes (the test has 5 minutes).
 		$sources = Join-Path $package 'Sources'
 		New-Item -ItemType Directory -Path (Join-Path $sources 'Scripts_to_run') -Force | Out-Null

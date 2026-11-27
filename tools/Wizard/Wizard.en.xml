@@ -130,7 +130,7 @@
 	<T Id="guide.s7item">   {0}: group tags {1}; device classes {2}</T>
 	<T Id="guide.s7tag">   Tip for a dynamic device group of a group tag: (device.devicePhysicalIds -any (_ -eq "[OrderID]:TAG"))</T>
 	<T Id="guide.s8">{0}. Test on a pilot device: the Start menu shows SelfX, the service SelfXService runs, the logs are in %ProgramData%\SelfX\Logs. Then widen the assignment.</T>
-	<T Id="guide.update">Update later: raise Tool_Version and ExpectedVersion in the repository, run the wizard again with your saved answers ({0}), and upload the new package as a new version of the app.</T>
+	<T Id="guide.update">Update later: raise Version.txt (SelfX Service) and ExpectedVersion in Detection.ps1 in the repository, run the wizard again with your saved answers ({0}), and upload the new package as a new version of the app.</T>
 	<T Id="guide.answers">Your answers are saved in {0}. It contains your mailbox addresses: keep it out of Git.</T>
 	<T Id="guide.script.header">Set-SelfXSupportUnit script for the unit {0}. Assign it to the Entra device group of this unit.</T>
 </Wizard_Language>

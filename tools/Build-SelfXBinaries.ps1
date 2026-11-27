@@ -35,7 +35,7 @@
     Name    : Build-SelfXBinaries.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 2.8.20
+    Version : 2.8.21
     Exit code: 0 = built, an exception otherwise
 
     History:
@@ -45,6 +45,7 @@
     2.8.18   2026-11-23  fubu2k               Also builds Bin\Audio\SelfXAudio.dll (Service\SelfXAudio.cs)
     2.8.19   2026-11-24  fubu2k               Offline build: packages only from offline-feed (checked against its manifest), own package cache
     2.8.20   2026-11-24  fubu2k               AppLocker rules: SID S-1-1-0 instead of the name Everyone (German Windows), also from PowerShell 7 (New-SelfXAppLockerRules.ps1)
+    2.8.21   2026-11-27  fubu2k               ToolVersion of SelfX.Binaries.json comes from Version.txt (no longer from Tool_Config.xml)
 #>
 
 [CmdletBinding()]
@@ -56,6 +57,8 @@ $ErrorActionPreference = 'Stop'
 
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptFolder
+# Get-SelfXVersionFromFile (the version is read from Version.txt); the file only defines functions.
+. (Join-Path $ScriptFolder 'SelfXPackage.Common.ps1')
 $PackageFolder = Join-Path $RepositoryRoot 'SelfX Service'
 $ProjectsFolder = Join-Path $PackageFolder 'Service\Projects'
 if (-not $OutputFolder) { $OutputFolder = Join-Path $PackageFolder 'Bin' }
@@ -149,14 +152,10 @@ finally {
     }
 }
 
-$toolConfig = Join-Path $PackageFolder 'Sources\Tool_Config.xml'
-$document = New-Object System.Xml.XmlDocument
-$document.XmlResolver = $null
-$document.Load($toolConfig)
 $manifest = [ordered]@{
     ManifestVersion = 3
     SdkVersion      = $sdkVersion
-    ToolVersion     = $document.SelectSingleNode('/GUI_Config/Tool_Version').InnerText.Trim()
+    ToolVersion     = Get-SelfXVersionFromFile -Path (Join-Path $PackageFolder 'Version.txt')
     BuiltUtc        = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
     Sources         = $manifestSources
     Binaries        = $manifestBinaries

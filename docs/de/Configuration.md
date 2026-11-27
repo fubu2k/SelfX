@@ -54,9 +54,15 @@ SelfX wird über XML-Dateien im Ordner `SelfX Service\Sources` eingestellt.
 Die Datei `Tool_Config.xml` enthält nur Einstellungen, keine Texte. Die Texte stehen in den
 Sprachdateien (siehe [Sprachen](#sprachen)).
 
+Die Versionsnummer ist **keine** Einstellung. Sie ist eine Eigenschaft des Codes: Sie ist die eine
+Zeile in `SelfX Service\Version.txt`, muss bei jedem Release gleich `$ExpectedVersion` in
+`Detection.ps1` sein und wird vom Bau in `SelfX.Code.json` (`ToolVersion`) geschrieben. Ein altes
+Element `Tool_Version` in einer `Tool_Config.xml` wird ignoriert. Die Konfiguration hat ihre eigene
+Marke: `SelfX.Config.json` enthält `ConfigRevision`, die UTC-Zeit des Paketlaufs. Eine neue Version
+ändert keine Einstellungsdatei, und geänderte Einstellungen ändern die Version nicht.
+
 | Einstellung | Standard | Was sie bewirkt |
 |---|---|---|
-| `Tool_Version` | (Ihre Version) | Die Versionsnummer. Sie muss bei jedem Release gleich `$ExpectedVersion` in `Detection.ps1` sein. |
 | `Tool_Language` | `de` | Standardsprache. `Auto` nimmt die Anzeigesprache von Windows. Sie können auch `en`, `fr-CH` oder `zh-Hans` schreiben. |
 | `Show_Language_Setting` | `True` | Nutzer können die Sprache selbst wählen. `False`: immer `Tool_Language`. |
 | `Tool_Name` | SelfX | Name in der Titelleiste. |

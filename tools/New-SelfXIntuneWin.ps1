@@ -16,12 +16,15 @@
     Each product folder is first copied to a temporary staging folder, so that packaging-only
     files (Test-*.ps1) are not shipped and the source folders stay unchanged. Before
     packaging, the script checks that the setup file exists, that all XML files are valid and,
-    for SelfX Service, that $ExpectedVersion in Detection.ps1 matches Tool_Version in
-    Sources\Tool_Config.xml (otherwise the Intune detection would fail after installation).
-    The version in the file name comes from Tool_Version.
+    for SelfX Service, that $ExpectedVersion in Detection.ps1 matches the version in Version.txt of the
+    product folder (otherwise the Intune detection would fail after installation).
+    The version is a property of the code: it comes from Version.txt, is written into SelfX.Code.json (ToolVersion) and into the
+    name of the file. Version.txt itself is not part of the package and Tool_Config.xml does not carry the version.
     Next to the .intunewin it writes build\SelfX-Service-<version>.Detection.ps1: Detection.ps1 with the
     digests of the two file lists (SelfX.Code.json and SelfX.Config.json) filled in. Upload that file as the detection script to
-    Intune (not the repository copy): then the detection also finds an update whose files changed without a new Tool_Version.
+    Intune (not the repository copy): then the detection also finds an update whose files changed without a new version, and a
+    changed configuration (for example a logo) without a new code version.
+    SelfX.Config.json gets ConfigRevision, the UTC time of this run.
 
     The script only reads the product folders, writes the staging folder (deleted at the end)
     and the build folder. It uploads nothing to Intune.
@@ -46,7 +49,7 @@
     Name    : New-SelfXIntuneWin.ps1
     Package : SelfX (repository tool, not installed)
     Context : Packaging, run by the administrator; no administrator rights needed
-    Version : 1.9.0
+    Version : 1.10.0
 
     History:
     Version  Date        Author               Change
@@ -58,6 +61,8 @@
     1.8.0    2026-11-24  fubu2k               New parameter -SourceFolder: build from a configured copy of the package (New-SelfXPackage.ps1)
     1.9.0    2026-11-27  fubu2k               Two file lists instead of SelfX.Files.json: SelfX.Code.json and SelfX.Config.json by file class
                                               (tools\SelfXPackage.Common.ps1); Detection.ps1 gets two digests
+    1.10.0   2026-11-27  fubu2k               The version comes from Version.txt (no longer from Tool_Config.xml) and is written only into SelfX.Code.json;
+                                              SelfX.Config.json gets ConfigRevision
 #>
 
 [CmdletBinding()]
@@ -79,9 +84,10 @@ $RepositoryRoot = Split-Path -Parent $ScriptFolder
 if (-not $OutputFolder) { $OutputFolder = Join-Path $RepositoryRoot 'build' }
 if (-not $ToolPath) { $ToolPath = Join-Path $ScriptFolder 'IntuneWinAppUtil.exe' }
 
-# Source folder, setup file and version source of every product.
+# Source folder, setup file and version source of every product. The version is read from Version.txt (the code carries it, not the
+# configuration).
 $Definitions = @{
-    Service = @{ Folder = 'SelfX Service';  Setup = 'Install.ps1';  VersionFile = 'Sources\Tool_Config.xml'; VersionXPath = '/GUI_Config/Tool_Version' }
+    Service = @{ Folder = 'SelfX Service';  Setup = 'Install.ps1';  VersionFile = 'Version.txt' }
 }
 # Files used only to build or test a package; they are never shipped.
 $ExcludedFiles = @('Test-*.ps1')
@@ -96,12 +102,8 @@ function Read-XmlFile {
 
 function Get-ProductVersion {
     param([string]$Folder, [hashtable]$Definition)
-    $node = (Read-XmlFile (Join-Path $Folder $Definition.VersionFile)).SelectSingleNode($Definition.VersionXPath)
-    if (-not $node -or [string]::IsNullOrWhiteSpace($node.InnerText)) { throw "No version found in $($Definition.VersionFile) ($($Definition.VersionXPath))." }
-    $version = $node.InnerText.Trim()
-    # The version becomes part of a file name.
-    if ($version -notmatch '^[0-9A-Za-z.\-]{1,30}$') { throw "Invalid version '$version' in $($Definition.VersionFile)." }
-    return $version
+    # Also used as part of a file name; Get-SelfXVersionFromFile allows letters, digits, '.' and '-' (30 characters at most).
+    return (Get-SelfXVersionFromFile -Path (Join-Path $Folder $Definition.VersionFile))
 }
 
 function Test-StagedPackage {
@@ -114,7 +116,7 @@ function Test-StagedPackage {
     if ($Name -eq 'Service') {
         $detection = Get-Content -LiteralPath (Join-Path $Stage 'Detection.ps1') -Raw
         if ($detection -notmatch "\`$ExpectedVersion\s*=\s*'([^']+)'") { throw 'No $ExpectedVersion found in Detection.ps1.' }
-        if ($Matches[1] -ne $Version) { throw "Detection.ps1 expects version $($Matches[1]), Tool_Config.xml has $Version. Set both to the same value." }
+        if ($Matches[1] -ne $Version) { throw "Detection.ps1 expects version $($Matches[1]), $($Definition.VersionFile) has $Version. Set both to the same value." }
         # Prebuilt programs (F9, .NET 10): Bin is required, and it must have been built from the sources of this
         # package, otherwise Install.ps1 would refuse it on every device.
         $bin = Join-Path $Stage 'Bin'
@@ -174,6 +176,8 @@ try {
             foreach ($pattern in $ExcludedFiles) {
                 Get-ChildItem -LiteralPath $stage -Recurse -File -Filter $pattern | Remove-Item -Force
             }
+            # Version.txt is read above and written into SelfX.Code.json; the device gets the version from that list only.
+            Remove-Item -LiteralPath (Join-Path $stage $definition.VersionFile) -Force -ErrorAction SilentlyContinue
             # The .NET project files (and build leftovers next to them) are only needed on the build machine.
             $projectsInStage = Join-Path $stage 'Service\Projects'
             if (Test-Path -LiteralPath $projectsInStage) { Remove-Item -LiteralPath $projectsInStage -Recurse -Force }

@@ -33,8 +33,10 @@ Windows setting.*
 - The devices need **Windows 11 25H2** (build 26200 or newer) and **PowerShell 7.6 or
   newer**.
 - Always deploy the **whole package**, never single files.
-- The version number `Tool_Version` and the value `$ExpectedVersion` in `Detection.ps1` must
-  be **the same**. Otherwise Intune does not detect the update.
+- The version number in `SelfX Service\Version.txt` and the value `$ExpectedVersion` in
+  `Detection.ps1` must be **the same**. Otherwise Intune does not detect the update. The version
+  is a property of the code: the build writes it into `SelfX.Code.json`; the settings file
+  `Tool_Config.xml` does not carry it.
 - If PowerShell 7 is missing, SelfX is still installed. This keeps Autopilot undisturbed.
 
 ## Requirements
@@ -82,10 +84,11 @@ Repeat this step for every new version. Open PowerShell in the folder of the rep
 1. **Adjust the settings.** Branding, support contacts and features are in
    `SelfX Service\Sources\Tool_Config.xml` (see [Configuration](Configuration.md)).
 2. **Check the version number.** For a new release, enter the same number in two places:
-   - `Tool_Version` in `Sources\Tool_Config.xml`
+   - `SelfX Service\Version.txt` (one line, for example `3.0.3`)
    - `$ExpectedVersion` in `Detection.ps1`
 
-   The packaging script stops if the two values differ.
+   The packaging script stops if the two values differ. Changing the settings (for example a
+   logo) does not change the version, and a new version changes no settings file.
 3. **Build the programs.** The command creates the folder `SelfX Service\Bin`:
 
    ```powershell
@@ -115,11 +118,11 @@ The script checks beforehand: the setup file exists, all XML files are valid, `B
 source code, the two versions are the same and `IntuneWinAppUtil.exe` has the Microsoft
 signature. It uploads nothing to Intune.
 
-**Alternative: release on GitHub.** After the merge, set the tag `v<Tool_Version>` (for example
-`v3.0.0`) on `main`. The workflow `.github/workflows/release.yml` builds the programs, the
+**Alternative: release on GitHub.** After the merge, set the tag `v<version>` (the number in
+`Version.txt`, for example `v3.0.0`) on `main`. The workflow `.github/workflows/release.yml` builds the programs, the
 `.intunewin`, a bill of materials (SBOM) and `SHA256SUMS.txt` and creates a **draft** under
 *Releases*. It publishes nothing. Check the hashes and publish the draft only afterwards. The
-workflow stops if the tag and `Tool_Version` do not match.
+workflow stops if the tag and `Version.txt` do not match.
 
 ### Offline build: renew the package folder
 
@@ -256,7 +259,7 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
 ## Update to a new version
 
 1. Always deploy the **whole package**. The window and the service must fit together.
-2. Raise `Tool_Version` and `$ExpectedVersion` to the same new value.
+2. Raise `Version.txt` and `$ExpectedVersion` to the same new value.
 3. Build the programs and the package again (step 2) and replace the AppLocker rules.
 4. Upload the new `.intunewin` **and** the new detection script to the same Intune app.
 5. Before packaging, check the support contacts in `Tool_Config.xml` and `Health_Config.xml`
@@ -500,13 +503,13 @@ deployment.
 | `The folder Bin is missing …` | Step 2.3 was not run before building the package. Repeat steps 2.3 and 2.5. |
 | `Bin was not built from the current …` | A source file was changed after building. Repeat steps 2.3 and 2.5. |
 | Installation ends with exit code 1 | The last line of `Install.log` names the reason. The existing installation stays unchanged. |
-| Intune does not detect an update | `Tool_Version` and `$ExpectedVersion` stayed the same, or you uploaded the copy from the repository instead of `build\SelfX-Service-<version>.Detection.ps1`. |
+| Intune does not detect an update | `Version.txt` and `$ExpectedVersion` stayed the same, or you uploaded the copy from the repository instead of `build\SelfX-Service-<version>.Detection.ps1`. |
 | SelfX starts no action | PowerShell 7.6 is missing (warning in `Install.log`), or event 4005 reports a deviating file. The SelfX log names the details. |
 
 ## Deployment checklist
 
 1. Configuration adjusted (branding, support contacts, features) and all XML files valid.
-2. `Tool_Version` and `$ExpectedVersion` are the same and new; history added in both files.
+2. `Version.txt` and `$ExpectedVersion` are the same and new; history added in `Detection.ps1`.
 3. All tests run without errors.
 4. Programs built, AppLocker rules replaced (if used).
 5. Package built; `.intunewin` **and** `…Detection.ps1` from `build` used.
