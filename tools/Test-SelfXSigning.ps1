@@ -12,7 +12,7 @@
     Part 2 needs Windows. The test creates self-signed certificates with New-SelfSignedCertificate in Cert:\CurrentUser\My only
     (never in LocalMachine) and removes them (with the private key) at the end. The checks of the signature status need a trusted
     root: for them the test adds the public part of the test certificates to Cert:\CurrentUser\Root and removes it at the end.
-    Windows asks for a confirmation when a root is added on an interactive desktop, so this part runs only on GitHub Actions
+    Windows asks for a confirmation when a root is added on an interactive desktop (certutil.exe -user is used, which the runner accepts), so this part runs only on GitHub Actions
     or when the variable SELFX_TEST_ALLOW_ROOT_IMPORT=1 is set; otherwise it is skipped (and said so).
 
     SELFX_TEST_SLOW=1                  also runs the tests with a certificate that expires during the test (about 3 minutes).
@@ -238,10 +238,12 @@ try {
             return (Get-Item -LiteralPath "Cert:\CurrentUser\My\$($created.Thumbprint)")
         }
         function Add-TestRoot {
+            # certutil does not show the confirmation dialog of Windows (X509Store.Add waits for an answer that never comes on a runner).
             param($Certificate)
-            $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
-            $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-            try { $store.Add((New-Object System.Security.Cryptography.X509Certificates.X509Certificate2(, $Certificate.RawData))) } finally { $store.Close() }
+            $file = Join-Path $work ($Certificate.Thumbprint + '.cer')
+            [IO.File]::WriteAllBytes($file, $Certificate.RawData)
+            $null = & certutil.exe -user -addstore -f Root $file 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "certutil could not add the test certificate to Cert:\CurrentUser\Root (exit code $LASTEXITCODE)." }
             $addedRoot.Add($Certificate.Thumbprint)
         }
         function Write-TestScript {
@@ -456,11 +458,7 @@ try {
             $fromStorePfx.Dispose()
         } finally {
             Write-Host 'Part 2: cleanup'
-            foreach ($thumbprint in $addedRoot) {
-                $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
-                $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-                try { foreach ($entry in @($store.Certificates | Where-Object { $_.Thumbprint -eq $thumbprint })) { $store.Remove($entry) } } finally { $store.Close() }
-            }
+            foreach ($thumbprint in $addedRoot) { $null = & certutil.exe -user -delstore Root $thumbprint 2>&1 }
             foreach ($thumbprint in $createdMy) {
                 $entry = "Cert:\CurrentUser\My\$thumbprint"
                 if (Test-Path -LiteralPath $entry) {
