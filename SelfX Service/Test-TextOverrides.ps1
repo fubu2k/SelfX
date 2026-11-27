@@ -122,6 +122,12 @@ try {
 	Write-Override 'de' $goodBody
 	$result = Read-SelfXTextOverride -Path (Join-Path $texts 'de.xml') -Culture 'de' -Reference $deReference
 	Assert-Equal $result.Loaded $true 'read: a valid file is loaded'
+	# TEMP-DIAG
+	[Console]::Out.WriteLine("DIAG type: $($result.GetType().FullName) / problems: $(if ($null -eq $result.Problems) { 'null' } else { $result.Problems.GetType().FullName })")
+	foreach ($variant in @({ $result.Problems.Count }, { @($result.Problems).Count }, { ($result.Problems | Measure-Object).Count }, { $x = @($result.Problems); $x.Count }, { @($result.Texts.Keys).Count })) {
+		try { [Console]::Out.WriteLine("DIAG ok: $($variant.ToString().Trim()) -> $(& $variant)") } catch { [Console]::Out.WriteLine("DIAG fail: $($variant.ToString().Trim()) -> $($_.Exception.Message)") }
+	}
+	# END-TEMP-DIAG
 	Assert-Equal (@($result.Problems).Count) 0 'read: a valid file has no problems'
 	Assert-Equal (@($result.Texts.Keys | Sort-Object) -join ',') 'Action/Q_Teams/Explanation,Action/Q_Teams/Name,Category/Device,Message/Msg_Teams_Restart,SystemInfo/Category_Device,UI/Action_Success_Text,UI/Main_Title_Text' 'read: UI, SystemInfo, Category, Message and Action texts are accepted'
 	Assert-Equal $result.Texts['UI/Main_Title_Text'] "Hilfe`r`nvom Team" 'read: the indentation of a multi-line text is removed like in language files'
