@@ -194,7 +194,7 @@ Der Assistent lässt den Administrator den Modus wählen (**Ziel**).
 
 | | Modus **Hash** (kein Zertifikat) | Modus **Signatur** (empfohlen mit Zertifikat) |
 |---|---|---|
-| Code | `SelfX.Code.json` aus dem Release, unverändert | Authenticode-Signatur in jeder `.exe`, `.dll` und `.ps1`; `Install.ps1` und der Dienst prüfen Signatur und Signierer |
+| Code | `SelfX.Code.json` aus dem Release, unverändert | Authenticode-Signatur in jeder `.exe`, `.dll` und `.ps1` und der signierte Katalog `SelfX.Code.cat` für alles außerhalb von `Config` (er deckt auch `SelfX.Code.json`, die Sprachdateien und die Bilder ab, die keine eingebettete Signatur tragen können); `Install.ps1` prüft Signatur und Signierer heute, der Dienst in einer späteren Version |
 | Konfiguration | `SelfX.Config.json`, vom Assistenten geschrieben | zusätzlich der signierte Katalog `SelfX.Config.cat` (XML- und PNG-Dateien können keine eingebettete Signatur tragen) |
 | AppLocker / App Control | Hashregeln, vom Assistenten erzeugt | **eine** Herausgeberregel bzw. Signer-Regel; sie bleibt für alle Versionen gleich |
 | Aufwand je Update | automatisch, aber neue Regeln müssen verteilt werden | keiner |
@@ -212,7 +212,8 @@ Programme.
 
 ## Der Vertrauensanker
 
-Der Anker legt fest, welche Signierer ein Gerät akzeptiert (**Ziel**, Modus Signatur).
+Der Anker legt fest, welche Signierer ein Gerät akzeptiert. `Install.ps1` schreibt ihn heute (siehe
+nächster Abschnitt); der Dienst liest ihn in einer späteren Version (**Ziel**).
 
 - Er stammt **nicht** aus dem Paket, denn ein Paket mit eigenem Anker belegt nur sich selbst. Er
   kommt aus der Intune-Befehlszeile: `Install.ps1 -TrustedSigner <Fingerabdruck>[,<Fingerabdruck>]`
@@ -234,11 +235,63 @@ Der Anker legt fest, welche Signierer ein Gerät akzeptiert (**Ziel**, Modus Sig
 - Eine ungültige Signatur oder ein Signierer, der nicht in der Liste steht, ist ein harter Abbruch
   **vor** jeder Änderung am Gerät. Das gilt auch bei Autopilot.
 
+### Der Modus Signatur in `Install.ps1`
+
+`Install.ps1 -TrustedSigner <Fingerabdruck>[,<Fingerabdruck>]` installiert im Modus Signatur. Vor jeder
+Änderung am Gerät (auch bevor der Datenordner vorbereitet wird) wird das ganze Paket geprüft:
+
+1. Im Paket liegt keine Verknüpfung (Junction, symbolischer Link).
+2. Jede `.exe`, `.dll`, `.ps1`, `.psm1` und `.psd1` des Pakets trägt eine Authenticode-Signatur mit
+   dem Status `Valid` eines Signierers der Liste. Das gilt auch für `Install.ps1` selbst und für
+   Bibliotheken anderer Herausgeber in `Bin` (zum Beispiel `Microsoft.Windows.SDK.NET.dll`): Das
+   Unternehmen signiert auch diese.
+3. `Config\SelfX.Config.cat` ist von einem Signierer der Liste signiert, verwendet SHA256 und passt
+   genau zum Ordner `Config` (keine geänderte, fehlende oder zusätzliche Datei).
+4. `SelfX.Code.cat` oben im Paket ist von einem Signierer der Liste signiert, verwendet SHA256 und
+   passt genau zu allem anderen im Paket: `App` (mit `SelfX.Code.json`, den Sprachdateien und den
+   Bildern), `Bin` (mit `SelfX.Binaries.json`), den Quellen in `Service` und den Skripten oben im
+   Paket. Damit ist keine Datei des Pakets ohne Signatur eines erlaubten Signierers, und ein älteres
+   signiertes Skript lässt sich nicht zusammen mit einer umgeschriebenen `SelfX.Code.json` ins Paket
+   legen.
+
+Danach folgen unverändert die Prüfungen des Modus Hash (`SelfX.Binaries.json`, `SelfX.Code.json`,
+`SelfX.Config.json`), und nach dem Kopieren müssen die installierten Listen Byte für Byte die Listen
+sein, die die Kataloge abgedeckt haben. Jede Abweichung bricht die Installation ab.
+
+| Thema | Verhalten |
+|---|---|
+| Liste der Signierer | SHA1-Fingerabdrücke mit 40 Hexadezimalzeichen, durch Kommas getrennt, höchstens 10. Ein leerer Eintrag, ein anderes Zeichen oder ein angegebener, aber leerer Parameter bricht die Installation ab; das bedeutet nie „alles ist erlaubt“. Parameter werden nur über ihren Namen gebunden. |
+| Anker | Wird geschrieben, nachdem die installierten Dateien geprüft wurden und bevor der Dienst registriert wird: `Mode` (`REG_SZ`) und im Modus Signatur `Signers` (`REG_MULTI_SZ`); im Modus Hash wird `Signers` entfernt. Besitzer Administratoren, Rechte nicht vererbt, alle Konten per SID. Der Anker wird zurückgelesen und seine Rechte werden geprüft. |
+| Herabstufung | Steht im Anker des Geräts `Signature` (oder lässt er sich nicht deuten) und fehlt `-TrustedSigner`, bricht die Installation ab. Der ausdrückliche Schalter `-AllowHashMode` erlaubt den Wechsel in den Modus Hash. `-AllowHashMode` zusammen mit `-TrustedSigner` ist ein Fehler. |
+| Signiertes Paket ohne `-TrustedSigner` | Wird abgelehnt (der Katalog in `Config` steht in keiner Liste), mit Hinweis auf den Parameter. |
+| Kataloge auf dem Gerät | Die beiden Kataloge werden im Paket geprüft und **nicht** installiert: Die Dateiprüfung des Dienstes lässt nur gelistete Dateien zu. Installieren und Prüfen im Dienst ist ein späterer Schritt (**Ziel**). |
+| `Detection.ps1` | Der Anker muss mit `Mode` = `Hash` oder `Signature` vorhanden sein; der Modus selbst wird nicht bewertet. Eine Installation ohne Anker wird nicht erkannt und erneut installiert. |
+| `Uninstall.ps1` | Entfernt `HKLM\SOFTWARE\SelfX\Trust`. |
+| Meldung bei Ablehnung | Die Signaturprüfung läuft, bevor der Protokollordner vorbereitet wird; ihre Meldung steht deshalb nicht in `Install.log`. Sie geht in den Fehlerstrom; zum Lesen den Installationsbefehl in einer Konsole mit erhöhten Rechten ausführen. |
+
+**Sperrprüfung.** `Install.ps1` verwendet die Prüfung von Windows (`Get-AuthenticodeSignature`). Die
+Adresse der Sperrliste steht im Zertifikat (Sperrlisten-Verteilungspunkt) und wird von der
+Zertifizierungsstelle festgelegt; SelfX kann sie nicht ändern. In der Standardeinstellung von Windows
+macht eine nicht erreichbare Sperrliste eine Signatur nicht ungültig, Windows wartet aber
+möglicherweise auf die Adresse. Für Geräte außerhalb des Firmennetzes sollte die Zertifizierungsstelle
+die Liste unter einer aus dem Internet erreichbaren HTTP-Adresse veröffentlichen und diese im
+Zertifikat an erster Stelle nennen. `tools\Measure-SelfXRevocationDelay.ps1` misst die Wartezeit auf
+einem Gerät (Zertifikat ohne Adresse, Adresse mit unbekanntem Hostnamen, Adresse, die nicht antwortet).
+Ein kompromittiertes Zertifikat lässt sich auch aus `-TrustedSigner` entfernen; das hängt nicht von der
+Sperrliste ab.
+
+**Noch nicht Teil der Paketwerkzeuge:** das Signieren der Dateien, das erneute Schreiben von
+`SelfX.Code.json` und `SelfX.Binaries.json` nach dem Signieren (eine Signatur ändert den Hash einer
+Datei) und das Erzeugen der beiden Kataloge. `SelfX.Code.cat` wird aus dem Paket erzeugt, bevor der
+Ordner `Config` hinzukommt.
+
 ## Die Signaturbibliothek
 
 `tools\SelfXSigning.ps1` enthält die Funktionen, mit denen die Dateien eines Pakets signiert und Signaturen geprüft werden. Sie
 läuft in Windows PowerShell 5.1 und in PowerShell 7, definiert nur Funktionen und gehört nicht zum Paket (auf einem Gerät wird
-nichts davon installiert). `Install.ps1` und der Dienst verwenden sie noch nicht.
+nichts davon installiert). `Install.ps1` hat eine eigene Kopie der Prüfung (`Test-SelfXFileSignature`,
+`Test-SelfXPackageCatalog`; `Test-InstallBinaries.ps1` prüft, dass beide gleich antworten); der Dienst prüft
+noch keine Signaturen.
 
 | Funktion | Zweck |
 |---|---|
@@ -271,7 +324,7 @@ Regeln der Funktionen:
   Zertifikatspeicher importiert; das Zertifikat liegt im Arbeitsspeicher mit einem temporären Schlüssel, der entfernt wird, wenn der
   Aufrufer das Objekt freigibt (`.Dispose()`).
 
-Nicht von der Bibliothek abgedeckt: das Verhalten der Sperrprüfung ohne Netz (wird mit `Install.ps1` geprüft, Planschritt 7), welche
+Nicht von der Bibliothek abgedeckt: das Verhalten der Sperrprüfung ohne Netz (siehe „Der Modus Signatur in `Install.ps1`“), welche
 Art Zeitstempel die jeweilige PowerShell-Edition schreibt und die Prüfung eines Katalogs durch den Dienst mit `WinVerifyTrust`.
 
 Tests: `tools\Test-SelfXSigning.ps1`. Teil 1 läuft überall. Teil 2 (Windows) erzeugt selbstsignierte Zertifikate in

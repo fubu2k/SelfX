@@ -16,7 +16,20 @@
     changed, Install.ps1 checks them: the manifest Bin\SelfX.Binaries.json must list the SHA256 of the
     sources in the package and of each file. A missing Bin folder or any failed check stops the
     installation with the old installation still in place (nothing is compiled on the device any more).
-    The files are unsigned; AppLocker/WDAC allow them with hash rules.
+    Trust mode (docs\Architecture.md): without -TrustedSigner the mode is Hash, as before (the files need no signature;
+    AppLocker/WDAC allow them with hash rules). With -TrustedSigner <thumbprint>[,<thumbprint>] the mode is Signature:
+    every .exe, .dll, .ps1, .psm1 and .psd1 of the package must have an Authenticode signature with the status Valid of one of
+    the given signers (SHA1 thumbprints, 40 hexadecimal characters), Config\SelfX.Config.cat must be signed by one of them and
+    match the folder Config, and SelfX.Code.cat (top of the package) must be signed by one of them and match everything else in
+    the package (App, Bin, Service, the scripts at the top; so SelfX.Code.json, the language files and the images are covered
+    too). SelfX.Code.json and SelfX.Config.json are checked in both modes. Any difference stops the installation before
+    anything on the device is changed. The two catalogs are checked in the package and are not installed. The revocation check
+    is the one of Windows (Get-AuthenticodeSignature): a revocation list that cannot be reached does not make a signature
+    invalid. After the files are installed, the anchor is written to HKLM\SOFTWARE\SelfX\Trust: Mode (Hash or Signature) and
+    Signers (REG_MULTI_SZ, only in the mode Signature); SYSTEM (S-1-5-18) and Administrators (S-1-5-32-544) have full control,
+    users (S-1-5-32-545) can read. A device whose anchor says Signature is installed in the mode Hash only with the explicit
+    switch -AllowHashMode (protection against a downgrade); -AllowHashMode together with -TrustedSigner is an error.
+    Parameters are bound by name only.
     Registers and starts an automatic LOCAL SYSTEM service with recovery restart actions.
     Restricts installed files against user modification and ProgramData\SelfX logs and the
     status cache to SYSTEM/administrators. Creates ProgramData\SelfX\Logs\Users, in which users
@@ -65,11 +78,20 @@
                                               folder may hold nothing but App and Config; a package in the old layout (Sources) is refused
     3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is accepted in SelfX.Config.json (placement rule); nothing below Texts
                                               may be in SelfX.Code.json
+    3.1.0    2026-11-27  fubu2k               Security: trust mode Signature with -TrustedSigner (every .exe, .dll and script of the package signed by
+                                              an allowed signer, signed catalogs Config\SelfX.Config.cat and SelfX.Code.cat, checked before anything
+                                              is changed); trust anchor HKLM\SOFTWARE\SelfX\Trust (Mode, Signers) in both modes; -AllowHashMode for
+                                              the change from Signature to Hash; parameters are bound by name only
 #>
 
-[CmdletBinding()]
+# Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
+[CmdletBinding(PositionalBinding = $false)]
 param(
-	[string]$InstallFolder = (Join-Path $env:ProgramFiles 'SelfX')
+	[string]$InstallFolder = (Join-Path $env:ProgramFiles 'SelfX'),
+	# Trust mode Signature: SHA1 thumbprints (40 hexadecimal characters) of the allowed signers, separated by commas.
+	[string[]]$TrustedSigner = @(),
+	# Allows the mode Hash on a device whose trust anchor says Signature.
+	[switch]$AllowHashMode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -264,7 +286,9 @@ function Test-SelfXFileManifest {
 	# and nothing may be in App or Config that is not listed. Returns the number of checked files, or $null when the package has
 	# neither list (the caller refuses it: no version). A package in the old layout (folder Sources), a mismatch, a missing list
 	# or a file in both lists throws before anything is installed.
-	param([Parameter(Mandatory = $true)][string]$PackageFolder)
+	# Config\SelfX.Config.cat (the signed catalog of the folder Config) is in no list: with -SignedPackage (trust mode Signature, the
+	# catalog was checked by Test-SelfXPackageSignatures) it is skipped, without the switch it is refused like every unlisted file.
+	param([Parameter(Mandatory = $true)][string]$PackageFolder, [switch]$SignedPackage)
 	$AppSource = Join-Path $PackageFolder 'App'
 	$ConfigSource = Join-Path $PackageFolder 'Config'
 	If(Test-Path -LiteralPath (Join-Path $PackageFolder 'Sources')) { throw 'The package has the old layout (folder Sources). Build it again with tools\New-SelfXIntuneWin.ps1 (folders App and Config).' }
@@ -312,6 +336,11 @@ function Test-SelfXFileManifest {
 		{
 			$Relative = $Folder.Prefix + $Item.FullName.Substring($Root.Length + 1).Replace('\', '/')
 			If(($Folder.Prefix -eq '') -and ($Relative -ceq $Folder.List)) { continue }
+			If(($Folder.List -eq 'SelfX.Config.json') -and ($Relative -ieq 'SelfX.Config.cat'))
+			{
+				If($SignedPackage) { continue }
+				throw 'The package is signed (Config\SelfX.Config.cat is present) but -TrustedSigner was not given. Install it with -TrustedSigner <thumbprint of the signer> (docs\Installation.md).'
+			}
 			If($Listed[$Relative.ToLowerInvariant()] -ne $Folder.List) { throw "$Relative is in the package but not listed in $($Folder.List)." }
 		}
 	}
@@ -444,6 +473,10 @@ function Copy-SelfXPayload {
 	New-Item -ItemType Directory -Path $App, $Config -Force | Out-Null
 	Copy-Item -Path (Join-Path (Join-Path $PackageFolder 'App') '*') -Destination $App -Recurse -Force
 	Copy-Item -Path (Join-Path (Join-Path $PackageFolder 'Config') '*') -Destination $Config -Recurse -Force
+	# The signed catalog of the configuration is checked in the package (trust mode Signature) and is not installed: the file check
+	# of the service accepts only files of SelfX.Config.json in Config.
+	$ConfigCatalog = Join-Path $Config 'SelfX.Config.cat'
+	If(Test-Path -LiteralPath $ConfigCatalog -PathType Leaf) { Remove-Item -LiteralPath $ConfigCatalog -Force }
 	Copy-Item -LiteralPath (Join-Path $PackageFolder 'Uninstall.ps1') -Destination $App -Force
 	ForEach($Program in @('SelfXService.exe', 'SelfX.exe')) { Copy-Item -LiteralPath (Join-Path $Bin $Program) -Destination (Join-Path $App $Program) -Force }
 	# Library for PowerShell 7 (Windows Update orchestrator).
@@ -457,6 +490,337 @@ function Copy-SelfXPayload {
 	$Audio = Join-Path $App 'Audio'
 	New-Item -ItemType Directory -Path $Audio -Force | Out-Null
 	Copy-Item -LiteralPath (Join-Path (Join-Path $Bin 'Audio') 'SelfXAudio.dll') -Destination $Audio -Force
+}
+
+function ConvertTo-SelfXTrustedSignerList {
+	# The list of allowed signers of -TrustedSigner: SHA1 thumbprints of exactly 40 hexadecimal characters. With powershell.exe -File
+	# the value "A,B" arrives as one string, so every entry is also split at commas. Returns the thumbprints in upper case without
+	# duplicates. An empty list, an empty entry, any other character (also a space inside a thumbprint) or more than Maximum entries
+	# throws: the list never means "everything is allowed". The text is not repeated in the message (it may be long or contain
+	# control characters).
+	param([string[]]$TrustedSigner, [int]$Maximum = 10)
+	$List = New-Object System.Collections.Generic.List[string]
+	ForEach($Item in @($TrustedSigner))
+	{
+		ForEach($Part in @("$Item" -split ','))
+		{
+			$Value = $Part.Trim()
+			If($Value -notmatch '^[0-9A-Fa-f]{40}\z') { throw '-TrustedSigner: every entry must be a SHA1 thumbprint of exactly 40 hexadecimal characters (several entries are separated by commas). Nothing was changed.' }
+			$Value = $Value.ToUpperInvariant()
+			If(-not $List.Contains($Value)) { $List.Add($Value) }
+		}
+	}
+	If($List.Count -eq 0) { throw '-TrustedSigner is empty: at least one SHA1 thumbprint (40 hexadecimal characters) is required. Nothing was changed.' }
+	If($List.Count -gt $Maximum) { throw "-TrustedSigner: at most $Maximum thumbprints are allowed. Nothing was changed." }
+	Return $List.ToArray()
+}
+
+function Get-SelfXTrustAnchor {
+	# Reads the trust anchor (64-bit view of the registry). Returns $null when the key does not exist, otherwise an object with Mode
+	# ('Hash', 'Signature' or 'Invalid' for any other content) and Signers. A key that cannot be read throws (the caller stops:
+	# fail closed). Hive and SubKey are parameters for the tests only.
+	param(
+		[ValidateSet('LocalMachine', 'CurrentUser')][string]$Hive = 'LocalMachine',
+		[string]$SubKey = 'SOFTWARE\SelfX\Trust'
+	)
+	$Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]$Hive, [Microsoft.Win32.RegistryView]::Registry64)
+	Try
+	{
+		$Key = $Base.OpenSubKey($SubKey, $false)
+		If($null -eq $Key) { return $null }
+		Try
+		{
+			$Mode = 'Invalid'
+			If($Key.GetValueKind('Mode') -eq [Microsoft.Win32.RegistryValueKind]::String)
+			{
+				$Text = "$($Key.GetValue('Mode'))"
+				If(($Text -ceq 'Hash') -or ($Text -ceq 'Signature')) { $Mode = $Text }
+			}
+			$Signers = @()
+			If(@($Key.GetValueNames()) -contains 'Signers')
+			{
+				If($Key.GetValueKind('Signers') -eq [Microsoft.Win32.RegistryValueKind]::MultiString) { $Signers = @($Key.GetValue('Signers') | ForEach-Object { "$_" }) }
+				Else { $Mode = 'Invalid' }
+			}
+			Return [pscustomobject]@{ Mode = $Mode; Signers = $Signers }
+		}
+		Catch [System.IO.IOException] { Return [pscustomobject]@{ Mode = 'Invalid'; Signers = @() } }
+		Finally { $Key.Dispose() }
+	}
+	Finally { $Base.Dispose() }
+}
+
+function Resolve-SelfXTrustMode {
+	# Decides the trust mode of this installation and refuses a downgrade. InstalledMode is the mode of the anchor on the device
+	# ($null = no anchor, 'Hash', 'Signature' or 'Invalid'). Returns 'Signature' or 'Hash'.
+	#  - -TrustedSigner given: Signature (from every state). -AllowHashMode together with it is a contradiction: throws.
+	#  - no -TrustedSigner: Hash, when the device has no anchor or the anchor says Hash. When the anchor says Signature (or cannot
+	#    be understood: treated like Signature, fail closed) the installation stops, unless -AllowHashMode is given.
+	param([string]$InstalledMode, [bool]$SignatureRequested, [bool]$AllowHashMode)
+	If($SignatureRequested)
+	{
+		If($AllowHashMode) { throw '-TrustedSigner and -AllowHashMode cannot be used together. Nothing was changed.' }
+		Return 'Signature'
+	}
+	If((-not $InstalledMode) -or ($InstalledMode -ceq 'Hash')) { return 'Hash' }
+	If(-not $AllowHashMode)
+	{
+		throw 'This device is in the trust mode Signature (HKLM\SOFTWARE\SelfX\Trust), but -TrustedSigner was not given. Install with -TrustedSigner <thumbprint>, or allow the change to the mode Hash with the switch -AllowHashMode. Nothing was changed.'
+	}
+	Return 'Hash'
+}
+
+function Test-SelfXFileSignature {
+	# Authenticode signature of one file: the status must be Valid AND the signer must be one of the allowed thumbprints ("any valid
+	# signature" is not enough). Returns the reason: Ok, FileMissing, NotSigned, HashMismatch, NotSupported, NotTrusted (every other
+	# status, for example a root that the device does not trust or a certificate that expired without a time stamp),
+	# SignerNotAllowed, Error. Same rule and same reasons as Test-SelfXSignature in tools\SelfXSigning.ps1 (that file is not part of
+	# the package; Test-InstallBinaries.ps1 checks that both answer alike). The revocation check is the one of Windows: a
+	# revocation list that cannot be reached does not change the status.
+	param(
+		[Parameter(Mandatory = $true)][string]$Path,
+		[Parameter(Mandatory = $true)][string[]]$AllowedThumbprint
+	)
+	If(-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return 'FileMissing' }
+	Try { $Signature = Get-AuthenticodeSignature -LiteralPath $Path -ErrorAction Stop }
+	Catch { return 'Error' }
+	If($null -eq $Signature) { return 'Error' }
+	$Status = [string]$Signature.Status
+	If($Status -eq 'Valid')
+	{
+		$Thumbprint = ''
+		If($null -ne $Signature.SignerCertificate) { $Thumbprint = "$($Signature.SignerCertificate.Thumbprint)".ToUpperInvariant() }
+		If($Thumbprint -notmatch '^[0-9A-F]{40}\z') { return 'Error' }
+		If($AllowedThumbprint -notcontains $Thumbprint) { return 'SignerNotAllowed' }
+		Return 'Ok'
+	}
+	If($Status -eq 'NotSigned') { return 'NotSigned' }
+	If($Status -eq 'HashMismatch') { return 'HashMismatch' }
+	If($Status -eq 'NotSupportedFileFormat') { return 'NotSupported' }
+	Return 'NotTrusted'
+}
+
+function Test-SelfXPackageCatalog {
+	# A signed catalog of the package: the catalog is signed by an allowed signer (Test-SelfXFileSignature), uses SHA256, and the
+	# folder matches it exactly. The catalog lies at the top of the folder it covers and is not counted itself. Files below the
+	# folders of SkipFolder (relative to Folder) are not part of this catalog. The lists of Test-FileCatalog -Detailed are compared
+	# here, so the reason names the files. Returns 'Ok' or the reason: FileMissing, CatalogSignature:<reason>, HashAlgorithm,
+	# NoDetails, FilesDiffer (...), Error. Anything unexpected, also an exception, is a reason and never 'Ok' (fail closed).
+	param(
+		[Parameter(Mandatory = $true)][string]$CatalogPath,
+		[Parameter(Mandatory = $true)][string]$Folder,
+		[Parameter(Mandatory = $true)][string[]]$AllowedThumbprint,
+		[string[]]$SkipFolder = @()
+	)
+	Try
+	{
+		$Root = [IO.Path]::GetFullPath($Folder).TrimEnd('\')
+		$Catalog = [IO.Path]::GetFullPath($CatalogPath)
+		If(-not (Test-Path -LiteralPath $Root -PathType Container) -or -not (Test-Path -LiteralPath $Catalog -PathType Leaf)) { return 'FileMissing' }
+		If((Split-Path -Parent $Catalog).TrimEnd('\') -ine $Root) { return 'Error' }
+		$Reason = Test-SelfXFileSignature -Path $Catalog -AllowedThumbprint $AllowedThumbprint
+		If($Reason -ne 'Ok') { return "CatalogSignature:$Reason" }
+		$CatalogKey = (Split-Path -Leaf $Catalog).ToLowerInvariant()
+		$Information = Test-FileCatalog -Path $Root -CatalogFilePath $Catalog -Detailed -FilesToSkip @(Split-Path -Leaf $Catalog) -ErrorAction Stop
+		If($null -eq $Information -or $null -eq $Information.CatalogItems -or $null -eq $Information.PathItems) { return 'NoDetails' }
+		If("$($Information.HashAlgorithm)" -notmatch 'SHA256') { return 'HashAlgorithm' }
+		$InCatalog = @{}
+		ForEach($Key in @($Information.CatalogItems.Keys)) { $InCatalog[([string]$Key).Replace('/', '\').ToLowerInvariant()] = [string]$Information.CatalogItems[$Key] }
+		$InFolder = @{}
+		ForEach($Key in @($Information.PathItems.Keys)) { $InFolder[([string]$Key).Replace('/', '\').ToLowerInvariant()] = [string]$Information.PathItems[$Key] }
+		$InCatalog.Remove($CatalogKey)
+		$InFolder.Remove($CatalogKey)
+		ForEach($Skip in @($SkipFolder))
+		{
+			$Prefix = "$Skip".Trim('\').ToLowerInvariant() + '\'
+			ForEach($Key in @($InFolder.Keys)) { If($Key.StartsWith($Prefix, [StringComparison]::Ordinal)) { $InFolder.Remove($Key) } }
+		}
+		If($InCatalog.Count -eq 0) { return 'NoDetails' }
+		$Changed = New-Object System.Collections.Generic.List[string]
+		$Missing = New-Object System.Collections.Generic.List[string]
+		$Extra = New-Object System.Collections.Generic.List[string]
+		ForEach($Key in $InCatalog.Keys)
+		{
+			If(-not $InFolder.ContainsKey($Key)) { $Missing.Add($Key) }
+			ElseIf($InFolder[$Key] -ne $InCatalog[$Key]) { $Changed.Add($Key) }
+		}
+		ForEach($Key in $InFolder.Keys) { If(-not $InCatalog.ContainsKey($Key)) { $Extra.Add($Key) } }
+		If(($Changed.Count + $Missing.Count + $Extra.Count) -eq 0) { return 'Ok' }
+		$Parts = @()
+		ForEach($Group in @(@{ Name = 'changed'; Items = $Changed }, @{ Name = 'missing'; Items = $Missing }, @{ Name = 'not in the catalog'; Items = $Extra }))
+		{
+			If($Group.Items.Count -eq 0) { continue }
+			$Names = @($Group.Items | Sort-Object | Select-Object -First 5)
+			$More = $(If($Group.Items.Count -gt 5) { " and $($Group.Items.Count - 5) more" } Else { '' })
+			$Parts += "$($Group.Name): $($Names -join ', ')$More"
+		}
+		Return "FilesDiffer ($($Parts -join '; '))"
+	}
+	Catch { return 'Error' }
+}
+
+function Test-SelfXPackageSignatures {
+	# Trust mode Signature: checks the whole package before anything on the device is changed. Throws at the first failed part.
+	#  1. No link (junction, symbolic link) in the package.
+	#  2. Every .exe, .dll, .ps1, .psm1 and .psd1 of the package (Install.ps1 and the libraries of other publishers in Bin included)
+	#     has a signature with the status Valid of an allowed signer.
+	#  3. Config\SelfX.Config.cat is signed by an allowed signer and matches the folder Config.
+	#  4. SelfX.Code.cat at the top of the package is signed by an allowed signer and matches everything else in the package (all
+	#     files outside Config: App with SelfX.Code.json, the language files and the images, Bin with SelfX.Binaries.json, the
+	#     sources in Service, the scripts at the top). So no file of the package is without a signature of an allowed signer.
+	# Returns an object with Files (number of files of step 2) and the SHA256 of the two lists as they were checked (CodeListHash,
+	# ConfigListHash); Install.ps1 compares the installed lists with them after the copy.
+	param(
+		[Parameter(Mandatory = $true)][string]$PackageFolder,
+		[Parameter(Mandatory = $true)][string[]]$AllowedThumbprint
+	)
+	$Allowed = @(ConvertTo-SelfXTrustedSignerList -TrustedSigner $AllowedThumbprint)
+	$Root = (Get-Item -LiteralPath $PackageFolder -Force).FullName.TrimEnd('\')
+	$Items = @(Get-ChildItem -LiteralPath $Root -Recurse -Force)
+	ForEach($Item in $Items)
+	{
+		If($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Trust mode Signature: the package contains a link ($($Item.FullName.Substring($Root.Length + 1))). Nothing was changed." }
+	}
+	$SignedTypes = @('.exe', '.dll', '.ps1', '.psm1', '.psd1')
+	$Count = 0
+	$Problems = New-Object System.Collections.Generic.List[string]
+	ForEach($Item in $Items)
+	{
+		If($Item.PSIsContainer -or ($SignedTypes -notcontains $Item.Extension.ToLowerInvariant())) { continue }
+		$Count++
+		$Reason = Test-SelfXFileSignature -Path $Item.FullName -AllowedThumbprint $Allowed
+		If($Reason -ne 'Ok') { $Problems.Add("$($Item.FullName.Substring($Root.Length + 1)) ($Reason)") }
+	}
+	If($Count -eq 0) { throw 'Trust mode Signature: the package contains no program or script. Nothing was changed.' }
+	If($Problems.Count -gt 0)
+	{
+		$Shown = @($Problems | Select-Object -First 10) -join ', '
+		$More = $(If($Problems.Count -gt 10) { " and $($Problems.Count - 10) more" } Else { '' })
+		throw "Trust mode Signature: $($Problems.Count) of $Count programs and scripts of the package have no valid signature of an allowed signer: $Shown$More. Nothing was changed."
+	}
+	$ConfigSource = Join-Path $Root 'Config'
+	$Result = Test-SelfXPackageCatalog -CatalogPath (Join-Path $ConfigSource 'SelfX.Config.cat') -Folder $ConfigSource -AllowedThumbprint $Allowed
+	If($Result -ne 'Ok') { throw "Trust mode Signature: Config\SelfX.Config.cat is not a valid signed catalog of the folder Config: $Result. Nothing was changed." }
+	$Result = Test-SelfXPackageCatalog -CatalogPath (Join-Path $Root 'SelfX.Code.cat') -Folder $Root -AllowedThumbprint $Allowed -SkipFolder @('Config')
+	If($Result -ne 'Ok') { throw "Trust mode Signature: SelfX.Code.cat is not a valid signed catalog of the package (all files outside Config): $Result. Nothing was changed." }
+	$CodeList = Join-Path (Join-Path $Root 'App') 'SelfX.Code.json'
+	$ConfigList = Join-Path $ConfigSource 'SelfX.Config.json'
+	ForEach($List in @($CodeList, $ConfigList))
+	{
+		If(-not (Test-Path -LiteralPath $List -PathType Leaf)) { throw "Trust mode Signature: $(Split-Path -Leaf $List) is missing in the package. Nothing was changed." }
+	}
+	Return [pscustomobject]@{
+		Files          = $Count
+		CodeListHash   = (Get-FileHash -LiteralPath $CodeList -Algorithm SHA256).Hash
+		ConfigListHash = (Get-FileHash -LiteralPath $ConfigList -Algorithm SHA256).Hash
+	}
+}
+
+function Test-SelfXInstalledLists {
+	# Trust mode Signature, after the copy: the installed lists are byte for byte the lists that the signed catalogs covered when
+	# the package was checked (no second look at the package; a list changed between check and copy is found here). Together with
+	# Test-SelfXInstalledFiles this binds every installed file to the signed package. Throws on a difference.
+	param(
+		[Parameter(Mandatory = $true)][string]$InstallFolder,
+		[Parameter(Mandatory = $true)]$Verified
+	)
+	$Lists = @(
+		@{ Path = (Join-Path (Join-Path $InstallFolder 'App') 'SelfX.Code.json'); Hash = "$($Verified.CodeListHash)"; Name = 'App\SelfX.Code.json' },
+		@{ Path = (Join-Path (Join-Path $InstallFolder 'Config') 'SelfX.Config.json'); Hash = "$($Verified.ConfigListHash)"; Name = 'Config\SelfX.Config.json' }
+	)
+	ForEach($List in $Lists)
+	{
+		If($List.Hash -notmatch '^[0-9A-Fa-f]{64}\z') { throw "The checked SHA256 of $($List.Name) is missing." }
+		If(-not (Test-Path -LiteralPath $List.Path -PathType Leaf)) { throw "$($List.Name) is missing in the installation folder." }
+		If((Get-FileHash -LiteralPath $List.Path -Algorithm SHA256).Hash -ne $List.Hash) { throw "$($List.Name) in the installation folder is not the list that was checked with the signed catalog (changed between check and copy)." }
+	}
+}
+
+function Set-SelfXTrustAnchor {
+	# Writes the trust anchor: Mode (REG_SZ, 'Hash' or 'Signature') and, in the mode Signature, Signers (REG_MULTI_SZ, the allowed
+	# thumbprints); in the mode Hash the value Signers is removed. Every other value and sub key is removed. Owner Administrators
+	# (S-1-5-32-544); rights not inherited: SYSTEM (S-1-5-18) and Administrators full control, users (S-1-5-32-545) read. All
+	# accounts by SID. Afterwards the anchor is read back and its rights are checked (Test-SelfXTrustAnchorState); a difference
+	# throws. Hive, SubKey, OwnerSid and FullControlSids are parameters for the tests only.
+	param(
+		[Parameter(Mandatory = $true)][ValidateSet('Hash', 'Signature')][string]$Mode,
+		[string[]]$Signers = @(),
+		[ValidateSet('LocalMachine', 'CurrentUser')][string]$Hive = 'LocalMachine',
+		[string]$SubKey = 'SOFTWARE\SelfX\Trust',
+		[string]$OwnerSid = 'S-1-5-32-544',
+		[string[]]$FullControlSids = @('S-1-5-18', 'S-1-5-32-544')
+	)
+	If($Mode -eq 'Signature') { $Signers = @(ConvertTo-SelfXTrustedSignerList -TrustedSigner $Signers) } Else { $Signers = @() }
+	$Security = New-Object System.Security.AccessControl.RegistrySecurity
+	$Security.SetAccessRuleProtection($true, $false)
+	$Security.SetOwner((New-Object System.Security.Principal.SecurityIdentifier($OwnerSid)))
+	$Inherit = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit
+	$Propagate = [System.Security.AccessControl.PropagationFlags]::None
+	$Allow = [System.Security.AccessControl.AccessControlType]::Allow
+	ForEach($Sid in $FullControlSids)
+	{
+		$Security.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule((New-Object System.Security.Principal.SecurityIdentifier($Sid)), [System.Security.AccessControl.RegistryRights]::FullControl, $Inherit, $Propagate, $Allow)))
+	}
+	$Security.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-545')), [System.Security.AccessControl.RegistryRights]::ReadKey, $Inherit, $Propagate, $Allow)))
+	$Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]$Hive, [Microsoft.Win32.RegistryView]::Registry64)
+	Try
+	{
+		$Key = $Base.CreateSubKey($SubKey, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree)
+		If($null -eq $Key) { throw 'The trust anchor could not be created.' }
+		Try
+		{
+			$Key.SetAccessControl($Security)
+			ForEach($Child in @($Key.GetSubKeyNames())) { $Key.DeleteSubKeyTree($Child, $false) }
+			ForEach($Name in @($Key.GetValueNames())) { If(($Name -ne 'Mode') -and ($Name -ne 'Signers')) { $Key.DeleteValue($Name, $false) } }
+			$Key.SetValue('Mode', $Mode, [Microsoft.Win32.RegistryValueKind]::String)
+			If($Mode -eq 'Signature') { $Key.SetValue('Signers', [string[]]$Signers, [Microsoft.Win32.RegistryValueKind]::MultiString) }
+			Else { $Key.DeleteValue('Signers', $false) }
+			$Key.Flush()
+		}
+		Finally { $Key.Dispose() }
+	}
+	Finally { $Base.Dispose() }
+	$Problem = Test-SelfXTrustAnchorState -Mode $Mode -Signers $Signers -Hive $Hive -SubKey $SubKey -TrustedSids $FullControlSids
+	If($Problem) { throw "The trust anchor was written but is not as expected: $Problem." }
+}
+
+function Test-SelfXTrustAnchorState {
+	# Reads the trust anchor back: the mode and the signers are the expected ones, the rights are not inherited and no identity
+	# other than TrustedSids (SYSTEM, Administrators) may change the key (set a value, create a sub key or a link, delete, change
+	# rights, take ownership). Rules are read as SIDs. Returns $null or the problem.
+	param(
+		[Parameter(Mandatory = $true)][string]$Mode,
+		[string[]]$Signers = @(),
+		[ValidateSet('LocalMachine', 'CurrentUser')][string]$Hive = 'LocalMachine',
+		[string]$SubKey = 'SOFTWARE\SelfX\Trust',
+		[string[]]$TrustedSids = @('S-1-5-18', 'S-1-5-32-544')
+	)
+	$Anchor = Get-SelfXTrustAnchor -Hive $Hive -SubKey $SubKey
+	If($null -eq $Anchor) { return 'the key is missing' }
+	If($Anchor.Mode -cne $Mode) { return "the mode is $($Anchor.Mode)" }
+	If((@($Anchor.Signers) -join ',') -cne (@($Signers) -join ',')) { return 'the signers differ' }
+	$Write = [System.Security.AccessControl.RegistryRights]'SetValue, CreateSubKey, CreateLink, Delete, ChangePermissions, TakeOwnership'
+	$Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]$Hive, [Microsoft.Win32.RegistryView]::Registry64)
+	Try
+	{
+		$Key = $Base.OpenSubKey($SubKey, $false)
+		If($null -eq $Key) { return 'the key is missing' }
+		Try
+		{
+			$Acl = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access)
+			If(-not $Acl.AreAccessRulesProtected) { return 'the rights are inherited' }
+			ForEach($Rule in $Acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
+			{
+				If($Rule.AccessControlType -ne 'Allow') { continue }
+				If(-not ($Rule.RegistryRights -band $Write)) { continue }
+				If($TrustedSids -contains $Rule.IdentityReference.Value) { continue }
+				Return "the key can be changed by $($Rule.IdentityReference.Value)"
+			}
+		}
+		Finally { $Key.Dispose() }
+	}
+	Finally { $Base.Dispose() }
+	Return $null
 }
 
 function Get-SelfXServicePrivileges {
@@ -542,6 +906,20 @@ If($PSVersionTable.PSEdition -eq 'Core') { throw 'Install.ps1 must run in Window
 $null = Test-SelfXWindowsBuild
 If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) { throw 'Run Install.ps1 in a 64-bit PowerShell (use %SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe from 32-bit agents).' }
 
+# Trust mode: Signature with -TrustedSigner, otherwise Hash. The list of signers comes from the command line (Intune), never from
+# the package. An invalid list, a contradiction and a downgrade (the anchor on the device says Signature, -TrustedSigner is missing
+# and -AllowHashMode was not given) stop here, before anything is changed.
+$SignatureRequested = $PSBoundParameters.ContainsKey('TrustedSigner')
+$AllowedSigners = @()
+If($SignatureRequested) { $AllowedSigners = @(ConvertTo-SelfXTrustedSignerList -TrustedSigner $TrustedSigner) }
+$InstalledAnchor = Get-SelfXTrustAnchor
+$InstalledMode = $(If($null -eq $InstalledAnchor) { '' } Else { $InstalledAnchor.Mode })
+$TrustMode = Resolve-SelfXTrustMode -InstalledMode $InstalledMode -SignatureRequested $SignatureRequested -AllowHashMode ([bool]$AllowHashMode)
+# Mode Signature: every program and script and both signed catalogs of the package, before anything on the device is changed
+# (also before the data folder is prepared). A failure throws; nothing is written, also no log.
+$VerifiedSignatures = $null
+If($TrustMode -eq 'Signature') { $VerifiedSignatures = Test-SelfXPackageSignatures -PackageFolder $PackageFolder -AllowedThumbprint $AllowedSigners }
+
 # Logs may contain script output; only SYSTEM and administrators can read them. The folder is cleaned of links and
 # foreign-owned entries first, then owner and rights are set.
 # The package is checked before anything on the device is changed; the delete helper is the checked SelfXService.exe of the package.
@@ -575,7 +953,10 @@ Try
 	# The programs of the package are checked first: when they are missing or do not match, the existing
 	# installation stays untouched and still works.
 	Write-Output 'Programs in Bin checked against the manifest (before the data folder was prepared).'
-	$CheckedFiles = Test-SelfXFileManifest -PackageFolder $PackageFolder
+	If($TrustMode -eq 'Signature') { Write-Output "Trust mode Signature: $($VerifiedSignatures.Files) programs and scripts are signed by an allowed signer; Config\SelfX.Config.cat and SelfX.Code.cat are signed and match the package (checked before the data folder was prepared). Allowed signers: $($AllowedSigners -join ', ')." }
+	ElseIf($InstalledMode -and ($InstalledMode -cne 'Hash')) { Write-Output "Trust mode Hash: the device was in the mode $InstalledMode; the change was allowed with -AllowHashMode." }
+	Else { Write-Output 'Trust mode Hash (no -TrustedSigner).' }
+	$CheckedFiles = Test-SelfXFileManifest -PackageFolder $PackageFolder -SignedPackage:($TrustMode -eq 'Signature')
 	If($null -eq $CheckedFiles) { throw 'SelfX.Code.json and SelfX.Config.json are missing in the package: it has no version and its files cannot be checked. Build the package with tools\New-SelfXIntuneWin.ps1. The existing installation was not changed.' }
 	Write-Output "Package files checked against SelfX.Code.json and SelfX.Config.json ($CheckedFiles files)."
 	# The version of the code, from the checked list.
@@ -622,6 +1003,15 @@ Try
 	# an older layout may be left next to App and Config.
 	$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder
 	Write-Output "Installed files checked against App\SelfX.Code.json and Config\SelfX.Config.json ($InstalledFiles files)."
+	# Mode Signature: the installed lists are the ones that the signed catalogs covered.
+	If($TrustMode -eq 'Signature')
+	{
+		Test-SelfXInstalledLists -InstallFolder $InstallFolder -Verified $VerifiedSignatures
+		Write-Output 'Installed lists are the lists of the signed package.'
+	}
+	# The trust anchor, before the service is registered and started (the service reads it).
+	Set-SelfXTrustAnchor -Mode $TrustMode -Signers $AllowedSigners
+	Write-Output "Trust anchor written: HKLM\SOFTWARE\SelfX\Trust, Mode = $TrustMode."
 
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null
 	& sc.exe description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null
