@@ -47,7 +47,7 @@ Texte. Die Dokumentation steht auf Englisch in `docs/`, die deutsche Fassung in 
 
 3. Wähle einen Weg:
    - **Schnell testen:** Verwende `SelfX-Service-<Version>.intunewin` mit der Standardkonfiguration (Beispielfirma *Contoso*). Lade `SelfX-Service-<Version>.Detection.ps1` in Intune als Erkennungsskript hoch.
-   - **Eigenes Paket bauen:** Entpacke `SelfX-Service-<Version>-payload.zip` und starte `tools\New-SelfXPackage.ps1`. Das Programm stellt einige Fragen (Logo, Support-Kontakt, Ticket-Adresse) und schreibt das eigene `.intunewin`, das Erkennungsskript und eine kurze Intune-Anleitung. Es benötigt das Microsoft Win32 Content Prep Tool (`IntuneWinAppUtil.exe`).
+   - **Eigenes Paket bauen:** Entpacke `SelfX-Service-<Version>-payload.zip` und doppelklicke `tools\Start-SelfXPackageWizard.cmd` (ein Fenster; die Konsolenfassung `tools\New-SelfXPackage.ps1` macht dasselbe für die Automatisierung). Das Programm stellt einige Fragen (Logo, Support-Kontakt, Ticket-Adresse) und schreibt das eigene `.intunewin`, das Erkennungsskript und eine kurze Intune-Anleitung. Es benötigt das Microsoft Win32 Content Prep Tool (`IntuneWinAppUtil.exe`).
 
 Mehr dazu: [Installation](docs/de/Installation.md) und [Assistent](docs/de/Assistent.md).
 

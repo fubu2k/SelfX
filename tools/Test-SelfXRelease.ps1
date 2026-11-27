@@ -25,13 +25,15 @@
     Name    : Test-SelfXRelease.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 3.1.0
+    Version : 3.1.1
     Exit code: 0 = all tests passed, 1 = at least one failed
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version
+    3.1.1    2026-11-27  fubu2k               A script of the assistant may dot-source a code file of the package (App of the payload: the
+                                              window SelfXWizardGui.ps1 loads Branding.ps1); eleven Windows PowerShell 5.1 tests
 #>
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -437,11 +439,14 @@ foreach ($folder in $script:SelfXPayloadToolFolders) {
 }
 $inPayload = @($script:SelfXPayloadToolFiles) + @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'tools/Wizard') -Recurse -File | ForEach-Object { 'tools/Wizard/' + $_.Name })
 $unresolved = New-Object System.Collections.Generic.List[string]
+. (Join-Path $ScriptFolder 'SelfXPackage.Common.ps1')
+$packageCodeFiles = @($script:SelfXCodeFileNames)
 foreach ($relative in $payloadScripts) {
     $text = [IO.File]::ReadAllText((Join-Path $RepositoryRoot $relative.Replace('/', $separator)))
     foreach ($match in [regex]::Matches($text, "(?m)^\s*\.\s+\(Join-Path\s+.*'([A-Za-z0-9._-]+\.ps1)'\)\s*$")) {
         $needed = $match.Groups[1].Value
-        if (('tools/' + $needed) -notin $inPayload -and ('tools/Wizard/' + $needed) -notin $inPayload) { $unresolved.Add("$relative -> $needed") }
+        # A code file of the package (App of the payload, for example Branding.ps1 for the window of the assistant) is part of the payload too.
+        if (('tools/' + $needed) -notin $inPayload -and ('tools/Wizard/' + $needed) -notin $inPayload -and $needed -notin $packageCodeFiles) { $unresolved.Add("$relative -> $needed") }
     }
 }
 Assert ($unresolved.Count -eq 0) ('every script that the assistant dot-sources is part of the payload' + $(if ($unresolved.Count) { ': ' + ($unresolved -join ', ') }))
@@ -489,7 +494,7 @@ Write-Host '.github\workflows\service-ci.yml'
 $ci = [IO.File]::ReadAllText((Join-Path $RepositoryRoot '.github/workflows/service-ci.yml'))
 Assert ($ci -match '(?m)^  workflow_call:\s*$') 'the CI workflow can be called by the release workflow'
 Assert ([regex]::Matches($ci, 'Test-SelfXRelease\.ps1').Count -eq 2) 'this test runs in Windows PowerShell 5.1 and in PowerShell 7'
-Assert ($ci -match "Count -ne 10") 'the count of the Windows PowerShell 5.1 tests is 10'
+Assert ($ci -match "Count -ne 11") 'the count of the Windows PowerShell 5.1 tests is 11'
 
 # ---------------------------------------------------------------- docs
 Write-Host 'Docs'

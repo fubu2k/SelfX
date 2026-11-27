@@ -43,7 +43,7 @@ deployment of SelfX Service: see
 
 3. Choose one way:
    - **Test quickly:** use `SelfX-Service-<version>.intunewin` with the default configuration (sample company *Contoso*). Upload `SelfX-Service-<version>.Detection.ps1` as the detection script in Intune.
-   - **Make your own package:** unzip `SelfX-Service-<version>-payload.zip` and run `tools\New-SelfXPackage.ps1`. It asks a few questions (logo, support contact, ticket address) and writes your own `.intunewin`, the detection script and a short Intune guide. It needs the Microsoft Win32 Content Prep Tool (`IntuneWinAppUtil.exe`).
+   - **Make your own package:** unzip `SelfX-Service-<version>-payload.zip` and double-click `tools\Start-SelfXPackageWizard.cmd` (a window; the console version `tools\New-SelfXPackage.ps1` does the same for automation). It asks a few questions (logo, support contact, ticket address) and writes your own `.intunewin`, the detection script and a short Intune guide. It needs the Microsoft Win32 Content Prep Tool (`IntuneWinAppUtil.exe`).
 
 More details: [Installation](docs/Installation.md) and [Guided setup](docs/Guided-Setup.md).
 

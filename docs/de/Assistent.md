@@ -15,6 +15,44 @@ hinterlässt keinen halb fertigen Ordner, und ein früheres Ergebnis bleibt unve
 Funktion `Invoke-SelfXPackageBuild` zur Verfügung (`tools\Wizard\SelfXWizard.ps1`): Antworten, Nutzlast-Ordner, Ausgabeordner,
 Werkzeugpfad, optionales Zertifikat und ein Rückruf für den Fortschritt.
 
+## Das Fenster (empfohlen)
+
+`tools\Start-SelfXPackageWizard.cmd` öffnet den Assistenten als Fenster im Stil von SelfX. Doppelklicken Sie die Datei im entpackten
+Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-NoProfile -STA`; PowerShell 7 geht ebenso
+(`pwsh -NoProfile -STA -File .\tools\Wizard\SelfXWizardGui.ps1`). Administratorrechte sind nicht nötig.
+
+| Seite | Was Sie einstellen |
+|---|---|
+| Sprache | Sprache des Assistenten (de, en) und Standardsprache von SelfX auf den Geräten |
+| Grundlagen | Name Ihrer Organisation und des Programms |
+| Support | E-Mail-Adresse, Telefon, Servicezeiten, Webseite und Teams-Kontakt des Supports |
+| Branding | Logo (Dateiauswahl, Vorschau) und Firmenfarbe; das Fenster zeigt die Farbe sofort |
+| Ticket | Ticket-E-Mail und, bei mehreren Organisationen, ein Postfach je Organisation, zugeordnet über Gruppentag, OU oder Geräteklasse |
+| Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
+| Zusammenfassung | Ihre Antworten, Paketordner, Ausgabeordner, `IntuneWinAppUtil.exe`, „Nur die Konfiguration schreiben“ |
+| Intune-Paket bauen | Ein Klick; eine Liste zeigt jeden Schritt; **Abbrechen** beendet den Bau, der Ausgabeordner bleibt unverändert |
+| Ergebnis | Dateien, **Ordner öffnen**, **Anleitung kopieren** und die Anleitung für Intune |
+
+![Fenster des Paketassistenten: Seite Branding mit Logo-Vorschau und Firmenfarbe](../images/selfx-wizard-branding-de.png)
+
+- Jeder Wert wird schon beim Tippen geprüft, mit denselben Regeln wie in der Konsole; der Fehler steht am Feld, und **Weiter** bleibt
+  auf der Seite, bis die markierten Felder stimmen.
+- **Antworten laden** liest eine `selfx-answers.json` (eine Antwort mit unbekanntem Namen wird abgelehnt), **Antworten speichern**
+  schreibt eine. Die Datei enthält nie ein Kennwort oder einen Schlüssel.
+- Der Bau läuft im Hintergrund: Das Fenster bleibt bedienbar. Das Ergebnis ist dasselbe wie mit `New-SelfXPackage.ps1` und denselben
+  Antworten.
+- Tastatur: Tab wechselt zwischen den Feldern, Enter ist **Weiter**, die unterstrichenen Buchstaben gehen mit Alt. Screenreader lesen
+  Name, Empfehlung und Fehler jedes Feldes vor.
+- Das Fenster folgt dem hellen oder dunklen Modus von Windows und verwendet Farben und Stile von SelfX.
+- Noch nicht im Fenster: das Signieren (Vertrauensmodus Signatur; dafür die Konsole mit `-CertificateThumbprint` oder `-PfxPath`) und
+  die Netzwerkziele des Verbindungstests.
+
+![Fenster des Paketassistenten: Bau mit Fortschrittsliste](../images/selfx-wizard-build-de.png)
+
+![Fenster des Paketassistenten: Ergebnis mit der Anleitung für Intune](../images/selfx-wizard-result-de.png)
+
+Die Konsolenfassung unten bleibt für die Automatisierung (Antwortdatei) und für das Signieren.
+
 ## Aufruf
 
 Am besten starten Sie mit dem **Nutzlast-Archiv** eines Release (`SelfX-Service-<Version>-payload.zip`, siehe

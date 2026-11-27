@@ -31,13 +31,14 @@
     Name    : SelfXRelease.Common.ps1
     Package : tools
     Context : Build machine / CI (any user; not installed, not shipped)
-    Version : 3.1.0
+    Version : 3.1.1
     Works in Windows PowerShell 5.1 and PowerShell 7.
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version: release notes from CHANGELOG.en.md, payload archive, checksum file
+    3.1.1    2026-11-27  fubu2k               tools\Start-SelfXPackageWizard.cmd (window of the package wizard) in the payload archive
 #>
 
 # A release version: <major>.<minor>.<patch> (the release workflow checks the tag against Version.txt with the same rule).
@@ -55,7 +56,7 @@ $script:SelfXReleaseNotesLimit = 120000
 $script:SelfXPayloadToolFiles = @(
     'tools/Get-SelfXAsrEvents.ps1', 'tools/New-SelfXAppLockerRules.ps1', 'tools/New-SelfXIntuneWin.ps1', 'tools/New-SelfXPackage.ps1',
     'tools/New-SelfXWdacPolicy.ps1', 'tools/SelfXPackage.Common.ps1', 'tools/SelfXPublisherRules.ps1', 'tools/SelfXRelease.Common.ps1',
-    'tools/SelfXSigning.ps1'
+    'tools/SelfXSigning.ps1', 'tools/Start-SelfXPackageWizard.cmd'
 )
 # Every file below these folders of the repository is part of the payload.
 $script:SelfXPayloadToolFolders = @('tools/Wizard')

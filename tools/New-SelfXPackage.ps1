@@ -64,7 +64,7 @@
     Name    : New-SelfXPackage.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 1.1.0
+    Version : 1.1.1
     Exit code: 0 = done, 1 = error or aborted
     Works in Windows PowerShell 5.1 and PowerShell 7. The wizard sends nothing; only -PfxPath makes it ask for the password of the PFX file (hidden, not stored).
 
@@ -75,6 +75,8 @@
     1.0.1    2026-11-27  fubu2k               The version in the file names comes from Version.txt (no longer from Tool_Config.xml)
     1.1.0    2026-11-27  fubu2k               Only asks and calls Invoke-SelfXPackageBuild (one run, no half-finished output); works on the unpacked payload
                                               archive; -CertificateThumbprint, -PfxPath, -TimestampServer for the trust mode Signature
+    1.1.1    2026-11-27  fubu2k               Default paths and the build of the repository package through Get-WizardBuildDefaults and
+                                              Invoke-SelfXWizardBuild (shared with the window tools\Wizard\SelfXWizardGui.ps1); same behavior
 #>
 [CmdletBinding()]
 param(
@@ -92,13 +94,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepositoryRoot = Split-Path -Parent $ScriptFolder
 $WizardFolder = Join-Path $ScriptFolder 'Wizard'
 # The functions of the assistant (texts, questions, Invoke-SelfXPackageBuild); the files only define functions.
 . (Join-Path $WizardFolder 'SelfXWizard.ps1')
 
 $certificate = $null
-$temporaryPayload = $null
 try {
     $interactive = -not $AnswerFile
     $script:WizardInteractive = $interactive
@@ -155,21 +155,20 @@ try {
     }
 
     # ---- where the package comes from: -PayloadFolder, the unpacked payload archive (this script is in its folder tools) or the repository
-    $packageSource = $RepositoryRoot
-    $fromRepository = -not (Test-Path -LiteralPath (Join-Path $RepositoryRoot 'App\SelfX.Code.json') -PathType Leaf)
-    if ($fromRepository) { $packageSource = Join-Path $RepositoryRoot 'SelfX Service' }
-    if ($PayloadFolder) { $packageSource = $PayloadFolder; $fromRepository = $false }
+    $defaults = Get-WizardBuildDefaults -ToolsFolder $ScriptFolder -PayloadFolder $PayloadFolder
+    $packageSource = $defaults.PayloadFolder
+    $fromRepository = $defaults.FromRepository
 
     # ---- build settings (machine specific, not part of the saved answers)
     if (-not $OutputFolder) {
-        $OutputFolder = $(if ($fromRepository) { Join-Path $RepositoryRoot 'build\SelfX-Guided' } else { Join-Path (Split-Path -Parent $RepositoryRoot) 'SelfX-Guided' })
+        $OutputFolder = $defaults.OutputFolder
         if ($interactive) {
             Write-Host ''; Write-Host (Get-WText 'section.build') -ForegroundColor Green
             $OutputFolder = Get-WizardAnswer -Question @{ Id = 'Output'; Kind = 'text'; Max = 260; Default = $OutputFolder } -Answers $answers -Source @{}
         }
     }
     if (-not $ConfigureOnly -and -not $ToolPath) {
-        $ToolPath = Join-Path $ScriptFolder 'IntuneWinAppUtil.exe'
+        $ToolPath = $defaults.ToolPath
         if ($interactive) { $ToolPath = Get-WizardAnswer -Question @{ Id = 'Tool'; Kind = 'text'; Max = 260; Default = $ToolPath } -Answers $answers -Source @{} }
     }
 
@@ -194,15 +193,9 @@ try {
         & (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptFolder 'Build-SelfXBinaries.ps1')
         if ($LASTEXITCODE -ne 0) { throw "Build-SelfXBinaries.ps1 failed (exit code $LASTEXITCODE)." }
     }
-    if ($fromRepository) {
-        # The package folder of the repository is brought into the layout of the payload (App, Config) in a temporary folder.
-        $temporaryPayload = Join-Path ([IO.Path]::GetTempPath()) ('SelfX-Payload-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
-        $null = New-SelfXPayloadFromRepository -SourceFolder $packageSource -Target $temporaryPayload
-        $packageSource = $temporaryPayload
-    }
 
-    # ---- build
-    $result = Invoke-SelfXPackageBuild -Answers $answers -PayloadFolder $packageSource -OutputFolder $OutputFolder -ToolPath $ToolPath `
+    # ---- build (the package folder of the repository is brought into the layout of the payload in a temporary folder first)
+    $result = Invoke-SelfXWizardBuild -Answers $answers -PayloadFolder $packageSource -FromRepository:$fromRepository -OutputFolder $OutputFolder -ToolPath $ToolPath `
         -Certificate $certificate -TimestampServer $TimestampServer -Language $Language -ConfigureOnly:$ConfigureOnly `
         -OnProgress { param($id, $text) Write-Host $text -ForegroundColor Cyan }
 
@@ -216,5 +209,4 @@ try {
     exit 1
 } finally {
     if ($null -ne $certificate) { $certificate.Dispose() }
-    if ($temporaryPayload -and (Test-Path -LiteralPath $temporaryPayload)) { Remove-Item -LiteralPath $temporaryPayload -Recurse -Force -ErrorAction SilentlyContinue }
 }

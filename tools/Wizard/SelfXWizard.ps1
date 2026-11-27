@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.1
+    Version : 3.1.2
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -23,6 +23,10 @@
     3.1.0    2026-11-27  fubu2k               Package layout App\Config, ASR step in the instructions
     3.1.1    2026-11-27  fubu2k               Invoke-SelfXPackageBuild (one-step build on the unpacked payload archive), logo check by file header,
                                               answers AppLockerRules and WdacBasePolicyId, -TrustedSigner in the instructions
+    3.1.2    2026-11-27  fubu2k               Get-WizardBuildDefaults and Invoke-SelfXWizardBuild: default paths and the build of the repository
+                                              package, shared by New-SelfXPackage.ps1 and the window SelfXWizardGui.ps1; Read-WizardLogo (the
+                                              check of Copy-WizardLogo, also used by the logo preview of the window); several platform scripts
+                                              are listed one per line in the instructions and in the result (they were joined into one line)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -573,12 +577,11 @@ function Get-WizardImageKind {
     return $null
 }
 
-# Copies the logo into <configuration folder>\Branding and returns the relative path for Brand_Logo (relative to the configuration
-# folder: Branding\<name>, resolved by SelfXPaths.ps1 on the device). The file is read once: it must be a normal file of at most 2 MB, the
-# extension must be png, jpg, jpeg or ico and the first bytes must be a png, jpg or ico image of the same kind. The copy gets the name
-# logo.<kind> from the checked bytes.
-function Copy-WizardLogo {
-    param([string]$LogoPath, [string]$SourcesFolder)
+# Reads and checks a logo file once: a normal file of at most 2 MB, extension png, jpg, jpeg or ico, and the first bytes are a png, jpg or ico
+# image of the same kind. Returns the bytes and the kind; throws a plain message otherwise. Used by Copy-WizardLogo and by the preview of the
+# window (SelfXWizardGui.ps1), so both apply the same rules.
+function Read-WizardLogo {
+    param([Parameter(Mandatory = $true)][string]$LogoPath)
     $item = Get-Item -LiteralPath $LogoPath -Force -ErrorAction Stop
     if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'The logo must be a normal file.' }
     if ($item.Extension -notmatch '^\.(png|jpg|jpeg|ico)$') { throw 'The logo must be png, jpg or ico.' }
@@ -589,11 +592,20 @@ function Copy-WizardLogo {
     if ($null -eq $kind) { throw 'The logo is not a png, jpg or ico image (the file header does not match).' }
     $extensionKind = $item.Extension.TrimStart('.').ToLowerInvariant().Replace('jpeg', 'jpg')
     if ($extensionKind -ne $kind) { throw "The logo has the extension $($item.Extension) but is a $kind image." }
+    return [pscustomobject]@{ Bytes = $bytes; Kind = $kind }
+}
+
+# Copies the logo into <configuration folder>\Branding and returns the relative path for Brand_Logo (relative to the configuration
+# folder: Branding\<name>, resolved by SelfXPaths.ps1 on the device). The file is read and checked once by Read-WizardLogo. The copy gets
+# the name logo.<kind> from the checked bytes.
+function Copy-WizardLogo {
+    param([string]$LogoPath, [string]$SourcesFolder)
+    $logo = Read-WizardLogo -LogoPath $LogoPath
     $folder = Join-Path $SourcesFolder 'Branding'
     New-Item -ItemType Directory -Path $folder -Force | Out-Null
     foreach ($old in @(Get-ChildItem -LiteralPath $folder -File -Force)) { Remove-Item -LiteralPath $old.FullName -Force }
-    $name = "logo.$kind"
-    [IO.File]::WriteAllBytes((Join-Path $folder $name), $bytes)
+    $name = "logo.$($logo.Kind)"
+    [IO.File]::WriteAllBytes((Join-Path $folder $name), $logo.Bytes)
     return "Branding\$name"
 }
 
@@ -911,7 +923,8 @@ function Invoke-SelfXPackageBuild {
 
         # ---- platform scripts, answers, instructions
         & $progress 'guide'
-        $scriptFiles = @(Write-SelfXSupportUnitScripts -Answers $a -Folder $out)
+        # The function returns one array (return , ...); @() around it would nest it and join the names into one line of the instructions.
+        $scriptFiles = [string[]](Write-SelfXSupportUnitScripts -Answers $a -Folder $out)
         Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language
         $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
         $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })
@@ -946,5 +959,57 @@ function Invoke-SelfXPackageBuild {
     finally {
         if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue }
         if ($null -ne $backup -and (Test-Path -LiteralPath $backup)) { Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}
+
+# ---------------------------------------------------------------- shared by the console and the window
+
+# Default build settings, the same for New-SelfXPackage.ps1 and SelfXWizardGui.ps1. ToolsFolder is the folder tools (of the repository or of
+# the unpacked payload archive). Without PayloadFolder the package comes from the payload around tools (it has App\SelfX.Code.json) or from
+# the package folder "SelfX Service" of the repository (FromRepository: it is brought into the payload layout before the build).
+function Get-WizardBuildDefaults {
+    param([Parameter(Mandatory = $true)][string]$ToolsFolder, [string]$PayloadFolder)
+    $root = Split-Path -Parent $ToolsFolder
+    $source = $root
+    $fromRepository = -not (Test-Path -LiteralPath (Join-Path $root 'App\SelfX.Code.json') -PathType Leaf)
+    if ($fromRepository) { $source = Join-Path $root 'SelfX Service' }
+    if ($PayloadFolder) { $source = $PayloadFolder; $fromRepository = $false }
+    return [pscustomobject]@{
+        PayloadFolder  = $source
+        FromRepository = $fromRepository
+        OutputFolder   = $(if ($fromRepository) { Join-Path $root 'build\SelfX-Guided' } else { Join-Path (Split-Path -Parent $root) 'SelfX-Guided' })
+        ToolPath       = (Join-Path $ToolsFolder 'IntuneWinAppUtil.exe')
+    }
+}
+
+# Builds the package from a payload folder or (FromRepository) from the package folder of the repository with a built folder Bin: the
+# repository package is copied into the payload layout in a temporary folder first, which is removed afterwards. Everything else is
+# Invoke-SelfXPackageBuild; the parameters are passed on unchanged.
+function Invoke-SelfXWizardBuild {
+    param(
+        [Parameter(Mandatory = $true)]$Answers,
+        [Parameter(Mandatory = $true)][string]$PayloadFolder,
+        [switch]$FromRepository,
+        [Parameter(Mandatory = $true)][string]$OutputFolder,
+        [string]$ToolPath,
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+        [string]$TimestampServer,
+        [scriptblock]$OnProgress,
+        [string]$Language = 'en',
+        [switch]$ConfigureOnly
+    )
+    $temporaryPayload = $null
+    try {
+        $source = $PayloadFolder
+        if ($FromRepository) {
+            $temporaryPayload = Join-Path ([IO.Path]::GetTempPath()) ('SelfX-Payload-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+            $null = New-SelfXPayloadFromRepository -SourceFolder $PayloadFolder -Target $temporaryPayload
+            $source = $temporaryPayload
+        }
+        return (Invoke-SelfXPackageBuild -Answers $Answers -PayloadFolder $source -OutputFolder $OutputFolder -ToolPath $ToolPath -Certificate $Certificate `
+                -TimestampServer $TimestampServer -OnProgress $OnProgress -Language $Language -ConfigureOnly:$ConfigureOnly)
+    }
+    finally {
+        if ($temporaryPayload -and (Test-Path -LiteralPath $temporaryPayload)) { Remove-Item -LiteralPath $temporaryPayload -Recurse -Force -ErrorAction SilentlyContinue }
     }
 }
