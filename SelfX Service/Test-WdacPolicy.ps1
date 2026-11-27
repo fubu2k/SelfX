@@ -138,6 +138,7 @@ else {
 		Assert-True ($LASTEXITCODE -ne 0 -and $layoutText -match 'Neither Version\.txt nor App\\SelfX\.Code\.json') 'a package folder without Version.txt and without App\SelfX.Code.json is refused'
 		[IO.File]::WriteAllText((Join-Path $layoutPackage 'App\SelfX.Code.json'), '{ "ManifestVersion": 1, "ToolVersion": "3.1.0", "Files": {} }')
 		$layoutText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tool -BasePolicyId $base.ToString() -PackageFolder $layoutPackage -OutputFolder $layoutOut -DetectionFile (Join-Path $root 'missing-detection.ps1') 2>&1 | Out-String
+		$layoutText = $layoutText -replace '\s+', ' '   # the console wraps long error lines
 		Assert-True ($LASTEXITCODE -ne 0 -and $layoutText -match 'detection script .* does not exist') 'the version is read from App\SelfX.Code.json; a missing -DetectionFile is refused before the scan'
 		Assert-True (-not (Test-Path -LiteralPath $layoutOut)) 'no output folder after these refusals'
 
