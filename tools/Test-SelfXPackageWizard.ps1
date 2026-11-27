@@ -42,6 +42,21 @@ function Assert-Throws {
     Assert $threw $Name
 }
 
+function Remove-PeSignature {
+    # Makes a copy of a system file signable: removes the embedded signature (certificate table) of a PE file, so no earlier signature is left.
+    param([string]$Path)
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+    $optional = $peOffset + 24
+    $directory = $optional + $(if ([BitConverter]::ToUInt16($bytes, $optional) -eq 0x20B) { 112 } else { 96 }) + 4 * 8
+    $tableStart = [BitConverter]::ToUInt32($bytes, $directory)
+    $tableSize = [BitConverter]::ToUInt32($bytes, $directory + 4)
+    if ($tableStart -eq 0 -or $tableSize -eq 0) { return }
+    for ($i = 0; $i -lt 8; $i++) { $bytes[$directory + $i] = 0 }
+    if ($tableStart + $tableSize -ge $bytes.Length) { $bytes = $bytes[0..($tableStart - 1)] }
+    [IO.File]::WriteAllBytes($Path, $bytes)
+}
+
 function New-FakePayload {
     # A payload as the release archive has it (App and Config, Bin with dummy programs and SelfX.Binaries.json, tools and licence texts),
     # made from the repository package folder. Real = copy real PE files for the programs (needed to sign them).
@@ -55,7 +70,7 @@ function New-FakePayload {
     foreach ($name in $programs.Keys) {
         $path = Join-Path $bin $name.Replace('/', '\')
         New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
-        if ($RealPrograms) { Copy-Item -LiteralPath $(if ($name -like '*.exe') { Join-Path $env:SystemRoot 'System32\whoami.exe' } else { Join-Path $env:SystemRoot 'System32\version.dll' }) -Destination $path }
+        if ($RealPrograms) { Copy-Item -LiteralPath $(if ($name -like '*.exe') { Join-Path $env:SystemRoot 'System32\whoami.exe' } else { Join-Path $env:SystemRoot 'System32\version.dll' }) -Destination $path; Remove-PeSignature -Path $path }
         else { [IO.File]::WriteAllText($path, "binary $name") }
         $binaries[$name] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
         $sources[$programs[$name]] = (Get-FileHash -LiteralPath (Join-Path $repo $programs[$name].Replace('/', '\')) -Algorithm SHA256).Hash
