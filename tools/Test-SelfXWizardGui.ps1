@@ -285,7 +285,7 @@ try {
         $signingPage = Get-WizardGuiPageIndex 'signing'
         Assert ($signingPage -eq 6 -and (Get-WizardGuiPageIndex 'summary') -eq 7 -and (Get-WizardGuiPageIndex 'result') -eq 9) 'the page Signature comes after the further settings and before the summary'
         Set-WizardGuiPage -Index $signingPage -NoFocus
-        Assert ($context.Ui.SignNone.IsChecked -and @(Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and $context.Ui.SignNoneInfo.Visibility -eq 'Visible') 'default: no certificate, the consequences are explained, nothing is required'
+        Assert ($context.Ui.SignNone.IsChecked -and (Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and $context.Ui.SignNoneInfo.Visibility -eq 'Visible') 'default: no certificate, the consequences are explained, nothing is required'
         Assert ($null -eq (Get-WizardGuiSigning -State $context.State).Certificate) 'without a certificate nothing is signed'
         $context.Ui.SignStore.IsChecked = $true
         $tags = @($context.Ui.CertList.Items | ForEach-Object { $_.Tag })
@@ -313,7 +313,7 @@ try {
         Assert ($signing.Certificate.Thumbprint -eq $valid.Thumbprint -and $signing.TimestampServer -eq 'http://timestamp.example.com' -and @($signing.AdditionalSigner).Count -eq 2) 'the build gets the certificate, the time stamp service and the additional signers'
         Set-Field 'Timestamp' ''
         Set-Field 'NoTimestamp' $true
-        Assert (@(Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and -not $context.Fields['Timestamp'].Control.IsEnabled) 'signing without a time stamp must be switched on explicitly'
+        Assert ((Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and -not $context.Fields['Timestamp'].Control.IsEnabled) 'signing without a time stamp must be switched on explicitly'
         Set-Field 'NoTimestamp' $false
         Set-Field 'Timestamp' 'http://timestamp.example.com'
         $context.State.Raw['OrgName'] = 'Contoso'
@@ -511,7 +511,7 @@ try {
     Assert ($guiText -notmatch '(?i)ConvertTo-WizardValue\s+-Kind\s+''(mail|url)''.*-replace') 'the window does not change the checks'
     $addScript = @([regex]::Matches($guiText, '\.AddScript\((.+?)\)\.AddParameters\('))
     Assert ($addScript.Count -eq 1 -and $addScript[0].Groups[1].Value -eq '$script:WizardGuiBuildScript.ToString()' -and ([regex]::Matches($guiText, 'AddScript\(')).Count -eq 1) 'the runspace runs only the constant build script (values are parameters)'
-    Assert ($guiText -notmatch '\.Password\b(?!Box|Label|Hint)' -and $guiText -match '\.SecurePassword') 'the window reads the password box only as SecureString (never the property Password)'
+    Assert ($guiText -cnotmatch '\.Password\b' -and $guiText -match '\.SecurePassword') 'the window reads the password box only as SecureString (never the property Password)'
     Assert ($guiText -notmatch '(?i)ConvertFrom-SecureString|PtrToString|SecureStringToBSTR|SecureStringToGlobalAlloc|NetworkCredential') 'the window never turns the password into text'
     $tokens = $null; $errors = $null
     $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $WizardFolder 'SelfXWizardGui.ps1'), [ref]$tokens, [ref]$errors)
