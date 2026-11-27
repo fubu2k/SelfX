@@ -122,7 +122,7 @@ if ($verifyMethod) {
 	}
 	# Same placement as the package build: settings files and Branding go to SelfX.Config.json, everything else to SelfX.Code.json.
 	function Get-ListOf([string]$Relative) {
-		if ($Relative -in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml' -or $Relative -like 'Branding/*') { return 'SelfX.Config.json' }
+		if ($Relative -in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml' -or $Relative -like 'Branding/*' -or $Relative -like 'Scripts_to_run/Own_*') { return 'SelfX.Config.json' }
 		return 'SelfX.Code.json'
 	}
 	function Write-ListFile([string]$Root, [string]$ListName, $Files) {
@@ -204,7 +204,7 @@ if ($verifyMethod) {
 	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Config.json invalid entry') 'N4: a file that is already in the code list is refused in the configuration list too (listed twice)'
 	# An own script of the company in the configuration list is accepted.
 	Set-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\Own_Action.ps1') -Value 'Write-Output 5'
-	New-FileList $fileRoot @{ 'Scripts_to_run/Own_Action.ps1' = ((Get-FileHash -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\Own_Action.ps1') -Algorithm SHA256).Hash) } 'SelfX.Config.json'
+	New-FileList $fileRoot
 	$result = Test-FileList $fileRoot
 	Assert-True $result.Ok "N4: an own script in the configuration list is accepted ($($result.Problems))"
 	Remove-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\Own_Action.ps1')
