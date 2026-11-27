@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Start: tools\Start-SelfXPackageWizard.cmd (Windows PowerShell 5.1, -STA). PowerShell 7 works as well (pwsh -STA -File ...).
-    Pages: language, basics, support, branding, ticket, further settings, signature, summary (with the build settings), build (progress
+    Pages: language, basics, support, branding, ticket, network targets, further settings, signature, summary (with the build settings), build (progress
     list) and result (files and the instructions for Intune as steps with copy buttons).
 
     Signature: the certificate comes from the stores (Get-SelfXSigningCertificate lists only certificates with a private key, the key usage
@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.1.0
+    Version : 1.3.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -42,6 +42,8 @@
                                               switched off), additional signers for a change of the certificate, revocation list addresses with
                                               warnings; result page with the instructions as steps and copy buttons
     1.2.0    2026-11-27  fubu2k               Summary page: choice of the package (full, full with separate configuration, configuration package)
+    1.3.0    2026-11-27  fubu2k               Page Network targets (between ticket and further settings): switches for the measurement, the delivered
+                                              Microsoft targets and host names in the report, list of own targets (label, host, port, group, kind)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -110,6 +112,7 @@ $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'support'; Questions = @('SupportMail', 'SupportPhone', 'SupportHours', 'SupportWebsite', 'SupportTeams') },
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },
+    [pscustomobject]@{ Id = 'network'; Questions = @('NetworkEnabled', 'NetworkMicrosoft', 'NetworkHostNames') },
     [pscustomobject]@{ Id = 'more'; Questions = @('CopilotEnabled', 'CopilotAudience', 'CopilotClearClipboard', 'WikiEnabled', 'WikiUrl', 'WikiName', 'TrayIcon', 'ShortcutDesktop', 'ShortcutStartMenu', 'Expert', 'LogRetention', 'FileCheck', 'Privileges', 'AppLockerRules', 'WdacBasePolicyId') },
     [pscustomobject]@{ Id = 'signing'; Questions = @() },
     [pscustomobject]@{ Id = 'summary'; Questions = @() },
@@ -155,7 +158,7 @@ function Get-WizardGuiTextIds {
     $ids = New-Object System.Collections.Generic.List[string]
     foreach ($id in 'title', 'rec', 'required', 'gui.back', 'gui.next', 'gui.load', 'gui.save', 'gui.browse', 'gui.wizardLanguage.ask', 'gui.wizardLanguage.rec',
         'gui.preview', 'gui.logo.none', 'gui.logo.invalid', 'gui.accent.sample', 'gui.accent.link', 'gui.units.title', 'gui.units.rec', 'gui.units.add', 'gui.units.remove',
-        'gui.units.empty', 'gui.units.duplicate', 'gui.unit.title', 'gui.unit.new', 'gui.unit.invalid', 'gui.summary.title', 'gui.summary.build', 'Payload.ask', 'Payload.rec', 'Payload.missing',
+        'gui.units.empty', 'gui.units.duplicate', 'gui.unit.title', 'gui.unit.new', 'gui.unit.invalid', 'gui.targets.title', 'gui.targets.rec', 'gui.targets.add', 'gui.targets.remove', 'gui.targets.duplicate', 'gui.targets.max', 'gui.target.title', 'gui.target.new', 'gui.target.invalid', 'gui.summary.title', 'gui.summary.build', 'Payload.ask', 'Payload.rec', 'Payload.missing',
         'ConfigureOnly.ask', 'ConfigureOnly.rec', 'PackageKind.ask', 'PackageKind.rec', 'Output.ask', 'Output.rec', 'Tool.ask', 'Tool.rec', 'gui.build.start', 'gui.build.cancel', 'gui.build.running', 'gui.build.cancelling',
         'gui.build.cancelled', 'gui.build.failed', 'gui.build.done', 'gui.state.pending', 'gui.state.running', 'gui.state.done', 'gui.state.failed', 'gui.state.cancelled',
         'gui.result.text', 'gui.result.configured', 'gui.result.files', 'gui.result.open', 'gui.result.copy', 'gui.result.copied', 'gui.result.guide', 'gui.page.errors', 'gui.answers.loaded',
@@ -180,6 +183,7 @@ function Get-WizardGuiQuestionTable {
     foreach ($question in (Get-WizardQuestions)) { $table[$question.Id] = $question }
     $everyUnit = @{ UseGroupTags = $true; HybridJoin = $true; UseDeviceClass = $true }
     foreach ($question in (Get-WizardUnitQuestions -Answers $everyUnit)) { $table[$question.Id] = $question }
+    foreach ($question in (Get-WizardTargetQuestions)) { $table[$question.Id] = $question }
     foreach ($question in $script:WizardGuiBuildQuestions) { $table[$question.Id] = $question }
     foreach ($question in $script:WizardGuiSigningQuestions) { $table[$question.Id] = $question }
     return $table
@@ -188,7 +192,7 @@ function Get-WizardGuiQuestionTable {
 # ---------------------------------------------------------------- state of the window (no WPF here: tested by Test-SelfXWizardGui.ps1)
 
 # Raw = typed values by question id (a missing id means: the default, exactly as a missing answer in an answer file). Units = raw values of the
-# units. Build = the build settings.
+# units. Targets = raw values of the own network targets. Build = the build settings.
 function New-WizardGuiState {
     param([Parameter(Mandatory = $true)][string]$ToolsFolder, [string]$Culture = 'en')
     $defaults = Get-WizardBuildDefaults -ToolsFolder $ToolsFolder
@@ -196,6 +200,7 @@ function New-WizardGuiState {
         Culture   = $Culture
         Raw       = @{}
         Units     = (New-Object System.Collections.Generic.List[hashtable])
+        Targets   = (New-Object System.Collections.Generic.List[hashtable])
         Build     = @{ Payload = $defaults.PayloadFolder; Output = $defaults.OutputFolder; Tool = $defaults.ToolPath; ConfigureOnly = $false; PackageKind = 'Full' }
         Questions = (Get-WizardGuiQuestionTable)
         ToolsFolder = $ToolsFolder
@@ -246,6 +251,11 @@ function Clear-WizardGuiCertificates {
 
 function New-WizardGuiUnit {
     return @{ UnitId = ''; UnitMail = ''; UnitCc = ''; UnitGroupTags = ''; UnitOUs = ''; UnitCategories = '' }
+}
+
+# A new own network target with the values the questions start with.
+function New-WizardGuiTarget {
+    return @{ TargetLabel = ''; TargetHost = ''; TargetPort = '443'; TargetGroup = 'Company'; TargetKind = 'Vpn' }
 }
 
 # The text of a failed check, in the language of the window. The message of ConvertTo-WizardValue is English, so the window shows the text of
@@ -325,6 +335,36 @@ function Get-WizardGuiEvaluation {
         }
         if ($State.Units.Count -eq 0) { $unitsError = (Get-WText 'gui.units.empty') }
     }
+    # Own network targets: an error list per target (field by field, then the whole target as Set-SelfXNetworkTestConfig takes it), no label
+    # twice, at most NetMaxTargets (the delivered Microsoft targets in the file count too).
+    $targetsShown = [bool]$answers.NetworkEnabled
+    $targetErrors = New-Object System.Collections.Generic.List[hashtable]
+    $targetsError = $null
+    $targetQuestions = Get-WizardTargetQuestions
+    if ($targetsShown) {
+        $labels = @{}
+        foreach ($target in $State.Targets) {
+            $problems = @{}
+            $isCompany = ("$($target.TargetGroup)" -ieq 'Company')
+            foreach ($question in $targetQuestions) {
+                if ($question.Id -eq 'TargetKind' -and -not $isCompany) { continue }
+                $problem = Test-WizardGuiValue -Question $question -Value $target[$question.Id]
+                if ($null -ne $problem) { $problems[$question.Id] = $problem }
+            }
+            if ($problems.Count -eq 0) {
+                try { $null = ConvertTo-WizardValue -Kind 'netTarget' -Value ([pscustomobject]@{ Label = $target.TargetLabel; Host = $target.TargetHost; Port = $target.TargetPort; Group = $target.TargetGroup; Kind = $(if ($isCompany) { $target.TargetKind } else { '' }) }) }
+                catch {
+                    $field = switch -Regex ($_.Exception.Message) { '^label' { 'TargetLabel' } '^(host|an IPv4)' { 'TargetHost' } '^port' { 'TargetPort' } '^group' { 'TargetGroup' } default { 'TargetKind' } }
+                    $problems[$field] = (Get-WText 'gui.target.invalid' @((Get-WText "$field.rec")))
+                }
+            }
+            $key = "$($target.TargetLabel)".Trim().ToLowerInvariant()
+            if ($key -and $labels.ContainsKey($key)) { $problems['TargetLabel'] = (Get-WText 'gui.targets.duplicate') }
+            if ($key) { $labels[$key] = $true }
+            $targetErrors.Add($problems)
+        }
+        if ($State.Targets.Count -gt $script:NetMaxOwnTargets) { $targetsError = (Get-WText 'gui.targets.max' @($script:NetMaxOwnTargets)) }
+    }
     $buildErrors = @{}
     $buildVisible = @{}
     foreach ($question in $script:WizardGuiBuildQuestions) {
@@ -353,6 +393,10 @@ function Get-WizardGuiEvaluation {
         UnitQuestions = @($unitQuestions | ForEach-Object { $_.Id })
         UnitErrors    = $unitErrors
         UnitsError    = $unitsError
+        TargetsShown  = $targetsShown
+        TargetQuestions = @($targetQuestions | ForEach-Object { $_.Id })
+        TargetErrors  = $targetErrors
+        TargetsError  = $targetsError
         BuildErrors   = $buildErrors
         BuildVisible  = $buildVisible
         SigningErrors = $signingErrors
@@ -370,6 +414,10 @@ function Get-WizardGuiPageErrors {
         if ($Evaluation.UnitsError) { $list.Add('Units') }
         for ($i = 0; $i -lt $Evaluation.UnitErrors.Count; $i++) { if ($Evaluation.UnitErrors[$i].Count -gt 0) { $list.Add("Unit$i") } }
     }
+    if ($PageId -eq 'network' -and $Evaluation.TargetsShown) {
+        if ($Evaluation.TargetsError) { $list.Add('Targets') }
+        for ($i = 0; $i -lt $Evaluation.TargetErrors.Count; $i++) { if ($Evaluation.TargetErrors[$i].Count -gt 0) { $list.Add("Target$i") } }
+    }
     if ($PageId -eq 'signing') { foreach ($id in $Evaluation.SigningErrors.Keys) { $list.Add($id) } }
     if ($PageId -eq 'summary') { foreach ($id in $Evaluation.BuildErrors.Keys) { $list.Add($id) } }
     return , $list.ToArray()
@@ -381,6 +429,17 @@ function Get-WizardGuiSource {
     $source = @{}
     foreach ($key in $State.Raw.Keys) { $source[$key] = $State.Raw[$key] }
     $source['Units'] = @($State.Units | ForEach-Object { [pscustomobject]@{ UnitId = $_.UnitId; UnitMail = $_.UnitMail; UnitCc = $_.UnitCc; UnitGroupTags = $_.UnitGroupTags; UnitOUs = $_.UnitOUs; UnitCategories = $_.UnitCategories } })
+    # Own targets only with the measurement switched on (an answer file with targets and the measurement off is refused).
+    $enabled = $false
+    if ($State.Raw.ContainsKey('NetworkEnabled')) {
+        # A value that is not yes or no is reported by the check of NetworkEnabled itself.
+        try { $enabled = [bool](ConvertTo-WizardValue -Kind 'bool' -Value $State.Raw['NetworkEnabled']) } catch { $enabled = $false }
+    }
+    if ($enabled) {
+        $source['NetworkTargets'] = @($State.Targets | ForEach-Object {
+                [pscustomobject]@{ Label = $_.TargetLabel; Host = $_.TargetHost; Port = $_.TargetPort; Group = $_.TargetGroup; Kind = $(if ("$($_.TargetGroup)" -ieq 'Company') { $_.TargetKind } else { '' }) }
+            })
+    }
     return $source
 }
 
@@ -398,10 +457,11 @@ function Import-WizardGuiAnswers {
     if ($item.PSIsContainer -or $item.Length -gt 1MB) { throw 'The answer file must be a JSON file of at most 1 MB.' }
     $json = [IO.File]::ReadAllText($item.FullName, [Text.Encoding]::UTF8) | ConvertFrom-Json
     if ($null -eq $json -or $json -isnot [psobject]) { throw 'The answer file is not a JSON object.' }
-    $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'WizardLanguage')
+    $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'NetworkTargets', 'WizardLanguage')
     foreach ($property in $json.PSObject.Properties) { if ($known -notcontains $property.Name) { throw "Unknown answer '$($property.Name)' in the answer file." } }
     $raw = @{}
     $units = New-Object System.Collections.Generic.List[hashtable]
+    $targets = New-Object System.Collections.Generic.List[hashtable]
     $language = ''
     $join = { param($v) if ($v -is [System.Collections.IEnumerable] -and $v -isnot [string]) { (@($v | ForEach-Object { "$_" }) -join ', ') } elseif ($null -eq $v) { '' } else { "$v" } }
     foreach ($property in $json.PSObject.Properties) {
@@ -415,11 +475,24 @@ function Import-WizardGuiAnswers {
             }
             continue
         }
+        if ($property.Name -eq 'NetworkTargets') {
+            foreach ($entry in @($property.Value)) {
+                if ($null -eq $entry) { continue }
+                $target = New-WizardGuiTarget
+                foreach ($pair in @(@('TargetLabel', 'Label'), @('TargetHost', 'Host'), @('TargetPort', 'Port'), @('TargetGroup', 'Group'), @('TargetKind', 'Kind'))) {
+                    if ($null -ne $entry.PSObject.Properties[$pair[1]]) { $target[$pair[0]] = & $join $entry.($pair[1]) }
+                }
+                if ($target.TargetKind -eq '') { $target.TargetKind = 'None' }
+                $targets.Add($target)
+            }
+            continue
+        }
         $value = $property.Value
         if ($value -is [bool]) { $raw[$property.Name] = $value } else { $raw[$property.Name] = & $join $value }
     }
     $State.Raw = $raw
     $State.Units = $units
+    $State.Targets = $targets
     return $language
 }
 
@@ -650,6 +723,40 @@ function Update-WizardGuiView {
         $touched = $script:Gui.ShowAll.Contains("Unit$index") -or ($index -ge 0 -and "$($state.Units[$index][$field.Id])" -ne '')
         Set-WizardGuiFieldError -Field $field -Message $(if ($touched) { $message } else { $null })
     }
+    # Network targets
+    $ui.TargetsPanel.Visibility = $(if ($evaluation.TargetsShown) { 'Visible' } else { 'Collapsed' })
+    $ui.TargetsError.Text = "$($evaluation.TargetsError)"
+    $ui.TargetsError.Visibility = $(if ($evaluation.TargetsError -and $script:Gui.ShowAll.Contains('Targets')) { 'Visible' } else { 'Collapsed' })
+    $selectedTarget = $ui.TargetList.SelectedIndex
+    $script:Gui.Loading = $true
+    try {
+        $ui.TargetList.Items.Clear()
+        for ($i = 0; $i -lt $state.Targets.Count; $i++) {
+            $target = $state.Targets[$i]
+            $name = $(if ("$($target.TargetLabel)".Trim()) { "$($target.TargetLabel)".Trim() } else { Get-WText 'gui.target.new' })
+            $mark = $(if ($i -lt $evaluation.TargetErrors.Count -and $evaluation.TargetErrors[$i].Count -gt 0) { '  !' } else { '' })
+            $text = "$name  -  $("$($target.TargetHost)".Trim()):$("$($target.TargetPort)".Trim())  ($("$($target.TargetGroup)"))$mark"
+            $item = New-Object System.Windows.Controls.ListBoxItem
+            $item.Content = $text
+            [System.Windows.Automation.AutomationProperties]::SetName($item, $text)
+            $null = $ui.TargetList.Items.Add($item)
+        }
+        if ($selectedTarget -ge $state.Targets.Count) { $selectedTarget = $state.Targets.Count - 1 }
+        $ui.TargetList.SelectedIndex = $selectedTarget
+    }
+    finally { $script:Gui.Loading = $false }
+    $ui.RemoveTargetButton.IsEnabled = ($ui.TargetList.SelectedIndex -ge 0)
+    $ui.AddTargetButton.IsEnabled = ($state.Targets.Count -lt $script:NetMaxOwnTargets)
+    $ui.TargetEditor.Visibility = $(if ($ui.TargetList.SelectedIndex -ge 0) { 'Visible' } else { 'Collapsed' })
+    $targetIndex = $ui.TargetList.SelectedIndex
+    foreach ($field in @($script:Gui.Fields.Values | Where-Object { $_.Scope -eq 'target' })) {
+        $shownGroup = $(if ($targetIndex -ge 0 -and $targetIndex -lt $state.Targets.Count) { "$($state.Targets[$targetIndex].TargetGroup)" } else { '' })
+        $field.Row.Visibility = $(if ($field.Id -eq 'TargetKind' -and $shownGroup -ine 'Company') { 'Collapsed' } else { 'Visible' })
+        $message = $null
+        if ($targetIndex -ge 0 -and $targetIndex -lt $evaluation.TargetErrors.Count) { $message = $evaluation.TargetErrors[$targetIndex][$field.Id] }
+        $touched = $script:Gui.ShowAll.Contains("Target$targetIndex") -or ($targetIndex -ge 0 -and "$($state.Targets[$targetIndex][$field.Id])" -ne '' -and $field.Id -ne 'TargetPort' -and $field.Id -ne 'TargetGroup' -and $field.Id -ne 'TargetKind') -or ($targetIndex -ge 0 -and $field.Id -in @('TargetPort', 'TargetGroup', 'TargetKind') -and $message)
+        Set-WizardGuiFieldError -Field $field -Message $(if ($touched) { $message } else { $null })
+    }
     # Company color shown at once when it is valid.
     $accent = $(if ($evaluation.Errors.ContainsKey('AccentColor')) { '' } else { "$($evaluation.Answers['AccentColor'])" })
     if ($accent -ne $script:Gui.AppliedAccent) { Set-WizardGuiColors -Window $script:Gui.Window -AccentColor $accent -Theme $script:Gui.Theme; $script:Gui.AppliedAccent = $accent }
@@ -776,6 +883,12 @@ function Set-WizardGuiTexts {
     Set-WizardGuiButtonText -Button $ui.AddUnitButton -Text (Get-WText 'gui.units.add')
     Set-WizardGuiButtonText -Button $ui.RemoveUnitButton -Text (Get-WText 'gui.units.remove')
     $ui.UnitEditorTitle.Text = (Get-WText 'gui.unit.title')
+    $ui.TargetsTitle.Text = (Get-WText 'gui.targets.title')
+    $ui.TargetsHint.Text = (Get-WText 'gui.targets.rec')
+    Set-WizardGuiButtonText -Button $ui.AddTargetButton -Text (Get-WText 'gui.targets.add')
+    Set-WizardGuiButtonText -Button $ui.RemoveTargetButton -Text (Get-WText 'gui.targets.remove')
+    $ui.TargetEditorTitle.Text = (Get-WText 'gui.target.title')
+    [System.Windows.Automation.AutomationProperties]::SetName($ui.TargetList, $ui.TargetsTitle.Text)
     [System.Windows.Automation.AutomationProperties]::SetName($ui.UnitList, $ui.UnitsTitle.Text)
     $ui.SummaryTitle.Text = (Get-WText 'gui.summary.title')
     [System.Windows.Automation.AutomationProperties]::SetName($ui.SummaryBox, $ui.SummaryTitle.Text)
@@ -1181,14 +1294,15 @@ function New-WizardGuiWindow {
     $script:Gui.AppliedAccent = ''
     $names = @('AppTitle', 'StepList', 'PageTitle', 'PageIntro', 'PageMessage', 'PageMessageText', 'PageScroll', 'WizardLanguageLabel', 'WizardLanguageHint', 'WizardLanguageBox',
         'PreviewTitle', 'LogoPreview', 'LogoPreviewText', 'AccentSwatch', 'AccentSample', 'AccentSampleLink', 'UnitsPanel', 'UnitsTitle', 'UnitsHint', 'UnitList', 'UnitsError',
-        'AddUnitButton', 'RemoveUnitButton', 'UnitEditor', 'UnitEditorTitle', 'SummaryTitle', 'SummaryBox', 'BuildSettingsTitle', 'BuildButton', 'CancelBuildButton', 'ProgressList',
+        'AddUnitButton', 'RemoveUnitButton', 'UnitEditor', 'UnitEditorTitle', 'TargetsPanel', 'TargetsTitle', 'TargetsHint', 'TargetList', 'TargetsError', 'AddTargetButton', 'RemoveTargetButton',
+        'TargetEditor', 'TargetEditorTitle', 'SummaryTitle', 'SummaryBox', 'BuildSettingsTitle', 'BuildButton', 'CancelBuildButton', 'ProgressList',
         'BuildStatus', 'BuildError', 'ResultText', 'ResultFilesTitle', 'ResultFilesBox', 'OpenFolderButton', 'CopyGuideButton', 'GuideTitle', 'GuideSteps', 'LoadButton', 'SaveButton',
         'NextButton', 'BackButton', 'StatusText', 'SignNone', 'SignStore', 'SignFile', 'SignNoneInfo', 'SignNoneText', 'SignStorePanel', 'CertListHint', 'CertList', 'CertListEmpty',
         'CertListError', 'RefreshCertsButton', 'SignFilePanel', 'PfxPathLabel', 'PfxPathHint', 'PfxBrowseButton', 'PfxPathBox', 'PfxPasswordLabel', 'PfxPasswordHint', 'PfxOpenButton',
         'PfxPasswordBox', 'PfxStatus', 'PfxError', 'SignDetailsPanel', 'CertDetailsTitle', 'CertCard', 'CertSubject', 'CertIssuer', 'CertValid', 'CertThumbprint', 'CertCrl',
         'CertCrlWarningBox', 'CertCrlWarning')
     foreach ($page in $script:WizardGuiPages) { $names += "Page_$($page.Id)" }
-    foreach ($page in @('language', 'basics', 'support', 'branding', 'ticket', 'more', 'signing', 'summary', 'unit')) { $names += "Fields_$page" }
+    foreach ($page in @('language', 'basics', 'support', 'branding', 'ticket', 'network', 'more', 'signing', 'summary', 'unit', 'target')) { $names += "Fields_$page" }
     foreach ($name in $names) {
         $element = $window.FindName($name)
         if ($null -eq $element) { throw "The window has no element $name." }
@@ -1214,6 +1328,11 @@ function New-WizardGuiWindow {
     foreach ($id in 'UnitId', 'UnitMail', 'UnitCc', 'UnitGroupTags', 'UnitOUs', 'UnitCategories') {
         $field = New-WizardGuiFieldRow -Question $questions[$id] -Scope 'unit'
         $null = $ui.Fields_unit.Children.Add($field.Row)
+        $script:Gui.Fields[$id] = $field
+    }
+    foreach ($id in 'TargetLabel', 'TargetHost', 'TargetPort', 'TargetGroup', 'TargetKind') {
+        $field = New-WizardGuiFieldRow -Question $questions[$id] -Scope 'target'
+        $null = $ui.Fields_target.Children.Add($field.Row)
         $script:Gui.Fields[$id] = $field
     }
     foreach ($question in $script:WizardGuiBuildQuestions) {
@@ -1247,6 +1366,15 @@ function Set-WizardGuiAllValues {
         elseif ($field.Scope -eq 'signing') { Set-WizardGuiControlValue -Field $field -Value $state.Signing[$field.Id] }
     }
     Set-WizardGuiUnitValues
+    Set-WizardGuiTargetValues
+}
+
+function Set-WizardGuiTargetValues {
+    $index = $script:Gui.Ui.TargetList.SelectedIndex
+    foreach ($field in @($script:Gui.Fields.Values | Where-Object { $_.Scope -eq 'target' })) {
+        $value = $(if ($index -ge 0 -and $index -lt $script:Gui.State.Targets.Count) { $script:Gui.State.Targets[$index][$field.Id] } else { '' })
+        Set-WizardGuiControlValue -Field $field -Value $value
+    }
 }
 
 function Set-WizardGuiUnitValues {
@@ -1271,6 +1399,11 @@ function Invoke-WizardGuiFieldChanged {
             $index = $script:Gui.Ui.UnitList.SelectedIndex
             if ($index -lt 0) { return }
             $state.Units[$index][$Field.Id] = $value
+        }
+        'target' {
+            $index = $script:Gui.Ui.TargetList.SelectedIndex
+            if ($index -lt 0) { return }
+            $state.Targets[$index][$Field.Id] = $value
         }
     }
     if ($Field.Id -eq 'ConfigureOnly' -and $script:WizardGuiPages[$script:Gui.Page].Id -eq 'summary') { Set-WizardGuiProgress }
@@ -1323,6 +1456,26 @@ function Register-WizardGuiEvents {
             $script:Gui.State.Units.RemoveAt($index)
             Update-WizardGuiView
             Set-WizardGuiUnitValues
+            Update-WizardGuiView
+        })
+    $ui.TargetList.Add_SelectionChanged({
+            if ($script:Gui.Loading) { return }
+            Set-WizardGuiTargetValues
+            Update-WizardGuiView
+        })
+    $ui.AddTargetButton.Add_Click({
+            if ($script:Gui.State.Targets.Count -ge $script:NetMaxOwnTargets) { return }
+            $script:Gui.State.Targets.Add((New-WizardGuiTarget))
+            Update-WizardGuiView
+            $script:Gui.Ui.TargetList.SelectedIndex = $script:Gui.State.Targets.Count - 1
+            $null = $script:Gui.Fields['TargetLabel'].Control.Focus()
+        })
+    $ui.RemoveTargetButton.Add_Click({
+            $index = $script:Gui.Ui.TargetList.SelectedIndex
+            if ($index -lt 0) { return }
+            $script:Gui.State.Targets.RemoveAt($index)
+            Update-WizardGuiView
+            Set-WizardGuiTargetValues
             Update-WizardGuiView
         })
     $ui.NextButton.Add_Click({ Invoke-WizardGuiNext })
@@ -1398,14 +1551,17 @@ function Invoke-WizardGuiNext {
         foreach ($id in $errors) { $null = $script:Gui.ShowAll.Add($id) }
         foreach ($id in $page.Questions) { $null = $script:Gui.ShowAll.Add($id) }
         if ($errors -match '^Unit\d+$') { $first = [int](($errors -match '^Unit\d+$')[0].Substring(4)); $ui.UnitList.SelectedIndex = $first }
+        if ($errors -match '^Target\d+$') { $first = [int](($errors -match '^Target\d+$')[0].Substring(6)); $ui.TargetList.SelectedIndex = $first }
         Update-WizardGuiView
         $ui.PageMessageText.Text = (Get-WText 'gui.page.errors')
         $ui.PageMessage.Visibility = 'Visible'
         foreach ($id in $errors) {
             $field = $script:Gui.Fields[$id]
+            if ($null -eq $field -and $id -match '^Target\d+$') { $field = @($script:Gui.Fields.Values | Where-Object { $_.Scope -eq 'target' -and $_.Error.Visibility -eq 'Visible' })[0] }
             if ($null -eq $field -and $id -match '^Unit\d+$') { $field = @($script:Gui.Fields.Values | Where-Object { $_.Scope -eq 'unit' -and $_.Error.Visibility -eq 'Visible' })[0] }
             if ($null -ne $field) { $null = $field.Control.Focus(); break }
             if ($id -eq 'Units') { $null = $ui.AddUnitButton.Focus(); break }
+            if ($id -eq 'Targets') { $null = $ui.AddTargetButton.Focus(); break }
             if ($id -eq 'Store') { $null = $ui.CertList.Focus(); break }
             if ($id -eq 'File') { $null = $ui.PfxPathBox.Focus(); break }
         }
@@ -1426,6 +1582,7 @@ function Invoke-WizardGuiLoad {
     $script:Gui.ShowAll.Clear()
     foreach ($key in $script:Gui.State.Raw.Keys) { $null = $script:Gui.ShowAll.Add($key) }
     $script:Gui.Ui.UnitList.SelectedIndex = -1
+    $script:Gui.Ui.TargetList.SelectedIndex = -1
     Set-WizardGuiAllValues
     Update-WizardGuiView
     $available = @(Get-WizardLanguages -Folder $script:GuiFolder | ForEach-Object { $_.Culture })

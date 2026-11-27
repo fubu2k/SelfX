@@ -283,6 +283,23 @@ SelfX द्वारा {1} को एकत्र किए गए {0} के 
 		<Latency_Value>{0} ms (न्यूनतम {1}, अधिकतम {2}, {4} में से {3} खोए)</Latency_Value>
 		<Latency_Failed>पहुँच योग्य नहीं ({1} में से {0} विफल)</Latency_Failed>
 		<Latency_Skipped>मापा नहीं गया (समय सीमा पूरी हुई)</Latency_Skipped>
+		<Check_Local>स्थानीय नेटवर्क (Wi-Fi, राउटर)</Check_Local>
+		<Check_Internet>इंटरनेट</Check_Internet>
+		<Check_Microsoft>Microsoft सेवाएँ (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>कंपनी नेटवर्क</Check_Company>
+		<Check_Result>कनेक्शन का परिणाम</Check_Result>
+		<Check_State_Ok>पहुँच योग्य ({1} में से {0})</Check_State_Ok>
+		<Check_State_Partial>आंशिक रूप से पहुँच योग्य ({1} में से {0})</Check_State_Partial>
+		<Check_State_Fail>पहुँच योग्य नहीं ({1} में से {0})</Check_State_Fail>
+		<Check_State_None>मापा नहीं गया</Check_State_None>
+		<Verdict_LocalDown>आपका Wi-Fi या राउटर जवाब नहीं दे रहा है।</Verdict_LocalDown>
+		<Verdict_InternetDown>इंटरनेट तक पहुँच नहीं है।</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>इंटरनेट काम कर रहा है, लेकिन इस डिवाइस के प्रबंधन के लिए Microsoft सेवाओं तक पहुँच नहीं है।</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>इंटरनेट काम कर रहा है, लेकिन कंपनी नेटवर्क तक पहुँच नहीं है: VPN जाँचें।</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>इंटरनेट काम कर रहा है, लेकिन कंपनी नेटवर्क तक पहुँच नहीं है: अपने स्थान पर नेटवर्क कनेक्शन जाँचें।</Verdict_CompanyIntranet>
+		<Verdict_Partial>ज़्यादातर कनेक्शन काम कर रहे हैं, लेकिन कुछ लक्ष्यों तक पहुँच नहीं है।</Verdict_Partial>
+		<Verdict_AllOk>सब कुछ पहुँच योग्य है।</Verdict_AllOk>
+		<Verdict_NoData>कुछ भी मापा नहीं जा सका।</Verdict_NoData>
 		<Collected_At>पर एकत्रित किया गया</Collected_At>
 		<Error>गलती</Error>
 		<Yes>हाँ</Yes>

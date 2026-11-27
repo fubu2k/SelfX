@@ -14,14 +14,15 @@
 	<T Id="yesno">j = ja, n = nein</T>
 	<T Id="invalid">Dieser Wert ist nicht gültig: {0}</T>
 	<T Id="required">Dieser Wert ist erforderlich.</T>
-	<T Id="section.basics">1/8 Grundlagen</T>
-	<T Id="section.support">2/8 Support-Kontakte</T>
-	<T Id="section.branding">3/8 Branding</T>
-	<T Id="section.ticket">4/8 Ticket per E-Mail und Organisationen</T>
-	<T Id="section.copilot">5/8 Copilot Chat und Firmen-Wiki</T>
-	<T Id="section.behavior">6/8 Verhalten auf dem Gerät</T>
-	<T Id="section.rules">7/8 AppLocker und App Control</T>
-	<T Id="section.build">8/8 Paket bauen</T>
+	<T Id="section.basics">1/9 Grundlagen</T>
+	<T Id="section.support">2/9 Support-Kontakte</T>
+	<T Id="section.branding">3/9 Branding</T>
+	<T Id="section.ticket">4/9 Ticket per E-Mail und Organisationen</T>
+    <T Id="section.network">5/9 Verbindungstest (Netzwerkziele)</T>
+	<T Id="section.copilot">6/9 Copilot Chat und Firmen-Wiki</T>
+	<T Id="section.behavior">7/9 Verhalten auf dem Gerät</T>
+	<T Id="section.rules">8/9 AppLocker und App Control</T>
+	<T Id="section.build">9/9 Paket bauen</T>
 	<T Id="ToolLanguage.ask">Standardsprache von SelfX auf den Geräten (de, en, fr, es ... oder Auto)</T>
 	<T Id="ToolLanguage.rec">Auto folgt der Anzeigesprache von Windows. Wählen Sie Auto, wenn Ihre Nutzer mehrere Sprachen sprechen.</T>
 	<T Id="ShowLanguageSetting.ask">Dürfen Nutzer ihre Sprache in den Einstellungen selbst wählen?</T>
@@ -73,6 +74,27 @@
 	<T Id="UnitCategories.rec">Freie Namen wie Notebook, Desktop, Tablet. Intune setzt den Wert je Gerätegruppe.</T>
 	<T Id="UnitMore.ask">Weitere Einheit anlegen?</T>
 	<T Id="UnitMore.rec">Ja, bis jedes Postfach angelegt ist. Die erste passende Regel gewinnt: zuerst Group Tags, dann OUs, dann Geräteklassen.</T>
+    <T Id="NetworkEnabled.ask">Soll der Verbindungstest (WLAN, Internet, Microsoft-Dienste, Firmennetz) in den Systeminformationen angezeigt werden?</T>
+    <T Id="NetworkEnabled.rec">Ja, wenn Benutzer sofort sehen sollen, ob Router, Internet oder Firmennetz das Problem ist. SelfX prüft nur, ob eine Verbindung aufgebaut werden kann, und sendet keine Daten. In der ausgelieferten Datei ist der Test aus.</T>
+    <T Id="NetworkMicrosoft.ask">Sollen auch die Microsoft-Dienste für Intune und Entra ID geprüft werden?</T>
+    <T Id="NetworkMicrosoft.rec">Ja nutzt die vier Endpunkte, die in Network_Test_Config.xml mitgeliefert werden (Intune-Dienst, Entra-ID-Anmeldung und -Verzeichnis, Geräteregistrierung). Antworten Sie Nein, wenn Ihre Firewall sie bewusst sperrt.</T>
+    <T Id="NetworkHostNames.ask">Sollen die Hostnamen der Ziele im Support-Bericht und im Ticket stehen?</T>
+    <T Id="NetworkHostNames.rec">Nein blendet interne Hostnamen dort aus: Der Bericht zeigt dann nur die Bezeichnung eines Ziels. Im Fenster des Benutzers stehen immer die Bezeichnungen.</T>
+    <T Id="TargetAdd.ask">Möchten Sie eigene Netzwerkziele hinzufügen (zum Beispiel das VPN-Gateway oder einen Intranet-Server)?</T>
+    <T Id="TargetAdd.rec">Benutzer können Ziele weder ändern noch hinzufügen. Insgesamt sind höchstens 12 Ziele möglich, die vier mitgelieferten Microsoft-Ziele eingeschlossen (also 8 eigene).</T>
+    <T Id="Target.header">Netzwerkziel {0}</T>
+    <T Id="TargetLabel.ask">Name des Ziels (wird dem Benutzer angezeigt)</T>
+    <T Id="TargetLabel.rec">Zum Beispiel VPN-Gateway. Buchstaben, Ziffern, Leerzeichen . _ - bis 40 Zeichen. Keinen geheimen Namen verwenden.</T>
+    <T Id="TargetHost.ask">Hostname oder IPv4-Adresse</T>
+    <T Id="TargetHost.rec">Nur der Name, zum Beispiel vpn.contoso.example. Kein https://, kein Pfad, kein Port. Die Datei Network_Test_Config.xml kann jeder Benutzer auf dem Gerät lesen.</T>
+    <T Id="TargetPort.ask">TCP-Port (0 = nur den Namen auflösen)</T>
+    <T Id="TargetPort.rec">Zum Beispiel 443 oder 445. Eine IPv4-Adresse braucht einen Port.</T>
+    <T Id="TargetGroup.ask">Wofür steht das Ziel?</T>
+    <T Id="TargetGroup.rec">Local = eigener Router oder Drucker, Internet = öffentliche Seite, Microsoft = ein Microsoft-Dienst, Company = Firmennetz (VPN oder Intranet).</T>
+    <T Id="TargetKind.ask">Art des Firmenziels</T>
+    <T Id="TargetKind.rec">Vpn = nur nach dem Aufbau des VPN erreichbar: SelfX sagt dann „VPN prüfen“. Intranet = im Büronetz erreichbar. None = keine Aussage.</T>
+    <T Id="TargetMore.ask">Weiteres Ziel hinzufügen?</T>
+    <T Id="TargetMore.rec">Ja, bis jedes Ziel angelegt ist.</T>
 	<T Id="CopilotEnabled.ask">Haben Sie Microsoft 365 Copilot Chat lizenziert und möchten ihn im Hilfe-Dialog anbieten?</T>
 	<T Id="CopilotEnabled.rec">Ja, wenn Ihre Nutzer Copilot Chat haben. SelfX nutzt keine Schnittstelle und kein Token: Es bereitet einen Text vor, den der Nutzer in Copilot einfügt.</T>
 	<T Id="WikiEnabled.ask">Soll es eine Schaltfläche geben, die das Wiki oder die Intranet-Seite Ihrer Firma im Webbrowser öffnet?</T>
@@ -185,6 +207,8 @@
 	<T Id="gui.page.branding.intro">Ihr Logo und Ihre Firmenfarbe. Die Vorschau unten zeigt sie so, wie SelfX sie darstellt.</T>
 	<T Id="gui.page.ticket">Ticket</T>
 	<T Id="gui.page.ticket.intro">Die Ticket-E-Mail und, bei mehreren Organisationen, ein Support-Postfach je Organisation, zugeordnet über den Gruppentag, die OU oder die Geräteklasse des Geräts.</T>
+    <T Id="gui.page.network">Verbindungstest</T>
+    <T Id="gui.page.network.intro">Zeigt dem Benutzer sofort, ob Router, Internet, Microsoft-Dienste oder Firmennetz nicht erreichbar sind. Nur ein Verbindungstest, es werden keine Daten gesendet.</T>
 	<T Id="gui.page.more">Weitere Einstellungen</T>
 	<T Id="gui.page.more.intro">Copilot Chat, Firmen-Wiki, Verhalten auf dem Gerät und Regeln für AppLocker und App Control. Die empfohlenen Werte sind schon eingestellt.</T>
 	<T Id="gui.page.summary">Zusammenfassung</T>
@@ -210,6 +234,15 @@
 	<T Id="gui.unit.title">Gewählte Organisation</T>
 	<T Id="gui.unit.new">(neu)</T>
 	<T Id="gui.unit.invalid">Nicht gültig. {0}</T>
+    <T Id="gui.targets.title">Eigene Netzwerkziele</T>
+    <T Id="gui.targets.rec">Fügen Sie das VPN-Gateway, einen Intranet-Server oder weitere Ziele hinzu. Benutzer können sie nicht ändern. Höchstens 8 eigene Ziele: 12 insgesamt, abzüglich der vier mitgelieferten Microsoft-Ziele.</T>
+    <T Id="gui.targets.add">_Ziel hinzufügen</T>
+    <T Id="gui.targets.remove">_Entfernen</T>
+    <T Id="gui.targets.duplicate">Dieser Name wird doppelt verwendet.</T>
+    <T Id="gui.targets.max">Zu viele Ziele. Insgesamt sind höchstens {0} möglich.</T>
+    <T Id="gui.target.title">Ausgewähltes Ziel</T>
+    <T Id="gui.target.new">(neu)</T>
+    <T Id="gui.target.invalid">Nicht gültig. {0}</T>
 	<T Id="gui.summary.title">Ihre Antworten</T>
 	<T Id="gui.summary.build">Einstellungen für den Bau</T>
 	<T Id="Payload.ask">Ordner des Pakets (entpacktes Nutzlast-Archiv oder der Ordner SelfX Service des Repositorys)</T>

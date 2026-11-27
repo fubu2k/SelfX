@@ -283,6 +283,23 @@ Descrição do problema:</Report_Mail_Body>
 		<Latency_Value>{0} ms (mín. {1}, máx. {2}, {3} de {4} perdidos)</Latency_Value>
 		<Latency_Failed>inacessível ({0} de {1} falharam)</Latency_Failed>
 		<Latency_Skipped>não medido (limite de tempo atingido)</Latency_Skipped>
+		<Check_Local>Rede local (Wi-Fi, router)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Serviços da Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Rede da empresa</Check_Company>
+		<Check_Result>Resultado da ligação</Check_Result>
+		<Check_State_Ok>acessível ({0} de {1})</Check_State_Ok>
+		<Check_State_Partial>parcialmente acessível ({0} de {1})</Check_State_Partial>
+		<Check_State_Fail>inacessível ({0} de {1})</Check_State_Fail>
+		<Check_State_None>não medido</Check_State_None>
+		<Verdict_LocalDown>O seu Wi-Fi ou router não responde.</Verdict_LocalDown>
+		<Verdict_InternetDown>Não é possível aceder à Internet.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>A Internet funciona, mas os serviços da Microsoft para a gestão deste dispositivo não estão acessíveis.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>A Internet funciona, mas a rede da empresa não está acessível: verifique a VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>A Internet funciona, mas a rede da empresa não está acessível: verifique a ligação de rede no seu local.</Verdict_CompanyIntranet>
+		<Verdict_Partial>A maioria das ligações funciona, mas alguns destinos não estão acessíveis.</Verdict_Partial>
+		<Verdict_AllOk>Tudo está acessível.</Verdict_AllOk>
+		<Verdict_NoData>Não foi possível medir nada.</Verdict_NoData>
 		<Collected_At>Recolhido em</Collected_At>
 		<Error>Erro</Error>
 		<Yes>Sim</Yes>

@@ -283,6 +283,23 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Latency_Value>{0} ms (chini {1}, juu {2}, {3} kati ya {4} zimepotea)</Latency_Value>
 		<Latency_Failed>haifikiki ({0} kati ya {1} zimeshindwa)</Latency_Failed>
 		<Latency_Skipped>haikupimwa (kikomo cha muda kimefikiwa)</Latency_Skipped>
+		<Check_Local>Mtandao wa ndani (Wi-Fi, kipanga njia)</Check_Local>
+		<Check_Internet>Intaneti</Check_Internet>
+		<Check_Microsoft>Huduma za Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Mtandao wa kampuni</Check_Company>
+		<Check_Result>Matokeo ya muunganisho</Check_Result>
+		<Check_State_Ok>inafikika ({0} kati ya {1})</Check_State_Ok>
+		<Check_State_Partial>inafikika kwa sehemu ({0} kati ya {1})</Check_State_Partial>
+		<Check_State_Fail>haifikiki ({0} kati ya {1})</Check_State_Fail>
+		<Check_State_None>haikupimwa</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi au kipanga njia chako hakijibu.</Verdict_LocalDown>
+		<Verdict_InternetDown>Intaneti haifikiki.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Intaneti inafanya kazi, lakini huduma za Microsoft za kusimamia kifaa hiki hazifikiki.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Intaneti inafanya kazi, lakini mtandao wa kampuni haufikiki: kagua VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Intaneti inafanya kazi, lakini mtandao wa kampuni haufikiki: kagua muunganisho wa mtandao mahali ulipo.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Miunganisho mingi inafanya kazi, lakini baadhi ya malengo hayafikiki.</Verdict_Partial>
+		<Verdict_AllOk>Kila kitu kinafikika.</Verdict_AllOk>
+		<Verdict_NoData>Hakuna kilichoweza kupimwa.</Verdict_NoData>
 		<Collected_At>Imekusanywa saa</Collected_At>
 		<Error>Hitilafu</Error>
 		<Yes>Ndiyo</Yes>

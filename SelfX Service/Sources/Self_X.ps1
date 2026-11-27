@@ -50,6 +50,7 @@
     3.1.0    2026-11-27  fubu2k               Code and configuration in two folders (App, Config): settings, catalog, ticket routing, network targets,
                                               images and own scripts and language files are resolved by SelfXPaths.ps1
     3.1.0    2026-11-27  fubu2k               Text overrides: Config\Texts\<culture>.xml replaces single texts of the language file (Localization.ps1)
+    3.1.0    2026-11-27  fubu2k               System information: status symbol (OK, warning, error) at the end of a row with a status; used by the connection check
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -744,10 +745,34 @@ $Global:SelfX_TemplatesXaml = @'
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Grid Margin="0,3" Background="Transparent" Cursor="Hand" ToolTip="{DynamicResource Str_Copy_Hint}">
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="Label"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="Label"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                   <TextBlock Text="{Binding Property}" Foreground="{DynamicResource TextSecondary}" Margin="0,0,16,0" TextWrapping="Wrap" MaxWidth="220"/>
                   <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" FlowDirection="LeftToRight"/>
+                  <TextBlock Name="StatusGlyph" Grid.Column="2" Style="{StaticResource Glyph}" FontSize="14" Margin="10,1,0,0" VerticalAlignment="Top" Visibility="Collapsed"/>
                 </Grid>
+                <DataTemplate.Triggers>
+                  <DataTrigger Binding="{Binding Status}" Value="OK">
+                    <Setter TargetName="StatusGlyph" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="StatusGlyph" Property="Text" Value="&#xE73E;"/>
+                    <Setter TargetName="StatusGlyph" Property="Foreground" Value="{DynamicResource OkFg}"/>
+                    <Setter TargetName="StatusGlyph" Property="ToolTip" Value="{DynamicResource Str_Health_OK}"/>
+                    <Setter TargetName="StatusGlyph" Property="AutomationProperties.Name" Value="{DynamicResource Str_Health_OK}"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Status}" Value="Pending">
+                    <Setter TargetName="StatusGlyph" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="StatusGlyph" Property="Text" Value="&#xE7BA;"/>
+                    <Setter TargetName="StatusGlyph" Property="Foreground" Value="{DynamicResource WarnFg}"/>
+                    <Setter TargetName="StatusGlyph" Property="ToolTip" Value="{DynamicResource Str_Health_Pending}"/>
+                    <Setter TargetName="StatusGlyph" Property="AutomationProperties.Name" Value="{DynamicResource Str_Health_Pending}"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Status}" Value="Error">
+                    <Setter TargetName="StatusGlyph" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="StatusGlyph" Property="Text" Value="&#xEA39;"/>
+                    <Setter TargetName="StatusGlyph" Property="Foreground" Value="{DynamicResource ErrFg}"/>
+                    <Setter TargetName="StatusGlyph" Property="ToolTip" Value="{DynamicResource Str_Health_Error}"/>
+                    <Setter TargetName="StatusGlyph" Property="AutomationProperties.Name" Value="{DynamicResource Str_Health_Error}"/>
+                  </DataTrigger>
+                </DataTemplate.Triggers>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

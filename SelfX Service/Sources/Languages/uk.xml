@@ -283,6 +283,23 @@
 		<Latency_Value>{0} мс (мін. {1}, макс. {2}, втрачено {3} із {4})</Latency_Value>
 		<Latency_Failed>недоступний (збоїв: {0} із {1})</Latency_Failed>
 		<Latency_Skipped>не виміряно (досягнуто ліміту часу)</Latency_Skipped>
+		<Check_Local>Локальна мережа (Wi-Fi, маршрутизатор)</Check_Local>
+		<Check_Internet>Інтернет</Check_Internet>
+		<Check_Microsoft>Служби Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Корпоративна мережа</Check_Company>
+		<Check_Result>Результат перевірки з’єднання</Check_Result>
+		<Check_State_Ok>доступно ({0} із {1})</Check_State_Ok>
+		<Check_State_Partial>частково доступно ({0} із {1})</Check_State_Partial>
+		<Check_State_Fail>недоступно ({0} із {1})</Check_State_Fail>
+		<Check_State_None>не виміряно</Check_State_None>
+		<Verdict_LocalDown>Ваш Wi-Fi або маршрутизатор не відповідає.</Verdict_LocalDown>
+		<Verdict_InternetDown>Інтернет недоступний.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Інтернет працює, але служби Microsoft для керування цим пристроєм недоступні.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Інтернет працює, але корпоративна мережа недоступна: перевірте VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Інтернет працює, але корпоративна мережа недоступна: перевірте мережеве підключення на своєму робочому місці.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Більшість з’єднань працює, але деякі цілі недоступні.</Verdict_Partial>
+		<Verdict_AllOk>Усе доступне.</Verdict_AllOk>
+		<Verdict_NoData>Нічого не вдалося виміряти.</Verdict_NoData>
 		<Collected_At>Зібрано</Collected_At>
 		<Error>Помилка</Error>
 		<Yes>Так</Yes>

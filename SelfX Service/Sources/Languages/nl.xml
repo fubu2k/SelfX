@@ -283,6 +283,23 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} van {4} verloren)</Latency_Value>
 		<Latency_Failed>niet bereikbaar ({0} van {1} mislukt)</Latency_Failed>
 		<Latency_Skipped>niet gemeten (tijdslimiet bereikt)</Latency_Skipped>
+		<Check_Local>Lokaal netwerk (wifi, router)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Microsoft-services (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Bedrijfsnetwerk</Check_Company>
+		<Check_Result>Resultaat van de verbinding</Check_Result>
+		<Check_State_Ok>bereikbaar ({0} van {1})</Check_State_Ok>
+		<Check_State_Partial>gedeeltelijk bereikbaar ({0} van {1})</Check_State_Partial>
+		<Check_State_Fail>niet bereikbaar ({0} van {1})</Check_State_Fail>
+		<Check_State_None>niet gemeten</Check_State_None>
+		<Verdict_LocalDown>Uw wifi of router reageert niet.</Verdict_LocalDown>
+		<Verdict_InternetDown>Het internet is niet bereikbaar.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Het internet werkt, maar de Microsoft-services voor het beheer van dit apparaat zijn niet bereikbaar.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Het internet werkt, maar het bedrijfsnetwerk is niet bereikbaar: controleer de VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Het internet werkt, maar het bedrijfsnetwerk is niet bereikbaar: controleer de netwerkverbinding op uw locatie.</Verdict_CompanyIntranet>
+		<Verdict_Partial>De meeste verbindingen werken, maar sommige doelen zijn niet bereikbaar.</Verdict_Partial>
+		<Verdict_AllOk>Alles is bereikbaar.</Verdict_AllOk>
+		<Verdict_NoData>Er kon niets worden gemeten.</Verdict_NoData>
 		<Collected_At>Verzameld op</Collected_At>
 		<Error>Fout</Error>
 		<Yes>Ja</Yes>

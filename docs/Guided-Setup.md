@@ -27,6 +27,7 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 | Support | E-mail address, phone, hours, website and Teams contact of the support |
 | Branding | Logo (file dialog, preview) and company color; the window shows the color at once |
 | Ticket | Ticket e-mail and, for several organisations, one mailbox per organisation, chosen by group tag, OU or device class |
+| Connection check | Switch the connection check on, the delivered Microsoft targets on or off, host names in the report on or off, and your own targets (name, host, port, group, kind; up to 8 own targets). See [Network measurements](Configuration.md#network-measurements) |
 | Further settings | Copilot Chat, company wiki, status icon, shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
 | Signature | No certificate (trust mode Hash), a certificate from the store (only suitable, valid ones) or a PFX file with its password; time stamp service; additional signers for a change of the certificate. Shows subject, issuer, end of validity, thumbprint and the revocation list addresses with warnings. See [Code signing certificate](Certificate-Guide.md) |
 | Summary | Your answers, the package folder, the output folder, `IntuneWinAppUtil.exe`, "only write the configuration" |
@@ -45,7 +46,7 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 - The window follows the light or dark mode of Windows and uses the colors and styles of SelfX.
 - The password of a PFX file is used once to open the file and the field is emptied; it is never shown, saved or written to
   `selfx-answers.json`. The certificate is not imported into a store.
-- Not yet in the window: the network targets of the connection test.
+- Network targets: the list works like the organisations on the page *Ticket*: **Add target**, **Remove**, the error is shown at the field. A host with `https://`, a path or a port, a port outside 1 to 65535, an unknown group, a kind outside the group *Company* and a name used twice are refused. At most 12 targets are possible in the file; four are delivered, so you can add 8.
 
 ![Package wizard window: page Signature with a PFX file (sample certificate)](images/selfx-wizard-signing-en.png)
 
@@ -99,15 +100,16 @@ preferably from the latest release tag). The wizard asks for the path of the fil
    SelfX runs on Windows 11 only. **SelfX cannot cover smartphones (iOS, Android).**
    The rules are written to `Ticket_Config.xml` in this order: group tags, then OUs, then device
    classes; the first matching rule wins.
-5. **Copilot Chat and company wiki:** offer Copilot only if it is licensed; audience of the answer, clear
+5. **Connection check:** on or off (default off), the delivered Microsoft targets, host names in the report and your own targets (a loop of questions: name, host, port, group, kind). The answers are `NetworkEnabled`, `NetworkMicrosoft`, `NetworkHostNames` and `NetworkTargets`; a target without `NetworkEnabled` is refused, not ignored. The wizard writes them into `Network_Test_Config.xml` and keeps its comments and the four Microsoft targets.
+6. **Copilot Chat and company wiki:** offer Copilot only if it is licensed; audience of the answer, clear
    the clipboard. Optionally a wiki button with an `https://` address and a name.
-6. **Behavior on the device:** status icon, shortcuts. In expert mode: log retention, file check
+7. **Behavior on the device:** status icon, shortcuts. In expert mode: log retention, file check
    (`Enforce` or `Audit`) and service rights. Without expert mode the secure defaults stay.
-7. **AppLocker and App Control:** whether to create AppLocker rules (default yes) and, if you use App Control for Business (WDAC), the
+8. **AppLocker and App Control:** whether to create AppLocker rules (default yes) and, if you use App Control for Business (WDAC), the
    ID of your base policy. Without an ID no App Control file is written. The rule scripts need Windows PowerShell 5.1; AppLocker also the
    AppLocker cmdlets, App Control the module ConfigCI. Without them the run stops with a clear text: answer *no* or create the files on
    another PC (`tools\New-SelfXAppLockerRules.ps1`, `tools\New-SelfXWdacPolicy.ps1`).
-8. **Build:** output folder and path of `IntuneWinAppUtil.exe`.
+9. **Build:** output folder and path of `IntuneWinAppUtil.exe`.
 
 Every input is checked (addresses, https links, colors, lengths, characters); an invalid input is
 refused at once. Values are written to the XML files as escaped text. The logo must be a `png`, `jpg` or `ico` file of at most 2 MB; the

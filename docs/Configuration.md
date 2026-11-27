@@ -46,7 +46,7 @@ SelfX is configured with XML files in the folder `SelfX Service\Sources`.
 | `Tool_Config.xml` | General settings, contacts, branding, switch features on or off |
 | `Issues_List.xml` | Actions for troubleshooting |
 | `Health_Config.xml` | Device status: checks, repairs, background check |
-| `Network_Test_Config.xml` | Network measurements (optional, off by default) |
+| `Network_Test_Config.xml` | Connection check and network measurements (optional, off by default) |
 | `Ticket_Config.xml` | Assignment of tickets to your IT units (optional) |
 | `Languages\<language>.xml` | All texts, per language |
 | `Texts\<language>.xml` | Optional: replaces single texts of a bundled language ([text overrides](#change-single-texts-text-overrides)) |
@@ -428,19 +428,27 @@ links.
 
 ## Network measurements
 
-Optional and off by default. The file `Network_Test_Config.xml` adds rows to the *System information*
-page in the network area:
+Optional and off by default. The file `Network_Test_Config.xml` adds the **connection check** to the *System
+information* page in the network area. It answers the question of every support call: is it the Wi-Fi or the
+router, the internet, the Microsoft services for device management, or the company network (VPN)?
 
-- response time to the default gateway,
-- duration of a name resolution (DNS),
-- duration of a connection setup (TCP).
+- **Four rows** with a traffic-light symbol: *Local network (Wi-Fi, router)*, *Internet*, *Microsoft services
+  (Intune, Entra ID)*, *Company network*. Each shows *reachable*, *partly reachable*, *not reachable* or
+  *not measured*.
+- **One sentence** that says what is probably wrong, for example "The internet cannot be reached.", "The internet
+  works, the company network cannot be reached: check the VPN." or "Everything can be reached.".
+- **Details** per target: name lookup time and the time to open a TCP connection. The default gateway is
+  measured with a ping.
+
+The rows and the sentence are part of *Copy*, *Export*, the support report and the ticket.
 
 ```xml
 <Network_Test_Config>
-  <Settings Enabled="True" Gateway="True" Samples="3" TimeoutMs="2000" />
+  <Settings Enabled="True" Gateway="True" Microsoft="True" HostNames="True" Samples="3" TimeoutMs="2000" />
   <Targets>
-    <Target Label="Intranet" Host="intranet.example.org" Port="443" />
-    <Target Label="Internet" Host="www.example.org" Port="443" />
+    <Target Label="Intune service" Host="manage.microsoft.com" Port="443" Group="Microsoft" />
+    <Target Label="VPN gateway" Host="vpn.example.org" Port="443" Group="Company" Kind="Vpn" />
+    <Target Label="File server" Host="files.example.org" Port="445" Group="Company" Kind="Intranet" />
   </Targets>
 </Network_Test_Config>
 ```
@@ -448,21 +456,47 @@ page in the network area:
 | Setting | Meaning |
 |---|---|
 | `Enabled` | `True` switches the measurements on. Default: `False`. |
-| `Gateway` | `True`: measure the response time to the gateway. |
+| `Gateway` | `True`: measure the response time to the default gateway (group *Local*). |
+| `Microsoft` | `True` (default): measure the targets of the group *Microsoft*. `False` leaves the group out. |
+| `HostNames` | `True` (default): the rows show host name and port. `False`: only the result is shown, so that internal host names do not appear in *Copy*, *Export* and the ticket. |
 | `Samples` | Measurements per value (1 to 5, default 3). |
 | `TimeoutMs` | Waiting time per measurement (200 to 5000 ms, default 2000). |
-| `Target` | Up to 5 targets. `Label` is the display name. `Host` is a name or an IPv4 address. `Port` is optional. |
 
-**Choosing targets:** You decide what is measured. An **internal name** shows the quality inside the
-company network. A **name from the internet** shows how a mobile device without VPN performs. For that,
-use an address your organization operates.
+| Target attribute | Meaning |
+|---|---|
+| `Label` | Display name (letters, digits, `.`, `_`, `-`, space; up to 40 characters; no label twice). |
+| `Host` | A DNS name or an IPv4 address, without `https://`, without path, without port. |
+| `Port` | Optional (1 to 65535). With a port the time to open a TCP connection is measured too. An IPv4 address needs a port. |
+| `Group` | Which row the target belongs to: `Local` (printer, local device), `Internet` (a public address), `Microsoft` (Microsoft service) or `Company` (company network). Without a group the target is measured and shown, but it does not count for the result. |
+| `Kind` | Only with `Group="Company"`: `Vpn` (reachable through VPN: the hint says "check the VPN") or `Intranet` (reachable at the location: the hint asks to check the network connection at the location). |
 
-**Security:** Targets come only from the file, which only administrators can change. `Host` is checked
-strictly: only letters, digits, hyphens and dots. The device only sends a name query, ping packets to
-the gateway and connection attempts to the targets. No data is transferred and no throughput is measured.
+At most **12 targets** are read. The file is delivered with four targets in the group *Microsoft* (TCP 443):
+`manage.microsoft.com` (Intune), `login.microsoftonline.com` and `graph.windows.net` (Entra ID sign-in and
+directory) and `enterpriseregistration.windows.net` (device registration). The source is the Microsoft Learn
+article *Network endpoints for Microsoft Intune* (checked on 2026-11-27); Microsoft changes the list from time
+to time, so compare it before you rely on it. Switch the group off with `Microsoft="False"`.
 
-**Check before deployment:** `tools\Test-SelfXNetworkMeasure.ps1` shows the settings and invalid entries.
-With `-Run` it performs the measurements once on the current device.
+**How the sentence is chosen:** the router does not answer and the internet is not reached: *Wi-Fi or router*.
+The internet is not reached: *internet*. The internet works and the Microsoft services are not reached:
+*Microsoft services* (check a firewall or proxy). The internet works and the company network is not reached:
+*check the VPN* (`Kind="Vpn"`) or *check the network connection at the location* (`Kind="Intranet"`). Some
+firewalls drop ping: a gateway that does not answer while the internet works is **not** reported as "router
+down". The *Internet reachable* test of the system information counts as one Internet target.
+
+**Choosing targets:** You decide what is measured. A **company name** shows whether the VPN or the location
+works. Use only addresses your organization operates or that Microsoft documents. Users cannot add or change
+targets.
+
+**Security:** Targets come only from the file, which only administrators can change. `Host`, `Port`, `Group`
+and `Kind` are checked strictly. The device only sends a name query, ping packets to the gateway and connection
+attempts to the targets (opened and closed at once). No data is transferred and no throughput is measured. The
+whole run stops after **15 seconds**; targets that were not reached by then are shown as *not measured*. The
+file is readable by every user on the device: do not put secret names into it. The wizard writes it from the page
+*Connection check* (see [Package wizard](Guided-Setup.md)).
+
+**Check before deployment:** `tools\Test-SelfXNetworkMeasure.ps1` shows the settings, the targets with group and
+kind and invalid entries. With `-Run` it performs the measurements once on the current device and prints the four
+rows and the sentence.
 
 ## Ticket by e-mail
 

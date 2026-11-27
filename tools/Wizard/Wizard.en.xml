@@ -16,14 +16,15 @@
 	<T Id="yesno">y = yes, n = no</T>
 	<T Id="invalid">This value is not valid: {0}</T>
 	<T Id="required">This value is required.</T>
-	<T Id="section.basics">1/8 Basics</T>
-	<T Id="section.support">2/8 Support contacts</T>
-	<T Id="section.branding">3/8 Branding</T>
-	<T Id="section.ticket">4/8 Ticket by e-mail and organisations</T>
-	<T Id="section.copilot">5/8 Copilot Chat and company wiki</T>
-	<T Id="section.behavior">6/8 Behavior on the device</T>
-	<T Id="section.rules">7/8 AppLocker and App Control</T>
-	<T Id="section.build">8/8 Build</T>
+	<T Id="section.basics">1/9 Basics</T>
+	<T Id="section.support">2/9 Support contacts</T>
+	<T Id="section.branding">3/9 Branding</T>
+	<T Id="section.ticket">4/9 Ticket by e-mail and organisations</T>
+    <T Id="section.network">5/9 Connection check (network targets)</T>
+	<T Id="section.copilot">6/9 Copilot Chat and company wiki</T>
+	<T Id="section.behavior">7/9 Behavior on the device</T>
+	<T Id="section.rules">8/9 AppLocker and App Control</T>
+	<T Id="section.build">9/9 Build</T>
 	<T Id="ToolLanguage.ask">Default language of SelfX on the devices (de, en, fr, es ... or Auto)</T>
 	<T Id="ToolLanguage.rec">Auto follows the display language of Windows. Choose Auto if your users speak several languages.</T>
 	<T Id="ShowLanguageSetting.ask">May users choose their language in the settings?</T>
@@ -75,6 +76,27 @@
 	<T Id="UnitCategories.rec">Free names such as Notebook, Desktop, Tablet. Intune sets the value per device group.</T>
 	<T Id="UnitMore.ask">Add another unit?</T>
 	<T Id="UnitMore.rec">Yes until every mailbox is defined. The first matching rule wins: group tags are checked first, then OUs, then device classes.</T>
+    <T Id="NetworkEnabled.ask">Do you want the connection check (WLAN, internet, Microsoft services, company network) in the system information?</T>
+    <T Id="NetworkEnabled.rec">Yes, if users should see at once whether the router, the internet or the company network is the problem. SelfX only tests whether a connection can be opened and sends no data. The check is off in the delivered file.</T>
+    <T Id="NetworkMicrosoft.ask">Test the Microsoft services for Intune and Entra ID too?</T>
+    <T Id="NetworkMicrosoft.rec">Yes uses the four endpoints that are delivered in Network_Test_Config.xml (Intune service, Entra ID sign-in and directory, device registration). Answer no if your firewall blocks them on purpose.</T>
+    <T Id="NetworkHostNames.ask">Show the host names of the targets in the support report and in the ticket?</T>
+    <T Id="NetworkHostNames.rec">No hides internal host names there: the report then shows only the label of a target. The window of the user always shows the labels.</T>
+    <T Id="TargetAdd.ask">Do you want to add your own network targets (for example the VPN gateway or an intranet server)?</T>
+    <T Id="TargetAdd.rec">The users cannot change or add targets. At most 12 targets are possible in total, the four delivered Microsoft targets included (so 8 own ones).</T>
+    <T Id="Target.header">Network target {0}</T>
+    <T Id="TargetLabel.ask">Name of the target (shown to the user)</T>
+    <T Id="TargetLabel.rec">For example VPN gateway. Letters, digits, space . _ - up to 40 characters. Do not use a secret name.</T>
+    <T Id="TargetHost.ask">Host name or IPv4 address</T>
+    <T Id="TargetHost.rec">Only the name, for example vpn.contoso.example. No https://, no path, no port. The file Network_Test_Config.xml can be read by every user on the device.</T>
+    <T Id="TargetPort.ask">TCP port (0 = only look up the name)</T>
+    <T Id="TargetPort.rec">For example 443 or 445. An IPv4 address needs a port.</T>
+    <T Id="TargetGroup.ask">What does the target show?</T>
+    <T Id="TargetGroup.rec">Local = your own router or printer, Internet = a public site, Microsoft = a Microsoft service, Company = the company network (VPN or intranet).</T>
+    <T Id="TargetKind.ask">Kind of the company target</T>
+    <T Id="TargetKind.rec">Vpn = reachable only after the VPN is connected: SelfX then says "check the VPN". Intranet = reachable in the office network. None = no statement.</T>
+    <T Id="TargetMore.ask">Add another target?</T>
+    <T Id="TargetMore.rec">Yes until every target is defined.</T>
 	<T Id="CopilotEnabled.ask">Do you have Microsoft 365 Copilot Chat licensed and want to offer it in the help dialog?</T>
 	<T Id="CopilotEnabled.rec">Yes if your users have Copilot Chat. SelfX uses no interface and no token: it prepares a text, the user pastes it into Copilot.</T>
 	<T Id="WikiEnabled.ask">Do you want a button that opens the wiki or intranet page of your company in the web browser?</T>
@@ -187,6 +209,8 @@
 	<T Id="gui.page.branding.intro">Your logo and company color. The preview below shows them as SelfX will.</T>
 	<T Id="gui.page.ticket">Ticket</T>
 	<T Id="gui.page.ticket.intro">The ticket e-mail and, for several organisations, one support mailbox per organisation, chosen by the group tag, the OU or the device class of the device.</T>
+    <T Id="gui.page.network">Connection check</T>
+    <T Id="gui.page.network.intro">Shows the user at once whether the router, the internet, Microsoft services or the company network cannot be reached. Only a connection test, no data is sent.</T>
 	<T Id="gui.page.more">Further settings</T>
 	<T Id="gui.page.more.intro">Copilot Chat, company wiki, behavior on the device and rules for AppLocker and App Control. The recommended values are already set.</T>
 	<T Id="gui.page.summary">Summary</T>
@@ -212,6 +236,15 @@
 	<T Id="gui.unit.title">Selected organisation</T>
 	<T Id="gui.unit.new">(new)</T>
 	<T Id="gui.unit.invalid">Not valid. {0}</T>
+    <T Id="gui.targets.title">Own network targets</T>
+    <T Id="gui.targets.rec">Add the VPN gateway, an intranet server or other targets. Users cannot change them. At most 8 own targets: 12 in total, minus the four delivered Microsoft targets.</T>
+    <T Id="gui.targets.add">_Add target</T>
+    <T Id="gui.targets.remove">_Remove</T>
+    <T Id="gui.targets.duplicate">This name is used twice.</T>
+    <T Id="gui.targets.max">Too many targets. At most {0} are possible in total.</T>
+    <T Id="gui.target.title">Selected target</T>
+    <T Id="gui.target.new">(new)</T>
+    <T Id="gui.target.invalid">Not valid. {0}</T>
 	<T Id="gui.summary.title">Your answers</T>
 	<T Id="gui.summary.build">Build settings</T>
 	<T Id="Payload.ask">Folder of the package (unpacked payload archive or the folder SelfX Service of the repository)</T>

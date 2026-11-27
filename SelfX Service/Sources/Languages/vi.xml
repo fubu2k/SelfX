@@ -283,6 +283,23 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Latency_Value>{0} ms (tối thiểu {1}, tối đa {2}, mất {3}/{4})</Latency_Value>
 		<Latency_Failed>không thể truy cập (thất bại {0}/{1})</Latency_Failed>
 		<Latency_Skipped>chưa đo (đã hết giới hạn thời gian)</Latency_Skipped>
+		<Check_Local>Mạng cục bộ (Wi-Fi, bộ định tuyến)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Dịch vụ Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Mạng công ty</Check_Company>
+		<Check_Result>Kết quả kết nối</Check_Result>
+		<Check_State_Ok>truy cập được ({0}/{1})</Check_State_Ok>
+		<Check_State_Partial>truy cập được một phần ({0}/{1})</Check_State_Partial>
+		<Check_State_Fail>không thể truy cập ({0}/{1})</Check_State_Fail>
+		<Check_State_None>chưa đo</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi hoặc bộ định tuyến của bạn không phản hồi.</Verdict_LocalDown>
+		<Verdict_InternetDown>Không thể truy cập Internet.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Internet hoạt động, nhưng không thể truy cập các dịch vụ Microsoft để quản lý thiết bị này.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Internet hoạt động, nhưng không thể truy cập mạng công ty: hãy kiểm tra VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Internet hoạt động, nhưng không thể truy cập mạng công ty: hãy kiểm tra kết nối mạng tại vị trí của bạn.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Hầu hết các kết nối hoạt động, nhưng một số đích không thể truy cập.</Verdict_Partial>
+		<Verdict_AllOk>Mọi thứ đều truy cập được.</Verdict_AllOk>
+		<Verdict_NoData>Không đo được gì.</Verdict_NoData>
 		<Collected_At>Thời điểm thu thập</Collected_At>
 		<Error>Lỗi</Error>
 		<Yes>Có</Yes>

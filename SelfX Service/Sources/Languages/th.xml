@@ -283,6 +283,23 @@
 		<Latency_Value>{0} มิลลิวินาที (ต่ำสุด {1}, สูงสุด {2}, สูญหาย {3} จาก {4})</Latency_Value>
 		<Latency_Failed>เข้าถึงไม่ได้ (ล้มเหลว {0} จาก {1})</Latency_Failed>
 		<Latency_Skipped>ไม่ได้วัด (ถึงขีดจำกัดเวลาแล้ว)</Latency_Skipped>
+		<Check_Local>เครือข่ายภายใน (Wi-Fi, เราเตอร์)</Check_Local>
+		<Check_Internet>อินเทอร์เน็ต</Check_Internet>
+		<Check_Microsoft>บริการของ Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>เครือข่ายของบริษัท</Check_Company>
+		<Check_Result>ผลการเชื่อมต่อ</Check_Result>
+		<Check_State_Ok>เข้าถึงได้ ({0}/{1})</Check_State_Ok>
+		<Check_State_Partial>เข้าถึงได้บางส่วน ({0}/{1})</Check_State_Partial>
+		<Check_State_Fail>เข้าถึงไม่ได้ ({0}/{1})</Check_State_Fail>
+		<Check_State_None>ไม่ได้วัด</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi หรือเราเตอร์ของคุณไม่ตอบสนอง</Verdict_LocalDown>
+		<Verdict_InternetDown>ไม่สามารถเข้าถึงอินเทอร์เน็ตได้</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>อินเทอร์เน็ตใช้งานได้ แต่ไม่สามารถเข้าถึงบริการของ Microsoft สำหรับการจัดการอุปกรณ์นี้ได้</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>อินเทอร์เน็ตใช้งานได้ แต่ไม่สามารถเข้าถึงเครือข่ายของบริษัทได้: ตรวจสอบ VPN</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>อินเทอร์เน็ตใช้งานได้ แต่ไม่สามารถเข้าถึงเครือข่ายของบริษัทได้: ตรวจสอบการเชื่อมต่อเครือข่ายที่สถานที่ของคุณ</Verdict_CompanyIntranet>
+		<Verdict_Partial>การเชื่อมต่อส่วนใหญ่ใช้งานได้ แต่บางปลายทางเข้าถึงไม่ได้</Verdict_Partial>
+		<Verdict_AllOk>เข้าถึงได้ทุกอย่าง</Verdict_AllOk>
+		<Verdict_NoData>ไม่สามารถวัดอะไรได้</Verdict_NoData>
 		<Collected_At>รวบรวมได้ที่</Collected_At>
 		<Error>ข้อผิดพลาด</Error>
 		<Yes>ใช่</Yes>

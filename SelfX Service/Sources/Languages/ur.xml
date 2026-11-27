@@ -281,6 +281,23 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<Latency_Value>{0} ملی سیکنڈ (کم از کم {1}، زیادہ سے زیادہ {2}، {4} میں سے {3} ضائع)</Latency_Value>
 		<Latency_Failed>قابل رسائی نہیں ({1} میں سے {0} ناکام)</Latency_Failed>
 		<Latency_Skipped>ناپا نہیں گیا (وقت کی حد پوری ہو گئی)</Latency_Skipped>
+		<Check_Local>مقامی نیٹ ورک (Wi-Fi، راؤٹر)</Check_Local>
+		<Check_Internet>انٹرنیٹ</Check_Internet>
+		<Check_Microsoft>Microsoft خدمات (Intune، Entra ID)</Check_Microsoft>
+		<Check_Company>کمپنی نیٹ ورک</Check_Company>
+		<Check_Result>کنکشن کا نتیجہ</Check_Result>
+		<Check_State_Ok>قابل رسائی ({1} میں سے {0})</Check_State_Ok>
+		<Check_State_Partial>جزوی طور پر قابل رسائی ({1} میں سے {0})</Check_State_Partial>
+		<Check_State_Fail>قابل رسائی نہیں ({1} میں سے {0})</Check_State_Fail>
+		<Check_State_None>ناپا نہیں گیا</Check_State_None>
+		<Verdict_LocalDown>آپ کا Wi-Fi یا راؤٹر جواب نہیں دے رہا۔</Verdict_LocalDown>
+		<Verdict_InternetDown>انٹرنیٹ تک رسائی ممکن نہیں۔</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>انٹرنیٹ چل رہا ہے، لیکن اس آلے کے انتظام کے لیے Microsoft خدمات تک رسائی ممکن نہیں۔</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>انٹرنیٹ چل رہا ہے، لیکن کمپنی نیٹ ورک تک رسائی ممکن نہیں: VPN چیک کریں۔</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>انٹرنیٹ چل رہا ہے، لیکن کمپنی نیٹ ورک تک رسائی ممکن نہیں: اپنی جگہ پر نیٹ ورک کنکشن چیک کریں۔</Verdict_CompanyIntranet>
+		<Verdict_Partial>زیادہ تر کنکشن کام کر رہے ہیں، لیکن کچھ اہداف تک رسائی ممکن نہیں۔</Verdict_Partial>
+		<Verdict_AllOk>ہر چیز تک رسائی ممکن ہے۔</Verdict_AllOk>
+		<Verdict_NoData>کچھ بھی ناپا نہیں جا سکا۔</Verdict_NoData>
 		<Collected_At>پر جمع کیا گیا۔</Collected_At>
 		<Error>خرابی</Error>
 		<Yes>جی ہاں</Yes>

@@ -1,44 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Network_Test_Config.xml: optional latency measurements on the System information page.
+  Network_Test_Config.xml: optional connection check and latency measurements on the System information page.
   Off by default (Enabled="False"). Only administrators can change this file; users cannot add or change targets.
 
   The measurements run in the context of the user, only read, and send no data other than a name lookup,
   an ICMP echo request to the default gateway and the opening (and immediate closing) of a TCP connection.
-  They run in the background together with the other system information.
+  They run in the background together with the other system information. The whole run stops after 15 seconds;
+  targets that were not reached by then are shown as "not measured" and do not count.
+
+  Result of the check (System information, category Network)
+    Four rows with the state of each group (reachable, partly reachable, not reachable, not measured) and one
+    sentence that tells what is probably wrong: the Wi-Fi or router, the internet, the Microsoft services for
+    device management, or the company network (VPN). The rows are part of the copy, the export and the ticket.
 
   Settings
     Enabled    True switches the measurements on.
-    Gateway    True (default) measures the round-trip time (ping) to the default gateway.
+    Gateway    True (default) measures the round-trip time (ping) to the default gateway (group Local).
+               Some firewalls drop ping: a gateway that does not answer while the internet works is not reported
+               as "router down".
+    Microsoft  True (default) measures the targets of the group Microsoft. False leaves that group out.
+    HostNames  True (default) shows the host name and port of each target in the rows. False shows only the
+               result, so that internal host names do not appear in the copy, the export and the ticket.
     Samples    Measurements per value, 1 to 5 (default 3).
     TimeoutMs  Wait time per measurement in milliseconds, 200 to 5000 (default 2000).
 
-  Targets (up to 5)
+  Targets (up to 12)
     Label  Name shown in the list (letters, digits . _ - and space, up to 40 characters).
-    Host   DNS name or IPv4 address. Choose the name according to what the measurement should show:
-           - an internal name (reachable only in the company network or through VPN) shows the quality of the
-             internal connection (office, VPN);
-           - a name that is reachable from the internet shows the connection of a device that works remotely
-             without VPN. Use an address that you operate or that is meant for such tests.
+    Host   DNS name or IPv4 address. Choose the name according to what the measurement should show.
     Port   Optional (1 to 65535). With a port the time to open a TCP connection is measured too.
-           Without a port only the name lookup is measured. For an IPv4 address no name lookup is measured.
+           Without a port only the name lookup is measured. For an IPv4 address no name lookup is measured, so
+           an IPv4 address needs a port.
+    Group  Optional. Which row the target belongs to:
+           Local      a device in the local network, for example a printer or the router (the default gateway is
+                      measured by itself with Gateway="True");
+           Internet   a target that is reachable from the internet. The "Internet reachable" test of the system
+                      information counts as one more Internet target. Use an address that you operate or that is
+                      meant for such tests;
+           Microsoft  a Microsoft service endpoint (see below);
+           Company    a target that is reachable only in the company network or through VPN (intranet, file
+                      server, domain controller).
+           Without Group the target is measured and shown, but it does not count for the result.
+    Kind   Optional, only with Group="Company". Vpn: the target is reachable through VPN (default for the hint
+           "check the VPN"). Intranet: the target is reachable in the company network at the location; the hint
+           then asks to check the network connection at the location instead of the VPN.
   Entries that are not valid are skipped. Check the file with tools\Test-SelfXNetworkMeasure.ps1.
+
+  Microsoft endpoints delivered with SelfX (group Microsoft, TCP 443)
+    Source: Microsoft Learn, "Network endpoints for Microsoft Intune"
+    (https://learn.microsoft.com/intune/intune-service/fundamentals/intune-endpoints), checked on 2026-11-27.
+    manage.microsoft.com               Intune client and host service (endpoint set 163)
+    login.microsoftonline.com          Authentication and identity, Microsoft Entra ID (endpoint set 56)
+    graph.windows.net                  Authentication and identity, Microsoft Entra ID (endpoint set 56)
+    enterpriseregistration.windows.net Device registration (endpoint set 59)
+  Switch the group off with Microsoft="False" or remove the targets. Microsoft changes this list from time to time;
+  compare it with the article before you rely on it.
 
   Note on the DNS time: the name is resolved through the Windows resolver, so its cache applies. Repeated
   measurements can be faster than the first one.
 
-  Example (remove the comment marks):
-  <Targets>
-    <Target Label="Intranet" Host="intranet.example.org" Port="443" />
-    <Target Label="Internet" Host="www.example.org" Port="443" />
-  </Targets>
+  Example for your own targets (remove the comment marks):
+    <Target Label="Router printer" Host="192.168.1.20" Port="9100" Group="Local" />
+    <Target Label="Internet" Host="www.example.org" Port="443" Group="Internet" />
+    <Target Label="Intranet" Host="intranet.example.org" Port="443" Group="Company" Kind="Vpn" />
+    <Target Label="File server" Host="files.example.org" Port="445" Group="Company" Kind="Intranet" />
 
   Citrix: add the address of the StoreFront server or the Gateway of the Citrix Workspace app as a target
-  (for example Label="Citrix Gateway" Host="citrix.example.org" Port="443"). The row shows whether the name resolves
-  and how fast the connection opens; users and the support team see it in the system information and in the ticket.
+  (for example Label="Citrix Gateway" Host="citrix.example.org" Port="443" Group="Company"). The row shows whether
+  the name resolves and how fast the connection opens; users and the support team see it in the system information
+  and in the ticket.
 -->
 <Network_Test_Config>
-  <Settings Enabled="False" Gateway="True" Samples="3" TimeoutMs="2000" />
+  <Settings Enabled="False" Gateway="True" Microsoft="True" HostNames="True" Samples="3" TimeoutMs="2000" />
   <Targets>
+    <Target Label="Intune service" Host="manage.microsoft.com" Port="443" Group="Microsoft" />
+    <Target Label="Entra ID sign-in" Host="login.microsoftonline.com" Port="443" Group="Microsoft" />
+    <Target Label="Entra ID directory" Host="graph.windows.net" Port="443" Group="Microsoft" />
+    <Target Label="Device registration" Host="enterpriseregistration.windows.net" Port="443" Group="Microsoft" />
   </Targets>
 </Network_Test_Config>

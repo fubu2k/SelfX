@@ -283,6 +283,23 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<Latency_Value>{0} ミリ秒 (最小 {1}、最大 {2}、{4} 回中 {3} 回損失)</Latency_Value>
 		<Latency_Failed>到達できません ({1} 回中 {0} 回失敗)</Latency_Failed>
 		<Latency_Skipped>未測定 (制限時間に達しました)</Latency_Skipped>
+		<Check_Local>ローカルネットワーク (Wi-Fi、ルーター)</Check_Local>
+		<Check_Internet>インターネット</Check_Internet>
+		<Check_Microsoft>Microsoft サービス (Intune、Entra ID)</Check_Microsoft>
+		<Check_Company>社内ネットワーク</Check_Company>
+		<Check_Result>接続の結果</Check_Result>
+		<Check_State_Ok>到達可能 ({0}/{1})</Check_State_Ok>
+		<Check_State_Partial>一部到達可能 ({0}/{1})</Check_State_Partial>
+		<Check_State_Fail>到達不可 ({0}/{1})</Check_State_Fail>
+		<Check_State_None>未測定</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi またはルーターが応答しません。</Verdict_LocalDown>
+		<Verdict_InternetDown>インターネットに接続できません。</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>インターネットは使えますが、このデバイスの管理に必要な Microsoft サービスに接続できません。</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>インターネットは使えますが、社内ネットワークに接続できません。VPN を確認してください。</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>インターネットは使えますが、社内ネットワークに接続できません。お使いの場所のネットワーク接続を確認してください。</Verdict_CompanyIntranet>
+		<Verdict_Partial>ほとんどの接続は動作していますが、一部の接続先に到達できません。</Verdict_Partial>
+		<Verdict_AllOk>すべてに到達できます。</Verdict_AllOk>
+		<Verdict_NoData>何も測定できませんでした。</Verdict_NoData>
 		<Collected_At>収集日時</Collected_At>
 		<Error>エラー</Error>
 		<Yes>はい</Yes>

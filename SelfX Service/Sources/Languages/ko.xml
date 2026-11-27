@@ -283,6 +283,23 @@ SelfX가 {1}에 수집한 {0}의 장치 로그를 첨부합니다.
 		<Latency_Value>{0}ms(최소 {1}, 최대 {2}, {4}회 중 {3}회 손실)</Latency_Value>
 		<Latency_Failed>연결할 수 없음({1}회 중 {0}회 실패)</Latency_Failed>
 		<Latency_Skipped>측정 안 됨(제한 시간 도달)</Latency_Skipped>
+		<Check_Local>로컬 네트워크(Wi-Fi, 라우터)</Check_Local>
+		<Check_Internet>인터넷</Check_Internet>
+		<Check_Microsoft>Microsoft 서비스(Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>회사 네트워크</Check_Company>
+		<Check_Result>연결 결과</Check_Result>
+		<Check_State_Ok>연결 가능({0}/{1})</Check_State_Ok>
+		<Check_State_Partial>일부 연결 가능({0}/{1})</Check_State_Partial>
+		<Check_State_Fail>연결할 수 없음({0}/{1})</Check_State_Fail>
+		<Check_State_None>측정 안 됨</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi 또는 라우터가 응답하지 않습니다.</Verdict_LocalDown>
+		<Verdict_InternetDown>인터넷에 연결할 수 없습니다.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>인터넷은 작동하지만 이 장치를 관리하는 Microsoft 서비스에 연결할 수 없습니다.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>인터넷은 작동하지만 회사 네트워크에 연결할 수 없습니다. VPN을 확인하세요.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>인터넷은 작동하지만 회사 네트워크에 연결할 수 없습니다. 현재 위치의 네트워크 연결을 확인하세요.</Verdict_CompanyIntranet>
+		<Verdict_Partial>대부분의 연결은 작동하지만 일부 대상에 연결할 수 없습니다.</Verdict_Partial>
+		<Verdict_AllOk>모두 연결할 수 있습니다.</Verdict_AllOk>
+		<Verdict_NoData>측정할 수 있는 항목이 없습니다.</Verdict_NoData>
 		<Collected_At>수집 시간</Collected_At>
 		<Error>오류</Error>
 		<Yes>예</Yes>

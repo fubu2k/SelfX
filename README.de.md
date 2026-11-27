@@ -139,6 +139,9 @@ Menü öffnet SelfX, prüft den Status oder sendet die Protokolle.
 - **Seite Systeminformationen**
   - Gerät, Windows, Nutzer und Intune-/Entra-ID-Verwaltung sowie
     Netzwerkdetails (LAN, WLAN, VPN, Internet, IP, DNS, MAC).
+  - Optionaler Verbindungstest: vier Zeilen (lokales Netzwerk, Internet,
+    Microsoft-Dienste, Firmennetz) und ein Satz, was vermutlich nicht stimmt,
+    zum Beispiel „VPN prüfen“. Die Ziele legt der Administrator fest.
   - Doppelklick auf eine Zeile kopiert sie. Alles kopieren oder als TXT, HTML,
     CSV oder JSON exportieren.
   - Sofort aus der letzten Erfassung angezeigt und im Hintergrund aktualisiert.

@@ -24,7 +24,7 @@
     Name    : SystemInfo.ps1
     Package : SelfX Service
     Context : User (dot-sourced by Self_X.ps1 and SelfX_Tray.ps1, run in a background runspace)
-    Version : 2.8.26
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -35,6 +35,8 @@
     2.8.9    2026-11-23  fubu2k               CSV export: text cells starting with = + - @ tab CR LF get a leading apostrophe (CSV/formula injection, finding N7)
     2.8.25   2026-11-24  fubu2k               Row "Citrix Workspace" (version of the app, only when installed; also in the support ticket)
     2.8.26   2026-11-24  fubu2k               Export: the file name is used literally (-LiteralPath); a name with [ ] from the save dialog no longer fails or matches other files
+    3.1.0    2026-11-27  fubu2k               Connection check with verdict: targets get Group (Local, Internet, Microsoft, Company) and Kind (Vpn, Intranet), up to 12 targets,
+                                              four group rows and one result sentence (pure function Get-SelfXConnectionVerdict), 15 second limit, setting HostNames
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -57,6 +59,16 @@ $Script:SelfXInfoDefaultText = @{
 	Latency_Gateway = 'Latency: default gateway'; Latency_Dns = 'DNS lookup: {0}'; Latency_Connection = 'Connection: {0}'
 	Latency_Value = '{0} ms (min {1}, max {2}, {3} of {4} lost)'; Latency_Failed = 'not reachable ({0} of {1} failed)'
 	Latency_Skipped = 'not measured (time limit reached)'
+	Check_Local = 'Local network (Wi-Fi, router)'; Check_Internet = 'Internet'; Check_Microsoft = 'Microsoft services (Intune, Entra ID)'
+	Check_Company = 'Company network'; Check_Result = 'Connection result'
+	Check_State_Ok = 'reachable ({0} of {1})'; Check_State_Partial = 'partly reachable ({0} of {1})'; Check_State_Fail = 'not reachable ({0} of {1})'
+	Check_State_None = 'not measured'
+	Verdict_LocalDown = 'Your Wi-Fi or router does not answer.'; Verdict_InternetDown = 'The internet cannot be reached.'
+	Verdict_MicrosoftDown = 'The internet works, but the Microsoft services for the management of this device cannot be reached.'
+	Verdict_CompanyVpn = 'The internet works, but the company network cannot be reached: check the VPN.'
+	Verdict_CompanyIntranet = 'The internet works, but the company network cannot be reached: check the network connection at your location.'
+	Verdict_Partial = 'Most connections work, but some targets cannot be reached.'; Verdict_AllOk = 'Everything can be reached.'
+	Verdict_NoData = 'Nothing could be measured.'
 	Collected_At = 'Collected at'; Error = 'Error'; Yes = 'Yes'; No = 'No'; Not_Available = 'n/a'
 	Not_Enrolled = 'Not enrolled / unknown'; No_WiFi = 'No Wi-Fi connection'
 	Category_Health = 'Health status'; Health_IME = 'IME service'; Health_Defender = 'Microsoft Defender'
@@ -474,13 +486,19 @@ function Test-SelfXIPv4Literal {
 	return [Net.IPAddress]::TryParse($Name, [ref]$address)
 }
 
+# Groups and kinds of targets. The file selects from these fixed lists; it cannot add to them.
+$Script:SelfXNetworkGroups = @('Local', 'Internet', 'Microsoft', 'Company')
+$Script:SelfXNetworkKinds = @('Vpn', 'Intranet')
+
 # Reads Network_Test_Config.xml. Entries that are not valid are skipped and named in Errors; a file that cannot
 # be read switches the measurements off. Limits: up to MaxTargets targets, 1-5 samples, 200-5000 ms timeout.
+# A target may name a Group (Local, Internet, Microsoft, Company; without Group it is measured but not part of the
+# verdict) and, for Company only, a Kind (Vpn, Intranet).
 function Read-SelfXNetworkTestConfig {
-	param([Parameter(Mandatory = $true)][string]$Path, [int]$MaxTargets = 5)
+	param([Parameter(Mandatory = $true)][string]$Path, [int]$MaxTargets = 12)
 	$errors = New-Object System.Collections.Generic.List[string]
 	$targets = New-Object System.Collections.Generic.List[object]
-	$result = [pscustomobject]@{ Enabled = $false; Gateway = $true; Samples = 3; TimeoutMs = 2000; Targets = @(); Errors = @() }
+	$result = [pscustomobject]@{ Enabled = $false; Gateway = $true; Microsoft = $true; HostNames = $true; Samples = 3; TimeoutMs = 2000; Targets = @(); Errors = @() }
 	$doc = New-Object Xml.XmlDocument
 	$doc.XmlResolver = $null
 	$reader = $null
@@ -500,6 +518,8 @@ function Read-SelfXNetworkTestConfig {
 	if (-not $node) { $result.Errors = @('Settings element is missing.'); return $result }
 	$result.Enabled = ($node.GetAttribute('Enabled').Trim() -eq 'True')
 	$result.Gateway = ($node.GetAttribute('Gateway').Trim() -ne 'False')
+	$result.Microsoft = ($node.GetAttribute('Microsoft').Trim() -ne 'False')
+	$result.HostNames = ($node.GetAttribute('HostNames').Trim() -ne 'False')
 	$value = 0
 	$text = $node.GetAttribute('Samples').Trim()
 	if ($text) {
@@ -518,14 +538,21 @@ function Read-SelfXNetworkTestConfig {
 		$label = $target.GetAttribute('Label').Trim()
 		$name = $target.GetAttribute('Host').Trim()
 		$portText = $target.GetAttribute('Port').Trim()
+		$group = $target.GetAttribute('Group').Trim()
+		$kind = $target.GetAttribute('Kind').Trim()
 		if ($label -notmatch '^[A-Za-z0-9._ -]{1,40}\z') { $errors.Add("Target $count has no valid Label (letters, digits . _ - and space, up to 40)."); continue }
 		if (-not (Test-SelfXNetworkHostName $name)) { $errors.Add("Target '$label' has no valid Host (DNS name or IPv4 address): skipped."); continue }
 		$port = 0
 		if ($portText) {
 			if (-not ([int]::TryParse($portText, [ref]$port) -and $port -ge 1 -and $port -le 65535)) { $errors.Add("Target '$label' has no valid Port (1-65535): skipped."); continue }
 		}
+		if ($group -and ($Script:SelfXNetworkGroups -cnotcontains $group)) { $errors.Add("Target '$label' has no valid Group (Local, Internet, Microsoft, Company): skipped."); continue }
+		if ($kind) {
+			if ($Script:SelfXNetworkKinds -cnotcontains $kind) { $errors.Add("Target '$label' has no valid Kind (Vpn, Intranet): skipped."); continue }
+			if ($group -cne 'Company') { $errors.Add("Target '$label': Kind is only valid with Group Company: skipped."); continue }
+		}
 		if (@($targets | Where-Object { $_.Label -eq $label }).Count) { $errors.Add("Target '$label' is listed twice: the first entry is used."); continue }
-		$targets.Add([pscustomobject]@{ Label = $label; Host = $name; Port = $port })
+		$targets.Add([pscustomobject]@{ Label = $label; Host = $name; Port = $port; Group = $group; Kind = $kind })
 	}
 	$result.Targets = $targets.ToArray()
 	$result.Errors = $errors.ToArray()
@@ -633,47 +660,154 @@ function ConvertTo-SelfXLatencyInfo {
 	return [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Value' $stats.Avg $stats.Min $stats.Max $stats.Lost $stats.Sent); Status = $status }
 }
 
-# Info items for the network measurements: default gateway (ping), per target the DNS lookup and, with a Port,
-# the connection time. The whole run stops after DeadlineSeconds; targets not reached are shown as not measured.
+# Outcome of one measurement series: NotMeasured (no sample taken), Failed (all samples lost) or Reached.
+function Get-SelfXMeasurementOutcome {
+	param($Measurement)
+	if (-not $Measurement.Stats.Sent) { return 'NotMeasured' }
+	if ($Measurement.Stats.Lost -ge $Measurement.Stats.Sent) { return 'Failed' }
+	return 'Reached'
+}
+
+# State of a group from the number of reached and failed targets: None (nothing measured), Ok, Partial or Fail.
+function Get-SelfXGroupState {
+	param([int]$Reached = 0, [int]$Failed = 0)
+	if (($Reached + $Failed) -le 0) { return 'None' }
+	if ($Failed -le 0) { return 'Ok' }
+	if ($Reached -le 0) { return 'Fail' }
+	return 'Partial'
+}
+
+# The verdict as an Id (Verdict_<Id> is the text). Pure function: only the four group states and the question whether
+# the failing company targets are expected to need a VPN go in. A gateway that does not answer ping does not count as
+# "router down" while the internet works (many firewalls drop ICMP): it only makes the result "Partial".
+function Get-SelfXConnectionVerdict {
+	param(
+		[ValidateSet('Ok', 'Partial', 'Fail', 'None')][string]$Local = 'None',
+		[ValidateSet('Ok', 'Partial', 'Fail', 'None')][string]$Internet = 'None',
+		[ValidateSet('Ok', 'Partial', 'Fail', 'None')][string]$Microsoft = 'None',
+		[ValidateSet('Ok', 'Partial', 'Fail', 'None')][string]$Company = 'None',
+		[bool]$CompanyVpnExpected = $true
+	)
+	$internetUp = ($Internet -eq 'Ok' -or $Internet -eq 'Partial')
+	if ($Local -eq 'Fail' -and -not $internetUp) { return 'LocalDown' }
+	if ($Internet -eq 'Fail') { return 'InternetDown' }
+	if ($internetUp) {
+		if ($Microsoft -eq 'Fail') { return 'MicrosoftDown' }
+		if ($Company -eq 'Fail') { return $(if ($CompanyVpnExpected) { 'CompanyVpn' } else { 'CompanyIntranet' }) }
+	}
+	$states = @($Local, $Internet, $Microsoft, $Company)
+	if ($states -contains 'Fail' -or $states -contains 'Partial') { return 'Partial' }
+	if ($states -contains 'Ok') { return 'AllOk' }
+	return 'NoData'
+}
+
+# Status of an info row for a group state (OK, Pending, Error or none) and for a verdict.
+function Get-SelfXCheckStatus {
+	param([string]$State)
+	switch ($State) { 'Ok' { return 'OK' } 'Partial' { return 'Pending' } 'Fail' { return 'Error' } default { return '' } }
+}
+function Get-SelfXVerdictStatus {
+	param([string]$Verdict)
+	switch ($Verdict) { 'AllOk' { return 'OK' } 'Partial' { return 'Pending' } 'NoData' { return '' } default { return 'Error' } }
+}
+
+# Value of a measurement row: with HostNames = False only the result, without the name and port of the target.
+function Format-SelfXMeasureValue {
+	param([string]$HostText, [string]$Result, [bool]$ShowHost = $true)
+	if ($ShowHost) { return ('{0}: {1}' -f $HostText, $Result) }
+	return $Result
+}
+
+# Info items for the network measurements: first the four group rows and the result sentence, then the details:
+# default gateway (ping), per target the DNS lookup and, with a Port, the connection time. Targets are measured
+# in the order Local, Internet, Microsoft, Company, others. The whole run stops after DeadlineSeconds; targets not
+# reached are shown as not measured and do not count. InternetTestReachable is the result of the "Internet reachable"
+# test of the system information (counts as one Internet target); $null = no result.
 function Get-SelfXNetworkMeasureItems {
 	param(
 		[string]$Category,
 		$Config,
 		[string[]]$Gateways = @(),
-		[int]$DeadlineSeconds = 20
+		[object]$InternetTestReachable = $null,
+		[int]$DeadlineSeconds = 15
 	)
-	$items = New-Object System.Collections.Generic.List[object]
-	if (-not $Config -or -not $Config.Enabled) { return $items.ToArray() }
+	if (-not $Config -or -not $Config.Enabled) { return @() }
+	$details = New-Object System.Collections.Generic.List[object]
 	$deadline = [datetime]::UtcNow.AddSeconds($DeadlineSeconds)
+	$showHosts = ($null -eq $Config.HostNames) -or [bool]$Config.HostNames
+	$useMicrosoft = ($null -eq $Config.Microsoft) -or [bool]$Config.Microsoft
+	$reached = @{ Local = 0; Internet = 0; Microsoft = 0; Company = 0 }
+	$failed = @{ Local = 0; Internet = 0; Microsoft = 0; Company = 0 }
+	$companyFailedKinds = New-Object System.Collections.Generic.List[string]
+	if ($null -ne $InternetTestReachable) {
+		if ([bool]$InternetTestReachable) { $reached['Internet']++ } else { $failed['Internet']++ }
+	}
 	if ($Config.Gateway) {
 		$gateway = @($Gateways | Where-Object { Test-SelfXIPv4Literal $_ } | Select-Object -First 1)
 		if ($gateway.Count) {
-			$info = ConvertTo-SelfXLatencyInfo (Measure-SelfXPingLatency -Address $gateway[0] -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline)
-			$items.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Gateway') $info.Value $info.Status))
+			$ping = Measure-SelfXPingLatency -Address $gateway[0] -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline
+			$info = ConvertTo-SelfXLatencyInfo $ping
+			$details.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Gateway') $info.Value $info.Status))
+			$outcome = Get-SelfXMeasurementOutcome $ping
+			if ($outcome -eq 'Reached') { $reached['Local']++ } elseif ($outcome -eq 'Failed') { $failed['Local']++ }
 		}
 	}
-	foreach ($target in @($Config.Targets)) {
+	$rank = @{ Local = 0; Internet = 1; Microsoft = 2; Company = 3 }
+	$index = 0
+	$ordered = @(@($Config.Targets) | Where-Object { $_ } | ForEach-Object {
+		$groupName = "$($_.Group)"
+		[pscustomobject]@{ Target = $_; Rank = $(if ($rank.ContainsKey($groupName)) { $rank[$groupName] } else { 9 }); Index = $index++ }
+	} | Sort-Object Rank, Index | ForEach-Object { $_.Target })
+	foreach ($target in $ordered) {
+		$group = "$($target.Group)"
+		if ($group -eq 'Microsoft' -and -not $useMicrosoft) { continue }
 		$address = $target.Host
 		$dnsSkipped = $false
+		$outcome = 'NotMeasured'
 		if (-not (Test-SelfXIPv4Literal $target.Host)) {
 			$dns = Measure-SelfXDnsLatency -HostName $target.Host -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline
 			$info = ConvertTo-SelfXLatencyInfo $dns
-			$items.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Dns' $target.Label) ('{0}: {1}' -f $target.Host, $info.Value) $info.Status))
+			$details.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Dns' $target.Label) (Format-SelfXMeasureValue $target.Host $info.Value $showHosts) $info.Status))
 			$address = $dns.Address
 			$dnsSkipped = ($dns.Skipped -and -not $dns.Stats.Sent)
+			$outcome = Get-SelfXMeasurementOutcome $dns
 		}
 		if ($target.Port -gt 0) {
 			if ($address) {
-				$info = ConvertTo-SelfXLatencyInfo (Measure-SelfXTcpLatency -Address $address -Port $target.Port -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline)
+				$tcp = Measure-SelfXTcpLatency -Address $address -Port $target.Port -Samples $Config.Samples -TimeoutMs $Config.TimeoutMs -Deadline $deadline
+				$info = ConvertTo-SelfXLatencyInfo $tcp
+				$outcome = Get-SelfXMeasurementOutcome $tcp
 			} elseif ($dnsSkipped) {
 				$info = [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Skipped'); Status = '' }
+				$outcome = 'NotMeasured'
 			} else {
 				$info = [pscustomobject]@{ Value = (Get-SelfXInfoText 'Latency_Failed' $Config.Samples $Config.Samples); Status = 'Error' }
+				$outcome = 'Failed'
 			}
-			$items.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Connection' $target.Label) ('{0}:{1}: {2}' -f $target.Host, $target.Port, $info.Value) $info.Status))
+			$details.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Latency_Connection' $target.Label) (Format-SelfXMeasureValue ('{0}:{1}' -f $target.Host, $target.Port) $info.Value $showHosts) $info.Status))
+		}
+		if ($reached.ContainsKey($group)) {
+			if ($outcome -eq 'Reached') { $reached[$group]++ }
+			elseif ($outcome -eq 'Failed') {
+				$failed[$group]++
+				if ($group -eq 'Company') { $companyFailedKinds.Add("$($target.Kind)") }
+			}
 		}
 	}
-	return $items.ToArray()
+	$summary = New-Object System.Collections.Generic.List[object]
+	$states = @{}
+	foreach ($group in $Script:SelfXNetworkGroups) {
+		if ($group -eq 'Microsoft' -and -not $useMicrosoft) { $states[$group] = 'None'; continue }
+		$state = Get-SelfXGroupState -Reached $reached[$group] -Failed $failed[$group]
+		$states[$group] = $state
+		$total = $reached[$group] + $failed[$group]
+		$text = $(if ($state -eq 'None') { Get-SelfXInfoText 'Check_State_None' } else { Get-SelfXInfoText "Check_State_$state" $reached[$group] $total })
+		$summary.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText "Check_$group") $text (Get-SelfXCheckStatus $state)))
+	}
+	$vpnExpected = ($companyFailedKinds.Count -eq 0) -or (@($companyFailedKinds | Where-Object { $_ -ne 'Intranet' }).Count -gt 0)
+	$verdict = Get-SelfXConnectionVerdict -Local $states['Local'] -Internet $states['Internet'] -Microsoft $states['Microsoft'] -Company $states['Company'] -CompanyVpnExpected $vpnExpected
+	$summary.Add((New-SelfXInfoItem $Category (Get-SelfXInfoText 'Check_Result') (Get-SelfXInfoText "Verdict_$verdict") (Get-SelfXVerdictStatus $verdict)))
+	return (@($summary.ToArray()) + @($details.ToArray()))
 }
 
 # Collects all information and returns a list of Category/Property/Value objects.
@@ -778,7 +912,8 @@ function Get-SelfXSystemInfo {
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WWAN_Connected') (& $yesNo $wwanUp)))
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WiFi_SSID') $(if ($ssid) { $ssid } else { Get-SelfXInfoText 'No_WiFi' })))
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'VPN_Connected') (& $yesNo (Test-SelfXVpnConnection))))
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Internet_Reachable') (& $yesNo (Test-SelfXTcpConnection -HostName $InternetTestHost -Port $InternetTestPort))))
+	$internetReachable = [bool](Test-SelfXTcpConnection -HostName $InternetTestHost -Port $InternetTestPort)
+	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Internet_Reachable') (& $yesNo $internetReachable)))
 
 	$nics = @(Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Filter 'IPEnabled = True' -ErrorAction Stop })
 	$ipv4 = @($nics | ForEach-Object { $_.IPAddress } | Where-Object { $_ -match '^\d{1,3}(\.\d{1,3}){3}$' } | Sort-Object -Unique)
@@ -794,10 +929,10 @@ function Get-SelfXSystemInfo {
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Proxy') (ConvertTo-SelfXProxyText $proxySettings)))
 	$driveLetters = Invoke-SelfXSafe { @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq [IO.DriveType]::Network } | ForEach-Object { $_.Name.TrimEnd('\') }) }
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Network_Drives') (Get-SelfXNetworkDriveText $driveLetters)))
-	# Optional latency measurements (only with an enabled Network_Test_Config.xml).
+	# Optional connection check and latency measurements (only with an enabled Network_Test_Config.xml).
 	if ($NetworkTestConfigPath -and (Test-Path -LiteralPath $NetworkTestConfigPath -PathType Leaf)) {
 		$measureConfig = Invoke-SelfXSafe { Read-SelfXNetworkTestConfig -Path $NetworkTestConfigPath }
-		foreach ($measureItem in @(Invoke-SelfXSafe { Get-SelfXNetworkMeasureItems -Category $catNetwork -Config $measureConfig -Gateways $gateways })) {
+		foreach ($measureItem in @(Invoke-SelfXSafe { Get-SelfXNetworkMeasureItems -Category $catNetwork -Config $measureConfig -Gateways $gateways -InternetTestReachable $internetReachable })) {
 			if ($measureItem) { $items.Add($measureItem) }
 		}
 	}
