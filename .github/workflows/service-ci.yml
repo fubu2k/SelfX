@@ -87,8 +87,8 @@ jobs:
           Write-Output 'No findings.'
 
   # Signing library (tools\SelfXSigning.ps1, trust mode "signature"): signs and checks with self-signed certificates that the test creates in
-  # Cert:\CurrentUser\My of the runner (never LocalMachine) and removes again; their public parts are trusted in Cert:\CurrentUser\Root for the
-  # time of the test. Both PowerShell editions, in parallel. The expiry tests (about 3 minutes) and the time stamp test run here only.
+  # Cert:\CurrentUser\My of the runner and removes again; their public parts are trusted in Cert:\LocalMachine\Root for the
+  # time of the test (the runner has administrator rights; Windows asks a question for Cert:\CurrentUser\Root). Both PowerShell editions, in parallel. The expiry tests (about 3 minutes) and the time stamp test run here only.
   signing-library:
     name: Signing library (${{ matrix.edition }})
     runs-on: windows-latest

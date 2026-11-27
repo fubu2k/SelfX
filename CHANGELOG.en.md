@@ -40,6 +40,11 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
   step, anchor in a test key below HKCU, the same answers as `tools\SelfXSigning.ps1`; with a trusted test root also real signatures and
   catalogs), `Test-Detection.ps1` (anchor). Not part of this change: the package tools do not sign yet, and the service does not read
   the anchor yet.
+- **Fix (tests): `tools\Test-SelfXSigning.ps1` no longer stops the CI jobs "Signing library".** Part 2 added its test certificates to
+  `Cert:\CurrentUser\Root`; Windows shows a question there, and a process without a desktop waits for it until the job is cancelled.
+  With administrator rights the test now uses `Cert:\LocalMachine\Root` (no question); on GitHub Actions part 2 runs only with
+  administrator rights. Two expectations follow what Windows reports: a script with text added after the signature block has the status
+  `NotSigned`, a script changed before the block `HashMismatch`. `tools\SelfXSigning.ps1` is unchanged.
 - **Signing library (`tools\SelfXSigning.ps1`, tools only, not part of the package):** Functions for the trust mode "signature"
   (docs/Architecture.md), working in Windows PowerShell 5.1 and PowerShell 7: `Get-SelfXSigningCertificate` (certificates of
   `Cert:\CurrentUser\My` and `Cert:\LocalMachine\My` with private key, key usage Code Signing and a valid period, or a PFX file with a

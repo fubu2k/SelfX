@@ -10,10 +10,12 @@
     created in memory).
 
     Part 2 needs Windows. The test creates self-signed certificates with New-SelfSignedCertificate in Cert:\CurrentUser\My only
-    (never in LocalMachine) and removes them (with the private key) at the end. The checks of the signature status need a trusted
-    root: for them the test adds the public part of the test certificates to Cert:\CurrentUser\Root and removes it at the end.
-    Windows asks for a confirmation when a root is added on an interactive desktop, so this part runs only on GitHub Actions
-    or when the variable SELFX_TEST_ALLOW_ROOT_IMPORT=1 is set; otherwise it is skipped (and said so).
+    and removes them (with the private key) at the end. The checks of the signature status need a trusted root: for them the test
+    adds the public part of the test certificates to the trusted roots and removes it at the end. With administrator rights that
+    is Cert:\LocalMachine\Root, where Windows asks nothing; without, Cert:\CurrentUser\Root, where Windows shows a question that
+    somebody has to answer (a process without a desktop waits for ever). So this part runs on GitHub Actions only with
+    administrator rights, and elsewhere only when the variable SELFX_TEST_ALLOW_ROOT_IMPORT=1 is set; otherwise it is skipped
+    (and said so).
 
     SELFX_TEST_SLOW=1                  also runs the tests with a certificate that expires during the test (about 3 minutes).
     SELFX_TEST_TIMESTAMP_URL=<http(s)> time stamp server for the test "expired with time stamp". A server that cannot be
@@ -33,6 +35,9 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version
+    3.1.0    2026-11-27  fubu2k               Test roots in Cert:\LocalMachine\Root with administrator rights (the question of Windows for
+                                              Cert:\CurrentUser\Root stopped the CI jobs); a script with text after the signature block is
+                                              NotSigned, a script changed before it is HashMismatch
 #>
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -213,7 +218,9 @@ try {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
         Skip 'Part 2 (signing, catalog, signature status)' 'needs Windows'
     } else {
-        $canTrust = ($env:GITHUB_ACTIONS -eq 'true') -or ($env:SELFX_TEST_ALLOW_ROOT_IMPORT -eq '1')
+        $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        $rootLocation = $(if ($isAdmin) { 'LocalMachine' } else { 'CurrentUser' })
+        $canTrust = (($env:GITHUB_ACTIONS -eq 'true') -and $isAdmin) -or ($env:SELFX_TEST_ALLOW_ROOT_IMPORT -eq '1')
         $slow = ($env:SELFX_TEST_SLOW -eq '1')
         $timestampUrl = $env:SELFX_TEST_TIMESTAMP_URL
         $createdMy = New-Object System.Collections.Generic.List[string]
@@ -239,7 +246,7 @@ try {
         }
         function Add-TestRoot {
             param($Certificate)
-            $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+            $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', $rootLocation)
             $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
             try { $store.Add((New-Object System.Security.Cryptography.X509Certificates.X509Certificate2(, $Certificate.RawData))) } finally { $store.Close() }
             $addedRoot.Add($Certificate.Thumbprint)
@@ -331,9 +338,9 @@ try {
             } else { Skip 'folder with a junction is refused' 'the junction could not be created' }
 
             if (-not $canTrust) {
-                Skip 'Part 2: signatures, catalog, expiry' 'a trusted root is needed; set SELFX_TEST_ALLOW_ROOT_IMPORT=1 (adds the test certificates to Cert:\CurrentUser\Root until the end of the test) or run on GitHub Actions'
+                Skip 'Part 2: signatures, catalog, expiry' 'a trusted root is needed; set SELFX_TEST_ALLOW_ROOT_IMPORT=1 (adds the test certificates to the trusted roots until the end of the test: Cert:\LocalMachine\Root with administrator rights, otherwise Cert:\CurrentUser\Root with a question of Windows) or run on GitHub Actions'
             } else {
-                Write-Host 'Part 2: trusted test roots (Cert:\CurrentUser\Root)'
+                Write-Host "Part 2: trusted test roots (Cert:\$rootLocation\Root)"
                 Add-TestRoot $certA
                 Add-TestRoot $certB
 
@@ -346,9 +353,14 @@ try {
                 Assert ((Test-SelfXSignature -Path $plain -AllowedThumbprint @($thumbB, $thumbA.ToLowerInvariant())).IsValid) 'valid: the signer is one of several allowed signers (any case)'
                 $wrong = Test-SelfXSignature -Path $plain -AllowedThumbprint $thumbB
                 Assert ((-not $wrong.IsValid) -and $wrong.Status -eq 'Valid' -and $wrong.Reason -eq 'SignerNotAllowed') 'wrong signer: status Valid but not in the list (SignerNotAllowed)'
-                Add-Content -LiteralPath $other -Value '# changed after signing'
+                [IO.File]::WriteAllText($other, "Write-Output 'changed after signing'`r`n" + [IO.File]::ReadAllText($other), (New-Object System.Text.UTF8Encoding($false)))
                 $changed = Test-SelfXSignature -Path $other -AllowedThumbprint $thumbA
-                Assert ((-not $changed.IsValid) -and $changed.Reason -eq 'HashMismatch') 'a file changed after signing is not valid (HashMismatch)'
+                Assert ((-not $changed.IsValid) -and $changed.Reason -eq 'HashMismatch') "a file changed before the signature block is not valid (HashMismatch; found $($changed.Reason))"
+                $appended = Join-Path $work 'appended.ps1'; Write-TestScript $appended
+                $null = Set-SelfXCodeSignature -Path $appended -Certificate $certA
+                Add-Content -LiteralPath $appended -Value '# added after the signature block'
+                $afterBlock = Test-SelfXSignature -Path $appended -AllowedThumbprint $thumbA
+                Assert ((-not $afterBlock.IsValid) -and $afterBlock.Reason -eq 'NotSigned') "a script with text added after the signature block is not valid (NotSigned; found $($afterBlock.Reason))"
                 $notSupported = Test-SelfXSignature -Path $xml -AllowedThumbprint $thumbA
                 Assert (-not $notSupported.IsValid) 'an XML file has no signature and is not valid'
 
@@ -457,7 +469,7 @@ try {
         } finally {
             Write-Host 'Part 2: cleanup'
             foreach ($thumbprint in $addedRoot) {
-                $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+                $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', $rootLocation)
                 $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
                 try { foreach ($entry in @($store.Certificates | Where-Object { $_.Thumbprint -eq $thumbprint })) { $store.Remove($entry) } } finally { $store.Close() }
             }
@@ -470,9 +482,9 @@ try {
                 }
             }
             $leftMy = @(Get-ChildItem Cert:\CurrentUser\My | Where-Object { $createdMy -contains $_.Thumbprint })
-            $leftRoot = @(Get-ChildItem Cert:\CurrentUser\Root | Where-Object { $addedRoot -contains $_.Thumbprint })
+            $leftRoot = @(Get-ChildItem "Cert:\$rootLocation\Root" | Where-Object { $addedRoot -contains $_.Thumbprint })
             Assert ($leftMy.Count -eq 0) 'no test certificate is left in Cert:\CurrentUser\My'
-            Assert ($leftRoot.Count -eq 0) 'no test certificate is left in Cert:\CurrentUser\Root'
+            Assert ($leftRoot.Count -eq 0) 'no test certificate is left in the trusted roots'
         }
     }
 } finally {
