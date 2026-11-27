@@ -228,8 +228,9 @@ thumbprint of the signing certificate to the install command:
   the company network it should be an HTTP address that is reachable from the internet. A list
   that cannot be reached does not stop the installation (default setting of Windows) but can slow
   it down; `tools\Measure-SelfXRevocationDelay.ps1` measures this on a test device.
-- The package tools do not sign yet: the package has to be signed with `tools\SelfXSigning.ps1`
-  until the wizard does it.
+- The package wizard signs the package (page **Signature** of the window, or `-CertificateThumbprint` /
+  `-PfxPath` in the console) and writes the install command with `-TrustedSigner`. How to get the
+  certificate, how devices trust it and how to change it: [Code signing certificate](Certificate-Guide.md).
 
 ### 3.2 PowerShell 7 as its own Win32 app
 

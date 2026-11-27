@@ -236,8 +236,10 @@ kommt der Fingerabdruck des Signaturzertifikats in den Installationsbefehl:
   Firmennetzes sollte das eine aus dem Internet erreichbare HTTP-Adresse sein. Eine nicht
   erreichbare Liste bricht die Installation nicht ab (Standardeinstellung von Windows), kann sie
   aber verlangsamen; `tools\Measure-SelfXRevocationDelay.ps1` misst das auf einem Testgerät.
-- Die Paketwerkzeuge signieren noch nicht: Das Paket wird mit `tools\SelfXSigning.ps1` signiert,
-  bis der Assistent das übernimmt.
+- Der Paketassistent signiert das Paket (Seite **Signatur** des Fensters oder `-CertificateThumbprint` /
+  `-PfxPath` in der Konsole) und schreibt den Installationsbefehl mit `-TrustedSigner`. Wie Sie das
+  Zertifikat bekommen, wie die Geräte ihm vertrauen und wie Sie es wechseln:
+  [Codesignatur-Zertifikat](Zertifikat.md).
 
 ### 3.2 PowerShell 7 als eigene Win32-App
 

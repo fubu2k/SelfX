@@ -29,9 +29,10 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 | Branding | Logo (Dateiauswahl, Vorschau) und Firmenfarbe; das Fenster zeigt die Farbe sofort |
 | Ticket | Ticket-E-Mail und, bei mehreren Organisationen, ein Postfach je Organisation, zugeordnet über Gruppentag, OU oder Geräteklasse |
 | Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
+| Signatur | Kein Zertifikat (Vertrauensmodus Hash), Zertifikat aus dem Speicher (nur geeignete, gültige) oder PFX-Datei mit Kennwort; Zeitstempeldienst; weitere Signierer für einen Zertifikatswechsel. Zeigt Antragsteller, Aussteller, Ablauf, Fingerabdruck und die Sperrlisten-Adressen mit Warnungen. Siehe [Codesignatur-Zertifikat](Zertifikat.md) |
 | Zusammenfassung | Ihre Antworten, Paketordner, Ausgabeordner, `IntuneWinAppUtil.exe`, „Nur die Konfiguration schreiben“ |
 | Intune-Paket bauen | Ein Klick; eine Liste zeigt jeden Schritt; **Abbrechen** beendet den Bau, der Ausgabeordner bleibt unverändert |
-| Ergebnis | Dateien, **Ordner öffnen**, **Anleitung kopieren** und die Anleitung für Intune |
+| Ergebnis | Dateien, **Ordner öffnen**, **Anleitung kopieren** und die Schritte für Intune als Karten mit Kopieren-Schaltflächen (App-Name, Installations- und Deinstallationsbefehl mit `-TrustedSigner`, Anforderungsskript, Erkennungsskript, Fingerabdrücke, ASR-Dateiliste) |
 
 ![Fenster des Paketassistenten: Seite Branding mit Logo-Vorschau und Firmenfarbe](../images/selfx-wizard-branding-de.png)
 
@@ -44,14 +45,15 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 - Tastatur: Tab wechselt zwischen den Feldern, Enter ist **Weiter**, die unterstrichenen Buchstaben gehen mit Alt. Screenreader lesen
   Name, Empfehlung und Fehler jedes Feldes vor.
 - Das Fenster folgt dem hellen oder dunklen Modus von Windows und verwendet Farben und Stile von SelfX.
-- Noch nicht im Fenster: das Signieren (Vertrauensmodus Signatur; dafür die Konsole mit `-CertificateThumbprint` oder `-PfxPath`) und
-  die Netzwerkziele des Verbindungstests.
+- Das Kennwort einer PFX-Datei wird einmal zum Öffnen verwendet, danach wird das Feld geleert; es wird nie angezeigt, gespeichert oder
+  in `selfx-answers.json` geschrieben. Das Zertifikat wird nicht in einen Speicher importiert.
+- Noch nicht im Fenster: die Netzwerkziele des Verbindungstests.
 
 ![Fenster des Paketassistenten: Bau mit Fortschrittsliste](../images/selfx-wizard-build-de.png)
 
 ![Fenster des Paketassistenten: Ergebnis mit der Anleitung für Intune](../images/selfx-wizard-result-de.png)
 
-Die Konsolenfassung unten bleibt für die Automatisierung (Antwortdatei) und für das Signieren.
+Die Konsolenfassung unten bleibt für die Automatisierung (Antwortdatei).
 
 ## Aufruf
 
@@ -83,6 +85,7 @@ Wichtige Parameter:
 | `-CertificateThumbprint <Fingerabdruck>` | Vertrauensmodus Signatur: signiert mit diesem Codesignatur-Zertifikat aus dem Zertifikatspeicher. |
 | `-PfxPath <Datei>` | Vertrauensmodus Signatur: signiert mit einer PFX-Datei. Der Assistent fragt das Kennwort ab (verdeckt, wird nie gespeichert). |
 | `-TimestampServer <Adresse>` | Zeitstempeldienst (`http` oder `https`) für die Signaturen. Empfohlen. |
+| `-AdditionalSigner <Fingerabdruck>` | Zertifikatswechsel: weitere Fingerabdrücke für `-TrustedSigner` im Installationsbefehl (damit wird nichts signiert; höchstens 9). |
 
 ## Die Fragen
 
