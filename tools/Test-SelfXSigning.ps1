@@ -242,8 +242,20 @@ try {
             param($Certificate)
             $file = Join-Path $work ($Certificate.Thumbprint + '.cer')
             [IO.File]::WriteAllBytes($file, $Certificate.RawData)
-            $null = & certutil.exe -user -addstore -f Root $file 2>&1
-            if ($LASTEXITCODE -ne 0) { throw "certutil could not add the test certificate to Cert:\CurrentUser\Root (exit code $LASTEXITCODE)." }
+            $outFile = Join-Path $work 'certutil.out.txt'
+            $errFile = Join-Path $work 'certutil.err.txt'
+            $process = Start-Process -FilePath 'certutil.exe' -ArgumentList '-user', '-addstore', '-f', 'Root', "`"$file`"" -PassThru -NoNewWindow `
+                -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+            $null = $process.Handle
+            if (-not $process.WaitForExit(60000)) {
+                & taskkill.exe /PID $process.Id /T /F | Out-Null
+                throw 'certutil did not end within 60 seconds (waiting for a confirmation dialog?).'
+            }
+            $process.WaitForExit()
+            if ($process.ExitCode -ne 0) {
+                $detail = ((Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue) -join ' ')
+                throw "certutil could not add the test certificate to Cert:\CurrentUser\Root (exit code $($process.ExitCode)): $(ConvertTo-SelfXSafeText $detail)"
+            }
             $addedRoot.Add($Certificate.Thumbprint)
         }
         function Write-TestScript {
@@ -456,9 +468,11 @@ try {
                 }
             }
             $fromStorePfx.Dispose()
+        } catch {
+            Assert $false "unexpected error in part 2: $(ConvertTo-SelfXSafeText $_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
         } finally {
             Write-Host 'Part 2: cleanup'
-            foreach ($thumbprint in $addedRoot) { $null = & certutil.exe -user -delstore Root $thumbprint 2>&1 }
+            foreach ($thumbprint in $addedRoot) { $null = Start-Process -FilePath 'certutil.exe' -ArgumentList '-user', '-delstore', 'Root', $thumbprint -NoNewWindow -Wait -PassThru }
             foreach ($thumbprint in $createdMy) {
                 $entry = "Cert:\CurrentUser\My\$thumbprint"
                 if (Test-Path -LiteralPath $entry) {
