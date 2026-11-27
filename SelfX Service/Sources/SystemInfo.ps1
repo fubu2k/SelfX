@@ -37,6 +37,7 @@
     2.8.26   2026-11-24  fubu2k               Export: the file name is used literally (-LiteralPath); a name with [ ] from the save dialog no longer fails or matches other files
     3.1.0    2026-11-27  fubu2k               Connection check with verdict: targets get Group (Local, Internet, Microsoft, Company) and Kind (Vpn, Intranet), up to 12 targets,
                                               four group rows and one result sentence (pure function Get-SelfXConnectionVerdict), 15 second limit, setting HostNames
+    3.1.0    2026-11-27  fubu2k               Health rows carry UserRemediation (part of a repair that SelfX runs in the context of the user)
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -231,6 +232,8 @@ function ConvertTo-SelfXHealthInfo {
         $value = (Get-SelfXInfoText "Health_$($result.Status)") + ' - ' + $detailText
         $item = New-SelfXInfoItem (Get-SelfXInfoText 'Category_Health') $property $value $result.Status
         $item | Add-Member -NotePropertyName Remediation -NotePropertyValue "$($result.Remediation)"
+        # Optional first part of the repair in the context of the user (Health_Config.xml UserScript).
+        $item | Add-Member -NotePropertyName UserRemediation -NotePropertyValue "$($result.UserRemediation)"
         # Technical identity of the check, used by the per-row recheck button.
         $item | Add-Member -NotePropertyName HealthId -NotePropertyValue "$($result.Id)"
         $item | Add-Member -NotePropertyName HealthName -NotePropertyValue "$($result.Name)"
@@ -259,6 +262,7 @@ function Get-SelfXHealthCheckInfo {
         if ($Name) { $property += " ($Name)" }
         $item = New-SelfXInfoItem (Get-SelfXInfoText 'Category_Health') $property (Get-SelfXInfoText 'Health_Unavailable' $_.Exception.Message) 'Unknown'
         $item | Add-Member -NotePropertyName Remediation -NotePropertyValue ''
+        $item | Add-Member -NotePropertyName UserRemediation -NotePropertyValue ''
         $item | Add-Member -NotePropertyName HealthId -NotePropertyValue $Id
         $item | Add-Member -NotePropertyName HealthName -NotePropertyValue $Name
         $item | Add-Member -NotePropertyName Detail -NotePropertyValue (Get-SelfXInfoText 'Health_Unavailable' $_.Exception.Message)

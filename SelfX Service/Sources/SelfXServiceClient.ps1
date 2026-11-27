@@ -18,7 +18,7 @@
     Name    : SelfXServiceClient.ps1
     Package : SelfX Service
     Context : GUI helper
-    Version : 2.6.10
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -28,6 +28,8 @@
                                               the pipe is the running SelfXService (process ID from the service control
                                               manager); a process of a user that created the pipe name while the service
                                               was stopped is refused
+    3.1.0    2026-11-27  fubu2k               Health results may carry UserRemediation (first part of a repair in the context of the user);
+                                              checked with the same name rule and only together with a Remediation
 #>
 
 $Script:SelfXDefaultPipeName = 'SelfX.Service'
@@ -236,6 +238,8 @@ function ConvertFrom-SelfXHealthJson {
             $null -eq $item.Detail) { throw 'Invalid health result.' }
         if ($item.Remediation -and ("$($item.Remediation)" -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,90}\.ps1$' -or
             "$($item.Remediation)".Contains('..'))) { throw 'Invalid health remediation filename.' }
+        if ($item.UserRemediation -and ("$($item.UserRemediation)" -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,90}\.ps1$' -or
+            "$($item.UserRemediation)".Contains('..') -or -not $item.Remediation)) { throw 'Invalid health remediation filename.' }
     }
     return $items
 }

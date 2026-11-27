@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update مکمل ہو گیا۔ ڈیوائس کی حالت دوبارہ جانچی جا رہی ہے اور دکھاتی ہے کہ آیا دوبارہ شروع کرنا ضروری ہے۔</Health_Updates_Done>
 		<Health_Apps_Button>دوبارہ کوشش کریں</Health_Apps_Button>
 		<Health_Apps_Started>ناکام ایپس کی انسٹالیشن دوبارہ شروع ہو رہی ہے۔ اس میں چند منٹ لگ سکتے ہیں؛ آپ اسے کمپنی پورٹل میں دیکھ سکتے ہیں۔</Health_Apps_Started>
+		<Health_FreeSpace_Button>جگہ خالی کریں</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>جگہ خالی کریں</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX ڈرائیو {0} پر جگہ خالی کرتا ہے۔ یہ حذف کیا جاتا ہے:&#10;• آپ کی ری سائیکل بن کا مواد (واپس نہیں ہو سکتا)&#10;• آپ کی عارضی فائلیں&#10;• Teams کیش، صرف جب Teams بند ہو (ہو سکتا ہے آپ کو Teams میں دوبارہ سائن ان کرنا پڑے)&#10;• Windows کی غیر ضروری فائلیں: پرانے اپڈیٹ اجزاء، ڈاؤن لوڈ کیش، پرانی عارضی سسٹم فائلیں اور کمپنی ایپس کی پرانی انسٹالیشن فائلیں&#10;&#10;آپ کی دستاویزات، ترتیبات اور پروگرام برقرار رہتے ہیں۔ اس میں ایک گھنٹے تک لگ سکتا ہے؛ آپ کام جاری رکھ سکتے ہیں۔&#10;&#10;کیا ابھی جگہ خالی کریں؟</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>جگہ خالی کرنا مکمل ہو گیا۔ {0} پر خالی جگہ: پہلے {1} GB، اب {2} GB۔</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>جگہ خالی کرنا مکمل ہو گیا، لیکن ہر قدم کامیاب نہیں ہوا۔ {0} پر خالی جگہ: پہلے {1} GB، اب {2} GB۔ اگر مسئلہ برقرار رہے تو IT سپورٹ سے رابطہ کریں۔</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams کھلا تھا، اس لیے اس کا کیش رکھا گیا۔ مزید جگہ خالی کرنے کے لیے Teams بند کریں اور جگہ خالی کریں دوبارہ چلائیں۔</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>فوری اسکین مکمل ہو گئی۔ Microsoft Defender کو کوئی خطرہ نہیں ملا۔</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>فوری اسکین مکمل ہو گئی۔ Microsoft Defender کو خطرات ملے ہیں اور وہ انہیں آپ کی کمپنی کی ترتیب کے مطابق سنبھالتا ہے۔ تفصیلات کے لیے Windows سکیورٹی کھولیں۔</Defender_Scan_Threats_Text>
 		<Health_Check_Button>ٹھیک ہے</Health_Check_Button>

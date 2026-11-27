@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update is klaar. De apparaatstatus wordt opnieuw gecontroleerd en toont of opnieuw opstarten nodig is.</Health_Updates_Done>
 		<Health_Apps_Button>Opnieuw proberen</Health_Apps_Button>
 		<Health_Apps_Started>De installatie van de mislukte apps wordt opnieuw gestart. Dit kan enkele minuten duren; u kunt het volgen in de Bedrijfsportal.</Health_Apps_Started>
+		<Health_FreeSpace_Button>Ruimte vrijmaken</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>Ruimte vrijmaken</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX maakt ruimte vrij op station {0}. Verwijderd worden:&#10;• de inhoud van uw prullenbak (kan niet ongedaan worden gemaakt)&#10;• uw tijdelijke bestanden&#10;• de Teams-cache, alleen als Teams gesloten is (mogelijk moet u zich opnieuw aanmelden bij Teams)&#10;• Windows-bestanden die niet meer nodig zijn: oude updateonderdelen, de downloadcache, oude tijdelijke systeembestanden en oude installatiebestanden van bedrijfsapps&#10;&#10;Uw documenten, instellingen en programma's blijven behouden. Dit kan tot een uur duren; u kunt blijven werken.&#10;&#10;Nu ruimte vrijmaken?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>Ruimte vrijmaken is klaar. Vrije ruimte op {0}: eerst {1} GB, nu {2} GB.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>Ruimte vrijmaken is klaar, maar niet elke stap is gelukt. Vrije ruimte op {0}: eerst {1} GB, nu {2} GB. Blijft het probleem, neem dan contact op met de IT-support.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams was geopend, daarom is de cache bewaard. Sluit Teams en voer Ruimte vrijmaken opnieuw uit om meer ruimte vrij te maken.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>De snelle scan is voltooid. Microsoft Defender heeft geen bedreigingen gevonden.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>De snelle scan is voltooid. Microsoft Defender heeft bedreigingen gevonden en behandelt ze volgens de instellingen van uw bedrijf. Open Windows-beveiliging voor details.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>

@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows 更新已完成。将重新检查设备状态，并显示是否需要重新启动。</Health_Updates_Done>
 		<Health_Apps_Button>重试</Health_Apps_Button>
 		<Health_Apps_Started>正在重新开始安装失败的应用。这可能需要几分钟；您可以在公司门户中查看进度。</Health_Apps_Started>
+		<Health_FreeSpace_Button>释放空间</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>释放空间</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX 将释放驱动器 {0} 上的空间。将删除:&#10;• 回收站中的内容 (无法撤消)&#10;• 你的临时文件&#10;• Teams 缓存,仅在 Teams 关闭时 (可能需要重新登录 Teams)&#10;• 不再需要的 Windows 文件:旧的更新组件、下载缓存、旧的临时系统文件以及公司应用的旧安装文件&#10;&#10;你的文档、设置和程序保持不变。这可能需要长达一小时;你可以继续工作。&#10;&#10;现在释放空间?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>释放空间已完成。{0} 上的可用空间:之前 {1} GB,现在 {2} GB。</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>释放空间已完成,但并非所有步骤都成功。{0} 上的可用空间:之前 {1} GB,现在 {2} GB。如果问题仍然存在,请联系 IT 支持。</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams 处于打开状态,因此保留了其缓存。关闭 Teams 后再次运行“释放空间”可以释放更多空间。</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>快速扫描已完成。Microsoft Defender 未发现威胁。</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>快速扫描已完成。Microsoft Defender 发现了威胁，并按公司的设置进行处理。请在 Windows 安全中心查看详细信息。</Defender_Scan_Threats_Text>
 		<Health_Check_Button>确定</Health_Check_Button>

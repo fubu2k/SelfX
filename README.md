@@ -195,6 +195,11 @@ menu opens SelfX, checks the status or sends the logs.
   - Your own read-only check scripts.
 - **Configurable repairs:** map any check to a repair script and choose whether
   the **Fix** button is shown always or only when the check is not OK.
+- **Free up space:** on a full system drive, one button empties the user's
+  recycle bin and temporary files (and the Teams cache while Teams is closed),
+  then cleans the component store, the Delivery Optimization cache and old files
+  in `Windows\Temp` and of the Intune Management Extension as SYSTEM. SelfX lists
+  what is deleted before it starts and shows the free space before and after.
 - **Logging**
   - All scripts log to `%ProgramData%\SelfX\Logs`; each user's logs go to their
     own, protected folder.

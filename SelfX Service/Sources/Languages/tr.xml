@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update tamamlandı. Cihaz durumu yeniden denetleniyor ve yeniden başlatma gerekip gerekmediğini gösteriyor.</Health_Updates_Done>
 		<Health_Apps_Button>Yeniden dene</Health_Apps_Button>
 		<Health_Apps_Started>Yüklenemeyen uygulamaların yüklemesi yeniden başlatılıyor. Bu birkaç dakika sürebilir; Şirket Portalı’nda izleyebilirsiniz.</Health_Apps_Started>
+		<Health_FreeSpace_Button>Yer aç</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>Yer aç</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX {0} sürücüsünde yer açar. Şunlar silinir:&#10;• Geri Dönüşüm Kutunuzun içeriği (geri alınamaz)&#10;• geçici dosyalarınız&#10;• Teams önbelleği, yalnızca Teams kapalıysa (Teams'e yeniden oturum açmanız gerekebilir)&#10;• artık gerekmeyen Windows dosyaları: eski güncelleme bileşenleri, indirme önbelleği, eski geçici sistem dosyaları ve şirket uygulamalarının eski kurulum dosyaları&#10;&#10;Belgeleriniz, ayarlarınız ve programlarınız korunur. Bu işlem bir saate kadar sürebilir; çalışmaya devam edebilirsiniz.&#10;&#10;Şimdi yer açılsın mı?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>Yer açma tamamlandı. {0} üzerindeki boş alan: önce {1} GB, şimdi {2} GB.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>Yer açma tamamlandı ancak her adım başarılı olmadı. {0} üzerindeki boş alan: önce {1} GB, şimdi {2} GB. Sorun devam ederse BT desteğine başvurun.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams açıktı, bu yüzden önbelleği korundu. Daha fazla yer açmak için Teams'i kapatıp Yer aç işlemini yeniden çalıştırın.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>Hızlı tarama tamamlandı. Microsoft Defender tehdit bulmadı.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>Hızlı tarama tamamlandı. Microsoft Defender tehditler buldu ve bunları şirketinizin belirlediği şekilde işliyor. Ayrıntılar için Windows Güvenliği'ni açın.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>Tamam</Health_Check_Button>

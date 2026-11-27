@@ -10,6 +10,8 @@
     2.3.0  2026-10-28  Wolfgang Baeck  Initial isolated health-check tests.
         2.6.10 2026-11-22  fubu2k          Test the pipe limits (connections per user, pause after an action) and the read deadline.
         2.6.12 2026-11-23  fubu2k          Test the CSV export against formula injection (finding N7).
+        3.1.0  2026-11-27  fubu2k          Repairs with two parts (UserScript / UserRemediation): collection, client check, service whitelist,
+                                           "Free up space" in SelfX (user part, then SYSTEM part, result text, never in "Fix all problems").
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -322,6 +324,25 @@ try {
     $remConfig.Save("$temp\Health_Config.xml")
     Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'Remediation exact name matching'
     $repair.RemoveAttribute('Name')
+    # Two parts: UserScript is returned as UserRemediation (plain file name, never the SYSTEM script itself).
+    $repair.SetAttribute('UserScript','Repair-IME-User.ps1')
+    $remConfig.Save("$temp\Health_Config.xml")
+    $twoParts = @(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0]
+    Assert-Equal "$($twoParts.Remediation)/$($twoParts.UserRemediation)" 'Repair-IME.ps1/Repair-IME-User.ps1' 'UserScript returned as UserRemediation'
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq Defender)[0].UserRemediation) '' 'No UserRemediation without UserScript'
+    foreach ($bad in @('..\user.ps1', 'C:\user.ps1', 'user.ps1;calc', 'user.cmd', 'Repair-IME.ps1')) {
+        $repair.SetAttribute('UserScript', $bad)
+        $remConfig.Save("$temp\Health_Config.xml")
+        Assert-Equal "$(@(Get-SelfXHealth -Root $temp)[0].Status)/$(@(Get-SelfXHealth -Root $temp)[0].Detail.Contains('UserScript'))" 'Error/True' "Reject UserScript '$bad'"
+    }
+    $repair.RemoveAttribute('UserScript')
+    # The delivered "Free up space" repair: both parts on the row of drive C: while it is not OK, nothing while it is OK.
+    $remConfig.Save("$temp\Health_Config.xml")
+    $script:disks = @([pscustomobject]@{ DeviceID='C:'; Size=500GB; FreeSpace=5GB }, [pscustomobject]@{ DeviceID='D:'; Size=500GB; FreeSpace=1GB })
+    $diskRows = @(Get-SelfXHealth -Root $temp -OnlyId Disk)
+    Assert-Equal (($diskRows | ForEach-Object { "$($_.Name)=$($_.Remediation)+$($_.UserRemediation)" }) -join ';') 'C:=SelfX_Device_FreeSpace.ps1+SelfX_Device_FreeSpaceUser.ps1;D:=+' 'Free up space offered on the full system drive only'
+    $script:disks = @([pscustomobject]@{ DeviceID='C:'; Size=500GB; FreeSpace=100GB })
+    Assert-Equal "$(@(Get-SelfXHealth -Root $temp -OnlyId Disk)[0].Remediation)/$(@(Get-SelfXHealth -Root $temp -OnlyId Disk)[0].UserRemediation)" '/' 'Free up space hidden while the disk is OK'
     $repair.SetAttribute('Script','..\outside.ps1')
     $remConfig.Save("$temp\Health_Config.xml")
     Assert-Equal (@(Get-SelfXHealth -Root $temp)[0].Status) Error 'Reject remediation traversal'
@@ -417,6 +438,12 @@ try {
     Assert-Throws { Get-SelfXServiceHealthReport } 'Invalid status rejected'
     $script:response = 'HEALTH ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('not json'))
     Assert-Throws { Get-SelfXServiceHealthReport } 'Invalid JSON rejected'
+    # UserRemediation: same name rule as Remediation and only together with a Remediation.
+    $twoPartJson = '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"x","Remediation":"A.ps1","UserRemediation":"B.ps1"}]'
+    Assert-Equal (@(ConvertFrom-SelfXHealthJson -Json $twoPartJson)[0].UserRemediation) 'B.ps1' 'Client accepts UserRemediation'
+    Assert-Throws { ConvertFrom-SelfXHealthJson -Json '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"x","Remediation":"","UserRemediation":"B.ps1"}]' } 'Client rejects UserRemediation without Remediation'
+    Assert-Throws { ConvertFrom-SelfXHealthJson -Json '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"x","Remediation":"A.ps1","UserRemediation":"..\\\\B.ps1"}]' } 'Client rejects a path as UserRemediation'
+    Assert-Throws { ConvertFrom-SelfXHealthJson -Json '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"x","Remediation":"A.ps1","UserRemediation":"B.ps1 -x"}]' } 'Client rejects arguments in UserRemediation'
 
     $language = Initialize-SelfXLanguage -LanguageFolder "$sources\Languages" -Language de-CH
     $script:SelfXInfoText = Get-SelfXSystemInfoTexts
@@ -645,6 +672,93 @@ try {
         Assert-Equal $kept[1].Status Error 'Invalid recheck result does not remove the row'
     }
     & {
+        # "Free up space" in SelfX: one confirmation, the part of the user, then the SYSTEM part; the result shows the free space.
+        # Only the callbacks and functions are run, with fake processes and a fake service action.
+        $tokens=$null; $parseErrors=$null
+        $ast = [Management.Automation.Language.Parser]::ParseFile("$sources\Self_X.ps1",[ref]$tokens,[ref]$parseErrors)
+        $findTick = { param($timer) $ast.Find({ param($node) $node -is [Management.Automation.Language.InvokeMemberExpressionAst] -and $node.Expression.Extent.Text -eq $timer -and $node.Member.Value -eq 'Add_Tick' }.GetNewClosure(), $true) }
+        $freeTick = & $findTick '$FreeSpace_Timer'
+        $svcTick = & $findTick '$SvcAction_Timer'
+        if (-not $freeTick -or -not $svcTick) { throw 'Free up space callbacks not found.' }
+        foreach ($fn in 'Start-SelfXTwoPartRepair', 'Get-SelfXFreeSpaceResultText', 'Get-SelfXDriveFreeGB') {
+            $def = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $fn }, $true)
+            if (-not $def) { throw "$fn not found." }
+            . ([scriptblock]::Create($def.Extent.Text))
+        }
+        $Global:SelfX_FreeSpaceScript = 'SelfX_Device_FreeSpace.ps1'
+        $script:alerts = New-Object System.Collections.Generic.List[string]
+        $msgbar = New-Object PSObject
+        $msgbar | Add-Member ScriptMethod Clear {}
+        foreach ($method in @('SetSuccessAlert','SetDangerAlert','SetWarningAlert','SetInformationAlert')) {
+            $msgbar | Add-Member ScriptMethod $method ([scriptblock]::Create("param(`$t) `$script:alerts.Add('$method=' + `$t)"))
+        }
+        function Get-SelfXString { param($Key) "$Key|$($args -join '|')" }
+        function Write-SelfXLog { param($Message, $Level) }
+        function Update-SelfXFixAllButton {}
+        function Update-SelfXStatusView {}
+        function Update-SelfXServiceStatus {}
+        function Set-SelfXActionRunning { param($Row, $Running) }
+        function Test-SelfXCheckRunning { $false }
+        function Start-SysInfoHealthCheck { param($Id, $Name) $script:recheck = "$Id/$Name" }
+        function Resolve-SelfXScriptPath { param($Folder, $FileName, $CodeRoot) if ($FileName -eq 'SelfX_Device_FreeSpaceUser.ps1') { "C:\SelfX\App\Scripts_to_run\$FileName" } }
+        function Start-SelfXHiddenPowerShell { param($Path, $WorkingDirectory, [switch]$PassThru) $script:userStarted = $Path; $script:fakeUser }
+        function Start-SelfXSystemAction { param($Script, $ActionName, [switch]$RefreshHealth, $HealthId, $HealthName) $script:systemStarted = "$Script/$HealthId/$HealthName"; $Global:SvcAction_Running = $true; $Global:SvcAction_Script = $Script }
+        $FreeSpace_Timer = New-Object PSObject
+        $FreeSpace_Timer | Add-Member ScriptMethod Start { $script:timerStarted = $true }
+        $FreeSpace_Timer | Add-Member ScriptMethod Stop {}
+        $SvcAction_Timer = New-Object PSObject
+        $SvcAction_Timer | Add-Member ScriptMethod Stop {}
+        $Form = [pscustomobject]@{Cursor=$null}
+        $Service_Busy_Text = 'busy'
+        $Current_Folder = 'C:\SelfX\App'
+        $Global:FixAll_Active = $false; $Global:SvcAction_Running = $false; $Global:FreeSpace_Active = $false; $Global:FreeSpace_Pending = $false
+        $card = [pscustomobject]@{ Property='Disk (C:)'; Remediation='SelfX_Device_FreeSpace.ps1'; UserRemediation='SelfX_Device_FreeSpaceUser.ps1'; HealthId='Disk'; HealthName='C:' }
+        $script:fakeUser = [pscustomobject]@{ Id = 4711; HasExited = $false; ExitCode = 2 }
+        $script:fakeUser | Add-Member ScriptMethod Dispose {}
+        $script:systemStarted = ''
+        Start-SelfXTwoPartRepair $card
+        Assert-Equal "$script:userStarted/$Global:FreeSpace_Active/$script:timerStarted/$script:systemStarted" 'C:\SelfX\App\Scripts_to_run\SelfX_Device_FreeSpaceUser.ps1/True/True/' 'Free up space: the part of the user starts first, nothing as SYSTEM yet'
+        Assert-Equal ($null -ne $Global:FreeSpace_Before) $true 'Free up space: free space before is measured'
+        # A second click or "Fix all" while the part of the user runs is refused.
+        $script:alerts.Clear()
+        Start-SelfXTwoPartRepair $card
+        Assert-Equal ($script:alerts -join ';') 'SetWarningAlert=busy' 'Free up space: no second start while the part of the user runs'
+        & $freeTick.Arguments[0].ScriptBlock.GetScriptBlock()
+        Assert-Equal "$script:systemStarted/$Global:FreeSpace_Active/$Global:FreeSpace_Pending" '/True/False' 'Free up space: still waiting for the part of the user'
+        $script:fakeUser.HasExited = $true
+        & $freeTick.Arguments[0].ScriptBlock.GetScriptBlock()
+        Assert-Equal "$script:systemStarted/$Global:FreeSpace_Active/$Global:FreeSpace_Pending/$Global:FreeSpace_TeamsSkipped" 'SelfX_Device_FreeSpace.ps1/Disk/C:/False/True/True' 'Free up space: then the SYSTEM part through the service; Teams kept is noted (exit 2)'
+        # Result of the SYSTEM part: free space before and now, the Teams hint; the flag is cleared.
+        $Global:SvcAction_Handle = [pscustomobject]@{IsCompleted=$true}
+        $Global:SvcAction_PS = New-Object PSObject
+        $Global:SvcAction_PS | Add-Member ScriptMethod EndInvoke { [pscustomobject]@{Status='Success';ExitCode=0;Message=''} }
+        $Global:SvcAction_PS | Add-Member ScriptMethod Dispose {}
+        $Global:SvcAction_RefreshHealth = $true; $Global:SvcAction_HealthId = 'Disk'; $Global:SvcAction_HealthName = 'C:'
+        $script:alerts.Clear()
+        & $svcTick.Arguments[0].ScriptBlock.GetScriptBlock()
+        Assert-Equal (($script:alerts -join ';') -match '^SetSuccessAlert=Health_FreeSpace_Done\|C:\|[0-9.,?]+\|[0-9.,?]+ Health_FreeSpace_TeamsSkipped\|$') $true "Free up space: result with free space before and now and the Teams hint ($($script:alerts -join ';'))"
+        Assert-Equal "$Global:FreeSpace_Pending/$script:recheck" 'False/Disk/C:' 'Free up space: flag cleared, disk row checked again'
+        # A failed SYSTEM part is a warning with the same numbers; the next ordinary action shows its own text again.
+        $Global:FreeSpace_Pending = $true; $Global:FreeSpace_TeamsSkipped = $false
+        $Global:SvcAction_PS | Add-Member -Force ScriptMethod EndInvoke { [pscustomobject]@{Status='Failed';ExitCode=1;Message=''} }
+        $Global:SvcAction_RefreshHealth = $false
+        $script:alerts.Clear()
+        & $svcTick.Arguments[0].ScriptBlock.GetScriptBlock()
+        Assert-Equal (($script:alerts -join ';') -like 'SetWarningAlert=Health_FreeSpace_Partial|C:|*') $true 'Free up space: failed step reported as warning with the numbers'
+        $script:alerts.Clear()
+        & $svcTick.Arguments[0].ScriptBlock.GetScriptBlock()
+        Assert-Equal (($script:alerts -join ';') -like 'SetDangerAlert=Action_Failed_ExitCode_Text*') $true 'Free up space: the next action is not reported as free up space'
+        # The script of the part of the user must be resolvable; otherwise nothing starts.
+        $Global:SvcAction_Running = $false; $script:userStarted = ''
+        $script:alerts.Clear()
+        Start-SelfXTwoPartRepair ([pscustomobject]@{ Property='X'; Remediation='A.ps1'; UserRemediation='Missing.ps1'; HealthId='Disk'; HealthName='C:' })
+        Assert-Equal "$script:userStarted/$Global:FreeSpace_Active/$(($script:alerts -join ';') -like 'SetDangerAlert=Script_Not_Found_Text|Missing.ps1*')" '/False/True' 'Two parts: an unknown user script is not started'
+        # "Fix all problems" never contains a repair with a part of the user.
+        $selfx = [IO.File]::ReadAllText("$sources\Self_X.ps1")
+        Assert-Equal ($selfx.Contains('-ne $Global:SelfX_RestartScript -and -not $_.UserRemediation }')) $true 'Fix all excludes repairs with a part of the user'
+        $Global:SvcAction_Running = $false; $Global:FreeSpace_Active = $false; $Global:FreeSpace_Pending = $false
+    }
+    & {
         # Compile and call only the read-only whitelist lookup, never ProcessRequest/RunScript.
         $env:SystemRoot = $originalRoot
         Add-SelfXServiceType -Path (Join-Path $PSScriptRoot 'Service\SelfXService.cs')
@@ -665,6 +779,11 @@ try {
                 Assert-Equal $allowed $case[1] "Service whitelist: $($case[0])"
                 if ($case[1]) { Assert-Equal $arguments[1] 900 "Service default timeout: $($case[0])" }
             }
+            # The part of the user of a two-part repair is never a SYSTEM action of the service.
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="Disk" Script="Free.ps1" UserScript="FreeUser.ps1"/></Remediations></HealthConfig>')
+            Assert-Equal $method.Invoke($instance,[object[]]@('FreeUser.ps1',0,$false)) $false 'Service whitelist: UserScript is not a SYSTEM action'
+            Assert-Equal $method.Invoke($instance,[object[]]@('Free.ps1',0,$false)) $true 'Service whitelist: Script of a two-part repair is a SYSTEM action'
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="IME" Script="Repair-IME.ps1"/></Remediations></HealthConfig>')
             foreach ($case in @(@('3600',3600), @('99999',7200), @('0',900), @('abc',900))) {
                 [IO.File]::WriteAllText("$temp\Health_Config.xml", "<HealthConfig><Remediations><Remediation Id=`"Updates`" Script=`"Upd.ps1`" TimeoutSeconds=`"$($case[0])`"/></Remediations></HealthConfig>")
                 $arguments = [object[]]@('Upd.ps1',0,$false)

@@ -33,6 +33,12 @@
 		<Health_Updates_Done>Windows Update a terminé. L’état de l’appareil est vérifié à nouveau et indique si un redémarrage est nécessaire.</Health_Updates_Done>
 		<Health_Apps_Button>Réessayer</Health_Apps_Button>
 		<Health_Apps_Started>L’installation des applications en échec redémarre. Cela peut prendre quelques minutes ; vous pouvez la suivre dans le Portail d’entreprise.</Health_Apps_Started>
+		<Health_FreeSpace_Button>Libérer de l'espace</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>Libérer de l'espace</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>SelfX libère de l'espace sur le lecteur {0}. Sont supprimés :&#10;• le contenu de votre corbeille (irréversible)&#10;• vos fichiers temporaires&#10;• le cache de Teams, seulement si Teams est fermé (vous devrez peut-être vous reconnecter à Teams)&#10;• les fichiers Windows devenus inutiles : anciens composants de mise à jour, cache de téléchargement, anciens fichiers système temporaires et anciens fichiers d'installation des applications de l'entreprise&#10;&#10;Vos documents, paramètres et programmes sont conservés. Cela peut durer jusqu'à une heure ; vous pouvez continuer à travailler.&#10;&#10;Libérer de l'espace maintenant ?</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>Libérer de l'espace est terminé. Espace libre sur {0} : {1} Go avant, {2} Go maintenant.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>Libérer de l'espace est terminé, mais toutes les étapes n'ont pas réussi. Espace libre sur {0} : {1} Go avant, {2} Go maintenant. Si le problème persiste, contactez le support informatique.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>Teams était ouvert, son cache a donc été conservé. Fermez Teams et relancez Libérer de l'espace pour gagner plus de place.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>L’analyse rapide est terminée. Microsoft Defender n’a trouvé aucune menace.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>L’analyse rapide est terminée. Microsoft Defender a trouvé des menaces et les traite selon les règles de votre entreprise. Ouvrez Sécurité Windows pour les détails.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>OK</Health_Check_Button>

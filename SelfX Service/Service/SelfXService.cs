@@ -100,6 +100,9 @@ Notes:
                                               SelfX.Config.cat, scripts and libraries by their embedded signature, settings files against
                                               SelfX.Config.cat (WinVerifyTrust, signer from the anchor, revocation from the cache only; event
                                               4007); positive results are cached for 60 minutes. Mode Hash: unchanged
+    3.1.0    2026-11-27  fubu2k               SafeTree /cleanold:<root> /minage:<days>: deletes old entries below one of four fixed folders
+                                              (Windows\Temp and three Intune Management Extension content folders, resolved in this file, never
+                                              from an argument) through handles, without following links (free disk space, SelfX_Device_FreeSpace.ps1)
 */
 
 using System;
@@ -2827,8 +2830,15 @@ namespace SelfX
         const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
         const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
         const uint FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
+        const int FileBasicInfo = 0;
+        const int FileStandardInfo = 1;
         const int FileAttributeTagInfo = 9;
         const int FileDispositionInfoEx = 21;
+        // /cleanold: limits. The age is checked on the handle (newest of creation, write and change time); the depth limit
+        // only protects the stack against a deeply nested folder that a user created in Windows\Temp.
+        const int CleanOldMinDays = 1;
+        const int CleanOldMaxDays = 365;
+        const int CleanOldMaxDepth = 64;
         const uint DISPOSITION_DELETE_POSIX_IGNORE_READONLY = 0x13;
         const int ERROR_FILE_NOT_FOUND = 2;
         const int ERROR_PATH_NOT_FOUND = 3;
@@ -2840,11 +2850,25 @@ namespace SelfX
         [StructLayout(LayoutKind.Sequential)]
         struct FILE_DISPOSITION_INFO_EX { public uint Flags; }
 
+        // FILE_BASIC_INFO (winbase.h): times as FILETIME (UTC, 100-ns intervals since 1601).
+        [StructLayout(LayoutKind.Sequential)]
+        struct FILE_BASIC_INFO { public long CreationTime; public long LastAccessTime; public long LastWriteTime; public long ChangeTime; public uint FileAttributes; }
+
+        // FILE_STANDARD_INFO (winbase.h).
+        [StructLayout(LayoutKind.Sequential)]
+        struct FILE_STANDARD_INFO { public long AllocationSize; public long EndOfFile; public uint NumberOfLinks; public byte DeletePending; public byte Directory; }
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         static extern SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int infoClass, out FILE_ATTRIBUTE_TAG_INFO info, uint size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int infoClass, out FILE_BASIC_INFO info, uint size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int infoClass, out FILE_STANDARD_INFO info, uint size);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FILE_DISPOSITION_INFO_EX info, uint size);
@@ -2990,6 +3014,156 @@ namespace SelfX
                     }
                 }
             }
+        }
+
+        sealed class OldResult
+        {
+            public int Removed;
+            public int Kept;
+            public long Bytes;
+        }
+
+        // Newest of creation, write and change time (UTC): a file copied or renamed into the folder counts as new.
+        static bool GetNewestTime(SafeFileHandle handle, out DateTime newest, out uint attributes)
+        {
+            FILE_BASIC_INFO info;
+            newest = DateTime.MaxValue;
+            attributes = 0;
+            if (!GetFileInformationByHandleEx(handle, FileBasicInfo, out info, (uint)Marshal.SizeOf(typeof(FILE_BASIC_INFO)))) return false;
+            long ticks = Math.Max(info.CreationTime, Math.Max(info.LastWriteTime, info.ChangeTime));
+            if (ticks < 0) return false;
+            newest = DateTime.FromFileTimeUtc(ticks);
+            attributes = info.FileAttributes;
+            return true;
+        }
+
+        // Size of a file with one name only; a hard link frees nothing when it is deleted.
+        static long FreedBytes(SafeFileHandle handle)
+        {
+            FILE_STANDARD_INFO info;
+            if (!GetFileInformationByHandleEx(handle, FileStandardInfo, out info, (uint)Marshal.SizeOf(typeof(FILE_STANDARD_INFO)))) return 0;
+            return info.NumberOfLinks == 1 && info.EndOfFile > 0 ? info.EndOfFile : 0;
+        }
+
+        // Deletes every entry below the (open) folder whose newest time is before the cutoff. A link is deleted itself and never
+        // followed; a real folder is held open while its content is processed and is deleted afterwards when it is old and empty.
+        // An entry that is in use or denied is kept and counted: that is normal in Windows\Temp and not an error.
+        static void CleanOld(string folder, DateTime cutoff, int depth, OldResult result)
+        {
+            if (depth > CleanOldMaxDepth) { result.Kept++; return; }
+            List<string> children;
+            try { children = Children(folder); }
+            catch (Exception) { result.Kept++; return; }
+            foreach (string child in children)
+            {
+                using (SafeFileHandle handle = Open(child, DELETE | FILE_READ_ATTRIBUTES))
+                {
+                    if (handle.IsInvalid)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) result.Kept++;
+                        continue;
+                    }
+                    DateTime newest;
+                    uint attributes;
+                    if (!GetNewestTime(handle, out newest, out attributes)) { result.Kept++; continue; }
+                    bool isLink = (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+                    bool isFolder = !isLink && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+                    bool old = newest < cutoff;
+                    if (isFolder)
+                    {
+                        CleanOld(child, cutoff, depth + 1, result);
+                        if (!old) continue;
+                        // Fails with ERROR_DIR_NOT_EMPTY when a newer entry is left: the folder then stays.
+                        int folderError;
+                        if (DeleteByHandle(handle, out folderError)) result.Removed++;
+                        else result.Kept++;
+                        continue;
+                    }
+                    if (!old) continue;
+                    long size = isLink ? 0 : FreedBytes(handle);
+                    int fileError;
+                    if (DeleteByHandle(handle, out fileError)) { result.Removed++; result.Bytes += size; }
+                    else result.Kept++;
+                }
+            }
+        }
+
+        /// <summary>The fixed folders of /cleanold:, resolved through known folders of Windows (never from an argument, an
+        /// environment variable or the registry). Content\Incoming, Content\Staging and IMECache: Microsoft Learn, "Understanding
+        /// the flow behind deployment, delivery, and processing of a Win32 application through Intune". null for an unknown key.</summary>
+        internal static string CleanOldRoot(string key)
+        {
+            string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string ime = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Intune Management Extension", "Content");
+            switch (key)
+            {
+                case "WindowsTemp": return string.IsNullOrEmpty(windows) ? null : Path.Combine(windows, "Temp");
+                case "ImeIncoming": return Path.Combine(ime, "Incoming");
+                case "ImeStaging": return Path.Combine(ime, "Staging");
+                case "ImeCache": return string.IsNullOrEmpty(windows) ? null : Path.Combine(windows, "IMECache");
+                default: return null;
+            }
+        }
+
+        /// <summary>/cleanold:&lt;key&gt; /minage:&lt;days&gt;: deletes entries older than the given number of days below one fixed
+        /// folder (CleanOldRoot). /cleanoldpath:&lt;absolute path&gt; does the same below any local folder for the tests and is
+        /// refused when the process runs as SYSTEM, so the service account only ever cleans the fixed folders. A missing folder
+        /// is not an error. Prints SELFX-CLEANOLD-OK removed=&lt;n&gt; kept=&lt;n&gt; bytes=&lt;n&gt;. Exit 0 = done (entries in use are
+        /// kept), 1 = the folder is a link, lies behind a link or is not a folder, 2 = invalid arguments.</summary>
+        public static int RunCleanOld(string key, string testPath, string minAge)
+        {
+            int days;
+            if (string.IsNullOrEmpty(minAge) || !Regex.IsMatch(minAge, @"^[0-9]{1,3}\z") || !int.TryParse(minAge, NumberStyles.None, CultureInfo.InvariantCulture, out days) ||
+                days < CleanOldMinDays || days > CleanOldMaxDays)
+            {
+                Console.WriteLine("SELFX-CLEANOLD-ERROR: /minage: must be a number of days from " + CleanOldMinDays + " to " + CleanOldMaxDays + ".");
+                return 2;
+            }
+            string root;
+            if (testPath != null)
+            {
+                if (key != null) { Console.WriteLine("SELFX-CLEANOLD-ERROR: use either /cleanold: or /cleanoldpath:."); return 2; }
+                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                {
+                    if (identity.IsSystem) { Console.WriteLine("SELFX-CLEANOLD-ERROR: /cleanoldpath: is refused for SYSTEM."); return 2; }
+                }
+                root = FullPathOrNull(testPath);
+            }
+            else root = key == null ? null : CleanOldRoot(key);
+            if (root == null) { Console.WriteLine("SELFX-CLEANOLD-ERROR: unknown folder."); return 2; }
+            root = Path.GetFullPath(root).TrimEnd('\\');
+
+            OldResult result = new OldResult();
+            try
+            {
+                using (SafeFileHandle handle = Open(root, FILE_READ_ATTRIBUTES))
+                {
+                    uint attributes;
+                    if (handle.IsInvalid)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) { Console.WriteLine("SELFX-CLEANOLD-OK removed=0 kept=0 bytes=0"); return 0; }
+                        Console.WriteLine("SELFX-CLEANOLD-ERROR: the folder cannot be opened (Windows error " + error + ").");
+                        return 1;
+                    }
+                    if (!PathMatches(handle, root)) { Console.WriteLine("SELFX-CLEANOLD-ERROR: a link lies in the path of the folder."); return 1; }
+                    if (!GetAttributes(handle, out attributes) || (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 || (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+                    {
+                        Console.WriteLine("SELFX-CLEANOLD-ERROR: the folder is not a real folder.");
+                        return 1;
+                    }
+                    // The root stays open (no share-delete) until the end, so it cannot be renamed or replaced by a link meanwhile.
+                    CleanOld(root, DateTime.UtcNow.AddDays(-days), 0, result);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SELFX-CLEANOLD-ERROR: " + ex.GetType().Name);
+                return 1;
+            }
+            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "SELFX-CLEANOLD-OK removed={0} kept={1} bytes={2}", result.Removed, result.Kept, result.Bytes));
+            return 0;
         }
 
         static string FullPathOrNull(string path)
@@ -3328,6 +3502,17 @@ namespace SelfX
                 else if (arg.StartsWith("/skip:", StringComparison.OrdinalIgnoreCase)) { treeSkip = arg.Substring(6); }
             }
             if (treeMode != null) return SafeTree.Run(treeMode, treePath, treeTrusted, treeSkip);
+
+            // Free disk space (SelfX_Device_FreeSpace.ps1): delete old entries below one fixed folder. No service is started.
+            string oldKey = null, oldPath = null, oldAge = null;
+            bool oldMode = false;
+            foreach (string arg in args)
+            {
+                if (arg.StartsWith("/cleanold:", StringComparison.OrdinalIgnoreCase)) { oldMode = true; oldKey = arg.Substring(10); }
+                else if (arg.StartsWith("/cleanoldpath:", StringComparison.OrdinalIgnoreCase)) { oldMode = true; oldPath = arg.Substring(14); }
+                else if (arg.StartsWith("/minage:", StringComparison.OrdinalIgnoreCase)) { oldAge = arg.Substring(8); }
+            }
+            if (oldMode) return SafeTree.RunCleanOld(oldKey, oldPath, oldAge);
 
             foreach (string arg in args)
             {

@@ -33,6 +33,12 @@
 		<Health_Updates_Done>انتهى Windows Update. يتم فحص حالة الجهاز مرة أخرى لتوضيح ما إذا كانت إعادة التشغيل مطلوبة.</Health_Updates_Done>
 		<Health_Apps_Button>إعادة المحاولة</Health_Apps_Button>
 		<Health_Apps_Started>تبدأ من جديد عملية تثبيت التطبيقات التي فشل تثبيتها. قد يستغرق ذلك بضع دقائق؛ يمكنك متابعته في مدخل الشركة.</Health_Apps_Started>
+		<Health_FreeSpace_Button>تحرير مساحة</Health_FreeSpace_Button>
+		<Health_FreeSpace_Title>تحرير مساحة</Health_FreeSpace_Title>
+		<Health_FreeSpace_Confirm>يحرر SelfX مساحة على محرك الأقراص {0}. سيتم حذف:&#10;• محتوى سلة المحذوفات (لا يمكن التراجع عن ذلك)&#10;• ملفاتك المؤقتة&#10;• ذاكرة التخزين المؤقت لـ Teams، فقط عندما يكون Teams مغلقًا (قد تحتاج إلى تسجيل الدخول إلى Teams مرة أخرى)&#10;• ملفات Windows التي لم تعد مطلوبة: مكونات التحديث القديمة وذاكرة التنزيل المؤقتة وملفات النظام المؤقتة القديمة وملفات التثبيت القديمة لتطبيقات الشركة&#10;&#10;تبقى مستنداتك وإعداداتك وبرامجك كما هي. قد يستغرق ذلك حتى ساعة؛ يمكنك متابعة العمل.&#10;&#10;هل تريد تحرير المساحة الآن؟</Health_FreeSpace_Confirm>
+		<Health_FreeSpace_Done>اكتمل تحرير المساحة. المساحة الفارغة على {0}: {1} غيغابايت قبل، {2} غيغابايت الآن.</Health_FreeSpace_Done>
+		<Health_FreeSpace_Partial>اكتمل تحرير المساحة، لكن لم تنجح كل الخطوات. المساحة الفارغة على {0}: {1} غيغابايت قبل، {2} غيغابايت الآن. إذا استمرت المشكلة، فاتصل بدعم تكنولوجيا المعلومات.</Health_FreeSpace_Partial>
+		<Health_FreeSpace_TeamsSkipped>كان Teams مفتوحًا، لذلك تم الإبقاء على ذاكرته المؤقتة. أغلق Teams وشغّل تحرير مساحة مرة أخرى لتحرير مساحة أكبر.</Health_FreeSpace_TeamsSkipped>
 		<Defender_Scan_Clean_Text>اكتمل الفحص السريع. لم يعثر Microsoft Defender على أي تهديدات.</Defender_Scan_Clean_Text>
 		<Defender_Scan_Threats_Text>اكتمل الفحص السريع. عثر Microsoft Defender على تهديدات ويتعامل معها وفق إعدادات شركتك. افتح «أمن Windows» لمعرفة التفاصيل.</Defender_Scan_Threats_Text>
 		<Health_Check_Button>موافق</Health_Check_Button>

@@ -374,6 +374,7 @@ es in `Health_Config.xml` ein:
 | `When` | `NotOK`: nur anbieten, solange die Zeile nicht in Ordnung ist. `Always` (Standard): immer anbieten. |
 | `TimeoutSeconds` | Zeitlimit, 1 bis 7200 Sekunden. Standard 900. |
 | `OtherSessions` | `Block` wie bei Aktionen. Die mitgelieferte Konfiguration setzt es für `Updates` und `PendingReboot`. |
+| `UserScript` | Optional. Ein erster Teil, den SelfX **als angemeldeter Nutzer** vor `Script` ausführt. Der Dienst führt ihn nie aus. Es muss ein Skript mit `Context : User` sein und darf nicht dieselbe Datei wie `Script` sein. Eine Reparatur mit `UserScript` hat eine eigene Bestätigung und ist nie Teil von *Alle Probleme beheben*. |
 
 **So läuft eine Reparatur:** Der Nutzer bestätigt. Der Dienst prüft, ob das Skript in der
 geschützten Liste steht, und führt es als SYSTEM aus. Nutzer können keine eigenen Skripte,
@@ -393,6 +394,37 @@ erneut. Das Ergebnis dieser Prüfung zählt, nicht der Exitcode des Skripts.
   beheben*.
 - **App-Wiederholung** (`SelfX_Apps_RetryInstall.ps1`): setzt den Wiederholungsplan einer
   fehlgeschlagenen Intune-App zurück. Es wird keine App deinstalliert.
+- **Speicherplatz freigeben** (`SelfX_Device_FreeSpaceUser.ps1`, danach `SelfX_Device_FreeSpace.ps1`): in der
+  Zeile von Laufwerk `C:`, solange sie nicht in Ordnung ist. Der Nutzer sieht eine Bestätigung, die
+  aufzählt, was gelöscht wird. Dann:
+  1. Als Nutzer: leert den eigenen Papierkorb (nicht rückgängig zu machen), löscht die eigenen
+     temporären Dateien und löscht den eigenen Teams-Cache nur, wenn Teams geschlossen ist. Teams wird
+     nie geschlossen; läuft es, bleibt der Cache erhalten und SelfX sagt das.
+  2. Als SYSTEM: `Dism.exe /Online /Cleanup-Image /StartComponentCleanup` mit festen Argumenten (nie
+     `/ResetBase`, installierte Updates bleiben deinstallierbar), der Delivery-Optimization-Cache
+     (`Delete-DeliveryOptimizationCache`, angeheftete Dateien bleiben) und Einträge älter als
+     `MinimumAgeDays` in `Windows\Temp` und in den Intune-Inhaltsordnern (`Content\Incoming`,
+     `Content\Staging`, `Windows\IMECache`). Die alten Einträge löscht `SelfXService.exe /cleanold:`: Es
+     öffnet jeden Eintrag einmal, ohne einer Verknüpfung zu folgen, und löscht über dieses Handle, nur
+     unterhalb dieser vier festen Ordner. Die Intune-Ordner werden übersprungen, solange
+     `AgentExecutor.exe` oder `msiexec.exe` läuft oder dort in den letzten `ImeQuietMinutes` etwas
+     geändert wurde. Das ist eine Heuristik; Windows bietet keine Abfrage für „keine Installation läuft“.
+
+  Am Ende zeigt SelfX den freien Platz vorher und nachher. Das kann bis zu einer Stunde dauern (DISM). Es
+  ist nie Teil von *Alle Probleme beheben*. Liegt Windows nicht auf `C:`, ändern Sie `Name` der Reparatur.
+  Schwellen in `Health_Config.xml`:
+
+  ```xml
+  <DiskCleanup MinimumAgeDays="7" ImeQuietMinutes="60" />
+  ```
+
+  | Attribut | Standard | Bedeutung |
+  |---|---|---|
+  | `MinimumAgeDays` | `7` | Nur Einträge, die älter sind, werden in `Windows\Temp` und in den Intune-Inhalten gelöscht (1 bis 365). |
+  | `ImeQuietMinutes` | `60` | Die Intune-Inhalte werden übersprungen, wenn sich dort in dieser Zeit etwas geändert hat (1 bis 1440). |
+
+  Ein ungültiger Wert stoppt den SYSTEM-Teil, bevor etwas gelöscht wird. Eine Datei gilt nur als alt,
+  wenn Erstellungs-, Schreib- und Änderungszeit alle älter als `MinimumAgeDays` sind.
 
 ## Geräteprotokolle für den Support
 
