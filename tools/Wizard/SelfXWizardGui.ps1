@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.4.0
+    Version : 1.5.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -45,6 +45,7 @@
     1.3.0    2026-11-27  fubu2k               Page Network targets (between ticket and further settings): switches for the measurement, the delivered
                                               Microsoft targets and host names in the report, list of own targets (label, host, port, group, kind)
     1.4.0    2026-11-27  fubu2k               Page Basics: question EnvironmentMode (Where does SelfX run?)
+    1.5.0    2026-11-28  fubu2k               Page Basics: question TerminalServerHealth (device status on a terminal server)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -109,7 +110,7 @@ $script:GuiCodeFolder = Get-WizardGuiCodeFolder -ToolsFolder $script:GuiToolsFol
 # (Test-SelfXWizardGui.ps1 checks this). The page 'summary' has the build settings, which are not answers (same as the console).
 $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'language'; Questions = @('ToolLanguage', 'ShowLanguageSetting') },
-    [pscustomobject]@{ Id = 'basics'; Questions = @('OrgName', 'ToolName', 'EnvironmentMode') },
+    [pscustomobject]@{ Id = 'basics'; Questions = @('OrgName', 'ToolName', 'EnvironmentMode', 'TerminalServerHealth') },
     [pscustomobject]@{ Id = 'support'; Questions = @('SupportMail', 'SupportPhone', 'SupportHours', 'SupportWebsite', 'SupportTeams') },
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },

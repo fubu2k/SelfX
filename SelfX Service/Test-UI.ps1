@@ -15,6 +15,8 @@
     2.6.9  2026-11-19  Wolfgang Baeck  Test that the cached status read does not block a repair.
     3.1.0  2026-11-27  fubu2k          Environment_Mode: actions not classified Show are hidden with TerminalServer (also the delivered
                                        catalogue), status cards, tray item and the message for a refusal of the service.
+    3.1.0  2026-11-28  fubu2k          TerminalServer_Health and the view of the user: device status page, status icon, system information,
+                                       ticket.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -475,6 +477,13 @@ try {
     $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
     Assert-Equal ($clientText.Contains("'^ERROR TerminalServer`$' { return [pscustomobject]@{ Status = 'TerminalServer'") -and $guiText.Contains("'TerminalServer' { `$msgbar.SetWarningAlert((Get-SelfXString 'Service_TerminalServer_Text')) }")) $true 'Environment_Mode: the refusal of the service has its own message'
     Assert-Equal ([bool](Get-SelfXString 'Service_TerminalServer_Text')) $true 'Environment_Mode: the message exists in en.xml'
+    # --- TerminalServer_Health and the view of the user (19c) ------------------------------------------------------------------
+    Assert-Equal ($guiText.Contains('If(-not $Global:SelfX_View.Health) { return $False }') -and $guiText.IndexOf('If(-not $Global:SelfX_View.Health) { return $False }') -lt $guiText.IndexOf('$Global:Health_PS = [PowerShell]::Create()')) $true 'View: the window asks the service for no device status the user may not see'
+    Assert-Equal ($guiText.Contains("-or -not `$Global:SelfX_View.Health) { `$Nav_Status.Visibility = 'Collapsed' }")) $true 'View: the page Device status is hidden'
+    Assert-Equal ($guiText.Contains('-TerminalServer:$TerminalServer -ServerRows $ServerRows') -and $trayText.Contains('-TerminalServer:$TerminalServer -ServerRows $ServerRows')) $true 'View: window and status icon collect the system information for the view of the user'
+    Assert-Equal ($guiText.Contains('.AddArgument([bool]$Global:SelfX_View.TerminalServer).AddArgument([bool]$Global:SelfX_View.ServerRows)') -and $trayText.Contains('.AddArgument([bool]$Global:Tray_View.TerminalServer).AddArgument([bool]$Global:Tray_View.ServerRows)')) $true 'View: the values of the view reach the background collection'
+    Assert-Equal ($guiText.Contains('-WindowsBuild $(If($Global:SelfX_View.ServerRows)')) $true 'View: the ticket names the Windows build only with server rows'
+    Assert-Equal ($trayText.Contains('If($Global:Tray_Job -or -not $Global:Tray_View.Health) { return }') -and $trayText.Contains('$Tray_Status_Open, $Tray_Status_Check)) { $Item.Visible = $false }')) $true 'View: the status icon asks for no status and hides the status entries'
 } finally {
     Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }

@@ -92,7 +92,7 @@ Wichtige Parameter:
 
 ## Die Fragen
 
-1. **Grundlagen:** Standardsprache, Sprachwahl durch Nutzer, Name der Organisation, Name des Werkzeugs, wo SelfX läuft (`Client` für einen PC oder ein Notebook, `TerminalServer` für einen Terminalserver oder Sitzungshost mit mehreren Nutzern; siehe [Konfiguration](Configuration.md#terminalserver-und-sitzungshost-environment_mode)).
+1. **Grundlagen:** Standardsprache, Sprachwahl durch Nutzer, Name der Organisation, Name des Werkzeugs, wo SelfX läuft (`Client` für einen PC oder ein Notebook, `TerminalServer` für einen Terminalserver oder Sitzungshost mit mehreren Nutzern; siehe [Konfiguration](Configuration.md#terminalserver-und-sitzungshost-environment_mode)) und auf einem Terminalserver, wer den Gerätestatus sieht (`TerminalServer_Health`).
 2. **Support-Kontakte:** Funktionspostfach, Telefon, Servicezeiten, Webseite, Teams.
 3. **Branding:** Logo (wird kopiert) und Firmenfarbe.
 4. **Ticket per E-Mail:** Ticket-Funktion an oder aus, Standard-Empfänger, Betreff-Kennzeichen.

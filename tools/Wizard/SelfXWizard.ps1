@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.6
+    Version : 3.1.7
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -36,6 +36,7 @@
     3.1.5    2026-11-27  fubu2k               Network targets: answers NetworkEnabled, NetworkMicrosoft, NetworkHostNames and NetworkTargets (kind netTarget), Set-SelfXNetworkTestConfig
                                               writes Network_Test_Config.xml (settings and own targets next to the delivered Microsoft targets)
     3.1.6    2026-11-27  fubu2k               Question EnvironmentMode (Where does SelfX run? Client or TerminalServer) writes Environment_Mode
+    3.1.7    2026-11-28  fubu2k               Question TerminalServerHealth (Off or AdminOnly, only with TerminalServer) writes TerminalServer_Health
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -526,6 +527,7 @@ function Get-WizardQuestions {
     & $add @{ Id = 'OrgName'; Kind = 'text'; Max = 60; Required = $true; Default = '' }
     & $add @{ Id = 'ToolName'; Kind = 'text'; Max = 40; Required = $true; Default = 'SelfX' }
     & $add @{ Id = 'EnvironmentMode'; Kind = 'choice'; Choices = @('Client', 'TerminalServer'); Default = 'Client' }
+    & $add @{ Id = 'TerminalServerHealth'; Kind = 'choice'; Choices = @('Off', 'AdminOnly'); When = { param($a) $a.EnvironmentMode -eq 'TerminalServer' }; Default = 'Off' }
     & $add @{ Section = 'support'; Id = 'SupportMail'; Kind = 'mail'; Default = '' }
     & $add @{ Id = 'SupportPhone'; Kind = 'phone'; Default = '' }
     & $add @{ Id = 'SupportHours'; Kind = 'text'; Max = 60; Default = '' }
@@ -762,6 +764,7 @@ function Get-WizardToolConfigValues {
         Ticket_Enabled              = [bool]$A.TicketEnabled
         Copilot_Enabled             = [bool]$A.CopilotEnabled
     }
+    if ($A.EnvironmentMode -eq 'TerminalServer') { $values['TerminalServer_Health'] = $(if ($A.TerminalServerHealth -eq 'AdminOnly') { 'AdminOnly' } else { 'Off' }) }
     if ($A.TicketEnabled) { $values['Ticket_Mail'] = $A.TicketMail; $values['Ticket_Subject_Tag'] = $A.TicketSubjectTag }
     if ($A.CopilotEnabled) { $values['Copilot_Audience'] = $A.CopilotAudience; $values['Copilot_Clear_Clipboard'] = [bool]$A.CopilotClearClipboard }
     $values['Wiki_Enabled'] = [bool]$A.WikiEnabled

@@ -38,6 +38,9 @@
                                               language files are resolved by SelfXPaths.ps1
     3.1.0    2026-11-27  fubu2k               Text overrides: Config\Texts\<culture>.xml replaces single texts of the language file (Localization.ps1)
     3.1.0    2026-11-27  fubu2k               Environment_Mode TerminalServer: the menu item to send the device logs only when that action is classified Show
+    3.1.0    2026-11-28  fubu2k               TerminalServer_Health: without the device status for this user no status request, no status entries and no
+                                              notifications; the icon stays a launcher of SelfX. System information without the rows of the
+                                              class Server for normal users and without the kinds of connection
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -118,6 +121,10 @@ $Global:Tray_Texts = Get-SelfXSystemInfoTexts
 $Global:Tray_Job_Script = (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXNetwork.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SystemInfo.ps1') -Raw)
 $Global:Tray_Tool_Name = Get-TrayConfig 'Tool_Name' 'SelfX'
 $Global:Tray_Notify = (Get-TrayConfig 'Tray_Notifications' 'True') -eq 'True'
+# Environment_Mode TerminalServer: device status only as TerminalServer_Health allows (the service checks it again); normal users see
+# no rows of the class Server (SelfXEnvironment.ps1, the same rule as SelfX).
+$Tray_Environment = (ConvertTo-SelfXEnvironmentMode (Get-TrayConfig 'Environment_Mode' '')).Mode
+$Global:Tray_View = Get-SelfXViewScope -Mode $Tray_Environment -HealthAccess (ConvertTo-SelfXHealthAccess $Tray_Environment (Get-TrayConfig 'TerminalServer_Health' '')) -IsAdmin (Test-SelfXElevatedAdministrator)
 # Windows notifications about new problems: allowed by the administrator (Tray_Notifications) and switched on by
 # the user (HKCU TrayNotifications, SelfX > Settings or the menu of the icon). Read at every use, so a change in
 # SelfX applies at once.
@@ -254,7 +261,7 @@ $Global:Tray_Show_Result = $false
 Function Start-TrayStatusJob
 	{
 		param([ValidateSet('Cached', 'Full')][string]$Mode)
-		If($Global:Tray_Job) { return }
+		If($Global:Tray_Job -or -not $Global:Tray_View.Health) { return }
 		$Global:Tray_Job_Mode = $Mode
 		$Global:Tray_PS = [PowerShell]::Create()
 		[void]$Global:Tray_PS.AddScript($Global:Tray_Job_Script).AddStatement().AddCommand('Get-SelfXStatusData').AddParameter('Mode', $Mode).AddParameter('Text', $Global:Tray_Texts)
@@ -323,8 +330,8 @@ Function Start-TraySystemInfoCache
 	{
 		$Global:Tray_Info_PS = [PowerShell]::Create()
 		[void]$Global:Tray_Info_PS.AddScript($Global:Tray_Job_Script).AddStatement().AddScript(
-			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig); Save-SelfXSystemInfoCache -Items $Items -Culture $Culture'
-		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture).AddArgument((Get-SelfXConfigPath -Name 'Network_Test_Config.xml' -CodeRoot $Global:Tray_Folder))
+			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig, $TerminalServer, $ServerRows) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig -TerminalServer:$TerminalServer -ServerRows $ServerRows); Save-SelfXSystemInfoCache -Items $Items -Culture $Culture'
+		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture).AddArgument((Get-SelfXConfigPath -Name 'Network_Test_Config.xml' -CodeRoot $Global:Tray_Folder)).AddArgument([bool]$Global:Tray_View.TerminalServer).AddArgument([bool]$Global:Tray_View.ServerRows)
 		$Global:Tray_Info_Job = $Global:Tray_Info_PS.BeginInvoke()
 	}
 
@@ -334,17 +341,21 @@ Function Start-TraySystemInfoCache
 $Global:Tray = New-Object System.Windows.Forms.NotifyIcon
 $Global:Tray.Icon = New-TrayIcon Unknown
 Set-TrayText (Get-SelfXString 'Tray_Tooltip_Unknown')
+If(-not $Global:Tray_View.Health) { Set-TrayText $Global:Tray_Tool_Name }
 $Menu = New-Object System.Windows.Forms.ContextMenuStrip
 $Open_Item = $Menu.Items.Add((Get-SelfXString 'Tray_Menu_Open'), $null, { Open-SelfX })
 $Open_Item.Font = New-Object System.Drawing.Font($Open_Item.Font, [System.Drawing.FontStyle]::Bold)
 $Global:Tray_Status_Item = $Menu.Items.Add((Get-SelfXString 'Tray_Tooltip_Unknown'), $null, { Open-SelfX 'Status' })
-[void]$Menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
-[void]$Menu.Items.Add((Get-SelfXString 'Tray_Menu_Status'), $null, { Open-SelfX 'Status' })
-[void]$Menu.Items.Add((Get-SelfXString 'Tray_Menu_Check'), $null, {
+$Tray_Status_Separator = New-Object System.Windows.Forms.ToolStripSeparator
+[void]$Menu.Items.Add($Tray_Status_Separator)
+$Tray_Status_Open = $Menu.Items.Add((Get-SelfXString 'Tray_Menu_Status'), $null, { Open-SelfX 'Status' })
+$Tray_Status_Check = $Menu.Items.Add((Get-SelfXString 'Tray_Menu_Check'), $null, {
 	$Global:Tray_Show_Result = $true
 	$Global:Tray.ShowBalloonTip(3000, $Global:Tray_Tool_Name, (Get-SelfXString 'Tray_Checking_Text'), [System.Windows.Forms.ToolTipIcon]::Info)
 	Start-TrayStatusJob Full
 })
+# Environment_Mode TerminalServer without the device status for this user (TerminalServer_Health): no status entries in the menu.
+If(-not $Global:Tray_View.Health) { foreach($Item in @($Global:Tray_Status_Item, $Tray_Status_Separator, $Tray_Status_Open, $Tray_Status_Check)) { $Item.Visible = $false } }
 $Catalog = New-Object System.Xml.XmlDocument
 $Catalog.XmlResolver = $null
 $XmlSettings = New-Object System.Xml.XmlReaderSettings

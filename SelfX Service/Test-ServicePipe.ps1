@@ -49,6 +49,8 @@
     3.1.0    2026-11-27  fubu2k               Environment_Mode: RUN in both modes through ProcessRequest of a test instance (Hide, not classified,
                                               different values per script, remediation, administrator, invalid or missing value, unreadable
                                               Tool_Config.xml), the check of other sessions in both modes, session host detection; nothing is started.
+    3.1.0    2026-11-28  fubu2k               TerminalServer_Health: access table, HEALTH and STATUS as user and as administrator with Off,
+                                              AdminOnly, an invalid value, Client and an unreadable Tool_Config.xml; background loop.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -1054,6 +1056,48 @@ Remove-Item -LiteralPath (Join-Path $envConfig 'Tool_Config.xml')
 Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Environment_Mode: a missing Tool_Config.xml counts as TerminalServer (fail closed)'
 $envLog = Join-Path $logDirectory 'SelfXService.log'
 Assert-True ((Test-Path -LiteralPath $envLog) -and ([IO.File]::ReadAllText($envLog) -match 'not available in Environment_Mode TerminalServer')) 'Environment_Mode: a refusal is logged'
+
+# --- TerminalServer_Health: HEALTH and STATUS in Environment_Mode TerminalServer (Off = nobody, AdminOnly = elevated administrators) ---
+$accessMethod = [SelfX.SelfXService].GetMethod('GetHealthAccess', $staticFlags)
+Assert-True ($null -ne $accessMethod) 'TerminalServer_Health: the service has the access check'
+foreach ($case in @(
+	@('Client', 'Off', 'Everyone'), @('Client', 'AdminOnly', 'Everyone'), @('', $null, 'Everyone'),
+	@('TerminalServer', '', 'Off'), @('TerminalServer', 'Off', 'Off'), @('TerminalServer', 'AdminOnly', 'AdminOnly'), @('TerminalServer', ' adminonly ', 'AdminOnly'),
+	@('TerminalServer', 'Everyone', 'Off'), @('TerminalServer', $null, 'Off'), @($null, 'AdminOnly', 'AdminOnly'), @($null, $null, 'Off'))) {
+	$result = "$($accessMethod.Invoke($null, [object[]]@($case[0], $case[1])))"
+	Assert-True ($result -ceq $case[2]) "TerminalServer_Health: mode '$($case[0])', value '$($case[1])' = $($case[2]) (got $result)"
+}
+function Invoke-EnvRaw([string]$Request, [bool]$Admin) {
+	return [string]$processMethod.Invoke($envService, [object[]]@($Request, 'TEST\user', 'S-1-5-21-1-2-3-1001', $Admin, [long]-1))
+}
+foreach ($mode in @(
+	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>', 'TerminalServer without TerminalServer_Health (= Off)', $false, $false),
+	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>', 'TerminalServer, Off', $false, $false),
+	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode><TerminalServer_Health>Everyone</TerminalServer_Health></GUI_Config>', 'TerminalServer, invalid value (= Off)', $false, $false),
+	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode><TerminalServer_Health>AdminOnly</TerminalServer_Health></GUI_Config>', 'TerminalServer, AdminOnly', $false, $true),
+	@('<GUI_Config><Environment_Mode>Client</Environment_Mode><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>', 'Client (TerminalServer_Health does not apply)', $true, $true),
+	@('<GUI_Config><Environment_Mode>Client', 'unreadable Tool_Config.xml (= TerminalServer, Off)', $false, $false))) {
+	Set-EnvMode $mode[0]
+	foreach ($admin in $false, $true) {
+		$allowed = if ($admin) { $mode[3] } else { $mode[2] }
+		$who = if ($admin) { 'an elevated administrator' } else { 'a user' }
+		$status = Invoke-EnvRaw 'STATUS' $admin
+		$health = Invoke-EnvRaw 'HEALTH' $admin
+		$single = Invoke-EnvRaw 'HEALTH Disk' $admin
+		if ($allowed) {
+			Assert-True ($status -like 'STATUS *' -and $health -ceq 'ERROR Health collector not installed' -and $single -ceq 'ERROR Health collector not installed') "$($mode[1]): $who gets STATUS and HEALTH (STATUS '$($status.Substring(0, [Math]::Min(30, $status.Length)))', HEALTH '$health', '$single')"
+		} else {
+			Assert-True ($status -ceq 'UNAVAILABLE TerminalServer' -and $health -ceq 'UNAVAILABLE TerminalServer' -and $single -ceq 'UNAVAILABLE TerminalServer') "$($mode[1]): $who gets no device status (STATUS '$status', HEALTH '$health', '$single')"
+		}
+	}
+}
+# The log of the earlier requests may already be at its limit of 20 lines per minute, so the source is checked: the refusal goes through LogRejected.
+Assert-True ($sourceText -match 'LogRejected\("HEALTH request from " \+ user \+ " refused: the device status is not available') 'TerminalServer_Health: a refused HEALTH request is logged through the rate-limited LogRejected'
+$loopStart = $sourceText.IndexOf('void BackgroundLoop()')
+$loop = $sourceText.Substring($loopStart, $sourceText.IndexOf('int ReadLogRetentionDays()') - $loopStart)
+$offAt = $loop.IndexOf('ReadHealthAccess() == HealthAccess.Off')
+Assert-True ($offAt -gt 0 -and $offAt -lt $loop.IndexOf('RunScript(healthScript') -and $loop.IndexOf('CleanupLogs()') -lt $offAt) 'TerminalServer_Health Off: the background loop runs no check, the log housekeeping still runs'
+Assert-True ($sourceText.IndexOf('if (!IsHealthAllowed(callerIsAdmin)) return HealthUnavailableResponse;') -lt $sourceText.IndexOf('return GetStatusResponse();')) 'TerminalServer_Health: STATUS is checked before the cache is read'
 
 # Report housekeeping: only old DeviceLogs-* files in SID-named folders are deleted, empty SID folders are removed.
 $reportRoot = Join-Path $dataRoot 'Reports'

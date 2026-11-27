@@ -17,10 +17,11 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.3.0
+    Version : 1.4.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
               1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
+              1.4.0 (2026-11-28, fubu2k) question TerminalServerHealth: only with TerminalServer, default Off, AdminOnly written
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -189,6 +190,12 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Server' -Choices $environmentQuestion[0].Choices } 'EnvironmentMode: another value is refused'
     Assert ((Get-WizardToolConfigValues -A @{ EnvironmentMode = 'TerminalServer' }).Environment_Mode -eq 'TerminalServer') 'EnvironmentMode: TerminalServer is written as Environment_Mode'
     Assert ((Get-WizardToolConfigValues -A @{}).Environment_Mode -eq 'Client') 'EnvironmentMode: an answer file without the answer writes Client'
+    $healthQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'TerminalServerHealth' })
+    Assert ($healthQuestion.Count -eq 1 -and $healthQuestion[0].Default -eq 'Off' -and ((& $healthQuestion[0].When @{ EnvironmentMode = 'TerminalServer' }) -eq $true) -and ((& $healthQuestion[0].When @{ EnvironmentMode = 'Client' }) -eq $false)) 'TerminalServerHealth: one question, default Off, asked only with TerminalServer'
+    Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Everyone' -Choices $healthQuestion[0].Choices } 'TerminalServerHealth: another value is refused'
+    Assert ((Get-WizardToolConfigValues -A @{ EnvironmentMode = 'TerminalServer'; TerminalServerHealth = 'AdminOnly' }).TerminalServer_Health -eq 'AdminOnly') 'TerminalServerHealth: AdminOnly is written'
+    Assert ((Get-WizardToolConfigValues -A @{ EnvironmentMode = 'TerminalServer' }).TerminalServer_Health -eq 'Off') 'TerminalServerHealth: TerminalServer without the answer writes Off'
+    Assert (-not (Get-WizardToolConfigValues -A @{ EnvironmentMode = 'Client'; TerminalServerHealth = 'AdminOnly' }).Contains('TerminalServer_Health')) 'TerminalServerHealth: Client writes nothing (the delivered Off stays)'
     Assert-Throws { ConvertTo-WizardValue -Kind 'text' -Value "a`r`nb" -Max 40 } 'text rejects line breaks'
     Assert ((ConvertTo-WizardValue -Kind 'list' -Value 'A, B ,,C').Count -eq 3) 'list splits at commas'
     Assert-Throws { Test-WizardUnitValues -Unit ([pscustomobject]@{ GroupTags = @('x;y'); Categories = @(); OUs = @() }) } 'group tag rejects ;'

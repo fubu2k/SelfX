@@ -69,6 +69,7 @@ and changing the settings does not change the version.
 | `Show_Language_Setting` | `True` | Users can choose the language. `False`: always `Tool_Language`. |
 | `Tool_Name` | SelfX | Name in the title bar. |
 | `Environment_Mode` | `Client` | Where SelfX runs. `Client`: PC or notebook of one person. `TerminalServer`: terminal server or session host with several users at the same time. See [Terminal server and session host](#terminal-server-and-session-host-environment_mode). Any other value counts as `Client`. |
+| `TerminalServer_Health` | `Off` | Only with `Environment_Mode` = `TerminalServer`: who gets the device status. `Off`: nobody. `AdminOnly`: only administrators who started SelfX with elevated rights. Any other value counts as `Off`. |
 | `Tool_Theme` | `Auto` | Default color scheme: `Auto` (follows Windows), `Dark` or `Light`. |
 | `Show_Theme_Button` | `True` | Users can choose the design themselves. |
 | `Default_Solution_Mode` | `Simplified` | Start view of troubleshooting: `Simplified` (easy) or `Detailed`. |
@@ -175,6 +176,21 @@ window is not a security boundary. An action without a classification counts as 
 cannot read `Tool_Config.xml`, it handles requests as with `TerminalServer`.
 
 The check of other active sessions (`OtherSessions`) works the same in both modes.
+
+**Device status and system information on a terminal server.** The device status describes the server,
+not the place of work of the user. `TerminalServer_Health` decides who gets it:
+
+- `Off` (default): no background checks, no page *Device status* and no status in the tray icon. The
+  service answers `HEALTH` and `STATUS` with `UNAVAILABLE TerminalServer` for every caller.
+- `AdminOnly`: the checks run as on a PC, but only administrators who started SelfX with elevated rights
+  get the status. The service checks this itself.
+
+Normal users see in *System information*, in the ticket and in the text for Copilot only rows about their
+account and session: user, UPN, time zone, proxy, network drives, Citrix Workspace and the time of the
+collection. Rows about the server (name, hardware, Windows, management, addresses, connection check) are
+shown to elevated administrators only. LAN, Wi-Fi, mobile and VPN are not shown on a terminal server.
+SelfX reads these values with the rights of the user, so hiding them keeps the view clear; it is not a
+security boundary.
 
 When Windows is a session host but `Environment_Mode` is `Client`, the service writes a warning at the
 start (event 4009). It does not change the setting itself.

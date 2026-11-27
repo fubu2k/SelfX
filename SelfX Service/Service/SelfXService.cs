@@ -108,6 +108,10 @@ Notes:
                                               every caller (event 4008); an unreadable Tool_Config.xml counts as TerminalServer. At the start a
                                               warning when Windows is a session host but the mode is Client (event 4009); the mode is never
                                               switched by the service. The check of other active sessions (OtherSessions) is the same in both modes
+    3.1.0    2026-11-28  fubu2k               TerminalServer_Health (Off or AdminOnly, only with Environment_Mode TerminalServer): Off = no
+                                              background checks (Background Enabled is ignored), no status cache, HEALTH and STATUS answer
+                                              UNAVAILABLE TerminalServer to every caller; AdminOnly = only elevated administrators get HEALTH and
+                                              STATUS. Any other value and an unreadable Tool_Config.xml count as Off. The log housekeeping keeps running
 */
 
 using System;
@@ -298,6 +302,8 @@ namespace SelfX
         const int EventTerminalServerRefused = 4008;
         // Windows is a session host for several users, but Environment_Mode is Client (warning at the start, nothing is switched).
         const int EventSessionHostClient = 4009;
+        // Answer to HEALTH and STATUS when the device status is not available to the caller (Environment_Mode TerminalServer).
+        const string HealthUnavailableResponse = "UNAVAILABLE TerminalServer";
         const int EventSuppressed = 4099;
         sealed class EventWindow { public DateTime Start = DateTime.MinValue; public int Count; public int Suppressed; }
         volatile string backgroundState = "Active";
@@ -876,11 +882,20 @@ namespace SelfX
             }
             if (request == "STATUS")
             {
+                // Environment_Mode TerminalServer: the status describes the server, not the place of work of the user (TerminalServer_Health).
+                // No log line here: the status icon of every signed-in user asks regularly.
+                if (!IsHealthAllowed(callerIsAdmin)) return HealthUnavailableResponse;
                 return GetStatusResponse();
             }
             Match healthMatch = HealthRequestPattern.Match(request);
             if (healthMatch.Success)
             {
+                // Environment_Mode TerminalServer: checks run only as TerminalServer_Health allows (before anything is started).
+                if (!IsHealthAllowed(callerIsAdmin))
+                {
+                    LogRejected("HEALTH request from " + user + " refused: the device status is not available in Environment_Mode TerminalServer (TerminalServer_Health).");
+                    return HealthUnavailableResponse;
+                }
                 string healthScript = Path.Combine(installRoot, "HealthStatus.ps1");
                 if (!File.Exists(healthScript)) return "ERROR Health collector not installed";
                 // Single-check filter: Id is whitelisted, Name is base64 so no quoting reaches the command line.
@@ -1005,6 +1020,42 @@ namespace SelfX
             }
         }
 
+        /// <summary>Who gets the device status (HEALTH, STATUS) and whether the background checks run.</summary>
+        enum HealthAccess { Everyone, AdminOnly, Off }
+
+        /// <summary>
+        /// Access to the device status from Environment_Mode and TerminalServer_Health of Tool_Config.xml (null = the file cannot be
+        /// read). Client: everyone. TerminalServer (also an unreadable file): AdminOnly only for exactly that value (case is ignored),
+        /// otherwise Off (default, empty, any other value): on a terminal server the status describes the server, and every user
+        /// would see its security state.
+        /// </summary>
+        static HealthAccess GetHealthAccess(string environmentMode, string terminalServerHealth)
+        {
+            bool valid;
+            if (environmentMode != null && !IsTerminalServerMode(environmentMode, out valid)) return HealthAccess.Everyone;
+            if (terminalServerHealth != null && string.Equals(terminalServerHealth.Trim(), "AdminOnly", StringComparison.OrdinalIgnoreCase)) return HealthAccess.AdminOnly;
+            return HealthAccess.Off;
+        }
+
+        /// <summary>TerminalServer_Health: empty (element missing), Off or AdminOnly; case is ignored.</summary>
+        static bool IsValidTerminalServerHealth(string value)
+        {
+            string text = (value ?? "").Trim();
+            return text.Length == 0 || string.Equals(text, "Off", StringComparison.OrdinalIgnoreCase) || string.Equals(text, "AdminOnly", StringComparison.OrdinalIgnoreCase);
+        }
+
+        HealthAccess ReadHealthAccess()
+        {
+            return GetHealthAccess(ReadToolConfigValue("Environment_Mode"), ReadToolConfigValue("TerminalServer_Health"));
+        }
+
+        /// <summary>True when the caller gets HEALTH and STATUS; AdminOnly needs an elevated administrator (the same check as for RUN).</summary>
+        bool IsHealthAllowed(bool callerIsAdmin)
+        {
+            HealthAccess access = ReadHealthAccess();
+            return access == HealthAccess.Everyone || (access == HealthAccess.AdminOnly && callerIsAdmin);
+        }
+
         /// <summary>
         /// Environment_Mode of Tool_Config.xml: true only for TerminalServer (case is ignored). Empty (element missing, for example in
         /// an older configuration) and Client are Client; any other value is Client too and valid is false (logged at the start).
@@ -1058,6 +1109,12 @@ namespace SelfX
                     terminalServer = IsTerminalServerMode(value, out valid);
                     if (!valid) Log("Environment_Mode in Tool_Config.xml is not Client or TerminalServer; Client is used.");
                     Log("Environment_Mode: " + (terminalServer ? "TerminalServer" : "Client") + ".");
+                }
+                if (terminalServer)
+                {
+                    string health = ReadToolConfigValue("TerminalServer_Health");
+                    if (health != null && !IsValidTerminalServerHealth(health)) Log("TerminalServer_Health in Tool_Config.xml is not Off or AdminOnly; Off is used.");
+                    Log("TerminalServer_Health: " + (ReadHealthAccess() == HealthAccess.AdminOnly ? "AdminOnly" : "Off") + ".");
                 }
                 bool? host = IsSessionHost();
                 if (host == null) Log("The product type of Windows could not be read; the session host check was skipped.");
@@ -2389,8 +2446,16 @@ namespace SelfX
                 try
                 {
                     settings = ReadBackgroundSettings();
-                    backgroundInterval = settings.Enabled ? settings.IntervalMinutes : 0;
-                    if (!settings.Enabled)
+                    bool healthOff = ReadHealthAccess() == HealthAccess.Off;
+                    backgroundInterval = settings.Enabled && !healthOff ? settings.IntervalMinutes : 0;
+                    if (healthOff)
+                    {
+                        // Environment_Mode TerminalServer with TerminalServer_Health Off: no checks and no status cache; Background Enabled
+                        // is ignored. The housekeeping above still runs.
+                        backgroundState = "Disabled";
+                        LogBackgroundNote("Background health checks are off: Environment_Mode TerminalServer with TerminalServer_Health Off.");
+                    }
+                    else if (!settings.Enabled)
                     {
                         backgroundState = "Disabled";
                         LogBackgroundNote("Background health checks are disabled in Health_Config.xml.");

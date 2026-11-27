@@ -11,13 +11,14 @@
     Name    : Test-CopilotFacts.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.12
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.10   2026-11-22  fubu2k               Initial version
     2.8.12   2026-11-22  fubu2k               Prompt texts in the language files (en, de), same text as the built-in fallback
+    3.1.0    2026-11-28  fubu2k               Environment_Mode TerminalServer: no facts of the server for normal users, no kinds of connection
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -97,6 +98,13 @@ foreach ($disk in @($facts.Disks)) {
 	Assert-Equal (($disk.UsedPercent -ge 0) -and ($disk.UsedPercent -le 100)) $true 'facts: percent used between 0 and 100'
 }
 if ($facts.ContainsKey('UptimeDays')) { Assert-Equal ($facts.UptimeDays -ge 0) $true 'facts: uptime is not negative' }
+# Environment_Mode TerminalServer: a normal user gets no facts of the server; the kinds of connection are left out for everyone.
+$serverKeys = @('WindowsEdition', 'WindowsVersion', 'WindowsBuild', 'UptimeDays', 'Disks', 'Status', 'Connection')
+$tsUser = Get-SelfXCopilotFacts -HealthItems $items -SelfXVersion '2.8.10' -Language 'de' -TerminalServer $true -ServerFacts $false
+Assert-Equal @($tsUser.Keys | Where-Object { $_ -in $serverKeys }).Count 0 'TerminalServer, normal user: no facts of the server and no kinds of connection'
+Assert-Equal "$($tsUser.SelfXVersion)/$($tsUser.Language)" '2.8.10/de' 'TerminalServer, normal user: SelfX version and language stay'
+$tsAdmin = Get-SelfXCopilotFacts -HealthItems $items -SelfXVersion '2.8.10' -Language 'de' -TerminalServer $true -ServerFacts $true
+Assert-Equal "$($tsAdmin.ContainsKey('Connection'))/$(@($tsAdmin.Status).Count)" 'False/4' 'TerminalServer, administrator: status rows stay, no kinds of connection'
 
 # --- Facts to prompt (end to end) -----------------------------------------------------------------------------
 $context = @{ ComputerName = 'PC-ANNA-01'; UserName = 'anna.beispiel'; DomainName = @('CONTOSO', 'contoso.example') }
@@ -167,6 +175,7 @@ if (($start -ge 0) -and ($end -gt $start)) {
 	}
 }
 Assert-Equal ($ui -match 'Get-SelfXCopilotFacts [^\r\n]*-IncludeAppNames \$Copilot_AppNames') $true 'window: the setting Copilot_Include_AppNames is passed to the facts'
+Assert-Equal ($ui -match 'Get-SelfXCopilotFacts [^\r\n]*-TerminalServer \(\[bool\]\$Global:SelfX_View\.TerminalServer\) -ServerFacts \(\[bool\]\$Global:SelfX_View\.ServerRows\)') $true 'window: the view of the user is passed to the facts'
 Assert-Equal ($ui -match "FindName\('CopilotWarning'\)\.Text = Get-SelfXString 'Copilot_Warning_Text'") $true 'window: the note for the user is shown'
 Assert-Equal ($ui -match '\$Copilot_Available = \(\(Get-SelfXText "Copilot_Enabled" "False"\) -eq ''True''\) -and \(Test-SelfXCopilotUrl \$Copilot_Url\)') $true 'window: the button needs Copilot_Enabled and a valid address'
 
