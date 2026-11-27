@@ -19,6 +19,7 @@
     Context : Build machine / CI (any user)
     Version : 1.1.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
+              1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -467,6 +468,49 @@ try {
     $configOnly = Join-Path $work 'result\configonly'
     $co = Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $configOnly -ConfigureOnly
     Assert ($null -eq $co.PackageFile -and (Test-Path (Join-Path $configOnly 'package\Config\SelfX.Config.json')) -and @(Get-ChildItem $configOnly -Filter '*.intunewin').Count -eq 0) '-ConfigureOnly: package folder only, no .intunewin, no tool needed'
+
+    # ---- configuration package (-PackageKind ConfigOnly) and the full package of a setup with a separate configuration package
+    $script:RuleCalls.Clear()
+    $cfgOut = Join-Path $work 'result\cfgpkg'
+    $cfgSteps = New-Object System.Collections.Generic.List[string]
+    $cfg = Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $cfgOut -ToolPath $dummyTool -Language 'en' -PackageKind ConfigOnly -OnProgress { param($id, $text) $cfgSteps.Add($id) }
+    Assert ($cfg.PackageKind -eq 'ConfigOnly' -and $cfg.PackageFile -eq "SelfX-Config-$($cfg.Version).intunewin" -and $cfg.DetectionFile -eq "SelfX-Config-$($cfg.Version).Detection.ps1") 'config package: file names SelfX-Config-<version>'
+    $cfgTop = @(Get-ChildItem -LiteralPath (Join-Path $cfgOut 'package') -Force | ForEach-Object { $_.Name } | Sort-Object)
+    Assert (($cfgTop -join ',') -eq 'Config,Detection.ps1,Install.ps1') 'config package: only Install.ps1, Detection.ps1 and Config are packaged'
+    $cfgList = Get-Content -LiteralPath (Join-Path $cfgOut 'package\Config\SelfX.Config.json') -Raw | ConvertFrom-Json
+    Assert ($cfgList.MinCodeVersion -eq $cfg.Version) 'config package: MinCodeVersion is the code version of the payload'
+    Assert ($null -ne $cfgList.Files.PSObject.Properties['Tool_Config.xml'] -and $null -ne $cfgList.Files.PSObject.Properties['Branding/logo.png']) 'config package: the list names the configuration and the logo'
+    Assert (@($cfgList.Files.PSObject.Properties.Name | Where-Object { $_ -like 'SelfX.*' }).Count -eq 0) 'config package: the lists are not listed in themselves'
+    $cfgDetection = Get-Content -LiteralPath (Join-Path $cfgOut $cfg.DetectionFile) -Raw
+    $cfgDigest = Get-SelfXListDigest -Stage (Join-Path $cfgOut 'package') -ListName 'SelfX.Config.json'
+    Assert ($cfgDetection -match "PackageKind = 'ConfigOnly'" -and $cfgDetection -match "ExpectedConfigHash = '$cfgDigest'" -and $cfgDetection -match "ExpectedCodeHash = '__SELFX_CODE_HASH__'") 'config package: detection checks the configuration digest only'
+    Assert ($script:RuleCalls.Count -eq 0) 'config package: no AppLocker or App Control files (no programs)'
+    Assert (($cfgSteps -join ',') -eq 'check,copy,config,pack,detection,rules,guide,finish') 'config package: progress steps'
+    $cfgGuide = Get-Content -LiteralPath (Join-Path $cfgOut 'SelfX-Intune-Guide.en.txt') -Raw
+    Assert ($cfgGuide -match 'Install\.ps1 -ConfigOnly' -and $cfgGuide -match 'Supersedence' -and $cfgGuide -match 'Never set supersedence between the configuration package and the full app' -and $cfgGuide -notmatch '-TrustedSigner') 'config guide: install command with -ConfigOnly, supersedence explained, no -TrustedSigner'
+    Assert (@($cfg.GuideSteps.Steps | ForEach-Object { $_.Id }) -join ',' -eq 'app,program,requirements,detection,dependency,assignment,supersedence,test') 'config guide: steps'
+    Assert ((Get-TreeDigest -Folder $payload) -eq $payloadBefore) 'config package: the payload folder is unchanged'
+    $fullPackageBefore = $result.PackageFile
+    $sep = Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\sep') -ToolPath $dummyTool -Language 'en' -PackageKind FullSeparateConfig
+    $sepDetection = Get-Content -LiteralPath (Join-Path $work 'result\sep' | Join-Path -ChildPath $sep.DetectionFile) -Raw
+    Assert ($sep.PackageFile -eq $fullPackageBefore -and $sepDetection -match "PackageKind = 'FullWithoutConfig'" -and $sepDetection -notmatch "ExpectedCodeHash = '__") 'separate config: the full package keeps its names and its detection does not compare the configuration'
+    Assert (@($sep.GuideSteps.Steps | ForEach-Object { $_.Id }) -contains 'separate' -and ((Get-Content -LiteralPath (Join-Path $work 'result\sep\SelfX-Intune-Guide.en.txt') -Raw) -match 'separate configuration package')) 'separate config: the full guide has the note'
+    Assert ((Get-Content -LiteralPath (Join-Path $work 'result\sep\package\Install.ps1') -Raw) -eq (Get-Content -LiteralPath (Join-Path $finalOut 'package\Install.ps1') -Raw)) 'separate config: the full package itself is the same'
+    Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\bad') -ToolPath $dummyTool -PackageKind 'Other' } 'an unknown package kind is refused'
+    $cfgNoInstall = Join-Path $work 'build-cfg-noinstall'; Copy-Item -LiteralPath $payload -Destination $cfgNoInstall -Recurse; Remove-Item -LiteralPath (Join-Path $cfgNoInstall 'Install.ps1')
+    Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $cfgNoInstall -OutputFolder (Join-Path $work 'result\bad') -ToolPath $dummyTool -PackageKind ConfigOnly } 'config package: a payload without Install.ps1 is refused'
+    Assert (-not (Test-Path -LiteralPath (Join-Path $work 'result\bad'))) 'config package: a refused run leaves no output folder'
+    # The config folder tool: a link or a file of the class Code in Config is refused; the manifest without MinCodeVersion keeps the old format.
+    $manifestStage = Join-Path $work 'manifest-stage'
+    New-Item -ItemType Directory -Path (Join-Path $manifestStage 'Config') -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $manifestStage 'Config\Tool_Config.xml'), '<GUI_Config />')
+    Assert-Throws { New-SelfXConfigManifest -Stage $manifestStage -MinCodeVersion '3.1.0-beta' } 'MinCodeVersion with a suffix is refused'
+    Assert-Throws { New-SelfXConfigManifest -Stage $manifestStage -MinCodeVersion '3' } 'MinCodeVersion with one number is refused'
+    [IO.File]::WriteAllText((Join-Path $manifestStage 'Config\Self_X.ps1'), 'x')
+    Assert-Throws { New-SelfXConfigManifest -Stage $manifestStage -MinCodeVersion '3.1.0' } 'a code file in the configuration package is refused (class Code)'
+    Remove-Item -LiteralPath (Join-Path $manifestStage 'Config\Self_X.ps1')
+    Assert ((New-SelfXConfigManifest -Stage $manifestStage -MinCodeVersion '3.1.0') -eq 1) 'the configuration manifest of one file lists one file'
+    Assert-Throws { Convert-SelfXPackageToConfigOnly -Stage $manifestStage } 'a stage without Install.ps1 is not converted'
 
     # ---- the guide with a signer
     Initialize-WizardTexts -Folder $WizardFolder -Culture 'en'

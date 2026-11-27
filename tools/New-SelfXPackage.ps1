@@ -10,7 +10,7 @@
     folder only when all steps worked. Result in the output folder:
 
       package\                                  the configured package folder (input of the packaging)
-      SelfX-Service-<version>.intunewin         the package for Intune (not with -ConfigureOnly)
+      SelfX-Service-<version>.intunewin         the package for Intune (not with -ConfigureOnly; SelfX-Config-... with -ConfigPackage)
       SelfX-Service-<version>.Detection.ps1     the detection script for Intune (not with -ConfigureOnly; signed in the trust mode Signature)
       SelfX.AppLocker.xml, AppControl\          AppLocker rules and App Control (WDAC) supplemental policy for the mode (optional)
       Set-SelfXSupportUnit-*.ps1                Intune platform scripts for the ticket routing (one per unit/group tag/device class)
@@ -58,6 +58,14 @@
 .PARAMETER ConfigureOnly
     Write the configured package folder, the scripts and the instructions only. No programs are built, nothing is packaged.
 
+.PARAMETER ConfigPackage
+    Build the configuration package instead of the full package: Install.ps1 (to be started with -ConfigOnly), Detection.ps1 and Config.
+    It replaces only the settings of an installed SelfX. Output: SelfX-Config-<version>.intunewin and its detection script.
+
+.PARAMETER SeparateConfig
+    Build the full package for a setup with a separate configuration package: its detection script does not compare the configuration.
+    Cannot be combined with -ConfigPackage.
+
 .EXAMPLE
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXPackage.ps1
 
@@ -82,6 +90,7 @@
     1.1.1    2026-11-27  fubu2k               Default paths and the build of the repository package through Get-WizardBuildDefaults and
                                               Invoke-SelfXWizardBuild (shared with the window tools\Wizard\SelfXWizardGui.ps1); same behavior
     1.2.0    2026-11-27  fubu2k               -AdditionalSigner (further thumbprints for -TrustedSigner, change of the certificate)
+    1.3.0    2026-11-27  fubu2k               -ConfigPackage (the configuration package) and -SeparateConfig (the full package of a setup with a configuration package)
 #>
 [CmdletBinding()]
 param(
@@ -91,6 +100,8 @@ param(
     [string]$ToolPath,
     [switch]$BuildBinaries,
     [switch]$ConfigureOnly,
+    [switch]$ConfigPackage,
+    [switch]$SeparateConfig,
     [string]$PayloadFolder,
     [string]$CertificateThumbprint,
     [string]$PfxPath,
@@ -110,6 +121,8 @@ try {
     $script:WizardInteractive = $interactive
     if ($CertificateThumbprint -and $PfxPath) { throw 'Use either -CertificateThumbprint or -PfxPath, not both.' }
     if ($TimestampServer -and -not ($CertificateThumbprint -or $PfxPath)) { throw '-TimestampServer needs -CertificateThumbprint or -PfxPath.' }
+    if ($ConfigPackage -and $SeparateConfig) { throw '-ConfigPackage and -SeparateConfig cannot be combined: one run builds one package.' }
+    $packageKind = $(if ($ConfigPackage) { 'ConfigOnly' } elseif ($SeparateConfig) { 'FullSeparateConfig' } else { 'Full' })
     if ($ConfigureOnly -and ($CertificateThumbprint -or $PfxPath)) { throw '-ConfigureOnly does not sign: do not combine it with a certificate.' }
     if (@($AdditionalSigner | Where-Object { $_ }).Count -and -not ($CertificateThumbprint -or $PfxPath)) { throw '-AdditionalSigner needs -CertificateThumbprint or -PfxPath.' }
 
@@ -203,7 +216,7 @@ try {
 
     # ---- build (the package folder of the repository is brought into the layout of the payload in a temporary folder first)
     $result = Invoke-SelfXWizardBuild -Answers $answers -PayloadFolder $packageSource -FromRepository:$fromRepository -OutputFolder $OutputFolder -ToolPath $ToolPath `
-        -Certificate $certificate -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -Language $Language -ConfigureOnly:$ConfigureOnly `
+        -Certificate $certificate -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -Language $Language -ConfigureOnly:$ConfigureOnly -PackageKind $packageKind `
         -OnProgress { param($id, $text) Write-Host $text -ForegroundColor Cyan }
 
     Write-Host ''

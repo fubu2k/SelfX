@@ -338,6 +338,7 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
    hoch.
 5. Prüfen Sie vor dem Paketieren die Support-Kontakte in `Tool_Config.xml` und
    `Health_Config.xml` (siehe [Konfiguration](Configuration.md)).
+6. Ändern sich nur die Einstellungen, reicht ein [zweites Paket für die Konfiguration](#zweites-intune-paket-nur-die-konfiguration).
 
 **Update von SelfX 2.6.9 (Upstream):** Zusätzlich brauchen die Geräte Windows 11 25H2 und
 PowerShell 7.6 (Schritt 3). Das Paket muss mit dem .NET SDK 10 neu gebaut werden; die alte
@@ -360,6 +361,56 @@ Programm eine Datei offen, versucht der Deinstaller es bis zu 90 Sekunden lang e
 - Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Uninstall.log`.
 
 ## Optionale Bausteine
+
+### Zweites Intune-Paket: nur die Konfiguration
+
+Der Assistent kann ein **zweites, kleines Paket** bauen (`SelfX-Config-<Version>.intunewin`), das nur `Install.ps1`, `Detection.ps1` und den Ordner
+`Config` enthält. Es wird mit `Install.ps1 -ConfigOnly` installiert. Es ersetzt die Einstellungen eines SelfX, das **schon installiert** ist (Support-Adresse,
+Logo, Ticket-Zuordnung, Aktionslisten, Sprache) und sonst nichts: Dienst, Programme und Vertrauensanker bleiben unberührt, nichts wird neu gestartet. Ein
+geöffnetes SelfX-Fenster zeigt die neuen Einstellungen, nachdem es geschlossen und wieder geöffnet wurde.
+
+**Wann lohnt sich das?** Wenn sich die Einstellungen oft ändern und der Code selten. Das kleine Paket ist in Sekunden installiert, Sie testen nicht
+das ganze Produkt neu, und das Code-Paket (das große) bleibt wie es ist. Ändern Sie Einstellungen nur zusammen mit einer neuen Version, ist ein Paket
+einfacher: Bleiben Sie dann dabei.
+
+**Beide Pakete bauen und installieren**
+
+1. Bauen Sie das vollständige Paket mit dem Assistenten und antworten Sie *Vollständiges Paket mit getrenntem Konfigurationspaket* (Konsole: `-SeparateConfig`). Sein Erkennungsskript
+   vergleicht die Konfiguration nicht; das vollständige Paket wird also nicht neu installiert, wenn sich nur die Konfiguration geändert hat.
+2. Bauen Sie das Konfigurationspaket aus demselben Release mit **denselben Antworten**: *Konfigurationspaket* (Konsole: `-ConfigPackage`).
+3. Legen Sie in Intune **zwei Apps** an: die vollständige App wie bisher und die Konfigurations-App mit dem Installationsbefehl
+   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -ConfigOnly` (der Assistent schreibt die genaue Zeile in seine Anleitung).
+   Deinstallationsbefehl: ein Befehl, der nichts tut (`...powershell.exe -NoProfile -Command exit 0`); die vollständige App entfernt SelfX.
+4. Tragen Sie die **vollständige App als Abhängigkeit** der Konfigurations-App ein (*Automatisch installieren: Ja*). Weisen Sie beide denselben Gerätegruppen zu.
+5. Erkennung der Konfigurations-App: die Datei `SelfX-Config-<Version>.Detection.ps1` (sie vergleicht nur die Konfiguration).
+
+**Konfiguration später ändern.** Bauen Sie ein neues Konfigurationspaket und laden Sie es als **neue Version der Konfigurations-App** hoch, oder legen Sie eine neue
+App an und tragen Sie die alte unter *Ablösung (Supersedence)* ein, mit *Vorherige Version deinstallieren* auf **Nein**. Die Ablösung gilt nur zwischen
+Konfigurations-Apps: Eine neuere ersetzt eine ältere, die Geräte installieren die neue, die alte ist nicht mehr erforderlich.
+
+> **Richten Sie nie eine Ablösung zwischen Konfigurations-App und vollständiger App ein.** Die vollständige App würde durch die Ablösung deinstalliert und SelfX
+> würde vom Gerät entfernt.
+
+**Was `-ConfigOnly` prüft (es hält an, bevor es etwas ändert)**
+
+- SelfX ist installiert und hat einen Vertrauensanker; der Anker ist sicher. Der Modus (Hash oder Signatur) ist der des Geräts. `-TrustedSigner` und
+  `-AllowHashMode` lassen sich nicht mit `-ConfigOnly` kombinieren: Ein Konfigurationspaket kann nicht ändern, wem vertraut wird.
+- Das Paket enthält nur `Install.ps1` und `Config`, keinen Link, und jede Datei steht mit ihrem SHA256 in `Config\SelfX.Config.json`. Im Modus Signatur müssen die Skripte
+  und `Config\SelfX.Config.cat` eine gültige Signatur eines Signierers des Geräts tragen.
+- `MinCodeVersion` in `SelfX.Config.json` (die Code-Version, für die die Konfiguration gemacht ist) darf nicht neuer sein als der installierte Code
+  (`App\SelfX.Code.json`). Installieren Sie in diesem Fall zuerst das vollständige Paket.
+- Einstellungen, die nur die vollständige Installation anwendet (Name der Verknüpfung, Verknüpfung auf dem Desktop oder im Startmenü, Eintrag des Statussymbols,
+  Symbol, `Service_Privileges`), müssen mit denen auf dem Gerät übereinstimmen. Weichen sie ab, lehnt das Konfigurationspaket mit ihren Namen ab: Ändern Sie sie
+  mit dem vollständigen Paket. Alles andere in `Tool_Config.xml` wird gelesen, wenn SelfX läuft, und darf sich ändern.
+
+Der Ordner `Config` wird durch Umbenennen getauscht: Der neue Ordner wird neben den Installationsordner kopiert und dort geprüft, dann wird `Config` in `SelfX.ConfigOld` (neben dem Installationsordner) und der neue
+Ordner in `Config` umbenannt; bei einem Fehler kommt der alte Ordner zurück. Die Ordner neben dem Installationsordner heißen `SelfX.ConfigStage` und `SelfX.ConfigOld` (der Dienst startet
+keine Skripte, wenn der Installationsordner mehr als `App` und `Config` enthält). Das Skript einer laufenden Aktion hält Dateien offen: Der Austausch wartet und versucht es etwa
+20 Sekunden lang erneut, dann endet er mit Exitcode 1 und Intune versucht es später noch einmal. Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Install.log`.
+
+**Erkennung und das vollständige Paket.** Nach einer neuen Code-Version ersetzt das vollständige Paket `Config` durch die Konfiguration seines eigenen Builds. Das Konfigurationspaket
+passt dann nicht mehr (sein Digest weicht ab) und Intune installiert es erneut: Die Einstellungen des Konfigurationspakets gelten wieder. Bauen Sie beide Pakete aus demselben
+Release mit denselben Antworten und verteilen Sie das vollständige Paket zuerst.
 
 ### Ticket-Zuordnung per Intune
 

@@ -168,6 +168,57 @@ try {
 	}
 	$installedOk = New-InstalledFolder '3.0.2' $codeInstalled $configInstalled
 	Assert-Equal $null (Test-Installed $installedOk).Reason 'installed: the expected version and both digests are accepted'
+	# Package kinds (Full, FullWithoutConfig, ConfigOnly): the two Intune packages of a setup with a configuration package.
+	function Test-InstalledKind([string]$Dir, [string]$Kind, [string]$ExpectedVersion = '3.0.2', [string]$CodeDigest = $digestCode, [string]$ConfigDigest = $digestConfig) {
+		return (Det_Test-SelfXInstalledPackage -InstallFolder $Dir -ExpectedVersion $ExpectedVersion -ExpectedCodeHash $CodeDigest -ExpectedConfigHash $ConfigDigest -Kind $Kind)
+	}
+	$configOther = [ordered]@{ 'Tool_Config.xml' = 'bb22'; 'Branding/logo.png' = 'ff66' }
+	$installedOtherConfig = New-InstalledFolder '3.0.2' $codeInstalled $configOther
+	Assert-Equal (Test-InstalledKind $installedOk 'Full').Reason $null 'kind Full: version and both digests are accepted'
+	Assert-Equal ((Test-InstalledKind $installedOtherConfig 'Full').Reason -like '*SelfX.Config.json*') $true 'kind Full: another configuration is a difference (as before)'
+	Assert-Equal (Test-InstalledKind $installedOtherConfig 'FullWithoutConfig').Reason $null 'kind FullWithoutConfig: another configuration is not compared (no reinstall loop with the configuration package)'
+	Assert-Equal (@((Test-InstalledKind $installedOtherConfig 'FullWithoutConfig').Notes).Count -ge 1) $true 'kind FullWithoutConfig: the note says that the configuration is delivered separately'
+	Assert-Equal (Test-InstalledKind $installedOk 'FullWithoutConfig' -ExpectedVersion '3.0.3').Reason 'installed version 3.0.2' 'kind FullWithoutConfig: the code version is still compared'
+	$installedOtherCode = New-InstalledFolder '3.0.2' ([ordered]@{ 'Self_X.ps1' = 'aa99' }) $configInstalled
+	Assert-Equal ((Test-InstalledKind $installedOtherCode 'FullWithoutConfig').Reason -like '*SelfX.Code.json*') $true 'kind FullWithoutConfig: the code digest is still compared'
+	Assert-Equal (Test-InstalledKind $installedOk 'ConfigOnly').Reason $null 'kind ConfigOnly: the configuration digest is accepted'
+	Assert-Equal ((Test-InstalledKind $installedOtherConfig 'ConfigOnly').Reason -like '*SelfX.Config.json*') $true 'kind ConfigOnly: another configuration is a difference'
+	Assert-Equal (Test-InstalledKind $installedOk 'ConfigOnly' -ExpectedVersion '9.9.9' -CodeDigest '0000').Reason $null 'kind ConfigOnly: version and code files are not compared (the configuration package does not own them)'
+	$installedNoCode = New-InstalledFolder '3.0.2' $codeInstalled $configInstalled
+	Remove-Item -LiteralPath (Join-Path $installedNoCode 'App\SelfX.Code.json')
+	Assert-Equal (Test-InstalledKind $installedNoCode 'ConfigOnly').Reason $null 'kind ConfigOnly: a missing code list does not matter for this package'
+	Assert-Equal ((Test-InstalledKind $installedOk 'ConfigOnly' -ConfigDigest '__SELFX_CONFIG_HASH__').Reason -like '*no digest*') $true 'kind ConfigOnly: the placeholder of the repository copy is a problem (not "installed")'
+	Assert-Equal ((Test-InstalledKind $installedOk 'Everything').Reason -like 'invalid package kind*') $true 'an unknown kind is refused (fail closed)'
+	Assert-Equal ((Test-InstalledKind $installedOk 'full').Reason -like 'invalid package kind*') $true 'the kind is case sensitive'
+	$noConfigList = New-InstalledFolder '3.0.2' $codeInstalled $null
+	Assert-Equal ((Test-InstalledKind $noConfigList 'ConfigOnly').Reason -ne $null) $true 'kind ConfigOnly: no configuration list means not installed'
+
+	# The writer sets the kind: ConfigOnly needs only the configuration list and leaves the code placeholder, FullWithoutConfig keeps both digests.
+	$kindStage = Join-Path $temp 'kind-stage'
+	[void][IO.Directory]::CreateDirectory((Join-Path $kindStage 'Config'))
+	[void][IO.Directory]::CreateDirectory((Join-Path $kindStage 'App'))
+	Copy-Item -LiteralPath $detectionScript -Destination (Join-Path $kindStage 'Detection.ps1')
+	Write-List (Join-Path $kindStage 'Config\SelfX.Config.json') $configInstalled
+	$configKind = New-SelfXDetectionScript -Stage $kindStage -Target (Join-Path $temp 'out\ConfigKind.ps1') -Kind ConfigOnly
+	$configKindText = [IO.File]::ReadAllText((Join-Path $temp 'out\ConfigKind.ps1'))
+	Assert-Equal $configKind.Code $null 'tool: ConfigOnly writes no code digest'
+	Assert-Equal $configKindText.Contains("`$PackageKind = 'ConfigOnly'") $true 'tool: ConfigOnly sets $PackageKind'
+	Assert-Equal $configKindText.Contains("`$ExpectedCodeHash = '__SELFX_CODE_HASH__'") $true 'tool: ConfigOnly leaves the code placeholder (the script never compares it)'
+	Assert-Equal $configKindText.Contains("`$ExpectedConfigHash = '$digestConfig'") $true 'tool: ConfigOnly writes the configuration digest'
+	Write-List (Join-Path $kindStage 'App\SelfX.Code.json') $codeInstalled
+	$separateKind = New-SelfXDetectionScript -Stage $kindStage -Target (Join-Path $temp 'out\SeparateKind.ps1') -Kind FullWithoutConfig
+	Assert-Equal ([IO.File]::ReadAllText((Join-Path $temp 'out\SeparateKind.ps1')).Contains("`$PackageKind = 'FullWithoutConfig'")) $true 'tool: FullWithoutConfig sets $PackageKind'
+	Assert-Equal ($null -ne $separateKind.Code) $true 'tool: FullWithoutConfig still writes the code digest'
+	$fullKind = New-SelfXDetectionScript -Stage $kindStage -Target (Join-Path $temp 'out\FullKind.ps1')
+	Assert-Equal ([IO.File]::ReadAllText((Join-Path $temp 'out\FullKind.ps1')).Contains("`$PackageKind = 'Full'")) $true 'tool: the default kind is Full (unchanged behaviour)'
+	$threw = $false
+	try { [void](New-SelfXDetectionScript -Stage $kindStage -Target (Join-Path $temp 'out\Bad.ps1') -Kind 'Other') } catch { $threw = $true }
+	Assert-Equal $threw $true 'tool: an unknown kind is refused'
+	Set-Content -LiteralPath (Join-Path $kindStage 'Detection.ps1') -Value "`$ExpectedCodeHash = '__SELFX_CODE_HASH__'`n`$ExpectedConfigHash = '__SELFX_CONFIG_HASH__'"
+	$threw = $false
+	try { [void](New-SelfXDetectionScript -Stage $kindStage -Target (Join-Path $temp 'out\Bad.ps1') -Kind ConfigOnly) } catch { $threw = $true }
+	Assert-Equal $threw $true 'tool: a Detection.ps1 without $PackageKind is refused for a kind other than Full'
+
 	# 1. A new code version (same files, same configuration): only the version is reported.
 	$installedNewVersion = New-InstalledFolder '3.0.3' $codeInstalled $configInstalled
 	Assert-Equal (Test-Installed $installedNewVersion).Reason 'installed version 3.0.3' 'installed: a different code version is reported as version'

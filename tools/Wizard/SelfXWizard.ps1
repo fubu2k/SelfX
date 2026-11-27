@@ -30,6 +30,9 @@
     3.1.3    2026-11-27  fubu2k               Instructions as steps with values to copy (Get-SelfXIntuneGuideSteps); trust mode Signature: events
                                               4006/4007, refused signature without Install.log, change of the certificate; -AdditionalSigner;
                                               Get-WizardCertificateInfo (certificate and revocation list addresses for the window)
+    3.1.4    2026-11-27  fubu2k               -PackageKind (Full, FullSeparateConfig, ConfigOnly): the configuration package (Install.ps1, Detection.ps1, Config; MinCodeVersion;
+                                              SelfX-Config-<version> names), the detection kind of the full package of a setup with a configuration
+                                              package, and the instructions for both (Supersedence explained)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -310,7 +313,8 @@ function Get-SelfXIntuneGuideSteps {
         [string]$AnswersFile = '',
         [string[]]$TrustedSigner = @(),
         [string[]]$RuleFiles = @(),
-        [string]$OutputFolder = ''
+        [string]$OutputFolder = '',
+        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full'
     )
     $ps = '%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
     # Trust mode Signature: the install command names the signers (SHA1 thumbprints, 40 hex characters, separated by commas without a space).
@@ -328,6 +332,28 @@ function Get-SelfXIntuneGuideSteps {
         $steps.Add([pscustomobject]@{ Id = $Id; Lines = @($Lines); Copies = @($Copies | Where-Object { $null -ne $_ -and $_.Value }) })
     }
     $copy = { param([string]$Label, [string]$Value) [pscustomobject]@{ Label = $Label; Value = $Value } }
+
+    if ($PackageKind -eq 'ConfigOnly') {
+        # The configuration package: Install.ps1 -ConfigOnly needs no trust parameters (the mode is the one of the device); the uninstall
+        # command is a command that does nothing (Intune needs one); the full package removes SelfX.
+        $configInstall = "$ps .\Install.ps1 -ConfigOnly"
+        $noUninstall = '%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command exit 0'
+        & $add 'app' @((Get-WText 'guide.c1' @($PackageFile, "SelfX Configuration - $org", $org))) @((& $copy 'gui.copy.name' "SelfX Configuration - $org"), (& $copy 'gui.copy.package' (& $inOutput $PackageFile)))
+        & $add 'program' @((Get-WText 'guide.c2' @($configInstall)), (Get-WText 'guide.c2b' @($noUninstall)), (Get-WText 'guide.s2c')) @((& $copy 'gui.copy.install' $configInstall), (& $copy 'gui.copy.uninstall' $noUninstall))
+        & $add 'requirements' @((Get-WText 'guide.c3')) @((& $copy 'gui.copy.requirement' $script:SelfXRequirementScript))
+        & $add 'detection' @((Get-WText 'guide.c4' @($DetectionFile))) @((& $copy 'gui.copy.detection' (& $inOutput $DetectionFile)))
+        & $add 'dependency' @((Get-WText 'guide.c5' @($Version)))
+        & $add 'assignment' @((Get-WText 'guide.c6'))
+        & $add 'supersedence' @((Get-WText 'guide.c7'), (Get-WText 'guide.c7a'), (Get-WText 'guide.c7b'))
+        & $add 'test' @((Get-WText 'guide.c8'))
+        $configFooter = @()
+        if ($AnswersFile) { $configFooter = @((Get-WText 'guide.answers' @($AnswersFile))) }
+        return [pscustomobject]@{
+            Header = @((Get-WText 'guide.title' @($org, $Version)), ('=' * 72), (Get-WText 'guide.c.intro'))
+            Steps  = $steps.ToArray()
+            Footer = $configFooter
+        }
+    }
 
     & $add 'app' @((Get-WText 'guide.s1' @($PackageFile, "SelfX Service - $org", $org))) @((& $copy 'gui.copy.name' "SelfX Service - $org"), (& $copy 'gui.copy.package' (& $inOutput $PackageFile)))
     & $add 'program' @((Get-WText 'guide.s2' @($installCommand)), (Get-WText 'guide.s2b' @($uninstallCommand)), (Get-WText 'guide.s2c')) @((& $copy 'gui.copy.install' $installCommand), (& $copy 'gui.copy.uninstall' $uninstallCommand))
@@ -362,6 +388,7 @@ function Get-SelfXIntuneGuideSteps {
     $lines = @((Get-WText 'guide.asr' @($step)), (Get-WText 'guide.asr1'), (Get-WText 'guide.asr2')) + @($script:SelfXAsrExclusionFiles | ForEach-Object { "   - $_" }) + @((Get-WText 'guide.asr3'))
     & $add 'asr' $lines @((& $copy 'gui.copy.asr' ($script:SelfXAsrExclusionFiles -join "`r`n")))
     & $add 'test' @((Get-WText 'guide.s8' @($step + 1)))
+    if ($PackageKind -eq 'FullSeparateConfig') { & $add 'separate' @((Get-WText 'guide.sep' @($step + 2)), (Get-WText 'guide.sep1')) }
     $footer = @()
     if ($AnswersFile) { $footer = @((Get-WText 'guide.update' @($AnswersFile)), (Get-WText 'guide.answers' @($AnswersFile))) }
     return [pscustomobject]@{
@@ -382,7 +409,8 @@ function New-SelfXIntuneGuide {
         [string[]]$ScriptFiles = @(),
         [string]$AnswersFile = '',
         [string[]]$TrustedSigner = @(),
-        [string[]]$RuleFiles = @()
+        [string[]]$RuleFiles = @(),
+        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full'
     )
     $guide = Get-SelfXIntuneGuideSteps @PSBoundParameters
     $lines = New-Object System.Collections.Generic.List[string]
@@ -809,6 +837,10 @@ function Invoke-SelfXPackageBuild {
         checked); write Detection.ps1 with the digests (signed in the mode Signature); AppLocker and App Control files for the mode;
         platform scripts, instructions and selfx-answers.json.
 
+        -PackageKind: Full (default), FullSeparateConfig (the full package for a setup with a separate configuration package: its
+        detection script does not compare the configuration) or ConfigOnly (the configuration package: Install.ps1, Detection.ps1 and
+        Config; Install.ps1 -ConfigOnly; no programs, no AppLocker or App Control files; the file list names MinCodeVersion).
+
         Everything is built in a work folder next to the output folder. Only when every step worked, the result replaces the output
         folder; an error leaves no half-finished output (an earlier result stays as it was). Errors are exceptions with a plain text.
         The caller disposes -Certificate; the function never reads, stores or logs a password.
@@ -836,8 +868,10 @@ function Invoke-SelfXPackageBuild {
         [string[]]$AdditionalSigner = @(),
         [scriptblock]$OnProgress,
         [string]$Language = 'en',
-        [switch]$ConfigureOnly
+        [switch]$ConfigureOnly,
+        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full'
     )
+    $configPackage = ($PackageKind -eq 'ConfigOnly')
     $progress = { param([string]$id) if ($null -ne $OnProgress) { & $OnProgress $id (Get-WText "step.$id") } }
     $signed = ($null -ne $Certificate)
     $additional = @($AdditionalSigner | Where-Object { "$_".Trim() })
@@ -882,6 +916,7 @@ function Invoke-SelfXPackageBuild {
         # ---- settings and logo
         & $progress 'config'
         Set-WizardPackageConfiguration -PackageFolder $package -Answers $a
+        if ($configPackage) { Convert-SelfXPackageToConfigOnly -Stage $package }
 
         # The detection script is made from the unsigned file with the lists of the finished package (a signature block is not copied).
         $detectStage = Join-Path $tmp 'detect'
@@ -895,24 +930,28 @@ function Invoke-SelfXPackageBuild {
             $signArguments = @{ Path = $files; Certificate = $Certificate }
             if ($TimestampServer) { $signArguments.TimestampServer = $TimestampServer }
             $null = Set-SelfXCodeSignature @signArguments
-            Update-SelfXBinariesManifest -Package $package
-            $null = New-SelfXCodeManifest -Stage $package -Version $version
+            if (-not $configPackage) {
+                Update-SelfXBinariesManifest -Package $package
+                $null = New-SelfXCodeManifest -Stage $package -Version $version
 
-            # SelfX.Code.cat covers everything outside Config: Config is set aside while the catalog is made, and the catalog must lie outside
-            # the folder it covers until it is moved in.
-            & $progress 'catalog'
-            $held = Join-Path $tmp 'config-held'
-            Move-Item -LiteralPath (Join-Path $package 'Config') -Destination $held
-            try {
-                $catalogArguments = @{ Path = $package; CatalogFilePath = (Join-Path $tmp 'SelfX.Code.cat'); Certificate = $Certificate }
-                if ($TimestampServer) { $catalogArguments.TimestampServer = $TimestampServer }
-                $null = New-SelfXSignedCatalog @catalogArguments
+                # SelfX.Code.cat covers everything outside Config: Config is set aside while the catalog is made, and the catalog must lie outside
+                # the folder it covers until it is moved in.
+                & $progress 'catalog'
+                $held = Join-Path $tmp 'config-held'
+                Move-Item -LiteralPath (Join-Path $package 'Config') -Destination $held
+                try {
+                    $catalogArguments = @{ Path = $package; CatalogFilePath = (Join-Path $tmp 'SelfX.Code.cat'); Certificate = $Certificate }
+                    if ($TimestampServer) { $catalogArguments.TimestampServer = $TimestampServer }
+                    $null = New-SelfXSignedCatalog @catalogArguments
+                }
+                finally { Move-Item -LiteralPath $held -Destination (Join-Path $package 'Config') }
+                Move-Item -LiteralPath (Join-Path $tmp 'SelfX.Code.cat') -Destination (Join-Path $package 'SelfX.Code.cat')
             }
-            finally { Move-Item -LiteralPath $held -Destination (Join-Path $package 'Config') }
-            Move-Item -LiteralPath (Join-Path $tmp 'SelfX.Code.cat') -Destination (Join-Path $package 'SelfX.Code.cat')
         }
 
-        $null = New-SelfXConfigManifest -Stage $package
+        # The configuration package names the code version it is made for (the version of the payload).
+        if ($configPackage) { $null = New-SelfXConfigManifest -Stage $package -MinCodeVersion $version }
+        else { $null = New-SelfXConfigManifest -Stage $package }
         if ($signed) {
             $configCatalogArguments = @{ Path = (Join-Path $package 'Config'); CatalogFilePath = (Join-Path $tmp 'SelfX.Config.cat'); Certificate = $Certificate }
             if ($TimestampServer) { $configCatalogArguments.TimestampServer = $TimestampServer }
@@ -921,8 +960,9 @@ function Invoke-SelfXPackageBuild {
         }
 
         # The names are also named in the instructions of a package that is only configured.
-        $packageName = "SelfX-Service-$version.intunewin"
-        $detectionName = "SelfX-Service-$version.Detection.ps1"
+        $namePrefix = $(if ($configPackage) { 'SelfX-Config' } else { 'SelfX-Service' })
+        $packageName = "$namePrefix-$version.intunewin"
+        $detectionName = "$namePrefix-$version.Detection.ps1"
         $packageFile = $null
         $detectionFile = $null
         $ruleFiles = New-Object System.Collections.Generic.List[string]
@@ -937,9 +977,10 @@ function Invoke-SelfXPackageBuild {
             # ---- detection script with the digests
             & $progress 'detection'
             $detectionFile = $detectionName
-            Copy-Item -LiteralPath (Get-SelfXListPath -Stage $package -ListName 'SelfX.Code.json') -Destination (Get-SelfXListPath -Stage $detectStage -ListName 'SelfX.Code.json')
+            if (-not $configPackage) { Copy-Item -LiteralPath (Get-SelfXListPath -Stage $package -ListName 'SelfX.Code.json') -Destination (Get-SelfXListPath -Stage $detectStage -ListName 'SelfX.Code.json') }
             Copy-Item -LiteralPath (Get-SelfXListPath -Stage $package -ListName 'SelfX.Config.json') -Destination (Get-SelfXListPath -Stage $detectStage -ListName 'SelfX.Config.json')
-            $null = New-SelfXDetectionScript -Stage $detectStage -Target (Join-Path $out $detectionFile)
+            $detectionKind = $(if ($configPackage) { 'ConfigOnly' } elseif ($PackageKind -eq 'FullSeparateConfig') { 'FullWithoutConfig' } else { 'Full' })
+            $null = New-SelfXDetectionScript -Stage $detectStage -Target (Join-Path $out $detectionFile) -Kind $detectionKind
             if ($signed) {
                 $detectSign = @{ Path = @((Join-Path $out $detectionFile)); Certificate = $Certificate }
                 if ($TimestampServer) { $detectSign.TimestampServer = $TimestampServer }
@@ -949,7 +990,7 @@ function Invoke-SelfXPackageBuild {
             # ---- AppLocker and App Control files for the mode
             & $progress 'rules'
             $mode = $(if ($signed) { 'Publisher' } else { 'Hash' })
-            if ($a.AppLockerRules) {
+            if ($a.AppLockerRules -and -not $configPackage) {
                 $programs = @(((Get-Content -LiteralPath (Join-Path $package 'Bin\SelfX.Binaries.json') -Raw | ConvertFrom-Json).Binaries.PSObject.Properties) | ForEach-Object { Join-Path $package ('Bin\' + $_.Name.Replace('/', '\')) })
                 if ($signed) { $programs += (Join-Path $package 'Install.ps1') }
                 if ($programs | Where-Object { $_ -match '\|' }) { throw 'A file name contains the character |.' }
@@ -957,7 +998,7 @@ function Invoke-SelfXPackageBuild {
                     '-PathList', ($programs -join '|'), '-OutputFile', (Join-Path $out 'SelfX.AppLocker.xml'), '-RuleNamePrefix', $(if ($signed) { 'SelfX' } else { "SelfX $version" }), '-Mode', $mode)
                 $ruleFiles.Add('SelfX.AppLocker.xml')
             }
-            if ($a.WdacBasePolicyId) {
+            if ($a.WdacBasePolicyId -and -not $configPackage) {
                 Invoke-SelfXRuleScript -Script (Join-Path $script:WizardToolsFolder 'New-SelfXWdacPolicy.ps1') -Arguments @(
                     '-BasePolicyId', $a.WdacBasePolicyId, '-Level', $mode, '-PackageFolder', $package, '-DetectionFile', (Join-Path $out $detectionFile), '-OutputFolder', (Join-Path $out 'AppControl'))
                 $ruleFiles.Add('AppControl\')
@@ -972,7 +1013,7 @@ function Invoke-SelfXPackageBuild {
         $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
         $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })
         $guideArguments = @{ Answers = $a; Version = $version; PackageFile = $packageName; DetectionFile = $detectionName; ScriptFiles = $scriptFiles
-            AnswersFile = 'selfx-answers.json'; TrustedSigner = $trustedSigners; RuleFiles = @($ruleFiles) }
+            AnswersFile = 'selfx-answers.json'; TrustedSigner = $trustedSigners; RuleFiles = @($ruleFiles); PackageKind = $PackageKind }
         $guideText = New-SelfXIntuneGuide @guideArguments
         $guideSteps = Get-SelfXIntuneGuideSteps @guideArguments -OutputFolder $final
         $guideFile = "SelfX-Intune-Guide.$guideLanguage.txt"
@@ -993,6 +1034,7 @@ function Invoke-SelfXPackageBuild {
             OutputFolder  = $final
             Version       = $version
             Mode          = $(if ($signed) { 'Signature' } else { 'Hash' })
+            PackageKind   = $PackageKind
             PackageFile   = $packageFile
             DetectionFile = $detectionFile
             RuleFiles     = @($ruleFiles)
@@ -1109,7 +1151,8 @@ function Invoke-SelfXWizardBuild {
         [string[]]$AdditionalSigner = @(),
         [scriptblock]$OnProgress,
         [string]$Language = 'en',
-        [switch]$ConfigureOnly
+        [switch]$ConfigureOnly,
+        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full'
     )
     $temporaryPayload = $null
     try {
@@ -1120,7 +1163,7 @@ function Invoke-SelfXWizardBuild {
             $source = $temporaryPayload
         }
         return (Invoke-SelfXPackageBuild -Answers $Answers -PayloadFolder $source -OutputFolder $OutputFolder -ToolPath $ToolPath -Certificate $Certificate `
-                -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -OnProgress $OnProgress -Language $Language -ConfigureOnly:$ConfigureOnly)
+                -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -OnProgress $OnProgress -Language $Language -ConfigureOnly:$ConfigureOnly -PackageKind $PackageKind)
     }
     finally {
         if ($temporaryPayload -and (Test-Path -LiteralPath $temporaryPayload)) { Remove-Item -LiteralPath $temporaryPayload -Recurse -Force -ErrorAction SilentlyContinue }

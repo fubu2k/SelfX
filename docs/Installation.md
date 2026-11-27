@@ -325,6 +325,7 @@ Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1' | ForEach-Object {
 4. Upload the new `.intunewin` **and** the new detection script to the same Intune app.
 5. Before packaging, check the support contacts in `Tool_Config.xml` and `Health_Config.xml`
    (see [Configuration](Configuration.md)).
+6. If only the settings change, a [second package for the configuration](#second-intune-package-the-configuration-only) is enough.
 
 **Update from SelfX 2.6.9 (upstream):** In addition the devices need Windows 11 25H2 and
 PowerShell 7.6 (step 3). The package must be built again with the .NET SDK 10; the old method of
@@ -345,6 +346,57 @@ tries again for up to 90 seconds.
 - The result is in `%ProgramData%\SelfX\Logs\Uninstall.log`.
 
 ## Optional building blocks
+
+### Second Intune package: the configuration only
+
+The assistant can build a **second, small package** (`SelfX-Config-<version>.intunewin`) that holds only `Install.ps1`, `Detection.ps1` and
+the folder `Config`. Install it with `Install.ps1 -ConfigOnly`. It replaces the settings of a SelfX that is **already installed** (support
+address, logo, ticket routing, action lists, language) and nothing else: the service, the programs and the trust anchor are not touched and
+nothing is restarted. An open SelfX window shows the new settings after it is closed and opened again.
+
+**When is it worth it?** When the settings change often and the code rarely. The small package installs in seconds, you do not test the
+whole product again, and the code package (the large one) stays as it is. If you change settings only together with a new version, one
+package is simpler: stay with it.
+
+**How to build and install both packages**
+
+1. Build the full package with the assistant, answer *Full package with a separate configuration package* (console: `-SeparateConfig`). Its detection script does
+   not compare the configuration, so the full package is not installed again when only the configuration changed.
+2. Build the configuration package from the same release and the **same answers**: answer *Configuration package* (console: `-ConfigPackage`).
+3. In Intune create **two apps**: the full app as before, and the configuration app with the install command
+   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -ConfigOnly` (the assistant writes the exact line in its instructions).
+   Uninstall command: a command that does nothing (`...powershell.exe -NoProfile -Command exit 0`); the full app removes SelfX.
+4. Add the **full app as a dependency** of the configuration app (*Automatically install: Yes*). Assign both to the same device groups.
+5. Detection of the configuration app: the file `SelfX-Config-<version>.Detection.ps1` (it compares only the configuration).
+
+**Updating the configuration later.** Build a new configuration package and upload it as a **new version of the configuration app**, or create a new app and add
+the old one under *Supersedence* with *Uninstall previous version* set to **No**. Supersedence is for the configuration apps among themselves:
+a newer configuration app replaces an older one, the devices install the new one and the old one is no longer required.
+
+> **Never set supersedence between the configuration app and the full app.** The full app would be uninstalled by the supersedence and SelfX would be removed
+> from the device.
+
+**What `-ConfigOnly` checks (it stops before it changes anything)**
+
+- SelfX is installed and has a trust anchor; the anchor is safe. The mode (Hash or Signature) is the one of the device. `-TrustedSigner` and
+  `-AllowHashMode` cannot be combined with `-ConfigOnly`: a configuration package cannot change who is trusted.
+- The package holds only `Install.ps1` and `Config`, no link, and every file is in `Config\SelfX.Config.json` with its SHA256. In the mode Signature the
+  scripts and `Config\SelfX.Config.cat` must carry a valid signature of a signer of the device.
+- `MinCodeVersion` in `SelfX.Config.json` (the code version the configuration is made for) must not be newer than the installed code version
+  (`App\SelfX.Code.json`). Install the full package first when it is.
+- Settings that only the full installation applies (shortcut name, shortcut on the desktop or in the Start menu, the entry of the status icon,
+  the icon, `Service_Privileges`) must be the same as on the device. If they differ, the configuration package refuses with their names: change
+  them with the full package. Everything else in `Tool_Config.xml` is read when SelfX runs and can change.
+
+The folder `Config` is exchanged by renaming: the new folder is copied next to the install folder and checked there, then `Config` is renamed to
+`SelfX.ConfigOld` (next to the install folder) and the new folder to `Config`; an error puts the old folder back. The folders next to the install folder are called `SelfX.ConfigStage` and `SelfX.ConfigOld`
+(the service refuses to start scripts when the install folder holds anything but `App` and `Config`). A script of an action that is running holds files open: the
+exchange waits and tries again for about 20 seconds, then it stops with exit code 1 and Intune tries again later. The result is in
+`%ProgramData%\SelfX\Logs\Install.log`.
+
+**Detection and the full package.** After a new code version the full package replaces `Config` with the configuration of its own build. The configuration
+package then no longer matches (its digest differs) and Intune installs it again: the settings of the configuration package apply again. Build both packages from the same
+release and the same answers, and roll out the full package first.
 
 ### Ticket routing with Intune
 

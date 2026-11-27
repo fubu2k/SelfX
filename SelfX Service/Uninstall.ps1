@@ -47,6 +47,8 @@
                                               without DTD
     3.1.0    2026-11-27  fubu2k               Removes the trust anchor HKLM\SOFTWARE\SelfX\Trust (written by Install.ps1); HKLM\SOFTWARE\SelfX\Support
                                               is kept
+    3.1.0    2026-11-27  fubu2k               Removes the work folders InstallFolder.ConfigStage, .ConfigOld and .ConfigStage.Failed that an interrupted
+                                              Install.ps1 -ConfigOnly can leave next to the install folder (delete helper, no link is followed)
 #>
 
 [CmdletBinding()]
@@ -174,6 +176,12 @@ If($RemoveLogs) { $DataFolders += (Join-Path $DataFolder 'Logs\Users') }
 ForEach($Folder in $DataFolders)
 {
 	If(-not (Remove-SelfXTreeSafe -Exe $SafeDeleteExe -Path $Folder)) { $DataFoldersSafe = $false }
+}
+# Work folders of an interrupted configuration update (Install.ps1 -ConfigOnly) lie next to the install folder.
+ForEach($Suffix in @('.ConfigStage', '.ConfigOld', '.ConfigStage.Failed'))
+{
+	$WorkFolder = $InstallFolder.TrimEnd('\') + $Suffix
+	If(Test-Path -LiteralPath $WorkFolder) { $null = Remove-SelfXTreeSafe -Exe $SafeDeleteExe -Path $WorkFolder }
 }
 
 # Other programs (e.g. an Explorer window) can still lock the folder or single files, so removal is retried

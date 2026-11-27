@@ -150,6 +150,8 @@ the project can be moved into the list that carries the files of the company. Th
 `Test-FileManifest.ps1` keeps the list of names equal to the files of the repository: a new file
 of the project has to be added to `$script:SelfXCodeFileNames`, otherwise the test fails.
 
+**The configuration package.** `Install.ps1 -ConfigOnly` installs a package with only `Install.ps1` and `Config`. Its `SelfX.Config.json` has `MinCodeVersion`, the code version that the configuration is made for. The mode takes the trust mode from the anchor of the device (never from the package or the command line), runs the same checks as the full installation for `Config`, refuses when the installed code is older than `MinCodeVersion` or when settings that only the full installation applies differ, and exchanges the folder `Config` by renaming with a way back. Service, programs and anchor are not touched. Its `Detection.ps1` has `$PackageKind = 'ConfigOnly'` and compares only the configuration digest; the detection script of the full package of such a setup has `FullWithoutConfig`. Usage: [Installation](Installation.md#second-intune-package-the-configuration-only).
+
 **Digest of a list:** SHA256 over the lines `<name>=<SHA256 in upper case>`, sorted by name
 (ordinal), joined by LF, UTF-8 without BOM. `Detection.ps1` and the build use the same function.
 

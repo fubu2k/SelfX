@@ -50,6 +50,9 @@
     3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is a configuration file; nothing below Texts may be in SelfX.Code.json
     3.1.0    2026-11-27  fubu2k               One-step build (Invoke-SelfXPackageBuild): Copy-SelfXPayloadPackage, Test-SelfXPayloadFolder, New-SelfXPayloadFromRepository,
                                               Assert-SelfXIntuneWinTool, New-SelfXIntuneWinFile
+    3.1.0    2026-11-27  fubu2k               Configuration package: New-SelfXConfigManifest -MinCodeVersion (writes MinCodeVersion, reads only the folder Config),
+                                              Get-SelfXConfigFolderHashes, Convert-SelfXPackageToConfigOnly; New-SelfXDetectionScript -Kind (Full,
+                                              FullWithoutConfig, ConfigOnly)
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -278,19 +281,57 @@ function New-SelfXCodeManifest {
     return $files.Count
 }
 
+# A code version that Install.ps1 -ConfigOnly can compare: two to four numbers separated by dots (the same rule as ConvertTo-SelfXCodeVersion
+# in Install.ps1; Test-InstallConfigOnly.ps1 checks that both agree).
+function Test-SelfXCodeVersionText {
+    param([string]$Text)
+    return ("$Text" -match '^[0-9]{1,5}(\.[0-9]{1,5}){1,3}\z')
+}
+
+function Get-SelfXConfigFolderHashes {
+    # The SHA256 of every file in the folder Config of the staged package (names relative to Config, '/' as separator, sorted by name,
+    # SelfX.Config.json and SelfX.Config.cat left out). Needs only Stage\Config (the staged configuration package has no App); every name
+    # must be of the class Config (Get-SelfXFileClass), a link or another class is an error. For a full package the result is the same as
+    # Get-SelfXClassHashes -Class Config.
+    param([Parameter(Mandatory = $true)][string]$Stage)
+    $path = Join-Path $Stage 'Config'
+    if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw 'The folder Config is missing in the package.' }
+    $root = (Get-Item -LiteralPath $path -Force).FullName.TrimEnd('\')
+    $items = New-Object System.Collections.Generic.List[object]
+    foreach ($item in @(Get-ChildItem -LiteralPath $root -Recurse -File -Force)) {
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "A link is not allowed in the package: Config/$($item.Name)" }
+        $relative = $item.FullName.Substring($root.Length + 1).Replace('\', '/')
+        if ($relative -ceq 'SelfX.Config.json' -or $relative -ieq 'SelfX.Config.cat') { continue }
+        if ((Get-SelfXFileClass -Name $relative) -ne 'Config') { throw "$relative is in the folder Config but belongs to the class Code." }
+        $items.Add([pscustomobject]@{ Name = $relative; Path = $item.FullName })
+    }
+    $names = [string[]]@($items | ForEach-Object { $_.Name })
+    [Array]::Sort($names, [StringComparer]::Ordinal)
+    $files = [ordered]@{}
+    foreach ($name in $names) {
+        $entry = $items | Where-Object { $_.Name -ceq $name } | Select-Object -First 1
+        $files[$name] = (Get-FileHash -LiteralPath $entry.Path -Algorithm SHA256).Hash
+    }
+    return $files
+}
+
 function New-SelfXConfigManifest {
     # Writes Config\SelfX.Config.json into the staged package: the SHA256 of every file of the class Config and ConfigRevision, the UTC
     # time of this packaging run (yyyy-MM-ddTHH:mm:ssZ; the caller may pass it, otherwise it is now). The revision is not part of the
     # digest that Detection.ps1 compares. Returns the number of files.
-    param([Parameter(Mandatory = $true)][string]$Stage, [string]$ConfigRevision)
+    # With -MinCodeVersion (the configuration package, Install.ps1 -ConfigOnly) the list also has MinCodeVersion, the oldest code version
+    # that the configuration is made for, and only the folder Config is read: the package has no App.
+    param([Parameter(Mandatory = $true)][string]$Stage, [string]$ConfigRevision, [string]$MinCodeVersion)
     if (-not $ConfigRevision) { $ConfigRevision = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ', [Globalization.CultureInfo]::InvariantCulture) }
     if ($ConfigRevision -notmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z') { throw "Invalid ConfigRevision '$ConfigRevision' (expected yyyy-MM-ddTHH:mm:ssZ, UTC)." }
-    $files = Get-SelfXClassHashes -Stage $Stage -Class Config
+    if ($MinCodeVersion -and -not (Test-SelfXCodeVersionText $MinCodeVersion)) { throw "Invalid MinCodeVersion '$MinCodeVersion' (expected two to four numbers separated by dots, for example 3.1.0)." }
+    $files = $(if ($MinCodeVersion) { Get-SelfXConfigFolderHashes -Stage $Stage } else { Get-SelfXClassHashes -Stage $Stage -Class Config })
     $manifest = [ordered]@{
         ManifestVersion = 1
         ConfigRevision  = $ConfigRevision
-        Files           = $files
     }
+    if ($MinCodeVersion) { $manifest['MinCodeVersion'] = $MinCodeVersion }
+    $manifest['Files'] = $files
     [IO.File]::WriteAllText((Get-SelfXListPath -Stage $Stage -ListName 'SelfX.Config.json'), ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
     return $files.Count
 }
@@ -320,25 +361,56 @@ function Get-SelfXListDigest {
 # Writes the Detection.ps1 for Intune: the copy of the package with the digests of SelfX.Code.json and SelfX.Config.json instead of
 # the two placeholders. The detection script is uploaded to Intune separately from the .intunewin, so it must come from the same
 # build. Returns an object with the properties Code and Config (the two digests).
+# -Kind sets $PackageKind of the script: Full (default), FullWithoutConfig (the full package of a setup with a separate configuration
+# package; the configuration digest is written but not compared) or ConfigOnly (the configuration package: it has no App, so only the
+# configuration digest is written; Code is $null and the placeholder of the code digest stays).
 function New-SelfXDetectionScript {
-    param([Parameter(Mandatory = $true)][string]$Stage, [Parameter(Mandatory = $true)][string]$Target)
-    $codeDigest = Get-SelfXListDigest -Stage $Stage -ListName 'SelfX.Code.json'
+    param(
+        [Parameter(Mandatory = $true)][string]$Stage,
+        [Parameter(Mandatory = $true)][string]$Target,
+        [ValidateSet('Full', 'FullWithoutConfig', 'ConfigOnly')][string]$Kind = 'Full'
+    )
+    $codeDigest = $(if ($Kind -eq 'ConfigOnly') { $null } else { Get-SelfXListDigest -Stage $Stage -ListName 'SelfX.Code.json' })
     $configDigest = Get-SelfXListDigest -Stage $Stage -ListName 'SelfX.Config.json'
     $path = Join-Path $Stage 'Detection.ps1'
     $bytes = [IO.File]::ReadAllBytes($path)
     $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
     $text = [IO.File]::ReadAllText($path)
-    $replacements = @(
-        @{ Variable = 'ExpectedCodeHash'; Placeholder = '__SELFX_CODE_HASH__'; Value = $codeDigest },
-        @{ Variable = 'ExpectedConfigHash'; Placeholder = '__SELFX_CONFIG_HASH__'; Value = $configDigest }
-    )
+    $replacements = @(@{ Variable = 'ExpectedConfigHash'; Placeholder = '__SELFX_CONFIG_HASH__'; Value = $configDigest })
+    if ($Kind -ne 'ConfigOnly') { $replacements = @(@{ Variable = 'ExpectedCodeHash'; Placeholder = '__SELFX_CODE_HASH__'; Value = $codeDigest }) + $replacements }
     foreach ($replacement in $replacements) {
         $pattern = "(\`$$($replacement.Variable)\s*=\s*')$($replacement.Placeholder)(')"
         if (@([regex]::Matches($text, $pattern)).Count -ne 1) { throw "Detection.ps1 must contain the placeholder for `$$($replacement.Variable) exactly once." }
         $text = [regex]::Replace($text, $pattern, ('${1}' + $replacement.Value + '${2}'))
     }
+    if ($Kind -ne 'Full') {
+        $kindPattern = "(\`$PackageKind\s*=\s*')Full(')"
+        if (@([regex]::Matches($text, $kindPattern)).Count -ne 1) { throw 'Detection.ps1 must contain $PackageKind = ''Full'' exactly once.' }
+        $text = [regex]::Replace($text, $kindPattern, ('${1}' + $Kind + '${2}'))
+    }
     [IO.File]::WriteAllText($Target, $text, (New-Object System.Text.UTF8Encoding($hasBom)))
     return [pscustomobject]@{ Code = $codeDigest; Config = $configDigest }
+}
+
+function Convert-SelfXPackageToConfigOnly {
+    # Reduces a staged package to the configuration package: Install.ps1, Detection.ps1 and Config\ stay (with SelfX.Config.json and, when
+    # signed, SelfX.Config.cat); App, Bin, Service, Uninstall.ps1 and the readme files are removed. The caller then writes the list with
+    # New-SelfXConfigManifest -MinCodeVersion (before the catalog). Throws when Install.ps1 or Config is missing. Nothing outside Stage
+    # is touched; a link inside Stage is an error.
+    param([Parameter(Mandatory = $true)][string]$Stage)
+    $root = (Get-Item -LiteralPath $Stage -Force).FullName.TrimEnd('\')
+    foreach ($item in @(Get-ChildItem -LiteralPath $root -Recurse -Force)) {
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "A link is not allowed in the package: $($item.FullName.Substring($root.Length + 1))" }
+    }
+    foreach ($name in @('Install.ps1', 'Config')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $root $name))) { throw "$name is missing in the package." }
+    }
+    $keep = @('Install.ps1', 'Detection.ps1', 'Config')
+    foreach ($item in @(Get-ChildItem -LiteralPath $root -Force)) {
+        $kept = $false
+        foreach ($name in $keep) { if ($item.Name -ieq $name) { $kept = $true } }
+        if (-not $kept) { Remove-Item -LiteralPath $item.FullName -Recurse -Force }
+    }
 }
 
 # ------------------------------------------------------------------------------------------------ payload and packaging (one-step build)
