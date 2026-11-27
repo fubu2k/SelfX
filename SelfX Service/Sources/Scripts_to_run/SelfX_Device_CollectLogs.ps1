@@ -57,7 +57,7 @@
     Name    : SelfX_Device_CollectLogs.ps1
     Package : SelfX Service
     Context : System
-    Version : 3.1.0
+    Version : 2.8.22
 
     History:
     Version  Date        Author               Change
@@ -65,7 +65,7 @@
     2.4.0    2026-11-02  Wolfgang Baeck       Initial version: device logs for the support by e-mail
     2.6.10   2026-11-22  fubu2k               Normal users get the reduced report of their own data (-UserView); user logs are added by the GUI
     2.8.21   2026-11-24  fubu2k               Security: only a user account SID (S-1-5-21-*, S-1-12-1-*) may be the report reader; groups (Everyone, Users, ...) are refused
-    3.1.0    2026-11-27  fubu2k               Tool_Config.xml is read from the configuration folder (Get-SelfXConfigPath in SelfXPaths.ps1)
+    2.8.22   2026-11-27  fubu2k               Tool_Config.xml is read from the configuration folder (Get-SelfXConfigPath in SelfXPaths.ps1)
 #>
 
 [CmdletBinding()]

@@ -134,7 +134,8 @@ try {
 	Assert-Equal (Test-SelfXConfigListed -Name 'Scripts_to_run/Own_Action.ps1' -CodeRoot $app) $true 'listed: a listed file with its SHA256 is listed'
 	Assert-Equal (Test-SelfXConfigListed -Name 'scripts_to_run/own_action.ps1' -CodeRoot $app) $false 'listed: the name in the list is compared exactly'
 	Remove-Item -LiteralPath (Join-Path $config 'Scripts_to_run\Unlisted.ps1')
-	foreach ($bad in '..\Own_Action.ps1', '..\..\App\Scripts_to_run\SelfX_Project.ps1', 'Scripts_to_run\Own_Action.ps1', 'C:\Windows\x.ps1', 'Own_Action.ps1:x', 'Own_Action', 'Own Action.ps1', '', '.ps1x') {
+	Assert-Throws { Resolve-SelfXScriptPath -Folder 'Scripts_to_run' -FileName '' -CodeRoot $app } 'empty string' 'script: an empty name is refused'
+	foreach ($bad in '..\Own_Action.ps1', '..\..\App\Scripts_to_run\SelfX_Project.ps1', 'Scripts_to_run\Own_Action.ps1', 'C:\Windows\x.ps1', 'Own_Action.ps1:x', 'Own_Action', 'Own Action.ps1', ' ', '.ps1x') {
 		Assert-Equal ($null -eq (Resolve-SelfXScriptPath -Folder 'Scripts_to_run' -FileName $bad -CodeRoot $app)) $true "script: the name '$bad' is refused"
 	}
 	Assert-Throws { Resolve-SelfXScriptPath -Folder 'Branding' -FileName 'Own_Action.ps1' -CodeRoot $app } 'Cannot validate|does not belong to the set' 'script: only Scripts_to_run and HealthChecks'

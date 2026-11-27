@@ -332,13 +332,13 @@ if ($configRootMethod -and $configFileMethod -and $layoutMethod -and $resolveMet
 		}
 	}
 	function Test-Layout([string]$Root) {
-		$arguments = [object[]]@((Join-Path $Root 'App'), (Join-Path $Root 'Config'), $null)
+		$arguments = [object[]]@([string](Join-Path $Root 'App'), [string](Join-Path $Root 'Config'), $null)
 		$ok = [bool]$layoutMethod.Invoke($null, $arguments)
 		return [pscustomobject]@{ Ok = $ok; Problems = @($arguments[2]) -join '; ' }
 	}
 	function Resolve-Script([string]$Root, [string]$Folder, [string]$Name, [switch]$Flat) {
 		$config = if ($Flat) { Join-Path $Root 'App' } else { Join-Path $Root 'Config' }
-		return $resolveMethod.Invoke($null, [object[]]@((Join-Path $Root 'App'), $config, $Folder, $Name))
+		return $resolveMethod.Invoke($null, [object[]]@([string](Join-Path $Root 'App'), [string]$config, [string]$Folder, [string]$Name))
 	}
 	$layoutRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXLayoutTest_' + [guid]::NewGuid().ToString('N'))
 	foreach ($folder in 'App\Scripts_to_run', 'App\HealthChecks', 'Config\Scripts_to_run', 'Config\Branding') { New-Item -ItemType Directory -Path (Join-Path $layoutRoot $folder) -Force | Out-Null }

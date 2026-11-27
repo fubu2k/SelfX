@@ -653,6 +653,8 @@ try {
         try {
             $flags = [Reflection.BindingFlags]'Instance,NonPublic'
             $type.GetField('installRoot',$flags).SetValue($instance,$temp)
+            # Flat layout of the test: the configuration (Health_Config.xml) is in the same folder.
+            $type.GetField('configRoot',$flags).SetValue($instance,$temp)
             $type.GetField('catalogPath',$flags).SetValue($instance,"$temp\Issues_List.xml")
             [IO.File]::WriteAllText("$temp\Issues_List.xml", '<Actions><Detailed_Solution><Action><Script>Catalog.ps1</Script><Context>System</Context></Action></Detailed_Solution></Actions>')
             [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Remediations><Remediation Id="IME" Script="Repair-IME.ps1"/></Remediations></HealthConfig>')
