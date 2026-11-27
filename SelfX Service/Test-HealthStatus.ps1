@@ -832,6 +832,8 @@ try {
         try {
             $flags = [Reflection.BindingFlags]'Instance,NonPublic'
             $type.GetField('installRoot', $flags).SetValue($instance, $temp)
+            # Flat layout of the test: Health_Config.xml is in the same folder.
+            $type.GetField('configRoot', $flags).SetValue($instance, $temp)
             Assert-Equal $type.GetField('cacheFile', $flags).GetValue($instance) (Join-Path $temp 'Cache\Health.json') 'Cache file is next to the log folder'
             $read = $type.GetMethod('ReadBackgroundSettings', $flags)
             [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig/>')

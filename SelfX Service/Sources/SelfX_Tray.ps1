@@ -321,7 +321,7 @@ Function Start-TraySystemInfoCache
 		$Global:Tray_Info_PS = [PowerShell]::Create()
 		[void]$Global:Tray_Info_PS.AddScript($Global:Tray_Job_Script).AddStatement().AddScript(
 			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig); Save-SelfXSystemInfoCache -Items $Items -Culture $Culture'
-		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture).AddArgument((Join-Path $Global:Tray_Folder 'Network_Test_Config.xml'))
+		).AddArgument((Get-TrayConfig 'SystemInfo_Internet_Test_Host' 'www.msftconnecttest.com')).AddArgument([int](Get-TrayConfig 'SystemInfo_Internet_Test_Port' '80')).AddArgument($Global:Tray_Texts).AddArgument($Language.Culture).AddArgument((Get-SelfXConfigPath -Name 'Network_Test_Config.xml' -CodeRoot $Global:Tray_Folder))
 		$Global:Tray_Info_Job = $Global:Tray_Info_PS.BeginInvoke()
 	}
 
