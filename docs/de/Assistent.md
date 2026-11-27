@@ -73,7 +73,9 @@ Die Dateien im Repository werden **nicht** verändert. Für ein Update erhöhen 
 ## Was Sie in Intune tun
 
 Die Kurzanleitung steht am Ende des Laufs und in `SelfX-Intune-Guide.<Sprache>.txt`. Die Einzelheiten
-stehen in der [Installationsanleitung](Installation.md#schritt-3-in-intune-einrichten).
+stehen in der [Installationsanleitung](Installation.md#schritt-3-in-intune-einrichten). Der Schritt vor dem Test behandelt auch die
+Defender-ASR-Regel für ausführbare Dateien (blockierte SelfX-Datei finden, höchstens vier Dateien ausschließen):
+[Defender ASR: Regel für ausführbare Dateien](Installation.md#defender-asr-regel-für-ausführbare-dateien).
 
 ## Weitere Sprache für den Assistenten
 

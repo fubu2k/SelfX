@@ -14,6 +14,22 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Defender ASR rule for executable files: diagnosis and exclusion (`tools\Get-SelfXAsrEvents.ps1` 3.1.0):** If the ASR rule "Block
+  executable files from running unless they meet a prevalence, age, or trusted list criterion" (`01443614-cd74-433a-b99e-2ecdc07bfc25`)
+  is active, Defender can block programs of SelfX. New read-only script `Get-SelfXAsrEvents.ps1` (Windows PowerShell 5.1 and PowerShell 7)
+  reads the events 1121 (block mode) and 1122 (audit mode) of `Microsoft-Windows-Windows Defender/Operational` for this one rule and shows
+  time, mode, blocked file, starting process and whether the file is in the SelfX program folder (`-SelfXOnly`, `-Days`, `-MaxEvents`).
+  The log, the rule and the fields are fixed in the script (no parameter names a log, a computer or a file). It changes nothing, never reads
+  the fields `User` and the command lines, shows the profile folder of a user as `<user>`, reads event XML without DTD and reports events
+  that it cannot assign to a rule instead of hiding them. Docs: docs/Installation.md, "Defender ASR: rule for executable files" (cause,
+  how to find the file, audit mode, per-rule exclusion for at most the four SelfX files `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll`
+  and `SelfXAudio.dll`, not the folder and not the global exclusion, programs of the release, signing is no guarantee; sources: Microsoft
+  Learn "ASR rules reference" and "ASR FAQ"). The Intune instructions of the package wizard get four new texts (`guide.asr`, `guide.asr1`
+  to `guide.asr3` in `Wizard.de.xml` and `Wizard.en.xml`, language files 1.1.0) and one more step before the test step. New test
+  `tools\Test-SelfXAsrEvents.ps1` (synthetic events instead of the log: only this rule, Block and Audit, unreadable events, DTD and
+  entity, no user name, control characters, limits, errors of the log, read-only commands only, texts of the docs and the wizard), added to
+  both test jobs of the CI. The event field names come from an example event, not from the documentation of Microsoft. Not tried on a
+  device on which the rule is active.
 - **Publisher rules for AppLocker and App Control (`tools\New-SelfXAppLockerRules.ps1` 1.1.0, `tools\New-SelfXWdacPolicy.ps1` 1.1.0):**
   For a package signed with the certificate of the company the rules no longer change with every version. `New-SelfXAppLockerRules.ps1
   -Mode Publisher` reads the publisher from the signature of the given files (all must be signed with status `Valid` by the same

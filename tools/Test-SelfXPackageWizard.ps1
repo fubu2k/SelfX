@@ -161,6 +161,15 @@ try {
     Assert ($berlin -match "\`$GroupTag\s+= 'DE-IT1-BER'" -and $berlin -match "\`$TicketMail = 'it-berlin@contoso.example'") 'script carries group tag and mailbox'
     $guide = Get-Content -LiteralPath (Join-Path $out 'SelfX-Intune-Guide.de.txt') -Raw -Encoding UTF8
     Assert ($guide -match 'Contoso <&> Test' -and $guide -match 'Installationsbefehl' -and $guide -match 'Plattformskript' -and $guide -match 'Detection\.ps1') 'German guide mentions app, commands, detection and scripts'
+    Assert ($guide -match 'Get-SelfXAsrEvents\.ps1' -and $guide -match '01443614-cd74-433a-b99e-2ecdc07bfc25' -and $guide -match 'ASR Only Per Rule Exclusions') 'German guide has the step about the Defender ASR rule'
+    $asrFiles = @([regex]::Matches($guide, '(?m)^   - (C:\\Program Files\\SelfX\\[^\r\n]+)\r?$') | ForEach-Object { $_.Groups[1].Value })
+    Assert ($asrFiles.Count -eq 4 -and @($asrFiles | Where-Object { $_ -notmatch '^C:\\Program Files\\SelfX\\App\\([A-Za-z]+\\)?[A-Za-z]+\.(exe|dll)$' }).Count -eq 0) 'guide names exactly four program files below SelfX\App for the exclusion (no folder, no wildcard)'
+    Assert ($guide -match '(?m)^8\. Defender' -and $guide -match '(?m)^9\. Auf einem Pilotger' -and $guide -match '(?m)^7\. Ticket-Zuordnung') 'ASR step comes after the ticket step and before the test step (numbers 8 and 9 with scripts)'
+    Initialize-WizardTexts -Folder $WizardFolder -Culture 'en'
+    $enGuide = New-SelfXIntuneGuide -Answers @{ OrgName = 'Contoso'; Units = @() } -Version '3.1.0' -PackageFile 'p.intunewin' -DetectionFile 'd.ps1'
+    Assert ($enGuide -match '(?m)^7\. Defender attack surface reduction' -and $enGuide -match '(?m)^8\. Test on a pilot device' -and $enGuide -match 'no guarantee') 'English guide without scripts: ASR step 7, test step 8, no promise that signing helps'
+    Assert ($enGuide -notmatch '(?m)^   - .*(\*|SelfX\\?$)') 'English guide: no wildcard and no folder entry in the exclusion list'
+    Initialize-WizardTexts -Folder $WizardFolder -Culture 'de-CH'
     $saved = Get-Content -LiteralPath (Join-Path $out 'selfx-answers.json') -Raw | ConvertFrom-Json
     Assert (@($saved.Units).Count -eq 2 -and $saved.OrgName -eq 'Contoso <&> Test') 'answers are saved'
     # Re-run with the saved file itself (round trip).

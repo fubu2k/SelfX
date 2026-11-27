@@ -511,6 +511,87 @@ Was eine Herausgeberregel **nicht** leistet:
 Die Skripte sind durch automatische Tests abgedeckt; die erzeugten Richtlinien sind noch nicht auf
 einem Gerät erprobt. Testen Sie sie zuerst im Überwachungsmodus.
 
+### Defender ASR: Regel für ausführbare Dateien
+
+Nutzen Ihre Geräte die Regel **Block executable files from running unless they meet a prevalence, age, or trusted list criterion**
+zur Verringerung der Angriffsfläche (ASR, ID `01443614-cd74-433a-b99e-2ecdc07bfc25`), kann Defender Programme von SelfX blockieren.
+Dieser Abschnitt erklärt die Ursache, wie Sie die blockierte Datei finden und was Sie tun können. Er folgt der Dokumentation von
+Microsoft und dem Aufbau des Pakets; **er ist nicht auf einem Gerät erprobt, auf dem die Regel aktiv ist.**
+
+**Was die Regel macht.** Sie hindert ausführbare Dateien (zum Beispiel `.exe`, `.dll`, `.scr`) am Start, wenn sie kein
+Vertrauenskriterium erfüllen. Sie braucht den Cloudschutz. Der Cloudschutz von Microsoft entscheidet anhand von Verbreitung, Alter und
+einer Vertrauensliste; diese Kriterien können Sie nicht einstellen. Der Benutzer sieht eine Benachrichtigung, im Defender-Portal
+erzeugt die Regel keine Warnung ([Referenz der ASR-Regeln](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference),
+[ASR-FAQ](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-faq); beide Seiten sind englisch).
+
+**Warum SelfX betroffen sein kann.** `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll` und `SelfXAudio.dll` werden auf Ihrem
+Build-Rechner gebaut (Schritt 2.3) und gibt es nur auf Ihren Geräten. Ein Programm, das Microsoft noch nie gesehen hat, erfüllt die
+Kriterien unter Umständen nicht, und laut FAQ kann eine neue Version einer App blockiert werden, solange sie Ruf aufbaut. Das ist ein
+Schluss aus dem Aufbau von SelfX, keine Aussage von Microsoft über SelfX.
+
+**1. Die blockierte Datei finden.** Kopieren Sie `tools\Get-SelfXAsrEvents.ps1` auf das Gerät und führen Sie es dort aus (nur
+lesend; mit erhöhten Rechten, wenn das Protokoll sonst nicht lesbar ist):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Get-SelfXAsrEvents.ps1 -SelfXOnly
+```
+
+Das Skript liest die Ereignisse 1121 (Regel im Blockmodus ausgelöst) und 1122 (Regel im Überwachungsmodus ausgelöst) des Protokolls
+`Microsoft-Windows-Windows Defender/Operational` nur für diese eine Regel und zeigt `Time` (Zeit), `Mode` (`Block` oder `Audit`),
+`File` (die blockierte Datei), `StartedBy` (der Prozess, der sie starten wollte) und `InSelfXFolder`. Ohne `-SelfXOnly` zeigt es die
+Ereignisse für alle Programme; `-Days` (Standard 30) und `-MaxEvents` (Standard 100) begrenzen die Liste. Es ändert nichts und zeigt
+keinen Benutzernamen: Es liest weder das Feld `User` noch die Befehlszeilen, und der Profilordner eines Benutzers wird in Pfaden als
+`<user>` angezeigt. Ein Pfad außerhalb der lokalen Profilordner wird so angezeigt, wie das Ereignis ihn meldet; sehen Sie sich die
+Ausgabe an, bevor Sie sie weitergeben. In Defender for Endpoint stehen dieselben Ereignisse im Advanced Hunting als
+`AsrUntrustedExecutableBlocked` und `AsrUntrustedExecutableAudited` bereit.
+
+Keine Ereignisse können bedeuten: Die Regel ist aus, die Datei ist ausgeschlossen (ausgeschlossene Dateien schreiben keine
+Ereignisse) oder nichts wurde blockiert. Die Namen der Ereignisfelder (`ID`, `Path`, `Process Name`) beschreibt Microsoft nicht; sie
+stammen aus einem Beispielereignis. Meldet das Skript Ereignisse, die es keiner Regel zuordnen konnte, weicht der Aufbau der
+Ereignisse von diesem Beispiel ab.
+
+**2. Zuerst der Überwachungsmodus.** Stellen Sie die Regel auf den Pilotgeräten auf **Audit**. Die Regel schreibt dann Ereignis 1122
+und blockiert nichts. Die FAQ empfiehlt den Überwachungsmodus für Regeln allgemein, um die Programme zu finden, die einen Ausschluss
+brauchen, und für diese Regel, wenn Sie Apps oft aktualisieren.
+
+**3. Genau die SelfX-Dateien ausschließen, nur für diese Regel.** Öffnen Sie in Intune *Endpoint Security > Verringerung der
+Angriffsfläche* und die Richtlinie vom Typ *Attack surface reduction rules*. Sobald die Regel auf Audit, Block oder Warn steht,
+erscheint für sie die Einstellung **ASR Only Per Rule Exclusions** (Namen der englischen Oberfläche; [ASR-Regeln und Ausschlüsse
+konfigurieren](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-configure)). Tragen Sie nur die
+Dateien ein, die die Ereignisse nennen, höchstens diese vier:
+
+```
+C:\Program Files\SelfX\App\SelfXService.exe
+C:\Program Files\SelfX\App\SelfX.exe
+C:\Program Files\SelfX\App\WinRT\SelfXWinRT.dll
+C:\Program Files\SelfX\App\Audio\SelfXAudio.dll
+```
+
+- Schließen Sie **nicht** den Ordner `C:\Program Files\SelfX` aus und verwenden Sie keinen Platzhalter. Verwenden Sie **nicht** die
+  globale Einstellung *Attack Surface Reduction Only Exclusions*: Sie gilt für jede ASR-Regel auf dem Gerät.
+- Nennt ein Ereignis eine andere Bibliothek in `App\WinRT` (die Windows-SDK-Projektion), schließen Sie genau diese Datei aus, und erst
+  nachdem Sie ihren SHA256 mit `SelfX.Code.json` verglichen haben.
+- Die Regel beachtet Ausschlüsse je Regel ([Übersicht der ASR-Regeln](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-overview)).
+  Ein Ausschluss gilt erst, wenn das Programm startet: Starten Sie den Dienst `SelfXService` oder das Gerät neu. Ausgeschlossene
+  Dateien schreiben keine Ereignisse; die Liste des Skripts wird nach dem Ausschluss also kürzer, und der Beleg ist, dass die
+  Benachrichtigung ausbleibt und SelfX startet.
+- Ein Ausschluss senkt den Schutz. Er gilt für den Pfad: Auch eine andere Datei an demselben Pfad würde von dieser Regel nicht
+  geprüft. Benutzer haben im Ordner nur Lese- und Ausführungsrechte; die Dateilisten, die Dateiprüfung des Dienstes und, wenn Sie sie
+  nutzen, AppLocker oder App Control schützen den Inhalt weiter. Ein lokaler Administrator kann beides ändern (siehe
+  [Architektur](Architecture.md#die-grenze-lokaler-administrator)).
+
+**4. Programme aus dem Release.** Der Release-Workflow baut die Programme einmal und liefert sie in der `.intunewin` des Releases
+(gebaut mit den Einstellungen des Repositorys, nicht mit Ihren). Wer diese Datei nutzt, hat dieselben Programme. Ein Paket mit Ihren
+eigenen Einstellungen enthält die Programme Ihres eigenen Builds; ob zwei Builds auf verschiedenen Rechnern identische Dateien ergeben,
+ist nicht geprüft (die CI vergleicht zwei Builds nur auf einem Runner). Nur identische Dateien können einen gemeinsamen Ruf aufbauen;
+Microsoft beschreibt keinen Weg, sich darauf zu verlassen.
+
+**5. Signieren ist keine Zusage.** Die Dokumentation von Microsoft zu dieser Regel sagt nicht, dass signierte Dateien durchgelassen
+werden. Ein signiertes Paket (Vertrauensmodus Signatur) kann deshalb trotzdem blockiert werden; es gibt keine Zusage, dass das
+Signieren den Block löst. Testen Sie Ihr signiertes Paket im Überwachungsmodus. Laut Übersicht der ASR-Regeln beachtet die Regel
+Indikatoren (IoC) für Dateien und Zertifikate; ein Indikator *Zulassen* für das Signaturzertifikat in Defender for Endpoint ist also
+eine weitere Möglichkeit. Das wurde mit SelfX nicht erprobt.
+
 ## Hintergrund: Was die Installation macht
 
 `Install.ps1` läuft mit Administratorrechten, in Intune als SYSTEM. Es prüft **ganz am
@@ -672,6 +753,7 @@ einmal auf einem Testgerät.
 | `-TrustedSigner: every entry must be a SHA1 thumbprint …` | Der Wert enthält ein Leerzeichen, ein anderes Zeichen oder einen leeren Eintrag. Je Fingerabdruck 40 Hexadezimalzeichen verwenden, Kommas ohne Leerzeichen. |
 | Intune erkennt SelfX nach dem Update auf diese Version nicht | Der Vertrauensanker fehlt (`Detection_<Datum>.log`: `trust anchor missing`). Intune installiert das Paket erneut; danach ist der Anker vorhanden. |
 | Intune erkennt ein Update nicht | `Version.txt` und `$ExpectedVersion` sind gleich geblieben, oder Sie haben die Kopie aus dem Repository statt `build\SelfX-Service-<Version>.Detection.ps1` hochgeladen. |
+| Defender blockiert ein SelfX-Programm (Defender-Benachrichtigung, Ereignis 1121 für die Regel `01443614-cd74-433a-b99e-2ecdc07bfc25`) | Die ASR-Regel für ausführbare Dateien hat gegen die Datei entschieden. Finden Sie die Datei mit `tools\Get-SelfXAsrEvents.ps1` und folgen Sie [Defender ASR: Regel für ausführbare Dateien](#defender-asr-regel-für-ausführbare-dateien). |
 | SelfX startet keine Aktion | PowerShell 7.6 fehlt (Warnung im `Install.log`), oder Ereignis 4005 meldet eine abweichende Datei. Das SelfX-Protokoll nennt die Einzelheiten. |
 | SelfX startet keine Aktion, Ereignis 4006 | Der Vertrauensanker `HKLM\SOFTWARE\SelfX\Trust` fehlt (Installation eines früheren Builds), wurde geändert, oder seine Rechte erlauben anderen Identitäten als SYSTEM und Administratoren eine Änderung. Paket neu installieren; `Install.ps1` schreibt den Anker mit den richtigen Rechten. |
 | SelfX startet keine Aktion, Ereignis 4007 | Gerät mit `-TrustedSigner` installiert: Das SelfX-Protokoll (`SelfXService.log`) nennt Datei und Grund. `UntrustedRoot` oder `Chaining`: Die Zertifikatskette des Signierers ist auf dem Gerät nicht (mehr) vertrauenswürdig. `Expired`: Das Zertifikat ist abgelaufen und die Signatur hat keinen Zeitstempel. `Revoked`: Das Zertifikat wurde gesperrt. `SignerNotAllowed`: Der Signierer steht nicht in `Signers` des Ankers (mit dem neuen Fingerabdruck in `-TrustedSigner` neu installieren). `NoSignature`, `BadDigest`, `NotInCatalogOrCatalogUnsigned`: Eine Datei wurde geändert oder ist nicht signiert; Paket neu installieren. |
@@ -688,5 +770,6 @@ einmal auf einem Testgerät.
 6. PowerShell 7 als Win32-App und als Abhängigkeit eingerichtet; Voraussetzungsregel
    Windows 11 25H2 gesetzt; weder SelfX noch PowerShell 7 blockieren die ESP.
 7. Auf einem Testgerät geprüft (Neuinstallation, Update, Deinstallation, Standardnutzer,
-   Autopilot).
+   Autopilot; nutzt Ihr Mandant die ASR-Regel für ausführbare Dateien, auch deren Ereignisse:
+   [Defender ASR](#defender-asr-regel-für-ausführbare-dateien)).
 8. Erst mit einer Pilotgruppe verteilen, dann breit.

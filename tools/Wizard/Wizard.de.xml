@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.0.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.1.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -127,6 +127,10 @@
 	<T Id="guide.s7">7. Ticket-Zuordnung: Legen Sie je Datei unten ein Plattformskript an (Geräte > Skripte und Fehlerbehebungen > Plattformskripts). Mit den Anmeldeinformationen des angemeldeten Benutzers ausführen: Nein. Skripthost in 64-Bit-PowerShell ausführen: Ja. Weisen Sie jedes Skript der passenden Entra-Gerätegruppe zu; die Gruppen sollten sich gegenseitig ausschließen.</T>
 	<T Id="guide.s7item">   {0}: Group Tags {1}; Geräteklassen {2}</T>
 	<T Id="guide.s7tag">   Tipp für eine dynamische Gerätegruppe zu einem Group Tag: (device.devicePhysicalIds -any (_ -eq "[OrderID]:TAG"))</T>
+	<T Id="guide.asr">{0}. Defender-Verringerung der Angriffsfläche (nur wenn die Regel "Block executable files from running unless they meet a prevalence, age, or trusted list criterion", ID 01443614-cd74-433a-b99e-2ecdc07bfc25, in Ihrem Mandanten aktiv ist): Der Cloud-Schutz von Microsoft entscheidet, welche Programme starten dürfen, und Sie können seine Kriterien nicht einstellen. Ein Programm von SelfX kann deshalb blockiert werden. Das ist möglich, nicht sicher: Prüfen Sie es auf den Pilotgeräten, bevor Sie die Zuweisung erweitern.</T>
+	<T Id="guide.asr1">   Welche Datei wird blockiert? Kopieren Sie tools\Get-SelfXAsrEvents.ps1 aus dem Repository auf ein Pilotgerät und führen Sie es dort aus (nur lesend, keine Benutzernamen in der Ausgabe, mit -SelfXOnly nur die SelfX-Dateien; mit erhöhten Rechten, wenn das Protokoll sonst nicht lesbar ist). Ereignis 1121 = blockiert, 1122 = nur im Überwachungsmodus protokolliert.</T>
+	<T Id="guide.asr2">   Stellen Sie die Regel zuerst auf den Überwachungsmodus (Audit). Nennen die Ereignisse SelfX-Dateien, tragen Sie genau diese Dateien (nie mehr als die folgenden vier) in die Einstellung "ASR Only Per Rule Exclusions" dieser Regel ein (Name der englischen Oberfläche): Endpoint Security > Verringerung der Angriffsfläche > Ihre Richtlinie vom Typ "Attack surface reduction rules".</T>
+	<T Id="guide.asr3">   Schließen Sie nicht den Ordner SelfX aus und nutzen Sie nicht die globale Einstellung "Attack Surface Reduction Only Exclusions" (sie gilt für jede ASR-Regel). Ein Ausschluss gilt erst, wenn das Programm startet: starten Sie den Dienst SelfXService oder das Gerät neu. Ausgeschlossene Dateien schreiben keine Ereignisse. Das Signieren des Pakets ist keine Zusage, dass die Regel die Dateien durchlässt. Einzelheiten: docs\de\Installation.md, Abschnitt "Defender ASR: Regel für ausführbare Dateien".</T>
 	<T Id="guide.s8">{0}. Auf einem Pilotgerät testen: Das Startmenü zeigt SelfX, der Dienst SelfXService läuft, die Protokolle liegen in %ProgramData%\SelfX\Logs. Danach die Zuweisung erweitern.</T>
 	<T Id="guide.update">Update später: Version.txt (SelfX Service) und ExpectedVersion in Detection.ps1 im Repository erhöhen, den Assistenten mit Ihren gespeicherten Antworten erneut starten ({0}) und das neue Paket als neue Version der App hochladen.</T>
 	<T Id="guide.answers">Ihre Antworten sind in {0} gespeichert. Die Datei enthält Ihre Postfachadressen: nicht in Git einchecken.</T>

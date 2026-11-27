@@ -67,7 +67,9 @@ and run the wizard with `-AnswerFile`.
 ## What to do in Intune
 
 The short instructions appear at the end of the run and in `SelfX-Intune-Guide.<language>.txt`. Details:
-[installation guide](Installation.md#step-3-set-up-in-intune).
+[installation guide](Installation.md#step-3-set-up-in-intune). The last step before the test also covers the Defender ASR rule for
+executable files (how to find a blocked SelfX file and which files to exclude, at most four):
+[Defender ASR: rule for executable files](Installation.md#defender-asr-rule-for-executable-files).
 
 ## Add a language to the wizard
 

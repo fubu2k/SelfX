@@ -16,6 +16,15 @@ $script:WizardTexts = @{}
 $script:WizardAnswerFile = $null
 $script:WizardInteractive = $true
 
+# The files of SelfX that the guide names for a per-rule exclusion of the Defender ASR rule for executable files (installed below
+# %ProgramFiles%\SelfX\App). Exactly these four, no folder and no wildcard; docs\Installation.md lists the same files.
+$script:SelfXAsrExclusionFiles = @(
+    'C:\Program Files\SelfX\App\SelfXService.exe',
+    'C:\Program Files\SelfX\App\SelfX.exe',
+    'C:\Program Files\SelfX\App\WinRT\SelfXWinRT.dll',
+    'C:\Program Files\SelfX\App\Audio\SelfXAudio.dll'
+)
+
 # ---------------------------------------------------------------- texts
 
 function Get-WizardLanguages {
@@ -293,7 +302,14 @@ function New-SelfXIntuneGuide {
         $lines.Add((Get-WText 'guide.s7tag'))
         $lines.Add('')
     }
-    $lines.Add((Get-WText 'guide.s8' @($(if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }))))
+    $step = if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }
+    $lines.Add((Get-WText 'guide.asr' @($step)))
+    $lines.Add((Get-WText 'guide.asr1'))
+    $lines.Add((Get-WText 'guide.asr2'))
+    foreach ($file in $script:SelfXAsrExclusionFiles) { $lines.Add("   - $file") }
+    $lines.Add((Get-WText 'guide.asr3'))
+    $lines.Add('')
+    $lines.Add((Get-WText 'guide.s8' @($step + 1)))
     $lines.Add('')
     if ($AnswersFile) {
         $lines.Add((Get-WText 'guide.update' @($AnswersFile)))
