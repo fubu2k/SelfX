@@ -76,8 +76,10 @@ Nothing is downloaded on the build machine. Everything it needs comes from the r
 
 ## Step 2: Build the package
 
-> **Easier with the wizard:** `tools\New-SelfXPackage.ps1` asks questions with recommendations, builds the package
-> and explains the steps in Intune. See [Package wizard](Guided-Setup.md). The steps below show the manual way.
+> **Easier with the wizard:** `tools\New-SelfXPackage.ps1` asks questions with recommendations, then builds the package
+> in one run (settings, logo, optional signature, packing, detection script, AppLocker and App Control files) and explains the steps
+> in Intune. It works on the unpacked **payload archive** of a release, so the .NET SDK is not needed. See
+> [Package wizard](Guided-Setup.md). The steps below show the manual way.
 
 Repeat this step for every new version. Open PowerShell in the folder of the repository.
 
@@ -422,7 +424,9 @@ for a package signed with the certificate of your company a signer rule is avail
    ```
 
    The script writes the XML and the `.cip` file to `build\wdac`. It contains hash rules for all
-   programs, libraries and scripts of the package. It changes nothing on the PC.
+   programs, libraries and scripts of the package. It changes nothing on the PC. The wizard (`New-SelfXPackage.ps1`) runs this
+   script for you when you give the ID of the base policy; the script then reads the package folder `package` of the result
+   (folders `App`, `Config` and `Bin`) and the generated detection script (`-DetectionFile`), as Intune runs it.
 4. **Deploy** with Intune (App Control for Business policy) to the same devices as the SelfX
    package. The policy must be on the device before the package.
 5. **Audit mode first.** Whether the policies audit or enforce is decided by the base policy

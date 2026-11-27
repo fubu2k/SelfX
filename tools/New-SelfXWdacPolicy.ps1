@@ -50,7 +50,11 @@
     use). Every signer of the package gets a signer rule.
 
 .PARAMETER PackageFolder
-    Default: "SelfX Service" of the repository (with the folder Bin built by Build-SelfXBinaries.ps1).
+    Default: "SelfX Service" of the repository (with the folder Bin built by Build-SelfXBinaries.ps1). The package layout of the
+    assistant (folders App and Config, version in App\SelfX.Code.json) is read as well.
+
+.PARAMETER DetectionFile
+    The detection script that you upload to Intune (it has the digests). Without it the Detection.ps1 of the package folder is scanned.
 
 .PARAMETER OutputFolder
     Default: build\wdac of the repository (not committed).
@@ -59,7 +63,7 @@
     Name    : New-SelfXWdacPolicy.ps1
     Package : tools
     Context : Administrator PC (not installed, no device is changed)
-    Version : 1.1.0
+    Version : 1.2.0
     Exit code: 0 = policy created, an exception otherwise
 
     History:
@@ -68,6 +72,7 @@
     1.0.0    2026-11-23  fubu2k               Initial version.
     1.0.1    2026-11-27  fubu2k               The policy version comes from Version.txt (no longer from Tool_Config.xml)
     1.1.0    2026-11-27  fubu2k               New -Level Publisher: signer rule of the signing certificate, hash fallback for unsigned files
+    1.2.0    2026-11-27  fubu2k               Reads the package layout App/Config (version from App\SelfX.Code.json, catalogs are not scanned), -DetectionFile
 #>
 
 [CmdletBinding()]
@@ -77,6 +82,7 @@ param(
     [ValidateSet('Hash', 'Publisher')][string]$Level = 'Hash',
     [switch]$AllowMultipleSigners,
     [string]$PackageFolder,
+    [string]$DetectionFile,
     [string]$OutputFolder
 )
 
@@ -109,9 +115,12 @@ if ($Level -eq 'Publisher' -and -not (Get-Command -Name Get-AuthenticodeSignatur
     throw 'The cmdlet Get-AuthenticodeSignature is missing (module Microsoft.PowerShell.Security). Run the script in Windows PowerShell 5.1 (powershell.exe).'
 }
 
+# The version: Version.txt of the repository folder, or ToolVersion of App\SelfX.Code.json in the package of the assistant.
 $versionPath = Join-Path $PackageFolder 'Version.txt'
-if (-not (Test-Path -LiteralPath $versionPath -PathType Leaf)) { throw "Version.txt not found in '$PackageFolder'." }
-$toolVersion = Get-SelfXVersionFromFile -Path $versionPath
+$codeListPath = Join-Path $PackageFolder 'App\SelfX.Code.json'
+if (Test-Path -LiteralPath $versionPath -PathType Leaf) { $toolVersion = Get-SelfXVersionFromFile -Path $versionPath }
+elseif (Test-Path -LiteralPath $codeListPath -PathType Leaf) { $toolVersion = "$((Get-Content -LiteralPath $codeListPath -Raw | ConvertFrom-Json).ToolVersion)" }
+else { throw "Neither Version.txt nor App\SelfX.Code.json found in '$PackageFolder'." }
 if ($toolVersion -notmatch '^(\d{1,4})\.(\d{1,4})\.(\d{1,4})$') { throw "Unexpected version '$toolVersion' in Version.txt." }
 $policyVersion = "$toolVersion.0"
 
@@ -125,8 +134,18 @@ try {
     foreach ($name in 'Install.ps1', 'Detection.ps1', 'Uninstall.ps1') {
         Copy-Item -LiteralPath (Join-Path $PackageFolder $name) -Destination $stage
     }
-    Copy-Item -LiteralPath (Join-Path $PackageFolder 'Sources') -Destination (Join-Path $stage 'Sources') -Recurse
+    foreach ($folder in 'Sources', 'App', 'Config') {
+        $folderPath = Join-Path $PackageFolder $folder
+        if (Test-Path -LiteralPath $folderPath -PathType Container) { Copy-Item -LiteralPath $folderPath -Destination (Join-Path $stage $folder) -Recurse }
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $stage 'Sources')) -and -not (Test-Path -LiteralPath (Join-Path $stage 'App'))) { throw "The package folder '$PackageFolder' has neither Sources nor App." }
     Copy-Item -LiteralPath $bin -Destination (Join-Path $stage 'Bin') -Recurse
+    if ($DetectionFile) {
+        if (-not (Test-Path -LiteralPath $DetectionFile -PathType Leaf)) { throw "The detection script '$DetectionFile' does not exist." }
+        Copy-Item -LiteralPath $DetectionFile -Destination (Join-Path $stage 'Detection.ps1') -Force
+    }
+    # Catalogs are not programs or scripts: the scan does not need them.
+    Get-ChildItem -LiteralPath $stage -Recurse -File -Filter '*.cat' | Remove-Item -Force
 
     # Level Publisher: look at the signatures of the staged files before the scan (fail closed, nothing is written yet).
     $signedFileNames = @()
