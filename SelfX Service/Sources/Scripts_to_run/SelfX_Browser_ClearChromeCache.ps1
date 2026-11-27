@@ -3,7 +3,7 @@
     Close Chrome and remove selected browsing data from its Default profile.
 
 .DESCRIPTION
-    Force-stops accessible chrome processes and waits two seconds before deleting selected cache,
+    Force-stops the chrome processes of the signed-in user's own session (other sessions are not touched) and waits two seconds before deleting selected cache,
     cookies, history and web-data files under LOCALAPPDATA\Google\Chrome\User Data\Default.
     Runs as the signed-in user from the SelfX GUI; other Chrome profiles are not cleared.
     Open Chrome windows close without saving session state; cookies and local browsing data
@@ -16,13 +16,14 @@
     Name    : SelfX_Browser_ClearChromeCache.ps1
     Package : SelfX Service
     Context : User
-    Version : 2.6.0
+    Version : 2.6.1
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     1.0.0    2022-10-04  Damien Van Robaeys   Initial version (SelfX Standard / SelfX Admin)
     2.6.0    2026-11-06  Wolfgang Baeck       Logging (SelfXLog.ps1); failed removals are reported (exit 1)
+    2.6.1    2026-11-27  fubu2k               Only processes of the own session are stopped (Edge pattern)
 #>
 
 # Logging to ProgramData\SelfX\Logs (SelfXLog.ps1 in the install folder); the action also works without it.
@@ -32,7 +33,8 @@ else { function Write-SelfXLog { param($Message, $Level) } }
 trap { Write-SelfXLog "Failed: $($_.Exception.Message)" Error; break }
 
 # Close Chrome first so open database and cache handles can be released.
-$processes = @(Get-Process -Name chrome -ErrorAction SilentlyContinue)
+$session = (Get-Process -Id $PID).SessionId
+$processes = @(Get-Process -Name chrome -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $session })
 $processes | Stop-Process -Force -ErrorAction SilentlyContinue
 Write-SelfXLog "Closed $($processes.Count) Chrome process(es)."
 Start-Sleep -Seconds 2

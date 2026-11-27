@@ -187,6 +187,13 @@ try {
 		Assert-Equal ($code -match "(?i)Start-Process\s+-FilePath\s+'[A-Za-z]+\.exe'") $false "$($file.Name) starts no program by a bare name"
 		if ($referenced -notcontains $file.Name) { $script:unused += $file.Name }
 	}
+	# Processes of a user action are stopped only in the caller's own session (19a). Mock tests cannot show this:
+	# the mocked Get-Process always reports session 1, so the rule is checked in the source.
+	foreach ($file in Get-ChildItem -LiteralPath $scripts -Filter '*.ps1') {
+		$text = [IO.File]::ReadAllText($file.FullName)
+		if ($text -notmatch 'Context\s*:\s*User' -or $text -notmatch 'Stop-Process') { continue }
+		Assert-Equal ($text -match '\.SessionId\s*-eq\s*\$session') $true "$($file.Name) stops only processes of its own session"
+	}
 	# XML files are read through an XmlReader that prohibits DTDs (no entity expansion, no external resolution).
 	foreach ($file in Get-ChildItem -LiteralPath $sources -Filter '*.ps1' -Recurse) {
 		$text = [IO.File]::ReadAllText($file.FullName)
