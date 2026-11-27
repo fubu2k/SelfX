@@ -34,6 +34,8 @@
                                               folder, locked file, package in the old layout, paths of service, starter, shortcut and uninstall entry.
     3.1.0    2026-11-27  fubu2k               Trust mode Signature: list of -TrustedSigner, mode and downgrade, signatures and both catalogs of the package
                                               (replaced cmdlets and, with a trusted test root, real certificates), copy step, trust anchor in a test key.
+    3.1.0    2026-11-27  fubu2k               Trust mode Signature: both catalogs are installed next to their lists and compared after the copy; no
+                                              catalog in the mode Hash
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -695,8 +697,9 @@ else {
 	$missingProbe = Join-Path $signedPackage 'NoSuchFile.ps1'
 	Assert-Equal (Test-SelfXFileSignature -Path $missingProbe -AllowedThumbprint @($signerA)) (Test-SelfXSignature -Path $missingProbe -AllowedThumbprint $signerA).Reason 'same answer as the signing library: missing file'
 
-	# 10. The lists and the copy step with a signed package: the catalog of Config is accepted only in the mode Signature and is
-	#     not installed; the installed lists are the checked ones.
+	# 10. The lists and the copy step with a signed package: the catalog of Config is accepted only in the mode Signature; both
+	#     catalogs are installed next to their lists (the service reads them); the installed lists and catalogs are the checked ones.
+	#     In the mode Hash no catalog is installed.
 	New-SignedPackage -Full
 	$verified = Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $signerA
 	Assert-Equal (Get-Refusal { Test-SelfXFileManifest -PackageFolder $signedPackage -SignedPackage }) 'accepted' 'mode Signature: the lists accept Config\SelfX.Config.cat'
@@ -707,18 +710,32 @@ else {
 	if (Test-Path -LiteralPath $device) { Remove-Item -LiteralPath $device -Recurse -Force }
 	Clear-SelfXInstallFolder -InstallFolder $device -Attempts 1 -DelaySeconds 0
 	Copy-SelfXPayload -PackageFolder $signedPackage -InstallFolder $device
+	Assert-Equal @(Get-ChildItem -LiteralPath $device -Recurse -File -Force -Filter '*.cat').Count 0 'mode Hash: the copy step installs no catalog'
+	if (Test-Path -LiteralPath $device) { Remove-Item -LiteralPath $device -Recurse -Force }
+	Clear-SelfXInstallFolder -InstallFolder $device -Attempts 1 -DelaySeconds 0
+	Copy-SelfXPayload -PackageFolder $signedPackage -InstallFolder $device -SignedPackage
 	Assert-Equal (Get-TopEntries) 'App,Config' 'signed package: the install folder holds only App and Config'
-	Assert-Equal (Test-Path -LiteralPath (Join-Path $device 'Config\SelfX.Config.cat')) $false 'signed package: the catalog of the configuration is not installed'
-	Assert-Equal @(Get-ChildItem -LiteralPath $device -Recurse -File -Force -Filter '*.cat').Count 0 'signed package: no catalog is installed'
-	try { $installedCount = Test-SelfXInstalledFiles -InstallFolder $device } catch { $installedCount = "refused: $($_.Exception.Message)" }
-	Assert-Equal $installedCount $packageCount 'signed package: the installed folders match both lists (the file check of the service sees no unlisted file)'
-	Assert-Equal (Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) 'accepted' 'signed package: the installed lists are the checked lists'
+	Assert-Equal ((@(Get-ChildItem -LiteralPath $device -Recurse -File -Force -Filter '*.cat' | ForEach-Object { $_.FullName.Substring($device.Length + 1) }) | Sort-Object) -join ',') 'App\SelfX.Code.cat,Config\SelfX.Config.cat' 'signed package: both catalogs are installed next to their lists, nowhere else'
+	Assert-Equal (Get-FileHash -LiteralPath (Join-Path $device 'App\SelfX.Code.cat') -Algorithm SHA256).Hash $verified.CodeCatalogHash 'signed package: the installed code catalog is the checked one'
+	Assert-Equal (Get-FileHash -LiteralPath (Join-Path $device 'Config\SelfX.Config.cat') -Algorithm SHA256).Hash $verified.ConfigCatalogHash 'signed package: the installed configuration catalog is the checked one'
+	try { $installedCount = Test-SelfXInstalledFiles -InstallFolder $device -SignedPackage } catch { $installedCount = "refused: $($_.Exception.Message)" }
+	Assert-Equal $installedCount $packageCount 'signed package: the installed folders match both lists (the catalogs are not counted)'
+	Assert-Equal ((Get-Refusal { Test-SelfXInstalledFiles -InstallFolder $device }) -match 'SelfX\.Code\.cat is not listed') $true 'mode Hash: an installed catalog is refused like every unlisted file'
+	Assert-Equal (Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) 'accepted' 'signed package: the installed lists and catalogs are the checked ones'
+	Add-Content -LiteralPath (Join-Path $device 'App\SelfX.Code.cat') -Value ' '
+	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) -match 'App\\SelfX\.Code\.cat.*changed between check and copy') $true 'a code catalog changed between check and copy is found'
+	Copy-Item -LiteralPath (Join-Path $signedPackage 'SelfX.Code.cat') -Destination (Join-Path $device 'App\SelfX.Code.cat') -Force
+	Remove-Item -LiteralPath (Join-Path $device 'Config\SelfX.Config.cat') -Force
+	Assert-Equal ((Get-Refusal { Test-SelfXInstalledFiles -InstallFolder $device -SignedPackage }) -match 'Config\\SelfX\.Config\.cat is missing') $true 'signed package: a missing installed catalog is refused'
+	Copy-Item -LiteralPath (Join-Path $signedPackage 'Config\SelfX.Config.cat') -Destination (Join-Path $device 'Config\SelfX.Config.cat') -Force
 	Add-Content -LiteralPath (Join-Path $device 'App\SelfX.Code.json') -Value ' '
 	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) -match 'App\\SelfX\.Code\.json.*changed between check and copy') $true 'a code list changed between check and copy is found'
 	Copy-Item -LiteralPath (Join-Path $signedPackage 'App\SelfX.Code.json') -Destination (Join-Path $device 'App\SelfX.Code.json') -Force
 	Add-Content -LiteralPath (Join-Path $device 'Config\SelfX.Config.json') -Value ' '
 	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified $verified }) -match 'Config\\SelfX\.Config\.json.*changed between check and copy') $true 'a configuration list changed between check and copy is found'
 	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified ([pscustomobject]@{ CodeListHash = ''; ConfigListHash = '' }) }) -match 'checked SHA256.*is missing') $true 'installed lists without checked hashes are refused'
+	Copy-Item -LiteralPath (Join-Path $signedPackage 'Config\SelfX.Config.json') -Destination (Join-Path $device 'Config\SelfX.Config.json') -Force
+	Assert-Equal ((Get-Refusal { Test-SelfXInstalledLists -InstallFolder $device -Verified ([pscustomobject]@{ CodeListHash = $verified.CodeListHash; ConfigListHash = $verified.ConfigListHash }) }) -match 'checked SHA256 of App\\SelfX\.Code\.cat is missing') $true 'installed catalogs without checked hashes are refused'
 
 	# 11. The trust anchor, in a test key of the current user (Install.ps1 uses HKLM\SOFTWARE\SelfX\Trust). The current user gets full
 	#     control here so that the test can run without administrator rights and can remove the key again.
@@ -799,7 +816,8 @@ else {
 		'Start-Transcript',
 		'Stop-Service -Name $ServiceName',
 		'Clear-SelfXInstallFolder -InstallFolder $InstallFolder',
-		'$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder',
+		'Copy-SelfXPayload -PackageFolder $PackageFolder -InstallFolder $InstallFolder -SignedPackage:($TrustMode -eq ''Signature'')',
+		'$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder -SignedPackage:($TrustMode -eq ''Signature'')',
 		'Test-SelfXInstalledLists -InstallFolder $InstallFolder -Verified $VerifiedSignatures',
 		'Set-SelfXTrustAnchor -Mode $TrustMode -Signers $AllowedSigners',
 		'New-Service -Name $ServiceName'
