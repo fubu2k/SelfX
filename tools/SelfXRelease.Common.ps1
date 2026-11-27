@@ -75,7 +75,7 @@ $script:SelfXPayloadTopLevel = @(
 
 function Get-SelfXReleaseFileNames {
     # The five files of a release (all in one folder). Throws for a version that is not <major>.<minor>.<patch>.
-    param([Parameter(Mandatory = $true)][string]$Version)
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Version)
     if ($Version -notmatch $script:SelfXReleaseVersionPattern) { throw "Invalid version '$Version' (expected <major>.<minor>.<patch>)." }
     return [ordered]@{
         Package   = "SelfX-Service-$Version.intunewin"
@@ -94,7 +94,7 @@ function Get-SelfXChangelogSection {
     # or is empty (a release without notes is not created). "## Unreleased" is no version.
     param(
         [Parameter(Mandatory = $true)][string]$Path,
-        [Parameter(Mandatory = $true)][string]$Version
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Version
     )
     if ($Version -notmatch $script:SelfXReleaseVersionPattern) { throw "Invalid version '$Version' (expected <major>.<minor>.<patch>)." }
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "The changelog is missing: $Path" }
@@ -130,7 +130,7 @@ function New-SelfXReleaseNotes {
     # Attested = $true adds the line for the verification of the build provenance of the payload archive.
     param(
         [Parameter(Mandatory = $true)][string]$ChangelogPath,
-        [Parameter(Mandatory = $true)][string]$Version,
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Version,
         [Parameter(Mandatory = $true)][string]$Repository,
         [bool]$Attested = $true
     )
@@ -343,7 +343,7 @@ function Get-SelfXChecksumProblems {
     $listed = @{}
     foreach ($line in @([IO.File]::ReadAllText($listPath) -split '\r?\n')) {
         if ($line.Length -eq 0 -or $line.StartsWith('#')) { continue }
-        if ($line -match '^([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._-]*)\z') {
+        if ($line -cmatch '^([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._-]*)\z') {
             $hash = $Matches[1]
             $name = $Matches[2]
         } else { $problems.Add("Line in the wrong format: '$line'."); continue }
