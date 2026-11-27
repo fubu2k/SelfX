@@ -49,6 +49,7 @@
     2.8.27   2026-11-27  fubu2k               The displayed version is ToolVersion of SelfX.Code.json (the version is a property of the code), no longer Tool_Version of Tool_Config.xml
     3.1.0    2026-11-27  fubu2k               Code and configuration in two folders (App, Config): settings, catalog, ticket routing, network targets,
                                               images and own scripts and language files are resolved by SelfXPaths.ps1
+    3.1.0    2026-11-27  fubu2k               Text overrides: Config\Texts\<culture>.xml replaces single texts of the language file (Localization.ps1)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -228,7 +229,8 @@ $Show_Language_Setting = (Get-SelfXText "Show_Language_Setting" "True") -eq 'Tru
 $Global:SelfX_LanguageFolder = Get-SelfXLanguageFolders -CodeRoot $Current_Folder
 $Global:SelfX_Language_Setting = Resolve-SelfXLanguageSetting -ConfigLanguage (Get-SelfXText "Tool_Language" "de") `
 	-UserLanguage ([string](Get-SelfXUserSetting 'Language' '')) -AllowUserChoice $Show_Language_Setting -LanguageFolder $Global:SelfX_LanguageFolder
-$SelfX_UI_Language = Initialize-SelfXLanguage -LanguageFolder $Global:SelfX_LanguageFolder -Language $Global:SelfX_Language_Setting
+# Optional text overrides of the company (Config\Texts\<culture>.xml) replace single texts of the bundled language file.
+$SelfX_UI_Language = Initialize-SelfXLanguage -LanguageFolder $Global:SelfX_LanguageFolder -Language $Global:SelfX_Language_Setting -TextOverrideFolder (Get-SelfXTextOverrideFolder -CodeRoot $Current_Folder)
 
 # Action catalogue: base data and English texts. Names, categories and messages are translated per language.
 $List_Issues_XML = New-Object System.Xml.XmlDocument

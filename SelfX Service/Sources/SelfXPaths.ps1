@@ -9,7 +9,8 @@
     Layout of an installation (%ProgramFiles%\SelfX):
       App\     the code: programs, libraries, scripts of the project, bundled language files, default images, SelfX.Code.json
       Config\  the configuration: Tool_Config.xml, Issues_List.xml, Health_Config.xml, Ticket_Config.xml, Network_Test_Config.xml,
-               Branding\, own scripts (Scripts_to_run, HealthChecks) and own language files (Languages) of the company, SelfX.Config.json
+               Branding\, own scripts (Scripts_to_run, HealthChecks), own language files (Languages) and text overrides (Texts) of the
+               company, SelfX.Config.json
     The configuration folder is the folder Config next to the code folder when the code folder is named App. Otherwise (the folder
     Sources of the repository, a flat test folder) the configuration is in the code folder itself. No environment variable, registry
     value or other input that a user can set takes part in this decision: both folders are protected by Install.ps1 (users can only
@@ -37,6 +38,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version: one resolver for the folders App and Config
+    3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is a configuration file; Get-SelfXTextOverrideFolder
 #>
 
 # The settings files of SelfX (same list as Install.ps1, tools\SelfXPackage.Common.ps1 and SelfXService.cs).
@@ -71,7 +73,7 @@ function Test-SelfXSplitLayout {
 
 function Test-SelfXConfigFileName {
 	# May this relative name be used below the configuration folder? Same rule as the configuration list (SelfX.Config.json):
-	# a settings file, a file below Branding, an own script in Scripts_to_run or HealthChecks or an own language file.
+	# a settings file, a file below Branding, an own script in Scripts_to_run or HealthChecks, an own language file or a text override.
 	param([string]$Name)
 	If([string]::IsNullOrEmpty($Name)) { return $false }
 	$Relative = $Name.Replace('\', '/')
@@ -80,6 +82,7 @@ function Test-SelfXConfigFileName {
 	If($Relative -match '^Branding/.+') { return $true }
 	If($Relative -match '^(Scripts_to_run|HealthChecks)/[A-Za-z0-9._-]+\.ps1\z') { return $true }
 	If($Relative -match '^Languages/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml\z') { return $true }
+	If($Relative -match '^Texts/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml\z') { return $true }
 	Return $false
 }
 
@@ -126,6 +129,13 @@ function Get-SelfXLanguageFolders {
 	$Folders = @(Join-Path (Get-SelfXCodeRoot -CodeRoot $CodeRoot) 'Languages')
 	If(Test-SelfXSplitLayout -CodeRoot $CodeRoot) { $Folders += (Join-Path (Get-SelfXConfigRoot -CodeRoot $CodeRoot) 'Languages') }
 	Return ,([string[]]$Folders)
+}
+
+function Get-SelfXTextOverrideFolder {
+	# Folder with the optional text overrides of the company (Texts\<culture>.xml): Config\Texts. The folder need not exist. The files
+	# are read by Initialize-SelfXLanguage (Localization.ps1), which accepts only culture names as file names.
+	param([string]$CodeRoot = '')
+	Return (Join-Path (Get-SelfXConfigRoot -CodeRoot $CodeRoot) 'Texts')
 }
 
 function Test-SelfXConfigListed {

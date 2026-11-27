@@ -63,6 +63,8 @@
                                               (settings, Branding, own scripts and language files, SelfX.Config.json), rights unchanged; an
                                               installation in the old layout is removed completely before the copy, and afterwards the install
                                               folder may hold nothing but App and Config; a package in the old layout (Sources) is refused
+    3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is accepted in SelfX.Config.json (placement rule); nothing below Texts
+                                              may be in SelfX.Code.json
 #>
 
 [CmdletBinding()]
@@ -211,16 +213,18 @@ function Test-SelfXListPlacement {
 	# Placement rule: may this name be in this list? Same rule as Test-SelfXListPlacement in tools\SelfXPackage.Common.ps1 and
 	# in the service (Test-ServicePipe.ps1 and Test-FileManifest.ps1 check that all copies answer alike). SelfX.Code.json
 	# may hold any file that is not a settings file or below Branding; SelfX.Config.json only settings files, files below
-	# Branding, own scripts in Scripts_to_run or HealthChecks and own language files, so no program, library, Uninstall.ps1,
+	# Branding, own scripts in Scripts_to_run or HealthChecks, own language files and text overrides (Texts/<culture>.xml), so no program, library, Uninstall.ps1,
 	# script of the project or image can be moved into the list that the company writes.
 	param([string]$Name, [string]$List)
 	If($Name -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Name -match '(^|/)\.\.?(/|$)') { return $false }
 	$ConfigFiles = @('Health_Config.xml', 'Issues_List.xml', 'Network_Test_Config.xml', 'Ticket_Config.xml', 'Tool_Config.xml')
 	$IsConfigFile = ($ConfigFiles -contains $Name) -or ($Name -match '^Branding/.+')
-	If($List -eq 'Code') { return (-not $IsConfigFile) }
+	# Nothing below Texts may be in the code list; the configuration list accepts only Texts/<culture>.xml (below).
+	If($List -eq 'Code') { return (-not ($IsConfigFile -or ($Name -match '^Texts/.+'))) }
 	If($IsConfigFile) { return $true }
 	If($Name -match '^(Scripts_to_run|HealthChecks)/[A-Za-z0-9._-]+\.ps1$') { return $true }
 	If($Name -match '^Languages/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml$') { return $true }
+	If($Name -match '^Texts/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml$') { return $true }
 	Return $false
 }
 

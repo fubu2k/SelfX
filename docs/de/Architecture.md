@@ -143,11 +143,13 @@ eine übrig gebliebene als Datei ohne Eintrag melden).
 Namen. Konfiguration sind die fünf Einstellungsdateien, alles unter `Branding` sowie jedes
 andere Skript in `Scripts_to_run` und `HealthChecks` und jede andere Sprachdatei in `Languages`,
 die nicht auf der Liste des Projekts steht (eigene Aktionen, eigene Prüfungen, eine eigene
-Sprache). Jede Datei, die keine Regel kennt, stoppt den Bau (fail closed). `Install.ps1` und der
+Sprache), und jede Datei `Texts\<Kultur>.xml` (Text-Überschreibung, siehe
+[Konfiguration](Configuration.md#einzelne-texte-ändern-text-überschreibungen)). Jede Datei, die keine Regel kennt, stoppt den Bau (fail closed). `Install.ps1` und der
 Dienst kennen die Namensliste nicht; sie prüfen nur, dass keine Datei in beiden Listen oder in
 keiner steht, dass die Code-Liste keine Einstellungsdatei und keine Datei aus `Branding` enthält
-und dass die Konfigurationsliste nur Einstellungsdateien, `Branding`-Dateien, eigene Skripte und
-eigene Sprachdateien enthält. So lässt sich kein Programm, keine Bibliothek, kein
+und dass die Konfigurationsliste nur Einstellungsdateien, `Branding`-Dateien, eigene Skripte,
+eigene Sprachdateien und `Texts\<Kultur>.xml` enthält; unter `Texts` darf nichts in der Code-Liste
+stehen. So lässt sich kein Programm, keine Bibliothek, kein
 `Uninstall.ps1` und kein Skript des Projekts in die Liste verschieben, die die Dateien der Firma
 trägt. Der Test `Test-FileManifest.ps1` hält die Namensliste gleich den Dateien des Repositorys:
 Eine neue Projektdatei muss in `$script:SelfXCodeFileNames` ergänzt werden, sonst schlägt der
@@ -300,7 +302,7 @@ Paket                                     Gerät (%ProgramFiles%\SelfX)
 +- Service\*.cs (Quellen der Programme)   |   +- WinRT\  Audio\  Repair.ico  logo.png  icon_systray.ico
 +- App\       (Code aus Sources)          |   +- SelfX.Code.json
 |   +- SelfX.Code.json                    +- Config\  (nur Konfiguration)
-+- Config\    (Konfiguration aus Sources)     +- *.xml  Branding\  eigene Scripts_to_run\, HealthChecks\, Languages\
++- Config\    (Konfiguration aus Sources)     +- *.xml  Branding\  eigene Scripts_to_run\, HealthChecks\, Languages\, Texts\
     +- SelfX.Config.json                      +- SelfX.Config.json
                                           (Rechte unverändert: Benutzer nur Lesen und Ausführen, S-1-5-32-545)
 ```

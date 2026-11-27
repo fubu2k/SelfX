@@ -37,6 +37,7 @@
     2.9.0    2026-11-27  fubu2k               Two lists (SelfX.Code.json, SelfX.Config.json): placement, both lists, one list missing, left-over SelfX.Files.json.
     3.1.0    2026-11-27  fubu2k               Layout App/Config: configuration folder, fixed names of the settings files, file check of App, Config and the
                                               install folder above them, scripts of the company only with their entry in SelfX.Config.json.
+    3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml in the configuration list, nothing below Texts in the code list.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -124,7 +125,7 @@ if ($verifyMethod) {
 	}
 	# Same placement as the package build: settings files and Branding go to SelfX.Config.json, everything else to SelfX.Code.json.
 	function Get-ListOf([string]$Relative) {
-		if ($Relative -in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml' -or $Relative -like 'Branding/*' -or $Relative -like 'Scripts_to_run/Own_*') { return 'SelfX.Config.json' }
+		if ($Relative -in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml' -or $Relative -like 'Branding/*' -or $Relative -like 'Texts/*' -or $Relative -like 'Scripts_to_run/Own_*') { return 'SelfX.Config.json' }
 		return 'SelfX.Code.json'
 	}
 	function Write-ListFile([string]$Root, [string]$ListName, $Files) {
@@ -210,6 +211,26 @@ if ($verifyMethod) {
 	$result = Test-FileList $fileRoot
 	Assert-True $result.Ok "N4: an own script in the configuration list is accepted ($($result.Problems))"
 	Remove-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\Own_Action.ps1')
+	# A text override of the company (Texts/<culture>.xml) belongs in the configuration list; nothing below Texts may be in the code list.
+	New-Item -ItemType Directory -Path (Join-Path $fileRoot 'Texts') -Force | Out-Null
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Texts\de.xml') -Value '<SelfX_Language Culture="de" />'
+	New-FileList $fileRoot
+	$result = Test-FileList $fileRoot
+	Assert-True $result.Ok "text overrides: Texts/de.xml in the configuration list is accepted ($($result.Problems))"
+	Add-Content -LiteralPath (Join-Path $fileRoot 'Texts\de.xml') -Value ' '
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: Texts/de.xml') 'text overrides: a changed Texts/de.xml is refused'
+	New-FileList $fileRoot
+	New-FileList $fileRoot @{ 'Texts/de-AT.xml' = ('A' * 64) } 'SelfX.Code.json'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Code.json invalid entry') 'text overrides: a file below Texts in the code list is refused'
+	New-FileList $fileRoot @{ 'Texts/x.ps1' = ('A' * 64) } 'SelfX.Config.json'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Config.json invalid entry') 'text overrides: a script below Texts in the configuration list is refused'
+	New-FileList $fileRoot @{ 'Texts/sub/de.xml' = ('A' * 64) } 'SelfX.Config.json'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Config.json invalid entry') 'text overrides: a sub folder below Texts in the configuration list is refused'
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'Texts') -Recurse -Force
 	New-FileList $fileRoot
 	# The old SelfX.Files.json of an earlier version is not a list any more: left in the folder it is an unlisted file.
 	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json') -Value '{"ManifestVersion":1,"Files":{}}'

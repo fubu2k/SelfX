@@ -50,6 +50,7 @@ SelfX wird über XML-Dateien im Ordner `SelfX Service\Sources` eingestellt.
 | `Network_Test_Config.xml` | Netzwerk-Messungen (optional, standardmäßig aus) |
 | `Ticket_Config.xml` | Zuordnung von Tickets zu Ihren IT-Einheiten (optional) |
 | `Languages\<Sprache>.xml` | Alle Texte, je Sprache |
+| `Texts\<Sprache>.xml` | Optional: ersetzt einzelne Texte einer mitgelieferten Sprache ([Text-Überschreibungen](#einzelne-texte-ändern-text-überschreibungen)) |
 
 ## Die wichtigsten Einstellungen
 
@@ -721,8 +722,73 @@ Eine eigene Sprachdatei (eine Kultur, die SelfX nicht mitbringt) ist Konfigurati
 Sprachen (`App\Languages`) an. Eine eigene Datei mit dem Namen einer mitgelieferten Sprache wird
 ignoriert; die mitgelieferte Datei gilt.
 
-Um einen Text für Ihr Unternehmen zu ändern, zum Beispiel den Haupttitel, bearbeiten Sie nur
-die Sprachdatei. Dafür ist keine Programmierung nötig.
+Um einen einzelnen Text für Ihr Unternehmen zu ändern, zum Beispiel den Haupttitel, bearbeiten
+Sie keine mitgelieferte Sprachdatei. Nutzen Sie eine Text-Überschreibung (nächster Abschnitt).
+
+### Einzelne Texte ändern (Text-Überschreibungen)
+
+Die mitgelieferten Sprachdateien (`App\Languages`) sind Code: Sie kommen mit jedem Release, und
+eine geänderte Datei passte nicht mehr zu `SelfX.Code.json`. Ihre eigene Formulierung gehört
+deshalb in eine optionale **Text-Überschreibung** (Konfiguration): die Datei
+`Texts\<Sprache>.xml` in `Sources` des Pakets, installiert nach `%ProgramFiles%\SelfX\Config\Texts`.
+Eine Änderung braucht eine neue Konfiguration, keine neue Code-Version, und ein neues SelfX-Release
+überschreibt sie nicht.
+
+Beispiel `Texts\de.xml` (nur die Texte, die Sie ändern):
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<SelfX_Language Culture="de">
+	<UI>
+		<Main_Title_Text>Haben Sie ein Problem mit Ihrem Gerät? Wir helfen.</Main_Title_Text>
+		<Action_Success_Text>Erledigt: {0}</Action_Success_Text>
+	</UI>
+	<Catalog>
+		<Categories><Category Id="Device">Geräte</Category></Categories>
+	</Catalog>
+</SelfX_Language>
+```
+
+So funktioniert es:
+
+- Die Datei hat das Format einer Sprachdatei, enthält aber nur die Texte, die Sie ändern. Die
+  Abschnitte sind `UI`, `SystemInfo` und `Catalog` (`Categories`, `Messages`, `Actions` mit `Name`,
+  `Explanation`, `Alerte_MSG`). Die Kennungen sind die aus `en.xml` und `de.xml`.
+- SelfX lädt erst die mitgelieferte Datei, dann die Überschreibung. Der Name der Überschreibung ist
+  die Kultur der **geladenen mitgelieferten Datei**: Ein Nutzer mit `de-CH` bekommt `de.xml` und damit
+  `Texts\de.xml`. Eine Überschreibung ändert nur ihre eigene Sprache; legen Sie also je Sprache, die Sie
+  ändern wollen, eine Datei an (eine englische Überschreibung ändert keine deutschen Texte).
+- `Culture` muss dem Dateinamen entsprechen. Andere Attribute des Wurzelelements (`NativeName`,
+  `FlowDirection`) werden ignoriert. Eine Überschreibung kann keine Sprache hinzufügen und keine
+  mitgelieferte Datei ersetzen; für eine eigene Sprache nutzen Sie `Languages\<Sprache>.xml`.
+- Ein Text gilt nur, wenn alles Folgende zutrifft; sonst behält SelfX den mitgelieferten Text:
+  - Er ist nicht leer und nicht länger als **1500 Zeichen**.
+  - Er enthält **kein Markup**: kein `<` und keine Folge wie `&amp;` oder `&#60;` im angezeigten Text (ein einfaches `&`
+    ist in Ordnung, in der XML-Datei schreiben Sie es als `&amp;`; ein `>` ist erlaubt).
+  - Er enthält keine Steuerzeichen.
+  - Er hat dieselben **Platzhalter** wie der mitgelieferte Text (`{0}` bleibt `{0}`, `{1:D2}` bleibt `{1:D2}`),
+    und `SystemInfo_Export_Filter` behält seine Anzahl `|`-Trenner.
+  - Seine Kennung kommt nur einmal vor.
+- Die Copilot-Prompts (`Copilot_Prompt_User`, `Copilot_Prompt_Admin`) lassen sich nicht überschreiben.
+- Eine Kennung, die keine mitgelieferte Datei kennt, wird **ignoriert** und im Protokoll des Nutzers
+  vermerkt (`Logs\Users\<SID>`, siehe [Protokolle und Aufbewahrung](#protokolle-und-aufbewahrung)). Das
+  Protokoll nennt Kennung und Grund, nie den Text.
+- Die Datei muss gültiges XML ohne DTD sein, höchstens 256 KB groß und kein Link. Sonst nutzt SelfX
+  sie gar nicht.
+- Die Dateien in `Texts` stehen wie Ihre übrigen Konfigurationsdateien in `SelfX.Config.json`. Etwas
+  anderes darf nicht im Ordner liegen (der Paketbau bricht bei einer Datei ab, die nicht
+  `<Kultur>.xml` heißt).
+
+Prüfen Sie Ihre Überschreibung, bevor Sie das Paket bauen. Die Prüfung nutzt denselben Code wie SelfX
+und meldet, was SelfX ignorieren würde:
+
+```powershell
+& '.\SelfX Service\Test-LanguageFiles.ps1' -Culture de
+```
+
+Fehler sind Dateien und Texte, die SelfX nicht verwenden würde (ungültige Datei, Markup, falsche
+Platzhalter, zu lang); Warnungen sind unbekannte Kennungen und eine Überschreibung ohne
+mitgelieferte Sprachdatei gleichen Namens.
 
 ## Änderungen sicher ausliefern
 

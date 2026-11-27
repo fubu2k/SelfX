@@ -16,11 +16,21 @@
     Missing texts are warnings (SelfX shows the English text instead). Wrong placeholders, unknown
     Ids and invalid files are errors. The script only reads files; it changes nothing.
 
+    Text overrides: every file Texts\<culture>.xml (next to the Sources folder content, in the package Config\Texts) is checked with the
+    same functions that SelfX uses at start (Localization.ps1: Read-SelfXTextOverride). Errors: a file name that is no culture
+    name, a file that is a link, too large, not valid XML (a DTD is refused), has another root element or Culture, and a text that
+    SelfX would reject (empty, longer than 1500 characters, markup, control characters, other placeholders than the bundled text).
+    Warnings: a text id that no bundled file knows (SelfX ignores it and writes it to the log) and a file without a bundled
+    language file of the same name (it is never used).
+
 .PARAMETER SourcesFolder
     Sources folder of the package. Default: the Sources folder next to this script.
 
+.PARAMETER TextsFolder
+    Folder with the text overrides. Default: the folder Texts next to the Languages folder. A missing folder is not an error.
+
 .PARAMETER Culture
-    Optional list of cultures to check, for example de, fr. Default: all files.
+    Optional list of cultures to check, for example de, fr. Default: all files (language files and text overrides).
 
 .EXAMPLE
     .\Test-LanguageFiles.ps1
@@ -30,20 +40,24 @@
     Name    : Test-LanguageFiles.ps1
     Package : SelfX Service
     Context : Packaging tool (run by the administrator before building the package; not installed)
-    Version : 2.2.0
+    Version : 3.1.0
     Exit code: 0 = no errors, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.2.0    2026-10-28  Wolfgang Baeck       Initial version
+    3.1.0    2026-11-27  fubu2k               Checks the text overrides Texts\<culture>.xml with the functions of Localization.ps1 (TextsFolder)
 #>
 param(
 	[string]$SourcesFolder = (Join-Path $PSScriptRoot 'Sources'),
+	[string]$TextsFolder = (Join-Path $SourcesFolder 'Texts'),
 	[string[]]$Culture
 )
 
 $LanguageFolder = Join-Path $SourcesFolder 'Languages'
+# The same functions as SelfX uses at start (Test-SelfXLanguageName, Read-SelfXTextOverride): this check cannot differ from the loader.
+. (Join-Path $SourcesFolder 'Localization.ps1')
 
 Function Read-Xml([string]$Path)
 {
@@ -176,5 +190,43 @@ $Results = foreach($File in $Files)
 	}
 
 $Results | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+
+# Text overrides: Texts\<culture>.xml
+If(Test-Path -LiteralPath $TextsFolder -PathType Container)
+	{
+		$English = Read-SelfXLanguageFile -Path (Join-Path $LanguageFolder 'en.xml')
+		$German = Read-SelfXLanguageFile -Path (Join-Path $LanguageFolder 'de.xml')
+		$TextFiles = @(Get-ChildItem -LiteralPath $TextsFolder -File -Force | Sort-Object Name)
+		If($Culture) { $TextFiles = @($TextFiles | Where-Object { $Culture -contains $_.BaseName }) }
+		$TextResults = foreach($File in $TextFiles)
+			{
+				$Errors = New-Object System.Collections.Generic.List[string]
+				$Warnings = New-Object System.Collections.Generic.List[string]
+				$Applied = 0
+				If(($File.Extension -cne '.xml') -or -not (Test-SelfXLanguageName $File.BaseName))
+					{
+						$Errors.Add("'$($File.Name)' is not a text override: the file name must be <culture>.xml, for example de.xml (the package build refuses the file)")
+					}
+				Else
+					{
+						$Bundled = Read-SelfXLanguageFile -Path (Join-Path $LanguageFolder "$($File.BaseName).xml")
+						If($Bundled -eq $null) { $Warnings.Add("There is no bundled language file '$($File.BaseName).xml': the override is never used") }
+						$Reference = Get-SelfXTextReference -Document @($Bundled, $English, $German)
+						$Override = Read-SelfXTextOverride -Path $File.FullName -Culture $File.BaseName -Reference $Reference
+						$Applied = $Override.Texts.Count
+						foreach($Problem in $Override.Problems)
+							{
+								$Where = $(If($Problem.Key) { " $($Problem.Key):" } Else { '' })
+								If($Problem.Kind -eq 'Unknown') { $Warnings.Add("$Where $($Problem.Message)".Trim()) }
+								Else { $Errors.Add("$Where $($Problem.Message)".Trim()) }
+							}
+					}
+				$Total_Errors += $Errors.Count
+				foreach($Message in $Errors) { Write-Host "[Texts\$($File.BaseName)] ERROR   $Message" -ForegroundColor Red }
+				foreach($Message in $Warnings) { Write-Host "[Texts\$($File.BaseName)] WARNING $Message" -ForegroundColor Yellow }
+				[pscustomobject]@{ TextOverride = $File.Name; Accepted = $Applied; Errors = $Errors.Count; Warnings = $Warnings.Count }
+			}
+		If(@($TextResults).Count -gt 0) { $TextResults | Format-Table -AutoSize | Out-String -Width 200 | Write-Host }
+	}
 If($Total_Errors -gt 0) { exit 1 }
 exit 0

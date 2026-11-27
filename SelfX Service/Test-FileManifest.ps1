@@ -35,6 +35,7 @@
                                               class tests, negative tests for a file in both lists, in none and in the wrong list.
     2.9.1    2026-11-27  fubu2k               Version in the code list: version and configuration are independent, Version.txt, ConfigRevision, Install.ps1 reads the
                                               version from SelfX.Code.json, no reader of Tool_Version is left.
+    3.1.0    2026-11-27  fubu2k               Text overrides: class and placement of Texts/<culture>.xml, same pattern in the service.
     3.1.0    2026-11-27  fubu2k               Layout App\ and Config\ in the package and on the device: sorting by file class, lists in App and Config,
                                               a package in the old layout, a configuration file in App and a code file in Config are refused, the
                                               installed folder may hold nothing but App and Config (left-over files and non-empty folders refused,
@@ -162,14 +163,14 @@ try {
 	$fromSources = @($script:SelfXCodeFileNames | Where-Object { $_ -notin 'Uninstall.ps1', 'SelfXService.exe', 'SelfX.exe', 'Audio/SelfXAudio.dll' })
 	foreach ($name in $fromSources) { Assert-Equal ($sourceFiles -ccontains $name) $true "name list of the project: $name exists in Sources" }
 	Assert-Equal @($script:SelfXCodeFileNames | Group-Object { $_.ToLowerInvariant() } | Where-Object Count -gt 1).Count 0 'name list of the project has no duplicates'
-	foreach ($case in @(@('Branding/company_logo.png', 'Config'), @('Branding/a/b.xml', 'Config'), @('Tool_Config.xml', 'Config'), @('WinRT/Some.Library.dll', 'Code'), @('Scripts_to_run/Own_Action.ps1', 'Config'), @('HealthChecks/Own-Check.ps1', 'Config'), @('Languages/de-AT.xml', 'Config'))) {
+	foreach ($case in @(@('Branding/company_logo.png', 'Config'), @('Branding/a/b.xml', 'Config'), @('Tool_Config.xml', 'Config'), @('WinRT/Some.Library.dll', 'Code'), @('Scripts_to_run/Own_Action.ps1', 'Config'), @('HealthChecks/Own-Check.ps1', 'Config'), @('Languages/de-AT.xml', 'Config'), @('Texts/de.xml', 'Config'), @('Texts/zh-Hans.xml', 'Config'))) {
 		Assert-Equal (Get-SelfXFileClass -Name $case[0]) $case[1] "class: $($case[0])"
 	}
-	foreach ($bad in 'Extra.dll', 'Evil.ps1', 'Sources/Self_X.ps1', 'Scripts_to_run/sub/Own.ps1', 'Languages/xx_yy.xml', 'Bin/SelfX.exe', '../Install.ps1', 'a//b.ps1', 'Branding/../Self_X.ps1') {
+	foreach ($bad in 'Extra.dll', 'Evil.ps1', 'Sources/Self_X.ps1', 'Scripts_to_run/sub/Own.ps1', 'Languages/xx_yy.xml', 'Texts/x.ps1', 'Texts/sub/de.xml', 'Texts/de.xml.txt', 'Texts/xx_yy.xml', 'Texts/', 'Bin/SelfX.exe', '../Install.ps1', 'a//b.ps1', 'Branding/../Self_X.ps1') {
 		Assert-Throws { Get-SelfXFileClass -Name $bad } 'belongs to no file class|Unsupported file name' "class: '$bad' is refused (fail closed)"
 	}
 	# The placement rules of the generator and of Install.ps1 give the same answer for every name.
-	$placementNames = @($script:SelfXCodeFileNames) + $script:SelfXConfigFileNames + @('Branding/x.png', 'Branding/', 'Scripts_to_run/Own.ps1', 'Scripts_to_run/Own.exe', 'Scripts_to_run/a/b.ps1', 'HealthChecks/Own-Check.ps1', 'Languages/it.xml', 'Languages/it-CH.xml', 'Languages/x.ps1', 'WinRT/A.dll', 'Evil.ps1', '../x', 'a/../b', 'C:/x')
+	$placementNames = @($script:SelfXCodeFileNames) + $script:SelfXConfigFileNames + @('Branding/x.png', 'Branding/', 'Scripts_to_run/Own.ps1', 'Scripts_to_run/Own.exe', 'Scripts_to_run/a/b.ps1', 'HealthChecks/Own-Check.ps1', 'Languages/it.xml', 'Languages/it-CH.xml', 'Languages/x.ps1', 'Texts/de.xml', 'Texts/de-CH.xml', 'Texts/x.ps1', 'Texts/sub/de.xml', 'Texts/xx_yy.xml', 'Texts/', 'WinRT/A.dll', 'Evil.ps1', '../x', 'a/../b', 'C:/x')
 	foreach ($name in $placementNames) {
 		foreach ($list in 'Code', 'Config') {
 			Assert-Equal (Test-SelfXListPlacement -Name $name -List $list) (Common_Test-SelfXListPlacement -Name $name -List $list) "placement of '$name' in $list is the same in Install.ps1 and the generator"
@@ -177,12 +178,18 @@ try {
 	}
 	Assert-Equal (Test-SelfXListPlacement -Name 'SelfXService.exe' -List 'Config') $false 'placement: a program must not be in the configuration list'
 	Assert-Equal (Test-SelfXListPlacement -Name 'Tool_Config.xml' -List 'Code') $false 'placement: a settings file must not be in the code list'
+	Assert-Equal (Test-SelfXListPlacement -Name 'Texts/de.xml' -List 'Config') $true 'placement: a text override belongs in the configuration list'
+	Assert-Equal (Test-SelfXListPlacement -Name 'Texts/de.xml' -List 'Code') $false 'placement: a text override must not be in the code list'
+	Assert-Equal (Test-SelfXListPlacement -Name 'Texts/x.ps1' -List 'Code') $false 'placement: nothing below Texts may be in the code list'
+	Assert-Equal (Test-SelfXListPlacement -Name 'Texts/x.ps1' -List 'Config') $false 'placement: only <culture>.xml may be below Texts in the configuration list'
 	# The service has the same rule: the names of the settings files and the two patterns are the same text.
 	$serviceText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -Raw
 	$serviceNames = [regex]::Match($serviceText, 'ConfigFileNames = \{([^}]*)\}').Groups[1].Value
 	Assert-Equal (([regex]::Matches($serviceNames, '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object) -join ',') (($script:SelfXConfigFileNames | Sort-Object) -join ',') 'service: the settings files are the same as in the generator'
 	Assert-Equal $serviceText.Contains('^(Scripts_to_run|HealthChecks)/[A-Za-z0-9._-]+\.ps1\z') $true 'service: same pattern for own scripts'
 	Assert-Equal $serviceText.Contains('^Languages/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml\z') $true 'service: same pattern for own language files'
+	Assert-Equal $serviceText.Contains('^Texts/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml\z') $true 'service: same pattern for text overrides'
+	Assert-Equal $serviceText.Contains('name.StartsWith("Texts/", StringComparison.Ordinal)') $true 'service: nothing below Texts is allowed in the code list'
 
 	# The generator lists every installed file in exactly one list and the check accepts the result.
 	$codeCount = New-SelfXCodeManifest -Stage $pristine -Version '9.9.9'
