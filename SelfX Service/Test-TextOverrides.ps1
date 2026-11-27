@@ -121,7 +121,7 @@ try {
 	Write-Override 'de' $goodBody
 	$result = Read-SelfXTextOverride -Path (Join-Path $texts 'de.xml') -Culture 'de' -Reference $deReference
 	Assert-Equal $result.Loaded $true 'read: a valid file is loaded'
-	Assert-Equal @($result.Problems).Count 0 'read: a valid file has no problems'
+	Assert-Equal (@($result.Problems).Count) 0 'read: a valid file has no problems'
 	Assert-Equal (@($result.Texts.Keys | Sort-Object) -join ',') 'Action/Q_Teams/Explanation,Action/Q_Teams/Name,Category/Device,Message/Msg_Teams_Restart,SystemInfo/Category_Device,UI/Action_Success_Text,UI/Main_Title_Text' 'read: UI, SystemInfo, Category, Message and Action texts are accepted'
 	Assert-Equal $result.Texts['UI/Main_Title_Text'] "Hilfe`r`nvom Team" 'read: the indentation of a multi-line text is removed like in language files'
 
@@ -140,7 +140,7 @@ try {
 "@
 	Write-Override 'de' $body
 	$result = Read-SelfXTextOverride -Path (Join-Path $texts 'de.xml') -Culture 'de' -Reference $deReference
-	Assert-Equal @($result.Texts.Keys).Count 1 'ids: only the known text is accepted'
+	Assert-Equal (@($result.Texts.Keys).Count) 1 'ids: only the known text is accepted'
 	Assert-Equal $result.Texts['UI/Action_Success_Text'] 'Erledigt: {0}' 'ids: the first of two equal ids wins'
 	Assert-Equal (@($result.Problems | Where-Object { $_.Kind -eq 'Unknown' }).Count) 4 'ids: an unknown id, two ids with unexpected characters and an unknown category are ignored'
 	Assert-Equal (@($result.Problems | Where-Object { $_.Kind -eq 'Rejected' }).Count) 1 'ids: the second text of a duplicate id is refused'
@@ -168,7 +168,7 @@ try {
 	$many = (1..200 | ForEach-Object { "<Unknown_$_>x</Unknown_$_>" }) -join ''
 	Write-Override 'de' "<UI>$many</UI>"
 	$result = Read-SelfXTextOverride -Path (Join-Path $texts 'de.xml') -Culture 'de' -Reference $deReference
-	Assert-Equal @($result.Problems).Count $Script:SelfXTextOverrideMaxProblems '200 unknown ids give at most 50 problems'
+	Assert-Equal (@($result.Problems).Count) $Script:SelfXTextOverrideMaxProblems '200 unknown ids give at most 50 problems'
 
 	# --- Reading a file: the file as a whole ---
 	$path = Join-Path $texts 'de.xml'
