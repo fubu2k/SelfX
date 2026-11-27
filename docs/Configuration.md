@@ -49,6 +49,7 @@ SelfX is configured with XML files in the folder `SelfX Service\Sources`.
 | `Network_Test_Config.xml` | Network measurements (optional, off by default) |
 | `Ticket_Config.xml` | Assignment of tickets to your IT units (optional) |
 | `Languages\<language>.xml` | All texts, per language |
+| `Texts\<language>.xml` | Optional: replaces single texts of a bundled language ([text overrides](#change-single-texts-text-overrides)) |
 
 ## The most important settings
 
@@ -693,7 +694,64 @@ A language file of your own (a culture that SelfX does not bring) is configurati
 `%ProgramFiles%\SelfX\Config\Languages`. SelfX offers it next to the bundled languages
 (`App\Languages`). A file of your own with the name of a bundled language is ignored; the bundled file wins.
 
-To change a text for your company, for example the main title, edit only the language file. No programming is needed.
+To change a single text for your company, for example the main title, do not edit a bundled language file. Use a text
+override (next section).
+
+### Change single texts (text overrides)
+
+The bundled language files (`App\Languages`) are code: they come with every release, and a changed file would no longer match
+`SelfX.Code.json`. Your own wording therefore goes into an optional **text override** (configuration): the file
+`Texts\<language>.xml` in `Sources` of the package, installed to `%ProgramFiles%\SelfX\Config\Texts`. A change needs a new
+configuration, not a new code version, and a new release of SelfX does not overwrite it.
+
+Example `Texts\de.xml` (only the texts to change):
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<SelfX_Language Culture="de">
+	<UI>
+		<Main_Title_Text>Haben Sie ein Problem mit Ihrem Gerät? Wir helfen.</Main_Title_Text>
+		<Action_Success_Text>Erledigt: {0}</Action_Success_Text>
+	</UI>
+	<Catalog>
+		<Categories><Category Id="Device">Geräte</Category></Categories>
+	</Catalog>
+</SelfX_Language>
+```
+
+How it works:
+
+- The file has the format of a language file, but only holds the texts that you change. The sections are `UI`, `SystemInfo` and
+  `Catalog` (`Categories`, `Messages`, `Actions` with `Name`, `Explanation`, `Alerte_MSG`). The identifiers are the ones of
+  `en.xml` and `de.xml`.
+- SelfX loads the bundled file first, then the override. The name of the override is the culture of the **bundled file that was
+  loaded**: a user of `de-CH` gets `de.xml` and therefore `Texts\de.xml`. An override only changes its own language, so create one
+  file per language that you want to change (an English override does not change German texts).
+- `Culture` must equal the file name. Other attributes of the root element (`NativeName`, `FlowDirection`) are ignored.
+  An override cannot add a language and cannot replace a bundled file; for an own language use `Languages\<language>.xml`.
+- A text is used only when all of this is true; otherwise SelfX keeps the bundled text:
+  - it is not empty and not longer than **1500 characters**;
+  - it has **no markup**: no `<` and no sequence such as `&amp;` or `&#60;` in the text that is shown (a plain `&` is fine, in the XML file you
+    write it as `&amp;`; a `>` is allowed);
+  - it has no control characters;
+  - it has the **same placeholders** as the bundled text (`{0}` stays `{0}`, `{1:D2}` stays `{1:D2}`), and `SystemInfo_Export_Filter` keeps its
+    number of `|` separators;
+  - its identifier is given once.
+- The Copilot prompts (`Copilot_Prompt_User`, `Copilot_Prompt_Admin`) cannot be overridden.
+- An identifier that no bundled file knows is **ignored** and written to the log of the user (`Logs\Users\<SID>`, see
+  [Logs and retention](#logs-and-retention)). The log names the identifier and the reason, never the text.
+- The file must be valid XML without a DTD, at most 256 KB, and not a link. Otherwise SelfX does not use it at all.
+- The files in `Texts` are listed in `SelfX.Config.json` like your other configuration files. Nothing else may be in the folder
+  (the package build stops on a file that is not named `<culture>.xml`).
+
+Check your override before you build the package. The check uses the same code as SelfX and reports what SelfX would ignore:
+
+```powershell
+& '.\SelfX Service\Test-LanguageFiles.ps1' -Culture de
+```
+
+Errors are files and texts that SelfX would not use (invalid file, markup, wrong placeholders, too long); warnings are unknown
+identifiers and an override without a bundled language file of the same name.
 
 ## Delivering changes safely
 

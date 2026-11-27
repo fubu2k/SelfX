@@ -10,8 +10,9 @@
       Code    The programs, the libraries and the scripts, language files and images of the project. They are the same for
               every company and are listed in SelfX.Code.json.
       Config  The settings files (Tool_Config.xml, Issues_List.xml, Health_Config.xml, Ticket_Config.xml,
-              Network_Test_Config.xml), everything below Branding, and own scripts and language files of the company in
-              Scripts_to_run, HealthChecks and Languages. They are listed in SelfX.Config.json.
+              Network_Test_Config.xml), everything below Branding, own scripts and language files of the company in
+              Scripts_to_run, HealthChecks and Languages, and the text overrides Texts\<culture>.xml. They are listed in
+              SelfX.Config.json.
     Get-SelfXFileClass is the one place of this rule. A file that no rule knows is an error (fail closed). Install.ps1 and
     SelfXService.cs cannot load this file (it is not part of the package); they apply the placement rule
     Test-SelfXListPlacement in their own copy, and the tests check that all copies give the same answers.
@@ -46,6 +47,7 @@
                                               SelfX.Config.json has ConfigRevision (UTC time of the run) instead of BuiltUtc
     3.1.0    2026-11-27  fubu2k               Package layout App\ and Config\ (ConvertTo-SelfXPackageLayout); the lists are written into
                                               App\SelfX.Code.json and Config\SelfX.Config.json; SelfXPaths.ps1 is a file of the project
+    3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is a configuration file; nothing below Texts may be in SelfX.Code.json
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -116,12 +118,13 @@ function Get-SelfXVersionFromFile {
 
 function Test-SelfXConfigName {
     # True for a name that may be in SelfX.Config.json: a settings file, a file below Branding, an own script in
-    # Scripts_to_run or HealthChecks, an own language file in Languages.
+    # Scripts_to_run or HealthChecks, an own language file in Languages, a text override Texts/<culture>.xml.
     param([string]$Name)
     if ($script:SelfXConfigFileNames -contains $Name) { return $true }
     if ($Name -match '^Branding/.+') { return $true }
     if ($Name -match '^(Scripts_to_run|HealthChecks)/[A-Za-z0-9._-]+\.ps1$') { return $true }
     if ($Name -match '^Languages/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml$') { return $true }
+    if ($Name -match '^Texts/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml$') { return $true }
     return $false
 }
 
@@ -131,7 +134,7 @@ function Test-SelfXListPlacement {
     # root script or image can be put into the list of the company).
     param([string]$Name, [ValidateSet('Code', 'Config')][string]$List)
     if (-not (Test-SelfXListedName $Name)) { return $false }
-    $isConfigFile = ($script:SelfXConfigFileNames -contains $Name) -or ($Name -match '^Branding/.+')
+    $isConfigFile = ($script:SelfXConfigFileNames -contains $Name) -or ($Name -match '^(Branding|Texts)/.+')
     if ($List -eq 'Code') { return (-not $isConfigFile) }
     return (Test-SelfXConfigName $Name)
 }

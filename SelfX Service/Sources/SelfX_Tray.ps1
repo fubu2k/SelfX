@@ -36,6 +36,7 @@
     2.8.19   2026-11-23  fubu2k               New app icon with a frame for every size; the status icon is drawn in the size of the display (sharp at 100 to 200 % scaling)
     3.1.0    2026-11-27  fubu2k               Code and configuration in two folders (App, Config): Tool_Config.xml, the catalog, the icon and own
                                               language files are resolved by SelfXPaths.ps1
+    3.1.0    2026-11-27  fubu2k               Text overrides: Config\Texts\<culture>.xml replaces single texts of the language file (Localization.ps1)
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -110,7 +111,7 @@ Function Get-TrayLanguageSetting
 			-AllowUserChoice ((Get-TrayConfig 'Show_Language_Setting' 'True') -eq 'True') -LanguageFolder (Get-SelfXLanguageFolders -CodeRoot $Global:Tray_Folder))
 	}
 $Global:Tray_Language_Setting = Get-TrayLanguageSetting
-$Language = Initialize-SelfXLanguage -LanguageFolder (Get-SelfXLanguageFolders -CodeRoot $Global:Tray_Folder) -Language $Global:Tray_Language_Setting
+$Language = Initialize-SelfXLanguage -LanguageFolder (Get-SelfXLanguageFolders -CodeRoot $Global:Tray_Folder) -Language $Global:Tray_Language_Setting -TextOverrideFolder (Get-SelfXTextOverrideFolder -CodeRoot $Global:Tray_Folder)
 $Global:Tray_Texts = Get-SelfXSystemInfoTexts
 $Global:Tray_Job_Script = (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXNetwork.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SystemInfo.ps1') -Raw)
 $Global:Tray_Tool_Name = Get-TrayConfig 'Tool_Name' 'SelfX'

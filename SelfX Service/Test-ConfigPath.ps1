@@ -33,6 +33,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version.
+    3.1.0    2026-11-27  fubu2k               Text overrides: Texts\<culture>.xml is a configuration file (the texts themselves: Test-TextOverrides.ps1).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -90,7 +91,7 @@ try {
 	Remove-Item Env:\SELFX_CONFIG
 
 	# --- Configuration files: allowed names only, always below Config ---
-	foreach ($name in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml', 'Branding\logo.png', 'Branding/a/b.png', 'Scripts_to_run\Own_Action.ps1', 'HealthChecks\Own-Check.ps1', 'Languages\it.xml', 'Languages\de-CH.xml') {
+	foreach ($name in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml', 'Branding\logo.png', 'Branding/a/b.png', 'Scripts_to_run\Own_Action.ps1', 'HealthChecks\Own-Check.ps1', 'Languages\it.xml', 'Languages\de-CH.xml', 'Texts\de.xml', 'Texts/de-CH.xml') {
 		Assert-Equal (Get-SelfXConfigPath -Name $name -CodeRoot $app) ([IO.Path]::GetFullPath((Join-Path $config $name.Replace('/', '\')))) "config path: $name is in Config"
 	}
 	Assert-Equal (Get-SelfXConfigPath -Name 'Tool_Config.xml' -CodeRoot $sources) ([IO.Path]::GetFullPath((Join-Path $sources 'Tool_Config.xml'))) 'config path: flat layout'
@@ -102,7 +103,7 @@ try {
 		Assert-Throws { Get-SelfXConfigPath -Name $bad -CodeRoot $app } 'is not a configuration file|outside the configuration folder|Cannot bind|empty' "config path: '$($bad -replace '\s', '_')' is refused"
 	}
 	# The rule equals the placement rule of the configuration list of the package tools (for names with '/').
-	foreach ($name in @($script:SelfXCodeFileNames) + $script:SelfXConfigFileNames + @('Branding/x.png', 'Branding/', 'Scripts_to_run/Own.ps1', 'Scripts_to_run/Own.exe', 'Scripts_to_run/a/b.ps1', 'HealthChecks/Own-Check.ps1', 'Languages/it.xml', 'Languages/it-CH.xml', 'Languages/x.ps1', 'WinRT/A.dll', 'Evil.ps1', '../x', 'a/../b')) {
+	foreach ($name in @($script:SelfXCodeFileNames) + $script:SelfXConfigFileNames + @('Branding/x.png', 'Branding/', 'Scripts_to_run/Own.ps1', 'Scripts_to_run/Own.exe', 'Scripts_to_run/a/b.ps1', 'HealthChecks/Own-Check.ps1', 'Languages/it.xml', 'Languages/it-CH.xml', 'Languages/x.ps1', 'Texts/de.xml', 'Texts/de-CH.xml', 'Texts/x.ps1', 'Texts/sub/de.xml', 'Texts/', 'WinRT/A.dll', 'Evil.ps1', '../x', 'a/../b')) {
 		Assert-Equal (Test-SelfXConfigFileName -Name $name) (Test-SelfXListPlacement -Name $name -List 'Config') "config path: '$name' follows the placement rule of SelfX.Config.json"
 	}
 

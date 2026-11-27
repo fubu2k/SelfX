@@ -14,6 +14,24 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Text-Überschreibungen (`Config\Texts\<Kultur>.xml`, Version 3.1.0):** Ein Unternehmen kann einzelne Texte ersetzen, ohne
+  eine mitgelieferte Sprachdatei zu ändern. Die optionale Datei hat das Format der Sprachdateien und enthält nur die zu
+  ändernden Texte (`UI`, `SystemInfo`, `Catalog`); sie ist Konfiguration (Klasse Config, in `SelfX.Config.json` gelistet) und
+  wird nach `%ProgramFiles%\SelfX\Config\Texts` installiert. `Localization.ps1` lädt erst die mitgelieferte Datei, dann die
+  Überschreibung der Kultur der geladenen Datei (`de-CH` nutzt `Texts\de.xml`): `Initialize-SelfXLanguage -TextOverrideFolder`,
+  neue Funktionen `Read-SelfXTextOverride`, `Test-SelfXOverrideText`, `Set-SelfXTextOverride`, `Import-SelfXTextOverride`,
+  `Get-SelfXTextEntries`, `Get-SelfXTextReference`; den Ordner liefert `Get-SelfXTextOverrideFolder` (`SelfXPaths.ps1`).
+  Ein Text gilt nur, wenn seine Kennung in einer mitgelieferten Datei bekannt ist, er nur einmal vorkommt, nicht leer und nicht
+  länger als 1500 Zeichen ist, kein Markup (kein `<`, keine Entität wie `&amp;`), keine Steuerzeichen und dieselben Platzhalter
+  wie der mitgelieferte Text hat; die Copilot-Prompts lassen sich nicht überschreiben. Unbekannte Kennungen und abgelehnte Texte
+  werden ignoriert und im Protokoll des Nutzers vermerkt (Kennung und Grund, nie ein Text). Die Datei wird einmal als Bytes
+  gelesen, darf kein Link, nicht größer als 256 KB und ohne DTD sein; die Attribute des Wurzelelements einer Überschreibung
+  werden nicht verwendet, sie kann also keine Sprache hinzufügen oder ersetzen. Platzierungsregel (`Install.ps1`,
+  `tools\SelfXPackage.Common.ps1`, `SelfXService.cs`, `SelfXPaths.ps1`): `Texts/<Kultur>.xml` ist in `SelfX.Config.json`
+  erlaubt; unter `Texts` darf nichts in `SelfX.Code.json` stehen. `Test-LanguageFiles.ps1` prüft die Text-Überschreibungen
+  (`-TextsFolder`) mit denselben Funktionen. Doku: `docs/de/Configuration.md` (Abschnitt „Einzelne Texte ändern“),
+  `docs/de/Architecture.md` (DE und EN). Tests: neu `Test-TextOverrides.ps1`; erweitert `Test-FileManifest.ps1`,
+  `Test-ConfigPath.ps1`, `Test-ServicePipe.ps1`.
 - **Paket und Gerät, Code und Konfiguration in zwei Ordnern (Version 3.1.0):** Das Paket hat statt `Sources` die Ordner
   `App` (Code) und `Config` (Konfiguration); `tools\New-SelfXIntuneWin.ps1` sortiert die Dateien aus `Sources` nach ihrer
   Dateiklasse (`ConvertTo-SelfXPackageLayout` in `tools\SelfXPackage.Common.ps1`, eine Datei ohne Klasse bricht den Bau ab).

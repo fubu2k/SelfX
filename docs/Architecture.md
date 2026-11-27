@@ -138,11 +138,13 @@ left-over one as a file without an entry).
 **Which list a file belongs to.** `Get-SelfXFileClass` knows the files of the project by name.
 Configuration are the five settings files, everything below `Branding`, and every other script in
 `Scripts_to_run` and `HealthChecks` or language file in `Languages` that is not on the list of
-the project (own actions, own checks, an own language). Every file that no rule knows stops the
+the project (own actions, own checks, an own language) and every `Texts\<culture>.xml` (text
+override, see [Configuration](Configuration.md#change-single-texts-text-overrides)). Every file that no rule knows stops the
 build (fail closed). `Install.ps1` and the service do not know the list of names; they check
 only that no file is in both lists or in none, that the code list holds no settings file or file
 of `Branding`, and that the configuration list holds nothing but settings files, `Branding`
-files, own scripts and own language files. So no program, library, `Uninstall.ps1` or script of
+files, own scripts, own language files and `Texts\<culture>.xml`; nothing below `Texts` may be in
+the code list. So no program, library, `Uninstall.ps1` or script of
 the project can be moved into the list that carries the files of the company. The test
 `Test-FileManifest.ps1` keeps the list of names equal to the files of the repository: a new file
 of the project has to be added to `$script:SelfXCodeFileNames`, otherwise the test fails.
@@ -287,7 +289,7 @@ Package                                   Device (%ProgramFiles%\SelfX)
 +- Service\*.cs (sources of the programs) |   +- WinRT\  Audio\  Repair.ico  logo.png  icon_systray.ico
 +- App\       (code of Sources)           |   +- SelfX.Code.json
 |   +- SelfX.Code.json                    +- Config\  (configuration only)
-+- Config\    (configuration of Sources)      +- *.xml  Branding\  own Scripts_to_run\, HealthChecks\, Languages\
++- Config\    (configuration of Sources)      +- *.xml  Branding\  own Scripts_to_run\, HealthChecks\, Languages\, Texts\
     +- SelfX.Config.json                      +- SelfX.Config.json
                                           (rights unchanged: users read and execute only, S-1-5-32-545)
 ```

@@ -10,8 +10,8 @@ Description:
     script filename listed with Context=System in the installed Issues_List.xml and
     present under the installed Scripts_to_run folder; user actions are not elevated.
     Layout: the service runs from the code folder App; the configuration (Tool_Config.xml,
-    Issues_List.xml, Health_Config.xml, Branding, own scripts and language files of the
-    company) is in the folder Config next to it (GetConfigRoot). A script of the project is
+    Issues_List.xml, Health_Config.xml, Branding, own scripts, language files and text
+    overrides of the company) is in the folder Config next to it (GetConfigRoot). A script of the project is
     started from App\Scripts_to_run; an own script of the company from Config\Scripts_to_run
     only when it is listed in Config\SelfX.Config.json with its current SHA256 (also with
     Service_FileCheck=Audit). The file check compares App with SelfX.Code.json and Config with
@@ -79,6 +79,8 @@ Notes:
                                               Config (GetConfigFilePath), scripts of the project only from App; an own script below Config is started
                                               only when SelfX.Config.json lists it with its current SHA256 and the catalog or Health_Config.xml names
                                               it; the file check covers App (SelfX.Code.json), Config (SelfX.Config.json) and the folder above them
+    3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is accepted in SelfX.Config.json (placement rule); nothing below
+                                              Texts may be in SelfX.Code.json
 */
 
 using System;
@@ -1036,6 +1038,7 @@ namespace SelfX
         static readonly string[] ConfigFileNames = { "Health_Config.xml", "Issues_List.xml", "Network_Test_Config.xml", "Ticket_Config.xml", "Tool_Config.xml" };
         static readonly Regex ConfigScriptPattern = new Regex(@"^(Scripts_to_run|HealthChecks)/[A-Za-z0-9._-]+\.ps1\z", RegexOptions.CultureInvariant);
         static readonly Regex ConfigLanguagePattern = new Regex(@"^Languages/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml\z", RegexOptions.CultureInvariant);
+        static readonly Regex ConfigTextPattern = new Regex(@"^Texts/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml\z", RegexOptions.CultureInvariant);
         const long MaxFileListBytes = 1048576;
         const int MaxFileProblems = 20;
         // Same rule as the generator (tools\SelfXPackage.Common.ps1): plain relative names with forward slashes.
@@ -1055,19 +1058,21 @@ namespace SelfX
         /// <summary>
         /// Placement rule (same as Test-SelfXListPlacement in Install.ps1 and tools\SelfXPackage.Common.ps1): SelfX.Code.json may
         /// hold any file that is not a settings file or below Branding; SelfX.Config.json only settings files, files below Branding,
-        /// own scripts in Scripts_to_run or HealthChecks and own language files. Both lists are written by the administrator of the
-        /// package, but a file that does not belong in a list is refused, so no program or script of the project can be moved
-        /// into the list that carries the company's own files.
+        /// own scripts in Scripts_to_run or HealthChecks, own language files and text overrides (Texts/&lt;culture&gt;.xml). Nothing
+        /// below Texts may be in SelfX.Code.json. Both lists are written by the administrator of the package, but a file that does
+        /// not belong in a list is refused, so no program or script of the project can be moved into the list that carries the
+        /// company's own files.
         /// </summary>
         static bool IsAllowedInList(string name, string listName)
         {
             bool isConfigFile = name.StartsWith("Branding/", StringComparison.Ordinal) && name.Length > "Branding/".Length;
+            bool isText = name.StartsWith("Texts/", StringComparison.Ordinal) && name.Length > "Texts/".Length;
             foreach (string known in ConfigFileNames)
             {
                 if (string.Equals(known, name, StringComparison.Ordinal)) isConfigFile = true;
             }
-            if (listName == CodeListName) return !isConfigFile;
-            return isConfigFile || ConfigScriptPattern.IsMatch(name) || ConfigLanguagePattern.IsMatch(name);
+            if (listName == CodeListName) return !(isConfigFile || isText);
+            return isConfigFile || ConfigScriptPattern.IsMatch(name) || ConfigLanguagePattern.IsMatch(name) || ConfigTextPattern.IsMatch(name);
         }
 
         static bool HasDotSegment(string name)

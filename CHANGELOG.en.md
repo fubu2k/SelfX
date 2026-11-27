@@ -14,6 +14,23 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Text overrides (`Config\Texts\<culture>.xml`, version 3.1.0):** A company can replace single texts without changing a
+  bundled language file. The optional file has the format of the language files and holds only the texts to change (`UI`,
+  `SystemInfo`, `Catalog`); it is configuration (class Config, listed in `SelfX.Config.json`) and is installed into
+  `%ProgramFiles%\SelfX\Config\Texts`. `Localization.ps1` loads the bundled file first and then the override of the culture of
+  the loaded file (`de-CH` uses `Texts\de.xml`): `Initialize-SelfXLanguage -TextOverrideFolder`, new functions
+  `Read-SelfXTextOverride`, `Test-SelfXOverrideText`, `Set-SelfXTextOverride`, `Import-SelfXTextOverride`,
+  `Get-SelfXTextEntries`, `Get-SelfXTextReference`; the folder comes from `Get-SelfXTextOverrideFolder` (`SelfXPaths.ps1`).
+  A text is used only when its id is known in a bundled file, it is given once, is not empty, not longer than 1500 characters,
+  has no markup (no `<`, no entity such as `&amp;`), no control characters and the same placeholders as the bundled text; the
+  Copilot prompts cannot be overridden. Unknown ids and refused texts are ignored and written to the log of the user (id and
+  reason, never a text). The file is read once as bytes, must not be a link, larger than 256 KB or have a DTD; the root
+  attributes of an override are not used, so it cannot add or replace a language. Placement rule (`Install.ps1`,
+  `tools\SelfXPackage.Common.ps1`, `SelfXService.cs`, `SelfXPaths.ps1`): `Texts/<culture>.xml` is accepted in
+  `SelfX.Config.json`; nothing below `Texts` may be in `SelfX.Code.json`. `Test-LanguageFiles.ps1` also checks the text
+  overrides (`-TextsFolder`) with the same functions. Docs: `docs/Configuration.md` (section "Change single texts"),
+  `docs/Architecture.md` (DE and EN). Tests: new `Test-TextOverrides.ps1`; extended `Test-FileManifest.ps1`,
+  `Test-ConfigPath.ps1`, `Test-ServicePipe.ps1`.
 - **Package and device, code and configuration in two folders (version 3.1.0):** The package has the folders `App` (code)
   and `Config` (configuration) instead of `Sources`; `tools\New-SelfXIntuneWin.ps1` sorts the files of `Sources` by their file
   class (`ConvertTo-SelfXPackageLayout` in `tools\SelfXPackage.Common.ps1`; a file without a class stops the build). On the
