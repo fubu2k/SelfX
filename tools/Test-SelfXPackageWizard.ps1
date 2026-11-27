@@ -43,7 +43,8 @@ function Assert-Throws {
 }
 
 function Remove-PeSignature {
-    # Makes a copy of a system file signable: removes the embedded signature (certificate table) of a PE file, so no earlier signature is left.
+    # Makes a copy of a system file signable: removes the embedded signature (certificate table) of a PE file and adds unique trailing bytes,
+    # so the file no longer matches the Windows catalog of the original (Get-AuthenticodeSignature would still report that signature).
     param([string]$Path)
     $bytes = [IO.File]::ReadAllBytes($Path)
     $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
@@ -51,9 +52,11 @@ function Remove-PeSignature {
     $directory = $optional + $(if ([BitConverter]::ToUInt16($bytes, $optional) -eq 0x20B) { 112 } else { 96 }) + 4 * 8
     $tableStart = [BitConverter]::ToUInt32($bytes, $directory)
     $tableSize = [BitConverter]::ToUInt32($bytes, $directory + 4)
-    if ($tableStart -eq 0 -or $tableSize -eq 0) { return }
-    for ($i = 0; $i -lt 8; $i++) { $bytes[$directory + $i] = 0 }
-    if ($tableStart + $tableSize -ge $bytes.Length) { $bytes = $bytes[0..($tableStart - 1)] }
+    if ($tableStart -ne 0 -and $tableSize -ne 0) {
+        for ($i = 0; $i -lt 8; $i++) { $bytes[$directory + $i] = 0 }
+        if ($tableStart + $tableSize -ge $bytes.Length) { $bytes = $bytes[0..($tableStart - 1)] }
+    }
+    $bytes = $bytes + [Guid]::NewGuid().ToByteArray()
     [IO.File]::WriteAllBytes($Path, $bytes)
 }
 
