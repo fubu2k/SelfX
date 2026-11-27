@@ -121,7 +121,7 @@ try {
     $consoleIds = @((Get-WizardQuestions) | ForEach-Object { $_.Id })
     Assert (@($consoleIds | Where-Object { @($onPages -eq $_).Count -ne 1 }).Count -eq 0) 'every question of the console is on exactly one page'
     Assert (@($onPages | Where-Object { $consoleIds -notcontains $_ }).Count -eq 0) 'the pages name only questions of the console'
-    Assert (@(Get-WizardGuiBuildSteps -ConfigureOnly $false) -join ',' -eq 'check,copy,config,pack,detection,rules,guide,finish') 'progress list has the steps of Invoke-SelfXPackageBuild'
+    Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false) -join ',') -eq 'check,copy,config,pack,detection,rules,guide,finish') 'progress list has the steps of Invoke-SelfXPackageBuild'
 
     # ---------------------------------------------------------- shared styles
     Write-Host 'Shared styles'

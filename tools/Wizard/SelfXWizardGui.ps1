@@ -222,7 +222,8 @@ function Get-WizardGuiEvaluation {
         $answers[$question.Id] = ConvertTo-WizardValue -Kind $question.Kind -Value $raw -Choices $choices -Min $min -Max $max
     }
     $unitsShown = [bool]($answers.TicketEnabled -and $answers.MultiOrg)
-    $unitQuestions = @(Get-WizardUnitQuestions -Answers $answers)
+    # Get-WizardUnitQuestions returns one array (return , ...): not wrapped in @() again.
+    $unitQuestions = Get-WizardUnitQuestions -Answers $answers
     $unitErrors = New-Object System.Collections.Generic.List[hashtable]
     $unitsError = $null
     if ($unitsShown) {
