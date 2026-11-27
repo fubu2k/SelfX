@@ -497,7 +497,7 @@ try {
             Assert ($bad.Count -eq 0) 'every program and script of the package has a valid signature of the certificate'
             $allowed = @($testCertificate.Thumbprint)
             Assert ((Test-SelfXSignedCatalog -Path (Join-Path $signedPackage 'Config') -CatalogFilePath (Join-Path $signedPackage 'Config\SelfX.Config.cat') -AllowedThumbprint $allowed).IsValid) 'Config\SelfX.Config.cat is valid and covers the folder Config'
-            $codeCatalog = Get-Content -LiteralPath (Join-Path $signedPackage 'SelfX.Code.cat') -Raw -Encoding Byte
+            $codeCatalog = [IO.File]::ReadAllBytes((Join-Path $signedPackage 'SelfX.Code.cat'))
             Assert ($null -ne $codeCatalog -and (Get-AuthenticodeSignature -LiteralPath (Join-Path $signedPackage 'SelfX.Code.cat')).Status -eq 'Valid') 'SelfX.Code.cat is signed'
             $binaries = Get-Content -LiteralPath (Join-Path $signedPackage 'Bin\SelfX.Binaries.json') -Raw | ConvertFrom-Json
             Assert ($binaries.Binaries.'SelfXService.exe' -eq (Get-FileHash (Join-Path $signedPackage 'Bin\SelfXService.exe')).Hash) 'SelfX.Binaries.json has the hashes of the signed programs'
