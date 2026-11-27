@@ -31,6 +31,18 @@
     users (S-1-5-32-545) can read. A device whose anchor says Signature is installed in the mode Hash only with the explicit
     switch -AllowHashMode (protection against a downgrade); -AllowHashMode together with -TrustedSigner is an error.
     Parameters are bound by name only.
+    Mode -ConfigOnly (package of the assistant that holds only Install.ps1 and Config): replaces the folder Config of an existing
+    installation and nothing else; the service, the programs, the shortcuts and the trust anchor are not touched and nothing is
+    restarted (the service reads its settings anew at every use; an open SelfX window keeps its texts until it is closed). The
+    trust mode is the one of the anchor on the device: -TrustedSigner and -AllowHashMode are errors. Mode Signature: Install.ps1
+    and every script of the package must be signed by a signer of the anchor, Config\SelfX.Config.cat must be signed by one of
+    them and match Config; mode Hash: no catalog. Config\SelfX.Config.json must list exactly the files of Config and must have
+    MinCodeVersion; the installed code (ToolVersion of App\SelfX.Code.json) must not be older. Settings that are applied only at
+    installation (shortcuts, status icon entry, icon, service privileges) must not differ from the installed Tool_Config.xml: such
+    a change needs the full package. The new folder is built next to the install folder (InstallFolder.ConfigStage), checked
+    there, and exchanged by two renames (the old one becomes InstallFolder.ConfigOld); an error at any step puts the old folder
+    back. A script of an action that is running keeps the folder locked: the exchange is retried for 20 seconds, then it stops
+    and the old configuration stays. No change before all checks have passed. Exits 0 or 1 as the full installation does.
     Registers and starts an automatic LOCAL SYSTEM service with recovery restart actions.
     Restricts installed files against user modification and ProgramData\SelfX logs and the
     status cache to SYSTEM/administrators. Creates ProgramData\SelfX\Logs\Users, in which users
@@ -85,6 +97,9 @@
                                               the change from Signature to Hash; parameters are bound by name only
     3.1.0    2026-11-27  fubu2k               Trust mode Signature: the signed catalogs are installed (SelfX.Code.cat into App, Config\SelfX.Config.cat
                                               into Config) and compared with the checked catalogs after the copy; the service reads them
+    3.1.0    2026-11-27  fubu2k               Mode -ConfigOnly: a package with only Install.ps1 and Config replaces the folder Config of an existing
+                                              installation (checks like the full installation, MinCodeVersion, no change of install-time settings,
+                                              exchange by rename with rollback); service, programs and trust anchor stay untouched
 #>
 
 # Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
@@ -94,7 +109,9 @@ param(
 	# Trust mode Signature: SHA1 thumbprints (40 hexadecimal characters) of the allowed signers, separated by commas.
 	[string[]]$TrustedSigner = @(),
 	# Allows the mode Hash on a device whose trust anchor says Signature.
-	[switch]$AllowHashMode
+	[switch]$AllowHashMode,
+	# Configuration package: replaces only the folder Config of an existing installation (see the description).
+	[switch]$ConfigOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -840,6 +857,378 @@ function Test-SelfXTrustAnchorState {
 	Return $null
 }
 
+# ------------------------------------------------------------------------------------------------ mode -ConfigOnly
+# A package of the assistant with only Install.ps1 and Config replaces the folder Config of an existing installation. The functions
+# below are called by Invoke-SelfXConfigOnly (Test-InstallConfigOnly.ps1 takes them out of this file and runs them in a temporary folder).
+
+function ConvertTo-SelfXCodeVersion {
+	# A version for the comparison of -ConfigOnly: two to four numbers separated by dots (3.1.0). Anything else (letters, a suffix, a
+	# sign, a number with more than five digits) gives $null, so an unclear version is never "new enough" (fail closed).
+	param([string]$Text)
+	If("$Text" -notmatch '^[0-9]{1,5}(\.[0-9]{1,5}){1,3}\z') { return $null }
+	Try { Return [version]"$Text" } Catch { Return $null }
+}
+
+function Get-SelfXConfigMinCodeVersion {
+	# MinCodeVersion of Config\SelfX.Config.json: the oldest code version that the configuration of the package is made for. A missing
+	# or invalid value throws: the package is then no configuration package.
+	param([Parameter(Mandatory = $true)][string]$Path)
+	Try { $List = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+	Catch { throw 'Config\SelfX.Config.json is not valid JSON.' }
+	$Text = If($List) { "$($List.MinCodeVersion)".Trim() } Else { '' }
+	If($null -eq (ConvertTo-SelfXCodeVersion -Text $Text)) { throw 'Config\SelfX.Config.json has no valid MinCodeVersion: this is not a configuration package (build it with the assistant, option configuration package).' }
+	Return $Text
+}
+
+function Test-SelfXConfigPackageLayout {
+	# The package of -ConfigOnly holds Install.ps1 and the folder Config and nothing else, and no link anywhere. A full package (App,
+	# Bin, Service, Uninstall.ps1) is refused: it would silently leave the code of the device unchanged. Throws; nothing is changed.
+	param([Parameter(Mandatory = $true)][string]$PackageFolder)
+	$Root = (Get-Item -LiteralPath $PackageFolder -Force).FullName.TrimEnd('\')
+	ForEach($Item in @(Get-ChildItem -LiteralPath $Root -Recurse -Force))
+	{
+		If($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "-ConfigOnly: the package contains a link ($($Item.FullName.Substring($Root.Length + 1))). Nothing was changed." }
+	}
+	ForEach($Item in @(Get-ChildItem -LiteralPath $Root -Force))
+	{
+		If(($Item.Name -ieq 'Install.ps1') -and -not $Item.PSIsContainer) { continue }
+		If(($Item.Name -ieq 'Config') -and $Item.PSIsContainer) { continue }
+		If(@('App', 'Bin', 'Service', 'Uninstall.ps1') -contains $Item.Name) { throw "-ConfigOnly: the package holds '$($Item.Name)': it is a full package. Install it without -ConfigOnly. Nothing was changed." }
+		throw "-ConfigOnly: the package holds the unexpected entry '$($Item.Name)' (only Install.ps1 and Config are allowed). Nothing was changed."
+	}
+	If(-not (Test-Path -LiteralPath (Join-Path $Root 'Config') -PathType Container)) { throw '-ConfigOnly: the folder Config is missing in the package. Nothing was changed.' }
+}
+
+function Test-SelfXConfigFolder {
+	# One folder of configuration against its list Config\SelfX.Config.json (the list is inside the folder): every listed name is allowed
+	# in this list (placement rule), exists with the listed SHA256, is listed once; nothing in the folder is unlisted; no link; Tool_Config.xml
+	# is listed. With -SignedPackage the catalog SelfX.Config.cat may be in the folder and is not counted (its signature is checked by
+	# Test-SelfXConfigPackageSignatures); without the switch it is an unlisted file. Where names the place in the messages. Throws at
+	# the first difference. Returns the number of listed files.
+	param(
+		[Parameter(Mandatory = $true)][string]$Folder,
+		[Parameter(Mandatory = $true)][string]$Where,
+		[switch]$SignedPackage
+	)
+	$Root = [IO.Path]::GetFullPath($Folder).TrimEnd('\')
+	$FolderItem = Get-Item -LiteralPath $Root -Force -ErrorAction SilentlyContinue
+	If(-not $FolderItem -or -not $FolderItem.PSIsContainer) { throw "The folder Config is missing in $Where." }
+	If($FolderItem.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "The folder Config in $Where is a link." }
+	$ListPath = Join-Path $Root 'SelfX.Config.json'
+	If(-not (Test-Path -LiteralPath $ListPath -PathType Leaf)) { throw "Config\SelfX.Config.json is missing in $Where." }
+	If($SignedPackage -and -not (Test-Path -LiteralPath (Join-Path $Root 'SelfX.Config.cat') -PathType Leaf)) { throw "Config\SelfX.Config.cat is missing in $Where." }
+	$Listed = @{}
+	$Count = 0
+	ForEach($Entry in @(Read-SelfXFileList -Path $ListPath -ListName 'SelfX.Config.json' -Where $Where))
+	{
+		$Key = $Entry.Name.ToLowerInvariant()
+		If($Listed.ContainsKey($Key)) { throw "$($Entry.Name) is listed twice in SelfX.Config.json." }
+		$File = [IO.Path]::GetFullPath((Join-Path $Root $Entry.Name.Replace('/', '\')))
+		If(-not $File.StartsWith($Root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "$($Entry.Name) points outside the folder Config." }
+		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$($Entry.Name) is listed in SelfX.Config.json but missing in $Where." }
+		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne $Entry.Hash) { throw "$($Entry.Name) does not match its SHA256 in SelfX.Config.json ($Where)." }
+		$Listed[$Key] = $true
+		$Count++
+	}
+	ForEach($Child in @(Get-ChildItem -LiteralPath $Root -Recurse -Force))
+	{
+		$Relative = $Child.FullName.Substring($Root.Length + 1).Replace('\', '/')
+		If($Child.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Config/$Relative in $Where is a link." }
+		If($Child.PSIsContainer -or ($Relative -ceq 'SelfX.Config.json')) { continue }
+		If($Relative -ieq 'SelfX.Config.cat')
+		{
+			If($SignedPackage) { continue }
+			throw "Config\SelfX.Config.cat is present in $Where but the trust mode of the device is Hash: a signed package needs a device in the mode Signature."
+		}
+		If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "Config/$Relative in $Where is not listed in SelfX.Config.json." }
+	}
+	If(-not $Listed.ContainsKey('tool_config.xml')) { throw "Tool_Config.xml is not listed in SelfX.Config.json ($Where)." }
+	Return $Count
+}
+
+function Test-SelfXConfigPackageSignatures {
+	# Trust mode Signature of -ConfigOnly: Install.ps1 and every script of the package carry a signature with the status Valid of an
+	# allowed signer (the signers of the anchor on the device, never a list from the package or the command line), and
+	# Config\SelfX.Config.cat is signed by one of them and matches the folder Config. Throws at the first failed part. Returns the number
+	# of checked files and the SHA256 of the list and of the catalog as they were checked (the copy is compared with them).
+	param(
+		[Parameter(Mandatory = $true)][string]$PackageFolder,
+		[Parameter(Mandatory = $true)][string[]]$AllowedThumbprint
+	)
+	$Allowed = @(ConvertTo-SelfXTrustedSignerList -TrustedSigner $AllowedThumbprint)
+	$Root = (Get-Item -LiteralPath $PackageFolder -Force).FullName.TrimEnd('\')
+	$Items = @(Get-ChildItem -LiteralPath $Root -Recurse -Force)
+	ForEach($Item in $Items)
+	{
+		If($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Trust mode Signature: the package contains a link ($($Item.FullName.Substring($Root.Length + 1))). Nothing was changed." }
+	}
+	$SignedTypes = @('.exe', '.dll', '.ps1', '.psm1', '.psd1')
+	$Count = 0
+	$Problems = New-Object System.Collections.Generic.List[string]
+	ForEach($Item in $Items)
+	{
+		If($Item.PSIsContainer -or ($SignedTypes -notcontains $Item.Extension.ToLowerInvariant())) { continue }
+		$Count++
+		$Reason = Test-SelfXFileSignature -Path $Item.FullName -AllowedThumbprint $Allowed
+		If($Reason -ne 'Ok') { $Problems.Add("$($Item.FullName.Substring($Root.Length + 1)) ($Reason)") }
+	}
+	If($Count -eq 0) { throw 'Trust mode Signature: the package contains no script. Nothing was changed.' }
+	If($Problems.Count -gt 0)
+	{
+		$Shown = @($Problems | Select-Object -First 10) -join ', '
+		$More = $(If($Problems.Count -gt 10) { " and $($Problems.Count - 10) more" } Else { '' })
+		throw "Trust mode Signature: $($Problems.Count) of $Count scripts of the package have no valid signature of a signer of this device: $Shown$More. Nothing was changed."
+	}
+	$ConfigSource = Join-Path $Root 'Config'
+	$Result = Test-SelfXPackageCatalog -CatalogPath (Join-Path $ConfigSource 'SelfX.Config.cat') -Folder $ConfigSource -AllowedThumbprint $Allowed
+	If($Result -ne 'Ok') { throw "Trust mode Signature: Config\SelfX.Config.cat is not a valid signed catalog of the folder Config: $Result. Nothing was changed." }
+	Return [pscustomobject]@{
+		Files             = $Count
+		ConfigListHash    = (Get-FileHash -LiteralPath (Join-Path $ConfigSource 'SelfX.Config.json') -Algorithm SHA256).Hash
+		ConfigCatalogHash = (Get-FileHash -LiteralPath (Join-Path $ConfigSource 'SelfX.Config.cat') -Algorithm SHA256).Hash
+	}
+}
+
+function Test-SelfXConfigListsMatch {
+	# Trust mode Signature: the list and the catalog in this copy of Config are byte for byte the ones that were checked in the package
+	# (a change between the check and the copy is found). Throws on a difference.
+	param([Parameter(Mandatory = $true)][string]$Folder, [Parameter(Mandatory = $true)]$Verified, [Parameter(Mandatory = $true)][string]$Where)
+	ForEach($Item in @(@{ Name = 'SelfX.Config.json'; Hash = "$($Verified.ConfigListHash)" }, @{ Name = 'SelfX.Config.cat'; Hash = "$($Verified.ConfigCatalogHash)" }))
+	{
+		If($Item.Hash -notmatch '^[0-9A-Fa-f]{64}\z') { throw "The checked SHA256 of $($Item.Name) is missing." }
+		$Path = Join-Path $Folder $Item.Name
+		If(-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "Config\$($Item.Name) is missing in $Where." }
+		If((Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash -ne $Item.Hash) { throw "Config\$($Item.Name) in $Where is not the file that was checked in the signed package (changed between check and copy)." }
+	}
+}
+
+function Read-SelfXXmlFile {
+	# Reads an XML file without DTD and without external resources (a DTD or an external entity is an error: fail closed).
+	param([Parameter(Mandatory = $true)][string]$Path)
+	$Document = New-Object System.Xml.XmlDocument
+	$Document.XmlResolver = $null
+	$Settings = New-Object System.Xml.XmlReaderSettings
+	$Settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+	$Settings.XmlResolver = $null
+	$Reader = [System.Xml.XmlReader]::Create($Path, $Settings)
+	Try { $Document.Load($Reader) } Finally { $Reader.Dispose() }
+	Return $Document
+}
+
+function Get-SelfXInstallTimeSettings {
+	# The settings of Tool_Config.xml that only Install.ps1 applies (shortcuts, the status icon entry, the icon of the shortcuts, the
+	# privileges of the service), as the values Install.ps1 works with (a missing or invalid value gives the same result as in
+	# Install.ps1). Returns an ordered table. Throws when the file has no element GUI_Config.
+	param([Parameter(Mandatory = $true)][System.Xml.XmlDocument]$ToolConfig)
+	$Gui = $ToolConfig.GUI_Config
+	If($null -eq $Gui) { throw 'Tool_Config.xml has no element GUI_Config.' }
+	$Privileges = "$($Gui.Service_Privileges)".Trim()
+	If($Privileges -notin @('Restricted', 'Default')) { $Privileges = 'Restricted' }
+	Return [ordered]@{
+		Shortcut_Name      = "$($Gui.Shortcut_Name)".Trim()
+		Shortcut_Desktop   = [bool]("$($Gui.Shortcut_Desktop)" -eq 'True')
+		Shortcut_StartMenu = [bool]("$($Gui.Shortcut_StartMenu)" -eq 'True')
+		Brand_Icon         = "$($Gui.Brand_Icon)".Trim()
+		Show_Tray_Icon     = [bool]("$($Gui.Show_Tray_Icon)".Trim() -ne 'False')
+		Service_Privileges = $Privileges
+	}
+}
+
+function Compare-SelfXInstallTimeSettings {
+	# Names of the install-time settings that differ between the installed Tool_Config.xml and the one of the package (empty = equal).
+	param([Parameter(Mandatory = $true)][string]$InstalledFile, [Parameter(Mandatory = $true)][string]$PackageFile)
+	$Installed = Get-SelfXInstallTimeSettings -ToolConfig (Read-SelfXXmlFile -Path $InstalledFile)
+	$Package = Get-SelfXInstallTimeSettings -ToolConfig (Read-SelfXXmlFile -Path $PackageFile)
+	$Different = New-Object System.Collections.Generic.List[string]
+	ForEach($Name in @($Installed.Keys)) { If("$($Installed[$Name])" -cne "$($Package[$Name])") { $Different.Add($Name) } }
+	Return $Different.ToArray()
+}
+
+function Get-SelfXInstalledDeleteHelper {
+	# The delete helper for the work folders: SelfXService.exe of the installation, used only when its SHA256 is the one in the installed
+	# App\SelfX.Code.json (otherwise nothing is deleted by it: fail closed). Returns the path.
+	param([Parameter(Mandatory = $true)][string]$InstallFolder)
+	$Exe = Join-Path $InstallFolder 'App\SelfXService.exe'
+	$ListPath = Join-Path $InstallFolder 'App\SelfX.Code.json'
+	If(-not (Test-Path -LiteralPath $Exe -PathType Leaf) -or -not (Test-Path -LiteralPath $ListPath -PathType Leaf)) { throw 'The installation is incomplete (App\SelfXService.exe or App\SelfX.Code.json is missing). Install the full package first. Nothing was changed.' }
+	$Entry = @(Read-SelfXFileList -Path $ListPath -ListName 'SelfX.Code.json' -Where 'the installation folder' | Where-Object { $_.Name -ceq 'SelfXService.exe' })
+	If($Entry.Count -ne 1) { throw 'App\SelfX.Code.json does not list SelfXService.exe. Nothing was changed.' }
+	If((Get-FileHash -LiteralPath $Exe -Algorithm SHA256).Hash -ne $Entry[0].Hash) { throw 'App\SelfXService.exe does not match App\SelfX.Code.json: it is not used to delete folders. Install the full package again. Nothing was changed.' }
+	Return $Exe
+}
+
+function Set-SelfXConfigFolderRights {
+	# Rights of a folder that becomes Config: the same as Install.ps1 gives the install folder (SYSTEM and administrators full control,
+	# users read and execute, not inherited), by SID.
+	param([Parameter(Mandatory = $true)][string]$Path)
+	& icacls.exe $Path /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
+	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$Path' (exit code $LASTEXITCODE)." }
+}
+
+function Reset-SelfXConfigFolderRights {
+	# After the folder has been moved into the install folder: its rights are the inherited ones again, exactly as after a full
+	# installation (Config inherits from the install folder).
+	param([Parameter(Mandatory = $true)][string]$Path)
+	& icacls.exe $Path /reset /T /C /Q | Out-Null
+	If($LASTEXITCODE -ne 0) { throw "icacls /reset failed for '$Path' (exit code $LASTEXITCODE)." }
+}
+
+function Move-SelfXFolderWithRetry {
+	# Renames a folder. A folder that holds a file which is open (a script of a running action) cannot be renamed: the rename is tried
+	# again (Attempts x DelaySeconds), then it throws and nothing has moved.
+	param(
+		[Parameter(Mandatory = $true)][string]$From,
+		[Parameter(Mandatory = $true)][string]$To,
+		[int]$Attempts = 10,
+		[int]$DelaySeconds = 2
+	)
+	For($Attempt = 1; $Attempt -le $Attempts; $Attempt++)
+	{
+		Try { [IO.Directory]::Move($From, $To); return }
+		Catch
+		{
+			If($Attempt -ge $Attempts) { throw "The folder '$From' is in use and cannot be exchanged (a SelfX action may be running): $($_.Exception.Message)" }
+			Start-Sleep -Seconds $DelaySeconds
+		}
+	}
+}
+
+function Restore-SelfXInterruptedConfig {
+	# A run that stopped between the two renames leaves no Config and the old one in InstallFolder.ConfigOld: it is put back (the
+	# installation works again) before anything else is looked at.
+	param([Parameter(Mandatory = $true)][string]$InstallFolder, [int]$Attempts = 10, [int]$DelaySeconds = 2)
+	$Root = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
+	$Config = Join-Path $Root 'Config'
+	$Old = $Root + '.ConfigOld'
+	If(-not (Test-Path -LiteralPath $Config) -and (Test-Path -LiteralPath $Old))
+	{
+		Move-SelfXFolderWithRetry -From $Old -To $Config -Attempts $Attempts -DelaySeconds $DelaySeconds
+		Write-Host 'The configuration of an interrupted update was put back.'
+	}
+}
+
+function Install-SelfXConfigFolder {
+	# Exchanges the folder Config of the installation for the one of the package, with these steps (each before the next):
+	#  1. The work folders next to the install folder are cleaned: InstallFolder.ConfigStage, InstallFolder.ConfigOld (left over from an
+	#     interrupted run; when Config is missing and ConfigOld exists, ConfigOld is put back first).
+	#  2. The package folder is copied into InstallFolder.ConfigStage (rights as Install.ps1 gives them) and checked there against its
+	#     list (and in the mode Signature against the checked list and catalog). A difference stops here; Config is untouched.
+	#  3. Config is renamed to ConfigOld, ConfigStage to Config (two renames, the only moment without a complete Config), rights are reset
+	#     to the inherited ones, and Config is checked again. Any error puts ConfigOld back as Config.
+	#  4. ConfigOld is deleted (link-safe, by the helper of the installation).
+	# The work folders are next to the install folder, not in it: the service refuses to start a script when the install folder holds
+	# more than App and Config. Returns the number of files of the new Config.
+	param(
+		[Parameter(Mandatory = $true)][string]$PackageFolder,
+		[Parameter(Mandatory = $true)][string]$InstallFolder,
+		[Parameter(Mandatory = $true)][string]$SafeDeleteExe,
+		[switch]$SignedPackage,
+		$Verified,
+		[int]$Attempts = 10,
+		[int]$DelaySeconds = 2
+	)
+	$Root = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
+	$Config = Join-Path $Root 'Config'
+	$Stage = $Root + '.ConfigStage'
+	$Old = $Root + '.ConfigOld'
+	# 1. left over from an interrupted run
+	Restore-SelfXInterruptedConfig -InstallFolder $Root -Attempts $Attempts -DelaySeconds $DelaySeconds
+	$ConfigItem = Get-Item -LiteralPath $Config -Force -ErrorAction SilentlyContinue
+	If(-not $ConfigItem -or -not $ConfigItem.PSIsContainer -or ($ConfigItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'The folder Config of the installation is missing or a link. Install the full package. Nothing was changed.' }
+	ForEach($Left in @($Stage, $Old))
+	{
+		If(Test-Path -LiteralPath $Left) { Invoke-SelfXSafeDelete -Exe $SafeDeleteExe -Arguments @("/removetree:$Left") }
+		If(Test-Path -LiteralPath $Left) { throw "The work folder '$Left' could not be removed. Nothing was changed." }
+	}
+	$Succeeded = $false
+	Try
+	{
+		# 2. copy and check next to the install folder
+		New-Item -ItemType Directory -Path $Stage | Out-Null
+		Set-SelfXConfigFolderRights -Path $Stage
+		Copy-Item -Path (Join-Path (Join-Path $PackageFolder 'Config') '*') -Destination $Stage -Recurse -Force
+		$Count = Test-SelfXConfigFolder -Folder $Stage -Where 'the copy of the package' -SignedPackage:$SignedPackage
+		If($SignedPackage) { Test-SelfXConfigListsMatch -Folder $Stage -Verified $Verified -Where 'the copy of the package' }
+		# 3. exchange
+		Move-SelfXFolderWithRetry -From $Config -To $Old -Attempts $Attempts -DelaySeconds $DelaySeconds
+		Try
+		{
+			[IO.Directory]::Move($Stage, $Config)
+			Reset-SelfXConfigFolderRights -Path $Config
+			$null = Test-SelfXConfigFolder -Folder $Config -Where 'the installation folder' -SignedPackage:$SignedPackage
+			If($SignedPackage) { Test-SelfXConfigListsMatch -Folder $Config -Verified $Verified -Where 'the installation folder' }
+		}
+		Catch
+		{
+			$Failure = $_
+			# The old folder goes back; a new Config that is already in place is moved out of the way first.
+			Try
+			{
+				If(Test-Path -LiteralPath $Config) { [IO.Directory]::Move($Config, $Stage + '.Failed') }
+				[IO.Directory]::Move($Old, $Config)
+			}
+			Catch { throw "The new configuration was refused ($($Failure.Exception.Message)) and the old one could not be put back ($($_.Exception.Message)). The old configuration is in '$Old'; run the package again to put it back." }
+			throw $Failure
+		}
+		$Succeeded = $true
+		Return $Count
+	}
+	Finally
+	{
+		ForEach($Leftover in @($Stage, ($Stage + '.Failed')))
+		{
+			If(Test-Path -LiteralPath $Leftover) { Try { Invoke-SelfXSafeDelete -Exe $SafeDeleteExe -Arguments @("/removetree:$Leftover") } Catch { Write-Warning "The work folder '$Leftover' could not be removed: $($_.Exception.Message)" } }
+		}
+		If($Succeeded -and (Test-Path -LiteralPath $Old)) { Try { Invoke-SelfXSafeDelete -Exe $SafeDeleteExe -Arguments @("/removetree:$Old") } Catch { Write-Warning "The work folder '$Old' could not be removed: $($_.Exception.Message)" } }
+	}
+}
+
+function Invoke-SelfXConfigOnly {
+	# The whole mode -ConfigOnly after the anchor was read. Anchor: the object of Get-SelfXTrustAnchor (Mode Hash or Signature and
+	# Signers), already checked for safe rights by the caller. All checks come before the first change:
+	#  - the package is Install.ps1 + Config; mode Signature: the signatures (signers of the anchor); mode Hash: no catalog;
+	#  - Config\SelfX.Config.json lists exactly the files of Config;
+	#  - MinCodeVersion is not newer than the installed code (App\SelfX.Code.json);
+	#  - the install-time settings of Tool_Config.xml are the installed ones.
+	# Then Install-SelfXConfigFolder. Throws with a plain text; returns an object with Version, MinCodeVersion, Files and Mode.
+	param(
+		[Parameter(Mandatory = $true)][string]$PackageFolder,
+		[Parameter(Mandatory = $true)][string]$InstallFolder,
+		$Anchor,
+		[int]$Attempts = 10,
+		[int]$DelaySeconds = 2
+	)
+	If($null -eq $Anchor) { throw '-ConfigOnly needs an installed SelfX with a trust anchor (HKLM\SOFTWARE\SelfX\Trust). Install the full package first. Nothing was changed.' }
+	Restore-SelfXInterruptedConfig -InstallFolder $InstallFolder -Attempts $Attempts -DelaySeconds $DelaySeconds
+	$SignedPackage = ($Anchor.Mode -ceq 'Signature')
+	If(-not $SignedPackage -and ($Anchor.Mode -cne 'Hash')) { throw 'The trust anchor of the device has no valid mode. Install the full package again. Nothing was changed.' }
+	Test-SelfXConfigPackageLayout -PackageFolder $PackageFolder
+	$Verified = $null
+	If($SignedPackage)
+	{
+		$Allowed = @(ConvertTo-SelfXTrustedSignerList -TrustedSigner @($Anchor.Signers))
+		$Verified = Test-SelfXConfigPackageSignatures -PackageFolder $PackageFolder -AllowedThumbprint $Allowed
+		Write-Host "Trust mode Signature: $($Verified.Files) scripts are signed by a signer of this device; Config\SelfX.Config.cat is signed and matches the package. Signers of the device: $($Allowed -join ', ')."
+	}
+	Else { Write-Host 'Trust mode Hash (the mode of this device).' }
+	$PackageConfig = Join-Path $PackageFolder 'Config'
+	$Checked = Test-SelfXConfigFolder -Folder $PackageConfig -Where 'the package' -SignedPackage:$SignedPackage
+	Write-Host "Package files checked against Config\SelfX.Config.json ($Checked files)."
+	$Minimum = Get-SelfXConfigMinCodeVersion -Path (Join-Path $PackageConfig 'SelfX.Config.json')
+	$Installed = Get-SelfXPackageToolVersion -PackageFolder $InstallFolder
+	$InstalledVersion = ConvertTo-SelfXCodeVersion -Text $Installed
+	If($null -eq $InstalledVersion) { throw "The installed code version '$Installed' cannot be compared. Install the full package. Nothing was changed." }
+	If($InstalledVersion -lt (ConvertTo-SelfXCodeVersion -Text $Minimum)) { throw "This configuration needs code version $Minimum or newer; installed is $Installed. Install the full package first. Nothing was changed." }
+	$InstalledToolConfig = Join-Path $InstallFolder 'Config\Tool_Config.xml'
+	If(-not (Test-Path -LiteralPath $InstalledToolConfig -PathType Leaf)) { throw 'The installation has no Config\Tool_Config.xml. Install the full package. Nothing was changed.' }
+	$Different = @(Compare-SelfXInstallTimeSettings -InstalledFile $InstalledToolConfig -PackageFile (Join-Path $PackageConfig 'Tool_Config.xml'))
+	If($Different.Count -gt 0) { throw "These settings are applied only by the full package, and the package changes them: $($Different -join ', '). Build and install the full package, or keep them as they are. Nothing was changed." }
+	$Helper = Get-SelfXInstalledDeleteHelper -InstallFolder $InstallFolder
+	Write-Host "Installed code version $Installed, the configuration needs $Minimum or newer."
+	$Files = Install-SelfXConfigFolder -PackageFolder $PackageFolder -InstallFolder $InstallFolder -SafeDeleteExe $Helper -SignedPackage:$SignedPackage -Verified $Verified -Attempts $Attempts -DelaySeconds $DelaySeconds
+	Return [pscustomobject]@{ Version = $Installed; MinCodeVersion = $Minimum; Files = $Files; Mode = $(If($SignedPackage) { 'Signature' } Else { 'Hash' }) }
+}
+
 function Get-SelfXServicePrivileges {
 	# Privileges the service (LocalSystem) keeps. Everything else of the LocalSystem token is removed, so the
 	# service and every script it starts cannot use SeTcb, SeDebug, SeCreateToken, SeLoadDriver, SeSecurity and the like.
@@ -922,6 +1311,34 @@ If(-not $IsAdmin) { throw 'Install.ps1 must run with administrator rights.' }
 If($PSVersionTable.PSEdition -eq 'Core') { throw 'Install.ps1 must run in Windows PowerShell 5.1 (powershell.exe), not PowerShell 7.' }
 $null = Test-SelfXWindowsBuild
 If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) { throw 'Run Install.ps1 in a 64-bit PowerShell (use %SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe from 32-bit agents).' }
+
+# Mode -ConfigOnly: only the folder Config of an existing installation is replaced (Invoke-SelfXConfigOnly). The trust mode is the one
+# of the anchor on the device: the anchor must exist and must not be changeable by users (Test-SelfXTrustAnchorState); the signers of the
+# command line cannot widen it. The service, the programs, the shortcuts and the anchor are not touched; nothing is restarted.
+If($ConfigOnly)
+{
+	$ConfigOnlyExit = 1
+	$ConfigOnlyTranscript = $false
+	Try
+	{
+		If($PSBoundParameters.ContainsKey('TrustedSigner') -or $AllowHashMode) { throw '-ConfigOnly cannot be combined with -TrustedSigner or -AllowHashMode: the trust anchor of the device is not changed. Nothing was changed.' }
+		If(-not (Test-Path -LiteralPath $LogFolder -PathType Container)) { throw 'SelfX is not installed on this device (no folder ProgramData\SelfX\Logs). Install the full package first. Nothing was changed.' }
+		Start-Transcript -Path (Join-Path $LogFolder 'Install.log') -Append | Out-Null
+		$ConfigOnlyTranscript = $true
+		Write-Output "Configuration update (-ConfigOnly) for '$InstallFolder'."
+		$ConfigOnlyAnchor = Get-SelfXTrustAnchor
+		If($null -eq $ConfigOnlyAnchor) { throw 'The trust anchor HKLM\SOFTWARE\SelfX\Trust is missing: the installed version is too old or SelfX is not installed. Install the full package first. Nothing was changed.' }
+		If($ConfigOnlyAnchor.Mode -ceq 'Invalid') { throw 'The trust anchor HKLM\SOFTWARE\SelfX\Trust cannot be understood. Install the full package again. Nothing was changed.' }
+		$AnchorProblem = Test-SelfXTrustAnchorState -Mode $ConfigOnlyAnchor.Mode -Signers @($ConfigOnlyAnchor.Signers)
+		If($AnchorProblem) { throw "The trust anchor HKLM\SOFTWARE\SelfX\Trust is not safe ($AnchorProblem). Install the full package again. Nothing was changed." }
+		$ConfigOnlyResult = Invoke-SelfXConfigOnly -PackageFolder $PackageFolder -InstallFolder $InstallFolder -Anchor $ConfigOnlyAnchor
+		Write-Output "SelfX configuration installed ($($ConfigOnlyResult.Files) files, trust mode $($ConfigOnlyResult.Mode), code version $($ConfigOnlyResult.Version) unchanged). The service and the programs were not restarted; an open SelfX window shows the new settings after it is closed and opened again."
+		$ConfigOnlyExit = 0
+	}
+	Catch { Write-Output "Configuration update failed: $($_.Exception.Message)" }
+	Finally { If($ConfigOnlyTranscript) { Stop-Transcript | Out-Null } }
+	exit $ConfigOnlyExit
+}
 
 # Trust mode: Signature with -TrustedSigner, otherwise Hash. The list of signers comes from the command line (Intune), never from
 # the package. An invalid list, a contradiction and a downgrade (the anchor on the device says Signature, -TrustedSigner is missing

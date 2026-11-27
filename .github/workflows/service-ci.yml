@@ -38,8 +38,8 @@ jobs:
           SELFX_TEST_TRACE: '1'
         run: |
           $failed = New-Object System.Collections.Generic.List[string]
-          $tests = @(Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Where-Object { $_.Name -in 'Test-Compat51.ps1', 'Test-Detection.ps1', 'Test-FileManifest.ps1', 'Test-InstallBinaries.ps1', 'Test-Uninstall.ps1' }) + @(Get-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXPackageWizard.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXOfflineFeed.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXAppLockerRules.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXAsrEvents.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXRelease.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXWizardGui.ps1')) | Sort-Object Name
-          if (@($tests).Count -ne 11) { throw 'The eleven Windows PowerShell 5.1 tests were not found.' }
+          $tests = @(Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'SelfX Service') -Filter 'Test-*.ps1' | Where-Object { $_.Name -in 'Test-Compat51.ps1', 'Test-Detection.ps1', 'Test-FileManifest.ps1', 'Test-InstallBinaries.ps1', 'Test-InstallConfigOnly.ps1', 'Test-Uninstall.ps1' }) + @(Get-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXPackageWizard.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXOfflineFeed.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXAppLockerRules.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXAsrEvents.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXRelease.ps1'), (Join-Path $env:GITHUB_WORKSPACE 'tools\Test-SelfXWizardGui.ps1')) | Sort-Object Name
+          if (@($tests).Count -ne 12) { throw 'The twelve Windows PowerShell 5.1 tests were not found.' }
           foreach ($test in $tests) {
             Write-Output "::group::$($test.Name)"
             # Each test in its own process, so mocks and globals of one test cannot affect the next.

@@ -146,6 +146,7 @@ Im Ausgabeordner:
 |---|---|
 | `SelfX-Service-<Version>.intunewin` | Das Paket für Intune. |
 | `SelfX-Service-<Version>.Detection.ps1` | Das Erkennungsskript. Laden Sie **diese** Datei hoch. |
+| `SelfX-Config-<Version>.intunewin`, `SelfX-Config-<Version>.Detection.ps1` | Statt der beiden Dateien darüber, wenn Sie das Konfigurationspaket bauen (Zusammenfassung: *Konfigurationspaket*, Konsole: `-ConfigPackage`). Es enthält nur `Install.ps1`, `Detection.ps1` und `Config` und wird mit `Install.ps1 -ConfigOnly` installiert: [zweites Paket für die Konfiguration](Installation.md#zweites-intune-paket-nur-die-konfiguration). |
 | `Set-SelfXSupportUnit-*.ps1` | Plattformskripte für die Ticket-Zuordnung (je Einheit, Group Tag und Geräteklasse). Einheiten, die nur nach OU zugeordnet werden, brauchen keins. |
 | `SelfX-Intune-Guide.<Sprache>.txt` | Kurzanleitung für Intune. |
 | `selfx-answers.json` | Ihre Antworten für den nächsten Lauf. **Enthält Postfachadressen: nicht in Git einchecken.** |
@@ -156,6 +157,16 @@ Im Ausgabeordner:
 Die Nutzlast und die Dateien im Repository werden **nicht** verändert. Für ein Update entpacken Sie das Nutzlast-Archiv des neuen Release
 und starten den Assistenten mit `-AnswerFile`. Im Vertrauensmodus Hash ist `App\SelfX.Code.json` im Ergebnis Lauf für Lauf die Datei der
 Nutzlast.
+
+## Welches Paket: vollständig oder nur Konfiguration
+
+Auf der Seite Zusammenfassung (Konsole: Schalter) wählen Sie, was der Lauf baut:
+
+- **Vollständiges Paket** (Standard): alles, wie bisher.
+- **Vollständiges Paket mit getrenntem Konfigurationspaket** (`-SeparateConfig`): dasselbe Paket; sein Erkennungsskript vergleicht die Konfiguration nicht. Wählen Sie es, wenn Sie auch das Konfigurationspaket nutzen.
+- **Konfigurationspaket** (`-ConfigPackage`): nur `Install.ps1`, `Detection.ps1` und `Config`. Keine Programme, keine AppLocker- oder App-Control-Dateien. Braucht ein installiertes SelfX desselben oder eines neueren Release.
+
+Bauen Sie beide Pakete aus demselben Release mit denselben Antworten. Warum und wie Sie sie in Intune verteilen (Abhängigkeit, Ablösung): [zweites Paket für die Konfiguration](Installation.md#zweites-intune-paket-nur-die-konfiguration).
 
 ## Was Sie in Intune tun
 

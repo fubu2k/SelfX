@@ -136,6 +136,7 @@ certificate protected: whoever has it can sign files that SelfX accepts.
 |---|---|
 | `SelfX-Service-<version>.intunewin` | The package for Intune. |
 | `SelfX-Service-<version>.Detection.ps1` | The detection script. Upload **this** file. |
+| `SelfX-Config-<version>.intunewin`, `SelfX-Config-<version>.Detection.ps1` | Instead of the two files above, when you build the configuration package (summary page: *Configuration package*, console: `-ConfigPackage`). It holds only `Install.ps1`, `Detection.ps1` and `Config` and is installed with `Install.ps1 -ConfigOnly`: [second package for the configuration](Installation.md#second-intune-package-the-configuration-only). |
 | `Set-SelfXSupportUnit-*.ps1` | Platform scripts for the ticket routing (per unit, group tag and device class). Units routed by OU only need none. |
 | `SelfX-Intune-Guide.<language>.txt` | Short Intune instructions. |
 | `selfx-answers.json` | Your answers for the next run. **Contains mailbox addresses: do not commit it.** |
@@ -145,6 +146,16 @@ certificate protected: whoever has it can sign files that SelfX accepts.
 
 The payload and the repository files are **not** changed. For an update unpack the payload archive of the new release and run the wizard
 with `-AnswerFile`. In the trust mode Hash, `App\SelfX.Code.json` of the result is the one of the payload, run after run.
+
+## Which package: full or configuration only
+
+On the summary page (console: switches) you choose what the run builds:
+
+- **Full package** (default): everything, as before.
+- **Full package with a separate configuration package** (`-SeparateConfig`): the same package; its detection script does not compare the configuration. Choose it when you also use the configuration package.
+- **Configuration package** (`-ConfigPackage`): only `Install.ps1`, `Detection.ps1` and `Config`. No programs, no AppLocker or App Control files. Needs an installed SelfX of the same release or newer.
+
+Build both packages from the same release and the same answers. Why and how to roll them out in Intune (dependency, supersedence): [second package for the configuration](Installation.md#second-intune-package-the-configuration-only).
 
 ## What to do in Intune
 

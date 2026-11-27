@@ -28,6 +28,7 @@
     History : 1.0.0 (2026-11-27, fubu2k) Initial version
               1.1.0 (2026-11-27, fubu2k) Page Signature (store list without expired certificates, PFX file, password never in a text, the
                                          state, the answers or the window title; time stamp; additional signers), instructions as steps
+              1.2.0 (2026-11-27, fubu2k) choice of the package kind (configuration package)
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -153,6 +154,10 @@ try {
     Assert (@($consoleIds | Where-Object { @($onPages -eq $_).Count -ne 1 }).Count -eq 0) 'every question of the console is on exactly one page'
     Assert (@($onPages | Where-Object { $consoleIds -notcontains $_ }).Count -eq 0) 'the pages name only questions of the console'
     Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false) -join ',') -eq 'check,copy,config,pack,detection,rules,guide,finish') 'progress list has the steps of Invoke-SelfXPackageBuild'
+    Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind ConfigOnly) -join ',') -eq 'check,copy,config,sign,pack,detection,rules,guide,finish') 'progress list of the signed configuration package has no code catalog step'
+    Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind Full) -join ',') -eq 'check,copy,config,sign,catalog,pack,detection,rules,guide,finish') 'progress list of the signed full package keeps the catalog step'
+    $kindQuestion = @($script:WizardGuiBuildQuestions | Where-Object { $_.Id -eq 'PackageKind' })
+    Assert ($kindQuestion.Count -eq 1 -and ($kindQuestion[0].Choices -join ',') -eq 'Full,FullSeparateConfig,ConfigOnly') 'the summary page asks for the package kind with the three kinds'
 
     # ---------------------------------------------------------- shared styles
     Write-Host 'Shared styles'

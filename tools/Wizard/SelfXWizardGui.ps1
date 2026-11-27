@@ -41,6 +41,7 @@
                                               PFX file (password box, SecureString only, emptied after opening), time stamp service (required unless
                                               switched off), additional signers for a change of the certificate, revocation list addresses with
                                               warnings; result page with the instructions as steps and copy buttons
+    1.2.0    2026-11-27  fubu2k               Summary page: choice of the package (full, full with separate configuration, configuration package)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -121,6 +122,7 @@ $script:WizardGuiBuildQuestions = @(
     @{ Id = 'Payload'; Kind = 'text'; Max = 260; Required = $true; Browse = 'folder' },
     @{ Id = 'Output'; Kind = 'text'; Max = 260; Required = $true; Browse = 'folder' },
     @{ Id = 'ConfigureOnly'; Kind = 'bool' },
+    @{ Id = 'PackageKind'; Kind = 'choice'; Choices = @('Full', 'FullSeparateConfig', 'ConfigOnly') },
     @{ Id = 'Tool'; Kind = 'text'; Max = 260; Required = $true; Browse = 'tool'; When = { param($b) -not $b.ConfigureOnly } }
 )
 
@@ -140,8 +142,10 @@ function Get-WizardGuiPageIndex {
 
 # Step ids of Invoke-SelfXPackageBuild in the order of the progress list (sign and catalog only with a certificate).
 function Get-WizardGuiBuildSteps {
-    param([bool]$ConfigureOnly, [bool]$Signed)
+    param([bool]$ConfigureOnly, [bool]$Signed, [string]$PackageKind = 'Full')
     if ($ConfigureOnly) { return , @('check', 'copy', 'config', 'guide', 'finish') }
+    # The configuration package has no programs and so no code catalog.
+    if ($PackageKind -eq 'ConfigOnly' -and $Signed) { return , @('check', 'copy', 'config', 'sign', 'pack', 'detection', 'rules', 'guide', 'finish') }
     if ($Signed) { return , @('check', 'copy', 'config', 'sign', 'catalog', 'pack', 'detection', 'rules', 'guide', 'finish') }
     return , @('check', 'copy', 'config', 'pack', 'detection', 'rules', 'guide', 'finish')
 }
@@ -152,7 +156,7 @@ function Get-WizardGuiTextIds {
     foreach ($id in 'title', 'rec', 'required', 'gui.back', 'gui.next', 'gui.load', 'gui.save', 'gui.browse', 'gui.wizardLanguage.ask', 'gui.wizardLanguage.rec',
         'gui.preview', 'gui.logo.none', 'gui.logo.invalid', 'gui.accent.sample', 'gui.accent.link', 'gui.units.title', 'gui.units.rec', 'gui.units.add', 'gui.units.remove',
         'gui.units.empty', 'gui.units.duplicate', 'gui.unit.title', 'gui.unit.new', 'gui.unit.invalid', 'gui.summary.title', 'gui.summary.build', 'Payload.ask', 'Payload.rec', 'Payload.missing',
-        'ConfigureOnly.ask', 'ConfigureOnly.rec', 'Output.ask', 'Output.rec', 'Tool.ask', 'Tool.rec', 'gui.build.start', 'gui.build.cancel', 'gui.build.running', 'gui.build.cancelling',
+        'ConfigureOnly.ask', 'ConfigureOnly.rec', 'PackageKind.ask', 'PackageKind.rec', 'Output.ask', 'Output.rec', 'Tool.ask', 'Tool.rec', 'gui.build.start', 'gui.build.cancel', 'gui.build.running', 'gui.build.cancelling',
         'gui.build.cancelled', 'gui.build.failed', 'gui.build.done', 'gui.state.pending', 'gui.state.running', 'gui.state.done', 'gui.state.failed', 'gui.state.cancelled',
         'gui.result.text', 'gui.result.configured', 'gui.result.files', 'gui.result.open', 'gui.result.copy', 'gui.result.copied', 'gui.result.guide', 'gui.page.errors', 'gui.answers.loaded',
         'gui.answers.saved', 'gui.answers.invalid', 'gui.answers.unreadable', 'gui.answers.filter', 'gui.logo.filter', 'gui.tool.filter', 'gui.close.build', 'gui.finish',
@@ -192,7 +196,7 @@ function New-WizardGuiState {
         Culture   = $Culture
         Raw       = @{}
         Units     = (New-Object System.Collections.Generic.List[hashtable])
-        Build     = @{ Payload = $defaults.PayloadFolder; Output = $defaults.OutputFolder; Tool = $defaults.ToolPath; ConfigureOnly = $false }
+        Build     = @{ Payload = $defaults.PayloadFolder; Output = $defaults.OutputFolder; Tool = $defaults.ToolPath; ConfigureOnly = $false; PackageKind = 'Full' }
         Questions = (Get-WizardGuiQuestionTable)
         ToolsFolder = $ToolsFolder
         # Signature: Mode None | Store | File. The certificates are objects in memory (never saved); no password is kept anywhere.
@@ -912,7 +916,7 @@ function Set-WizardGuiProgress {
     $ui = $script:Gui.Ui
     $ui.ProgressList.Children.Clear()
     $script:Gui.ProgressRows = @{}
-    $steps = Get-WizardGuiBuildSteps -ConfigureOnly ([bool]$script:Gui.State.Build.ConfigureOnly) -Signed ($null -ne (Get-WizardGuiCertificate -State $script:Gui.State))
+    $steps = Get-WizardGuiBuildSteps -ConfigureOnly ([bool]$script:Gui.State.Build.ConfigureOnly) -Signed ($null -ne (Get-WizardGuiCertificate -State $script:Gui.State)) -PackageKind "$($script:Gui.State.Build.PackageKind)"
     foreach ($step in $steps) {
         $row = New-Object System.Windows.Controls.StackPanel
         $row.Orientation = 'Horizontal'
@@ -948,7 +952,7 @@ function Set-WizardGuiStepState {
 
 # The script of the runspace. Every value is a parameter (nothing is put together as code); progress goes into a queue that the window reads.
 $script:WizardGuiBuildScript = {
-    param([string]$WizardScript, [string]$Culture, [hashtable]$Source, [string]$PayloadFolder, [bool]$FromRepository, [string]$OutputFolder, [string]$ToolPath, [bool]$ConfigureOnly,
+    param([string]$WizardScript, [string]$Culture, [hashtable]$Source, [string]$PayloadFolder, [bool]$FromRepository, [string]$OutputFolder, [string]$ToolPath, [bool]$ConfigureOnly, [string]$PackageKind,
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate, [string]$TimestampServer, [string[]]$AdditionalSigner, $Sync)
     $ErrorActionPreference = 'Stop'
     try {
@@ -957,7 +961,7 @@ $script:WizardGuiBuildScript = {
         $queue = $Sync.Queue
         $progress = { param($id, $text) $queue.Enqueue([string]$id) }.GetNewClosure()
         $Sync.Result = Invoke-SelfXWizardBuild -Answers $Source -PayloadFolder $PayloadFolder -FromRepository:$FromRepository -OutputFolder $OutputFolder `
-            -ToolPath $ToolPath -Language $Culture -ConfigureOnly:$ConfigureOnly -Certificate $Certificate -TimestampServer $TimestampServer `
+            -ToolPath $ToolPath -Language $Culture -ConfigureOnly:$ConfigureOnly -PackageKind $PackageKind -Certificate $Certificate -TimestampServer $TimestampServer `
             -AdditionalSigner $AdditionalSigner -OnProgress $progress
     }
     catch { $Sync.Error = $_.Exception.Message }
@@ -979,7 +983,7 @@ function Start-WizardGuiBuild {
     $null = $shell.AddScript($script:WizardGuiBuildScript.ToString()).AddParameters(@{
             WizardScript = (Join-Path $script:GuiFolder 'SelfXWizard.ps1'); Culture = $State.Culture; Source = $source; PayloadFolder = $payload
             FromRepository = [bool]$fromRepository; OutputFolder = "$($State.Build.Output)".Trim(); ToolPath = "$($State.Build.Tool)".Trim()
-            ConfigureOnly = [bool]$State.Build.ConfigureOnly; Certificate = $signing.Certificate; TimestampServer = $signing.TimestampServer
+            ConfigureOnly = [bool]$State.Build.ConfigureOnly; PackageKind = $(if (@('Full', 'FullSeparateConfig', 'ConfigOnly') -ccontains "$($State.Build.PackageKind)") { "$($State.Build.PackageKind)" } else { 'Full' }); Certificate = $signing.Certificate; TimestampServer = $signing.TimestampServer
             AdditionalSigner = [string[]]$signing.AdditionalSigner; Sync = $sync
         })
     $handle = $shell.BeginInvoke()

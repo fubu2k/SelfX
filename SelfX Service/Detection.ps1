@@ -11,6 +11,11 @@
     (build\SelfX-Service-<version>.Detection.ps1; upload that file to Intune). The three checks are independent: a new code
     version, changed code files without a new version, and a changed configuration (for example a logo) each fail with their own reason,
     and a changed logo changes only the configuration digest.
+    $PackageKind says which package this script belongs to (tools\New-SelfXIntuneWin.ps1 and the assistant write it): Full (default:
+    all three checks), FullWithoutConfig (the full package of a setup with a separate configuration package: version and code digest,
+    the configuration digest is not compared, so that the full package is not installed again when the configuration package has
+    changed the configuration) and ConfigOnly (the configuration package: only the configuration digest; it needs a digest, a
+    placeholder is a problem).
     The copy in the repository still has the placeholders: it checks the version only and logs that.
     An installation in the layout of an older version (all files directly in ProgramFiles\SelfX) is not detected, so Intune
     installs the update.
@@ -45,6 +50,8 @@
                                               and SelfX.Config.json in Config); the old layout is not detected
     3.1.0    2026-11-27  fubu2k               The trust anchor HKLM\SOFTWARE\SelfX\Trust must exist with Mode = Hash or Signature (function
                                               Test-SelfXTrustAnchor); the mode is logged, not judged
+    3.1.0    2026-11-27  fubu2k               $PackageKind: Full (as before), FullWithoutConfig (configuration digest not compared) and ConfigOnly (only the
+                                              configuration digest) for the two Intune packages of a setup with a configuration package
 #>
 
 $ExpectedVersion = '3.1.0'
@@ -52,6 +59,9 @@ $ExpectedVersion = '3.1.0'
 # writes to the build folder; the repository copy keeps them (version check only).
 $ExpectedCodeHash = '__SELFX_CODE_HASH__'
 $ExpectedConfigHash = '__SELFX_CONFIG_HASH__'
+# Full | FullWithoutConfig | ConfigOnly (see the description); the packaging tools replace the value for the configuration package and for
+# the full package of a setup with a separate configuration package.
+$PackageKind = 'Full'
 $InstallFolder = Join-Path $env:ProgramFiles 'SelfX'
 # Code in App, configuration in Config (Install.ps1).
 $AppFolder = Join-Path $InstallFolder 'App'
@@ -129,13 +139,18 @@ function Test-SelfXInstalledPackage {
 		[Parameter(Mandatory = $true)][string]$InstallFolder,
 		[Parameter(Mandatory = $true)][string]$ExpectedVersion,
 		[Parameter(Mandatory = $true)][string]$ExpectedCodeHash,
-		[Parameter(Mandatory = $true)][string]$ExpectedConfigHash
+		[Parameter(Mandatory = $true)][string]$ExpectedConfigHash,
+		[string]$Kind = 'Full'
 	)
 	$notes = New-Object System.Collections.Generic.List[string]
-	# Compare the package catalog version, not the service protocol version.
-	$installedVersion = Get-SelfXInstalledVersion -Path (Join-Path $InstallFolder 'App\SelfX.Code.json')
-	If($null -eq $installedVersion) { return [pscustomobject]@{ Reason = 'no code version in SelfX.Code.json'; Notes = $notes.ToArray() } }
-	If($installedVersion -ne $ExpectedVersion) { return [pscustomobject]@{ Reason = "installed version $installedVersion"; Notes = $notes.ToArray() } }
+	If(@('Full', 'FullWithoutConfig', 'ConfigOnly') -cnotcontains $Kind) { return [pscustomobject]@{ Reason = 'invalid package kind in this script'; Notes = $notes.ToArray() } }
+	# Compare the package catalog version, not the service protocol version. The configuration package does not check the code.
+	If($Kind -ne 'ConfigOnly')
+	{
+		$installedVersion = Get-SelfXInstalledVersion -Path (Join-Path $InstallFolder 'App\SelfX.Code.json')
+		If($null -eq $installedVersion) { return [pscustomobject]@{ Reason = 'no code version in SelfX.Code.json'; Notes = $notes.ToArray() } }
+		If($installedVersion -ne $ExpectedVersion) { return [pscustomobject]@{ Reason = "installed version $installedVersion"; Notes = $notes.ToArray() } }
+	}
 	# The two file lists of the package: changed files without a new version are an update too.
 	$checks = @(
 		@{ File = 'SelfX.Code.json'; Folder = 'App'; Expected = $ExpectedCodeHash; Placeholder = '__SELFX_CODE_HASH__' },
@@ -143,6 +158,9 @@ function Test-SelfXInstalledPackage {
 	)
 	ForEach($check in $checks)
 	{
+		If(($Kind -eq 'ConfigOnly') -and ($check.File -eq 'SelfX.Code.json')) { continue }
+		If(($Kind -eq 'FullWithoutConfig') -and ($check.File -eq 'SelfX.Config.json')) { $notes.Add('The configuration is delivered by a separate package: SelfX.Config.json is not compared here.'); continue }
+		If(($Kind -eq 'ConfigOnly') -and ($check.Expected -ceq $check.Placeholder)) { return [pscustomobject]@{ Reason = 'no digest of SelfX.Config.json in this script (it is not a script of the assistant)'; Notes = $notes.ToArray() } }
 		If($check.Expected -match '^[0-9A-Fa-f]{64}\z')
 		{
 			$problem = Test-SelfXFilesList -Path (Join-Path (Join-Path $InstallFolder $check.Folder) $check.File) -ExpectedHash $check.Expected
@@ -182,7 +200,7 @@ function Test-SelfXTrustAnchor {
 function Exit-Detection {
 	param([int]$Code, [string]$Reason)
 	Write-DetectionLog ("SelfX {0}: {1}" -f $ExpectedVersion, $Reason)
-	if ($Code -eq 0) { Write-Output "SelfX $ExpectedVersion is installed" }
+	if ($Code -eq 0) { Write-Output $(if ($PackageKind -eq 'ConfigOnly') { 'The SelfX configuration is installed' } else { "SelfX $ExpectedVersion is installed" }) }
 	exit $Code
 }
 
@@ -193,7 +211,7 @@ If(-not (Test-Path -LiteralPath $ToolConfigFile)) { Exit-Detection 1 'not detect
 If(-not (Get-Service -Name 'SelfXService' -ErrorAction SilentlyContinue)) { Exit-Detection 1 'not detected (service SelfXService not registered)' }
 
 # The installed package: code version, code files, configuration files (each with its own reason).
-$Result = Test-SelfXInstalledPackage -InstallFolder $InstallFolder -ExpectedVersion $ExpectedVersion -ExpectedCodeHash $ExpectedCodeHash -ExpectedConfigHash $ExpectedConfigHash
+$Result = Test-SelfXInstalledPackage -InstallFolder $InstallFolder -ExpectedVersion $ExpectedVersion -ExpectedCodeHash $ExpectedCodeHash -ExpectedConfigHash $ExpectedConfigHash -Kind $PackageKind
 ForEach($Note in @($Result.Notes)) { Write-DetectionLog $Note }
 If($Result.Reason) { Exit-Detection 1 "not detected ($($Result.Reason))" }
 

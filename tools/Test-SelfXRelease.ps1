@@ -494,7 +494,7 @@ Write-Host '.github\workflows\service-ci.yml'
 $ci = [IO.File]::ReadAllText((Join-Path $RepositoryRoot '.github/workflows/service-ci.yml'))
 Assert ($ci -match '(?m)^  workflow_call:\s*$') 'the CI workflow can be called by the release workflow'
 Assert ([regex]::Matches($ci, 'Test-SelfXRelease\.ps1').Count -eq 2) 'this test runs in Windows PowerShell 5.1 and in PowerShell 7'
-Assert ($ci -match "Count -ne 11") 'the count of the Windows PowerShell 5.1 tests is 11'
+Assert ($ci -match "Count -ne 12") 'the count of the Windows PowerShell 5.1 tests is 12'
 
 # ---------------------------------------------------------------- docs
 Write-Host 'Docs'
