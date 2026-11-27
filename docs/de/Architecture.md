@@ -275,7 +275,7 @@ Nicht von der Bibliothek abgedeckt: das Verhalten der Sperrprüfung ohne Netz (w
 Art Zeitstempel die jeweilige PowerShell-Edition schreibt und die Prüfung eines Katalogs durch den Dienst mit `WinVerifyTrust`.
 
 Tests: `tools\Test-SelfXSigning.ps1`. Teil 1 läuft überall. Teil 2 (Windows) erzeugt selbstsignierte Zertifikate in
-`Cert:\CurrentUser\My`, vertraut ihren öffentlichen Teil in `Cert:\CurrentUser\Root` und entfernt beides am Ende; er läuft auf
+`Cert:\CurrentUser\My`, vertraut ihren öffentlichen Teil in `Cert:\CurrentUser\Root` (auf GitHub Actions `Cert:\LocalMachine\Root` des Einmal-Runners, weil Windows dort auf einen Bestätigungsdialog wartet) und entfernt beides am Ende; er läuft auf
 GitHub Actions (Job *Signing library*, beide PowerShell-Editionen) oder mit `SELFX_TEST_ALLOW_ROOT_IMPORT=1`. `SELFX_TEST_SLOW=1`
 ergänzt die Tests mit einem Zertifikat, das während des Tests abläuft, `SELFX_TEST_TIMESTAMP_URL` den Test mit Zeitstempel.
 

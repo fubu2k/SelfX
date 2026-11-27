@@ -367,7 +367,8 @@ try {
                 Assert ((Test-SelfXSignature -Path $plain -AllowedThumbprint @($thumbB, $thumbA.ToLowerInvariant())).IsValid) 'valid: the signer is one of several allowed signers (any case)'
                 $wrong = Test-SelfXSignature -Path $plain -AllowedThumbprint $thumbB
                 Assert ((-not $wrong.IsValid) -and $wrong.Status -eq 'Valid' -and $wrong.Reason -eq 'SignerNotAllowed') 'wrong signer: status Valid but not in the list (SignerNotAllowed)'
-                Add-Content -LiteralPath $other -Value '# changed after signing'
+                # The signed content is everything before the signature block, so the text is changed there (a line after the block is not covered).
+                [IO.File]::WriteAllText($other, ([IO.File]::ReadAllText($other).Replace('SelfX signing test', 'SelfX signing TEST')), (New-Object System.Text.UTF8Encoding($false)))
                 $changed = Test-SelfXSignature -Path $other -AllowedThumbprint $thumbA
                 Assert ((-not $changed.IsValid) -and $changed.Reason -eq 'HashMismatch') 'a file changed after signing is not valid (HashMismatch)'
                 $notSupported = Test-SelfXSignature -Path $xml -AllowedThumbprint $thumbA

@@ -261,7 +261,7 @@ Not covered by the library: the behaviour of the revocation check without a netw
 which kind of time stamp each PowerShell edition writes, and the check of a catalog by the service with `WinVerifyTrust`.
 
 Tests: `tools\Test-SelfXSigning.ps1`. Part 1 runs everywhere. Part 2 (Windows) creates self-signed certificates in
-`Cert:\CurrentUser\My`, trusts their public part in `Cert:\CurrentUser\Root` and removes both at the end; it runs on GitHub
+`Cert:\CurrentUser\My`, trusts their public part in `Cert:\CurrentUser\Root` (on GitHub Actions `Cert:\LocalMachine\Root` of the disposable runner, because Windows waits there for a confirmation dialog) and removes both at the end; it runs on GitHub
 Actions (job *Signing library*, both PowerShell editions) or with `SELFX_TEST_ALLOW_ROOT_IMPORT=1`. `SELFX_TEST_SLOW=1`
 adds the tests with a certificate that expires during the test, `SELFX_TEST_TIMESTAMP_URL` the test with a time stamp.
 
