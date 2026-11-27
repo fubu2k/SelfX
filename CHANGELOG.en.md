@@ -14,6 +14,27 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Trust mode in the service (`SelfXService.exe`, version 3.1.0):** Before every start of a script the service reads the trust anchor
+  `HKLM\SOFTWARE\SelfX\Trust` (64-bit view). An anchor that is missing, invalid (`Mode` not `Hash` or `Signature`; in the mode signature
+  `Signers` not a list of 1 to 10 SHA1 thumbprints) or not protected (owner other than SYSTEM `S-1-5-18` or Administrators
+  `S-1-5-32-544`, or another identity may change the key) starts nothing: new **event 4006**. `Mode` = `Hash`: behaviour as before.
+  `Mode` = `Signature` (docs/Architecture.md, "The mode signature in the service"): the lists, the catalogs and every listed file are
+  opened once (readable, not writable, replaceable, renamable or deletable) and stay open until the started script has ended;
+  `SelfX.Code.json` must be a member of the signed `App\SelfX.Code.cat` and `SelfX.Config.json` a member of the signed
+  `Config\SelfX.Config.cat`; the file check runs on the open handles; every listed `.ps1`, `.psm1`, `.psd1` and `.dll` must carry an
+  embedded signature; every settings file must be a member of `SelfX.Config.cat`. A signature counts when Windows accepts it
+  (`WinVerifyTrust`) and the signer is in `Signers`. A failed signature check starts nothing, also with `Service_FileCheck` = `Audit`:
+  new **event 4007**. Revocation is checked from the local cache only (no network request). Positive results are kept for 60 minutes
+  per file (path, write time, size and SHA256 of the open handle; never negative results; the list of signers is applied at every
+  start). No new package: the calls of Windows are made directly (class `SelfXTrust`). **`Install.ps1`:** in the mode signature the two
+  catalogs are now installed next to their lists (`SelfX.Code.cat` into `App`, `Config\SelfX.Config.cat` into `Config`) and compared
+  with the checked catalogs after the copy (`Copy-SelfXPayload -SignedPackage`, `Test-SelfXInstalledFiles -SignedPackage`,
+  `Test-SelfXInstalledLists`); in the mode hash no catalog is installed. **Changed behaviour:** an installation without the anchor
+  (installed before the anchor existed, service replaced by hand) starts no action until the package is installed again. New for the
+  experiment behind the check: `tools\SelfXTrustProbe.cs` and `tools\Measure-SelfXTrustCheck.ps1` (cases and time per check on a
+  device). Tests: `Test-ServicePipe.ps1` (anchor missing, invalid and unsafe; pinned files; with test certificates: wrong signer,
+  changed XML, missing and unsigned catalog, unsigned and changed script, unsigned library, cache), `Test-InstallBinaries.ps1` (copy
+  step with catalogs). Not part of this change: the package tools do not sign yet.
 - **Trust mode signature in `Install.ps1` (`-TrustedSigner`, version 3.1.0):** `Install.ps1 -TrustedSigner <thumbprint>[,<thumbprint>]`
   installs a signed package (docs/Architecture.md, "The mode signature in `Install.ps1`"). The list holds SHA1 thumbprints of 40
   hexadecimal characters (at most 10, separated by commas; anything else stops the installation, also a given but empty parameter).

@@ -493,6 +493,8 @@ höchstens 10 Einträge in 10 Minuten; danach meldet 4099 die Zahl der ausgelass
 | 4003 | Warnung | PowerShell 7 ist nicht gegen Änderungen durch Nutzer geschützt; Aktionen als SYSTEM werden nicht gestartet. |
 | 4004 | Fehler | `%ProgramData%\SelfX` ist nicht geschützt (Verknüpfung oder fremder Besitzer); der Dienst schreibt dort nichts, bis ein Administrator es repariert (SelfX neu installieren). |
 | 4005 | Fehler | Installierte Skripte oder Konfigurationen stimmen nicht mit `SelfX.Code.json` und `SelfX.Config.json` überein; der Dienst startet nichts. Mit `Service_FileCheck` = `Audit` nur eine Warnung. |
+| 4006 | Fehler | Der Vertrauensanker `HKLM\SOFTWARE\SelfX\Trust` fehlt, ist ungültig oder kann von einer anderen Identität als SYSTEM und Administratoren geändert werden; der Dienst startet nichts. SelfX neu installieren. |
+| 4007 | Fehler | Vertrauensmodus Signatur: Ein installiertes Skript oder eine Bibliothek hat keine gültige Signatur eines erlaubten Signierers, oder ein signierter Katalog (`SelfX.Code.cat`, `SelfX.Config.cat`) fehlt oder passt nicht; der Dienst startet nichts, auch mit `Service_FileCheck` = `Audit`. Das SelfX-Protokoll nennt Datei und Grund. |
 | 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
 
 ### Die Dateilisten `SelfX.Code.json` und `SelfX.Config.json`
@@ -512,6 +514,14 @@ Installation ersetzt sie.
   alle gelisteten Dateien unverändert sind, dass keine Datei ohne Eintrag im Ordner liegt und
   dass keine Verknüpfung im Weg ist. Bei einer Abweichung startet er nichts und schreibt
   Ereignis 4005.
+- Davor liest der Dienst den Vertrauensanker, den `Install.ps1` geschrieben hat (Ereignis 4006,
+  wenn er fehlt, ungültig oder nicht geschützt ist). Ein mit `-TrustedSigner` installiertes Gerät
+  prüft vor jedem Start zusätzlich Signaturen: die zwei Listen gegen die signierten Kataloge, jedes
+  gelistete Skript und jede Bibliothek über die eingebettete Signatur, die Einstellungsdateien gegen
+  `SelfX.Config.cat` (Ereignis 4007). Die geprüften Dateien bleiben geöffnet und damit unveränderbar,
+  bis das Skript beendet ist. Die Sperrprüfung nutzt nur den lokalen Zwischenspeicher, der Dienst
+  wartet also auf einem Gerät ohne Netz nicht
+  ([Architektur](Architecture.md#der-modus-signatur-im-dienst)).
 - Für den ersten Rollout können Sie `Service_FileCheck` auf `Audit` stellen (nur
   protokollieren).
 - Die Bibliotheken `WinRT\*.dll` (Windows-Update-Schnittstelle) und `Audio\SelfXAudio.dll`
@@ -579,6 +589,8 @@ einmal auf einem Testgerät.
 | Intune erkennt SelfX nach dem Update auf diese Version nicht | Der Vertrauensanker fehlt (`Detection_<Datum>.log`: `trust anchor missing`). Intune installiert das Paket erneut; danach ist der Anker vorhanden. |
 | Intune erkennt ein Update nicht | `Version.txt` und `$ExpectedVersion` sind gleich geblieben, oder Sie haben die Kopie aus dem Repository statt `build\SelfX-Service-<Version>.Detection.ps1` hochgeladen. |
 | SelfX startet keine Aktion | PowerShell 7.6 fehlt (Warnung im `Install.log`), oder Ereignis 4005 meldet eine abweichende Datei. Das SelfX-Protokoll nennt die Einzelheiten. |
+| SelfX startet keine Aktion, Ereignis 4006 | Der Vertrauensanker `HKLM\SOFTWARE\SelfX\Trust` fehlt (Installation eines früheren Builds), wurde geändert, oder seine Rechte erlauben anderen Identitäten als SYSTEM und Administratoren eine Änderung. Paket neu installieren; `Install.ps1` schreibt den Anker mit den richtigen Rechten. |
+| SelfX startet keine Aktion, Ereignis 4007 | Gerät mit `-TrustedSigner` installiert: Das SelfX-Protokoll (`SelfXService.log`) nennt Datei und Grund. `UntrustedRoot` oder `Chaining`: Die Zertifikatskette des Signierers ist auf dem Gerät nicht (mehr) vertrauenswürdig. `Expired`: Das Zertifikat ist abgelaufen und die Signatur hat keinen Zeitstempel. `Revoked`: Das Zertifikat wurde gesperrt. `SignerNotAllowed`: Der Signierer steht nicht in `Signers` des Ankers (mit dem neuen Fingerabdruck in `-TrustedSigner` neu installieren). `NoSignature`, `BadDigest`, `NotInCatalogOrCatalogUnsigned`: Eine Datei wurde geändert oder ist nicht signiert; Paket neu installieren. |
 
 ## Checkliste für die Bereitstellung
 

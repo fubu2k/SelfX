@@ -201,8 +201,8 @@ it with the same function (`WinVerifyTrust`) as programs.
 
 ## The trust anchor
 
-The anchor says which signers a device accepts. `Install.ps1` writes it today (see the next section); the
-service reads it in a later version (**Target**).
+The anchor says which signers a device accepts. `Install.ps1` writes it (see the next section); the
+service reads it before every start (see "The mode signature in the service").
 
 - It is **not** taken from the package, because a package that carries its own anchor only proves
   itself. It comes from the Intune command line:
@@ -242,7 +242,8 @@ on the device is changed (also before the data folder is prepared) it checks the
 
 Then the checks of the mode hash follow unchanged (`SelfX.Binaries.json`, `SelfX.Code.json`,
 `SelfX.Config.json`), and after the copy the installed lists must be byte for byte the lists that the
-catalogs covered. Any difference stops the installation.
+catalogs covered, and the installed catalogs byte for byte the checked catalogs. Any difference stops the
+installation.
 
 | Topic | Behaviour |
 |---|---|
@@ -250,7 +251,7 @@ catalogs covered. Any difference stops the installation.
 | Anchor | Written after the installed files were checked and before the service is registered: `Mode` (`REG_SZ`) and, in the mode signature, `Signers` (`REG_MULTI_SZ`); in the mode hash `Signers` is removed. Owner Administrators, rights not inherited, all accounts by SID. The anchor is read back and its rights are checked. |
 | Downgrade | When the anchor on the device says `Signature` (or cannot be understood) and `-TrustedSigner` is missing, the installation stops. The explicit switch `-AllowHashMode` allows the change to the mode hash. `-AllowHashMode` together with `-TrustedSigner` is an error. |
 | Signed package without `-TrustedSigner` | Refused (the catalog in `Config` is in no list), with a hint to the parameter. |
-| Catalogs on the device | The two catalogs are checked in the package and are **not** installed: the file check of the service accepts only listed files. Installing them and checking them in the service is a later step (**Target**). |
+| Catalogs on the device | In the mode signature both catalogs are installed next to their lists: `SelfX.Code.cat` (top of the package) into `App`, `Config\SelfX.Config.cat` into `Config`. The service checks the lists against them before every start. In the mode hash no catalog is installed. |
 | `Detection.ps1` | The anchor must exist with `Mode` = `Hash` or `Signature`; the mode itself is not judged. An installation without the anchor is not detected and is installed again. |
 | `Uninstall.ps1` | Removes `HKLM\SOFTWARE\SelfX\Trust`. |
 | Message of a refusal | The signature check runs before the log folder is prepared, so its message is not in `Install.log`. It is written to the error stream; run the install command in an elevated console to read it. |
@@ -269,12 +270,63 @@ does not depend on the revocation list.
 `SelfX.Binaries.json` again after signing (a signature changes the hash of a file) and creating the two
 catalogs. `SelfX.Code.cat` is created from the package before the folder `Config` is added.
 
+### The mode signature in the service
+
+Before **every** start of a script (action, health check, background check) `SelfXService.exe` reads the
+anchor `HKLM\SOFTWARE\SelfX\Trust` (64-bit view of the registry).
+
+| Anchor | Behaviour of the service |
+|---|---|
+| The key is missing; `Mode` is not the text `Hash` or `Signature`; in the mode signature `Signers` is missing or is not a list of 1 to 10 SHA1 thumbprints | Nothing is started, event 4006. |
+| The key is owned by an identity other than SYSTEM (`S-1-5-18`) or Administrators (`S-1-5-32-544`), or another identity may set a value, create a sub key or a link, delete the key, change its rights or take ownership | Nothing is started, event 4006. |
+| `Mode` = `Hash` | The file check with both lists as before (event 4005, `Service_FileCheck`). A catalog in `App` or `Config` is then a file without an entry. |
+| `Mode` = `Signature` | The signature check described here (event 4007). |
+
+In the mode signature the service does this before every start:
+
+1. It opens the two lists, the two catalogs (`App\SelfX.Code.cat`, `Config\SelfX.Config.cat`) and every
+   listed file **once**: other processes can read the file, but nobody can write, replace, rename or
+   delete it while the handle is open. The SHA256 and the signature are read from these handles, and the
+   handles stay open until the started script has ended. So the content that was checked is the content
+   that PowerShell reads; there is no second look at a file by its path that could find other content.
+2. `SelfX.Code.json` must be a member of the signed catalog `SelfX.Code.cat`, `SelfX.Config.json` a member
+   of the signed catalog `SelfX.Config.cat`. The names in `SelfX.Code.cat` are paths of the package
+   (`App\...`, `Bin\...`), so the list is found by its hash; the list then binds every installed name
+   to its SHA256.
+3. The file check with both lists, as in the mode hash: every listed file with its SHA256, no file
+   without an entry, no link.
+4. Every listed `.ps1`, `.psm1`, `.psd1` and `.dll` must carry an embedded Authenticode signature: the
+   script that is started, the scripts it loads, the libraries, and the own scripts of the company in
+   `Config`.
+5. Every settings file in `Config` (`Issues_List.xml`, `Health_Config.xml`, `Tool_Config.xml`,
+   `Ticket_Config.xml`, `Network_Test_Config.xml`) must be a member of `SelfX.Config.cat`.
+
+A signature counts when Windows accepts it (`WinVerifyTrust`: content unchanged, certificate chain
+trusted on the device, not expired without a time stamp, not known as revoked) **and** the thumbprint
+of the signer is in `Signers` of the anchor. When step 2, 4 or 5 fails, nothing is started and event
+4007 is written, also with `Service_FileCheck` = `Audit`. `Audit` applies only to a difference of step 3
+that is not a signature problem (for example a file without an entry), as in the mode hash.
+
+| Topic | Behaviour |
+|---|---|
+| Revocation | Checked for the certificate chain without the root, from the local cache of Windows only. The service never asks the network for a revocation list, so it does not wait on a device without a network. A certificate that the cache knows as revoked is refused; a revocation list that is not in the cache does not make a signature invalid. `Install.ps1` asks online during the installation (see above). |
+| Cache | A positive result is kept for 60 minutes per file. It is used only when the path, the write time, the size and the SHA256 read from the open handle are the same; for a member of a catalog the SHA256 of the catalog belongs to it. The stored value is the thumbprint of the signer: whether this signer is allowed is decided at every start from the anchor. Negative results are never kept. The 60 minutes bound what can change without the file changing (a certificate expires, is revoked or is no longer trusted). |
+| Programs | `SelfXService.exe` and `SelfX.exe` are bound by their SHA256 in the signed `SelfX.Code.json`; the service does not check their embedded signature at every start (a replaced service would not check itself). AppLocker or App Control check the signature of programs when they start. |
+| PowerShell 7 | `pwsh.exe` is not signed by the company. As before, the service checks before every start that only SYSTEM, Administrators and TrustedInstaller may change it. |
+| Order | The service decides from `Issues_List.xml` whether a script is an allowed action and then checks the installation. A changed catalog XML therefore never leads to a start: the check refuses it. |
+
+`tools\Measure-SelfXTrustCheck.ps1` (with the test class `tools\SelfXTrustProbe.cs`) is the experiment
+behind this check: it runs the two calls of Windows against known cases (files of Windows, a test signer,
+changed and unsigned files, changed, unsigned and missing catalogs) and measures the time per check on a
+device.
+
 ## The signing library
 
 `tools\SelfXSigning.ps1` holds the functions that sign the files of a package and check signatures. It works in Windows
 PowerShell 5.1 and in PowerShell 7, only defines functions and is not part of the package (nothing of it is installed on
 a device). `Install.ps1` has its own copy of the check (`Test-SelfXFileSignature`, `Test-SelfXPackageCatalog`;
-`Test-InstallBinaries.ps1` checks that both answer alike); the service does not check signatures yet.
+`Test-InstallBinaries.ps1` checks that both answer alike). The service checks signatures with the functions of Windows directly
+(`WinVerifyTrust`, class `SelfXTrust` in `SelfXService.cs`), because it checks open handles and must not ask the network.
 
 | Function | Purpose |
 |---|---|
@@ -335,7 +387,7 @@ version. See [Installation](Installation.md#app-control-for-business-wdac).
 | Component | Runs as | Today | Target |
 |---|---|---|---|
 | `Install.ps1` | SYSTEM, started by Intune, Windows PowerShell 5.1 | compares the package with both lists before copying and the installed folder after copying | the same with both lists; in mode signature also the signatures and the signer |
-| `SelfXService.exe` | SYSTEM | compares `App` with `SelfX.Code.json` and `Config` with `SelfX.Config.json` before every start; no file without an entry, no file next to the two folders and no link may be in the way (event 4005); an own script below `Config` only with its entry and current SHA256 | the same with both lists; in mode signature also the signature of the scripts and the catalog |
+| `SelfXService.exe` | SYSTEM | compares `App` with `SelfX.Code.json` and `Config` with `SelfX.Config.json` before every start; no file without an entry, no file next to the two folders and no link may be in the way (event 4005); an own script below `Config` only with its entry and current SHA256 | reads the trust anchor before every start (event 4006). Mode signature: lists against the signed catalogs, embedded signature of every listed script and library, settings files against `SelfX.Config.cat`, all through handles that stay open during the run (event 4007) |
 | `Detection.ps1` | Intune, Windows PowerShell 5.1 | version and the digests of both lists | code version and configuration digest, separately |
 | SelfX window, status icon | the signed-in user | read only | read only |
 

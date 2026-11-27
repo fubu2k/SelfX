@@ -23,7 +23,8 @@
     match the folder Config, and SelfX.Code.cat (top of the package) must be signed by one of them and match everything else in
     the package (App, Bin, Service, the scripts at the top; so SelfX.Code.json, the language files and the images are covered
     too). SelfX.Code.json and SelfX.Config.json are checked in both modes. Any difference stops the installation before
-    anything on the device is changed. The two catalogs are checked in the package and are not installed. The revocation check
+    anything on the device is changed. The two catalogs are installed next to the lists (App\SelfX.Code.cat,
+    Config\SelfX.Config.cat): the service checks the lists against them before every start. The revocation check
     is the one of Windows (Get-AuthenticodeSignature): a revocation list that cannot be reached does not make a signature
     invalid. After the files are installed, the anchor is written to HKLM\SOFTWARE\SelfX\Trust: Mode (Hash or Signature) and
     Signers (REG_MULTI_SZ, only in the mode Signature); SYSTEM (S-1-5-18) and Administrators (S-1-5-32-544) have full control,
@@ -82,6 +83,8 @@
                                               an allowed signer, signed catalogs Config\SelfX.Config.cat and SelfX.Code.cat, checked before anything
                                               is changed); trust anchor HKLM\SOFTWARE\SelfX\Trust (Mode, Signers) in both modes; -AllowHashMode for
                                               the change from Signature to Hash; parameters are bound by name only
+    3.1.0    2026-11-27  fubu2k               Trust mode Signature: the signed catalogs are installed (SelfX.Code.cat into App, Config\SelfX.Config.cat
+                                              into Config) and compared with the checked catalogs after the copy; the service reads them
 #>
 
 # Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
@@ -371,11 +374,13 @@ function Test-SelfXInstalledFiles {
 	# no link may be in the way; and the install folder itself may hold nothing but App and Config (no mixed state with an older
 	# layout; an empty folder that a running process still uses as working folder is allowed). Throws at the first difference.
 	# Returns the number of checked files.
-	param([Parameter(Mandatory = $true)][string]$InstallFolder)
+	# With -SignedPackage (trust mode Signature) the signed catalog next to each list (App\SelfX.Code.cat, Config\SelfX.Config.cat)
+	# must exist and is not counted as an unlisted file; without the switch a catalog is refused like every unlisted file.
+	param([Parameter(Mandatory = $true)][string]$InstallFolder, [switch]$SignedPackage)
 	$Root = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
 	$Count = 0
 	$Listed = @{}
-	ForEach($List in @(@{ Name = 'SelfX.Code.json'; Folder = 'App' }, @{ Name = 'SelfX.Config.json'; Folder = 'Config' }))
+	ForEach($List in @(@{ Name = 'SelfX.Code.json'; Folder = 'App'; Catalog = 'SelfX.Code.cat' }, @{ Name = 'SelfX.Config.json'; Folder = 'Config'; Catalog = 'SelfX.Config.cat' }))
 	{
 		$ListName = $List.Name
 		$FolderRoot = Join-Path $Root $List.Folder
@@ -384,6 +389,7 @@ function Test-SelfXInstalledFiles {
 		If($FolderItem.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "The folder $($List.Folder) in the installation folder is a link." }
 		$ManifestPath = Join-Path $FolderRoot $ListName
 		If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw "$($List.Folder)\$ListName is missing in the installation folder." }
+		If($SignedPackage -and -not (Test-Path -LiteralPath (Join-Path $FolderRoot $List.Catalog) -PathType Leaf)) { throw "$($List.Folder)\$($List.Catalog) is missing in the installation folder." }
 		ForEach($Entry in @(Read-SelfXFileList -Path $ManifestPath -ListName $ListName -Where 'the installation folder'))
 		{
 			$Relative = $Entry.Name
@@ -404,6 +410,7 @@ function Test-SelfXInstalledFiles {
 			$Relative = $Item.FullName.Substring($FolderRoot.Length + 1).Replace('\', '/')
 			If($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "$($List.Folder)/$Relative is a link." }
 			If($Item.PSIsContainer -or ($Relative -ceq $ListName)) { continue }
+			If($SignedPackage -and ($Relative -ieq $List.Catalog)) { continue }
 			If($Listed[$Relative.ToLowerInvariant()] -ne $ListName) { throw "$($List.Folder)/$Relative is not listed in $ListName." }
 		}
 	}
@@ -462,9 +469,12 @@ function Copy-SelfXPayload {
 	# Copies the checked package into the emptied install folder: App\* (code, SelfX.Code.json), Uninstall.ps1, SelfXService.exe,
 	# SelfX.exe, Bin\WinRT\*.dll (as listed in Bin\SelfX.Binaries.json) and Bin\Audio\SelfXAudio.dll into InstallFolder\App, and
 	# Config\* (configuration, SelfX.Config.json) into InstallFolder\Config. Nothing is copied to the install folder itself.
+	# With -SignedPackage (trust mode Signature) the two signed catalogs are installed next to their lists: SelfX.Code.cat from
+	# the top of the package into App, Config\SelfX.Config.cat into Config. The service checks the lists against them.
 	param(
 		[Parameter(Mandatory = $true)][string]$PackageFolder,
-		[Parameter(Mandatory = $true)][string]$InstallFolder
+		[Parameter(Mandatory = $true)][string]$InstallFolder,
+		[switch]$SignedPackage
 	)
 	$Bin = Join-Path $PackageFolder 'Bin'
 	$App = Join-Path $InstallFolder 'App'
@@ -473,10 +483,11 @@ function Copy-SelfXPayload {
 	New-Item -ItemType Directory -Path $App, $Config -Force | Out-Null
 	Copy-Item -Path (Join-Path (Join-Path $PackageFolder 'App') '*') -Destination $App -Recurse -Force
 	Copy-Item -Path (Join-Path (Join-Path $PackageFolder 'Config') '*') -Destination $Config -Recurse -Force
-	# The signed catalog of the configuration is checked in the package (trust mode Signature) and is not installed: the file check
-	# of the service accepts only files of SelfX.Config.json in Config.
+	# Trust mode Signature: both catalogs are installed. Trust mode Hash: no catalog is installed (the file check of the service
+	# then accepts only the files of the two lists).
 	$ConfigCatalog = Join-Path $Config 'SelfX.Config.cat'
-	If(Test-Path -LiteralPath $ConfigCatalog -PathType Leaf) { Remove-Item -LiteralPath $ConfigCatalog -Force }
+	If($SignedPackage) { Copy-Item -LiteralPath (Join-Path $PackageFolder 'SelfX.Code.cat') -Destination (Join-Path $App 'SelfX.Code.cat') -Force }
+	ElseIf(Test-Path -LiteralPath $ConfigCatalog -PathType Leaf) { Remove-Item -LiteralPath $ConfigCatalog -Force }
 	Copy-Item -LiteralPath (Join-Path $PackageFolder 'Uninstall.ps1') -Destination $App -Force
 	ForEach($Program in @('SelfXService.exe', 'SelfX.exe')) { Copy-Item -LiteralPath (Join-Path $Bin $Program) -Destination (Join-Path $App $Program) -Force }
 	# Library for PowerShell 7 (Windows Update orchestrator).
@@ -668,8 +679,9 @@ function Test-SelfXPackageSignatures {
 	#  4. SelfX.Code.cat at the top of the package is signed by an allowed signer and matches everything else in the package (all
 	#     files outside Config: App with SelfX.Code.json, the language files and the images, Bin with SelfX.Binaries.json, the
 	#     sources in Service, the scripts at the top). So no file of the package is without a signature of an allowed signer.
-	# Returns an object with Files (number of files of step 2) and the SHA256 of the two lists as they were checked (CodeListHash,
-	# ConfigListHash); Install.ps1 compares the installed lists with them after the copy.
+	# Returns an object with Files (number of files of step 2) and the SHA256 of the two lists and of the two catalogs as they were
+	# checked (CodeListHash, ConfigListHash, CodeCatalogHash, ConfigCatalogHash); Install.ps1 compares the installed lists and
+	# catalogs with them after the copy.
 	param(
 		[Parameter(Mandatory = $true)][string]$PackageFolder,
 		[Parameter(Mandatory = $true)][string[]]$AllowedThumbprint
@@ -711,28 +723,33 @@ function Test-SelfXPackageSignatures {
 	}
 	Return [pscustomobject]@{
 		Files          = $Count
-		CodeListHash   = (Get-FileHash -LiteralPath $CodeList -Algorithm SHA256).Hash
-		ConfigListHash = (Get-FileHash -LiteralPath $ConfigList -Algorithm SHA256).Hash
+		CodeListHash      = (Get-FileHash -LiteralPath $CodeList -Algorithm SHA256).Hash
+		ConfigListHash    = (Get-FileHash -LiteralPath $ConfigList -Algorithm SHA256).Hash
+		CodeCatalogHash   = (Get-FileHash -LiteralPath (Join-Path $Root 'SelfX.Code.cat') -Algorithm SHA256).Hash
+		ConfigCatalogHash = (Get-FileHash -LiteralPath (Join-Path $ConfigSource 'SelfX.Config.cat') -Algorithm SHA256).Hash
 	}
 }
 
 function Test-SelfXInstalledLists {
 	# Trust mode Signature, after the copy: the installed lists are byte for byte the lists that the signed catalogs covered when
-	# the package was checked (no second look at the package; a list changed between check and copy is found here). Together with
-	# Test-SelfXInstalledFiles this binds every installed file to the signed package. Throws on a difference.
+	# the package was checked, and the installed catalogs are byte for byte the checked catalogs (no second look at the package; a
+	# list or catalog changed between check and copy is found here). Together with Test-SelfXInstalledFiles this binds every
+	# installed file to the signed package. Throws on a difference.
 	param(
 		[Parameter(Mandatory = $true)][string]$InstallFolder,
 		[Parameter(Mandatory = $true)]$Verified
 	)
 	$Lists = @(
 		@{ Path = (Join-Path (Join-Path $InstallFolder 'App') 'SelfX.Code.json'); Hash = "$($Verified.CodeListHash)"; Name = 'App\SelfX.Code.json' },
-		@{ Path = (Join-Path (Join-Path $InstallFolder 'Config') 'SelfX.Config.json'); Hash = "$($Verified.ConfigListHash)"; Name = 'Config\SelfX.Config.json' }
+		@{ Path = (Join-Path (Join-Path $InstallFolder 'Config') 'SelfX.Config.json'); Hash = "$($Verified.ConfigListHash)"; Name = 'Config\SelfX.Config.json' },
+		@{ Path = (Join-Path (Join-Path $InstallFolder 'App') 'SelfX.Code.cat'); Hash = "$($Verified.CodeCatalogHash)"; Name = 'App\SelfX.Code.cat' },
+		@{ Path = (Join-Path (Join-Path $InstallFolder 'Config') 'SelfX.Config.cat'); Hash = "$($Verified.ConfigCatalogHash)"; Name = 'Config\SelfX.Config.cat' }
 	)
 	ForEach($List in $Lists)
 	{
 		If($List.Hash -notmatch '^[0-9A-Fa-f]{64}\z') { throw "The checked SHA256 of $($List.Name) is missing." }
 		If(-not (Test-Path -LiteralPath $List.Path -PathType Leaf)) { throw "$($List.Name) is missing in the installation folder." }
-		If((Get-FileHash -LiteralPath $List.Path -Algorithm SHA256).Hash -ne $List.Hash) { throw "$($List.Name) in the installation folder is not the list that was checked with the signed catalog (changed between check and copy)." }
+		If((Get-FileHash -LiteralPath $List.Path -Algorithm SHA256).Hash -ne $List.Hash) { throw "$($List.Name) in the installation folder is not the file that was checked in the signed package (changed between check and copy)." }
 	}
 }
 
@@ -989,7 +1006,7 @@ Try
 	# Replace the complete payload so old scripts cannot survive a package upgrade (also an installation in the old layout).
 	Clear-SelfXInstallFolder -InstallFolder $InstallFolder
 	# Code into App, configuration into Config; the programs and libraries from Bin that were checked at the start (.NET 10, self-contained).
-	Copy-SelfXPayload -PackageFolder $PackageFolder -InstallFolder $InstallFolder
+	Copy-SelfXPayload -PackageFolder $PackageFolder -InstallFolder $InstallFolder -SignedPackage:($TrustMode -eq 'Signature')
 	Write-Output 'Installed App (code, SelfXService.exe, SelfX.exe, WinRT and audio libraries from Bin) and Config (configuration).'
 	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM (App and Config inherit the rights).
 	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
@@ -1001,13 +1018,13 @@ Try
 	If(-not (Test-Path -LiteralPath $LauncherExe)) { throw 'SelfX.exe is missing after the installation step.' }
 	# The installed folders must equal the checked package (scripts, configuration, WinRT libraries, both programs), and nothing of
 	# an older layout may be left next to App and Config.
-	$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder
+	$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder -SignedPackage:($TrustMode -eq 'Signature')
 	Write-Output "Installed files checked against App\SelfX.Code.json and Config\SelfX.Config.json ($InstalledFiles files)."
 	# Mode Signature: the installed lists are the ones that the signed catalogs covered.
 	If($TrustMode -eq 'Signature')
 	{
 		Test-SelfXInstalledLists -InstallFolder $InstallFolder -Verified $VerifiedSignatures
-		Write-Output 'Installed lists are the lists of the signed package.'
+		Write-Output 'Installed lists and catalogs (App\SelfX.Code.cat, Config\SelfX.Config.cat) are the ones of the signed package.'
 	}
 	# The trust anchor, before the service is registered and started (the service reads it).
 	Set-SelfXTrustAnchor -Mode $TrustMode -Signers $AllowedSigners

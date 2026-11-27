@@ -471,6 +471,8 @@ after that 4099 reports the number of skipped ones.
 | 4003 | Warning | PowerShell 7 is not protected against changes by users; actions as SYSTEM are not started. |
 | 4004 | Error | `%ProgramData%\SelfX` is not protected (link or foreign owner); the service writes nothing there until an administrator repairs it (reinstall SelfX). |
 | 4005 | Error | Installed scripts or configurations do not match `SelfX.Code.json` and `SelfX.Config.json`; the service starts nothing. With `Service_FileCheck` = `Audit` only a warning. |
+| 4006 | Error | The trust anchor `HKLM\SOFTWARE\SelfX\Trust` is missing, invalid or can be changed by an identity other than SYSTEM and Administrators; the service starts nothing. Install SelfX again. |
+| 4007 | Error | Trust mode signature: an installed script or library has no valid signature of an allowed signer, or a signed catalog (`SelfX.Code.cat`, `SelfX.Config.cat`) is missing or does not match; the service starts nothing, also with `Service_FileCheck` = `Audit`. The SelfX log names the file and the reason. |
 | 4099 | Warning | Further events of the same ID were not written (limit). |
 
 ### The file lists `SelfX.Code.json` and `SelfX.Config.json`
@@ -488,6 +490,13 @@ single list `SelfX.Files.json`; the installation replaces it.
 - The service checks before **every** start (action, health check, background check) that all
   listed files are unchanged, that no file without an entry is in the folder and that no link is
   in the way. On a deviation it starts nothing and writes event 4005.
+- Before that, the service reads the trust anchor that `Install.ps1` wrote (event 4006 when it is
+  missing, invalid or not protected). A device installed with `-TrustedSigner` additionally checks
+  signatures before every start: the two lists against the signed catalogs, every listed script and
+  library by its embedded signature, the settings files against `SelfX.Config.cat` (event 4007). The
+  checked files stay open, and so unchangeable, until the script has ended. Revocation is checked
+  from the local cache only, so the service does not wait on a device without a network
+  ([Architecture](Architecture.md#the-mode-signature-in-the-service)).
 - For the first rollout you can set `Service_FileCheck` to `Audit` (log only).
 - The libraries `WinRT\*.dll` (Windows Update interface) and `Audio\SelfXAudio.dll` (action "No
   sound on this PC") are also checked **when loaded** and kept open meanwhile, so that they cannot
@@ -553,6 +562,8 @@ deployment.
 | Intune does not detect SelfX after the update of this version | The trust anchor is missing (`Detection_<date>.log`: `trust anchor missing`). Intune installs the package again; afterwards the anchor exists. |
 | Intune does not detect an update | `Version.txt` and `$ExpectedVersion` stayed the same, or you uploaded the copy from the repository instead of `build\SelfX-Service-<version>.Detection.ps1`. |
 | SelfX starts no action | PowerShell 7.6 is missing (warning in `Install.log`), or event 4005 reports a deviating file. The SelfX log names the details. |
+| SelfX starts no action, event 4006 | The trust anchor `HKLM\SOFTWARE\SelfX\Trust` is missing (installation of an earlier build), was changed, or its rights allow other identities than SYSTEM and Administrators to change it. Install the package again; `Install.ps1` writes the anchor with the correct rights. |
+| SelfX starts no action, event 4007 | Device installed with `-TrustedSigner`: the SelfX log (`SelfXService.log`) names the file and the reason. `UntrustedRoot` or `Chaining`: the certificate chain of the signer is not (or no longer) trusted on the device. `Expired`: the certificate expired and the signature has no time stamp. `Revoked`: the certificate was revoked. `SignerNotAllowed`: the signer is not in `Signers` of the anchor (install again with the new thumbprint in `-TrustedSigner`). `NoSignature`, `BadDigest`, `NotInCatalogOrCatalogUnsigned`: a file was changed or is not signed; install the package again. |
 
 ## Deployment checklist
 
