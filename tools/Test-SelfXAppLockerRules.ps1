@@ -50,6 +50,8 @@ function Invoke-Rules {
     param([string]$PathList, [string]$OutputFile, [string]$Mode)
     $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $rulesScript, '-PathList', $PathList, '-OutputFile', $OutputFile, '-RuleNamePrefix', 'SelfX test')
     if ($Mode) { $arguments += @('-Mode', $Mode) }
+    # Text on stderr (for example a refused parameter value) is output here, not an error that stops the test.
+    $ErrorActionPreference = 'Continue'
     $output = & $windowsPowerShell @arguments 2>&1 | Out-String
     return [pscustomobject]@{ Exit = $LASTEXITCODE; Output = $output.Trim() }
 }
@@ -282,7 +284,8 @@ try {
             Assert (@($document.SelectNodes('//FilePublisherRule')).Count -eq 3) 'one publisher rule for each of Exe, Dll and Script'
             Assert ($document.SelectNodes('//FileHashRule').Count -eq 0) 'no hash rule in the publisher mode'
             Assert (@($document.SelectNodes('//FilePublisherRule') | Where-Object { $_.GetAttribute('UserOrGroupSid') -ne 'S-1-1-0' }).Count -eq 0) 'all rules apply to the SID S-1-1-0'
-            $expectedPublisher = [string](Get-AppLockerFileInformation -Path $signedOne).Publisher.PublisherName
+            # Read in Windows PowerShell 5.1 (PowerShell 7 reaches the AppLocker cmdlets through a compatibility layer).
+            $expectedPublisher = ("$(& $windowsPowerShell -NoProfile -Command "(Get-AppLockerFileInformation -Path '$signedOne').Publisher.PublisherName")").Trim()
             Assert ($expectedPublisher -and $document.SelectSingleNode('//FilePublisherCondition').GetAttribute('PublisherName') -eq $expectedPublisher) 'the publisher name is the one that AppLocker reads from the signature'
             $bytes = [IO.File]::ReadAllBytes($published)
             Assert (-not ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)) 'file is UTF-8 without BOM'
@@ -301,7 +304,8 @@ try {
         Assert ($result.Exit -eq 1 -and $result.Output -match 'not signed') 'one unsigned file among signed files is refused'
         $tampered = Join-Path $work 'Tampered.ps1'
         Copy-Item -LiteralPath $signedOne -Destination $tampered
-        [IO.File]::AppendAllText($tampered, "`r`nWrite-Output 'changed after signing'`r`n")
+        # Change a character before the signature block (text after the block is not a hash mismatch for every host).
+        [IO.File]::WriteAllText($tampered, ([IO.File]::ReadAllText($tampered).Replace('SelfX rules test', 'SelfX rules TEST')), (New-Object System.Text.UTF8Encoding($false)))
         $result = Invoke-Rules -PathList "$signedOne|$tampered" -OutputFile $refused -Mode Publisher
         Assert ($result.Exit -eq 1 -and $result.Output -match 'not valid') 'a file changed after signing is refused'
         Assert (-not (Test-Path -LiteralPath $refused)) 'no output file after the refusal of a changed file'

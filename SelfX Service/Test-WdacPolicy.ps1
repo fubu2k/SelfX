@@ -159,7 +159,11 @@ else {
 				else {
 					$process.WaitForExit()
 					$log = @(Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue)
-					Assert-True ($process.ExitCode -eq 0) ("the level Publisher runs for a package with signed and unsigned scripts ($(($log | Select-Object -Last 5) -join ' | '))")
+					if ($process.ExitCode -ne 0) {
+						# Diagnosis for a failed run: the signature status of every script as Windows PowerShell 5.1 reads it.
+						$log += @(& powershell.exe -NoProfile -Command "Get-ChildItem -LiteralPath '$signedPackage' -Recurse -File -Filter *.ps1 | ForEach-Object { '{0}: {1}' -f `$_.Name, (Get-AuthenticodeSignature -LiteralPath `$_.FullName).Status }")
+					}
+					Assert-True ($process.ExitCode -eq 0) ("the level Publisher runs for a package with signed and unsigned scripts ($(($log | Where-Object { $_ } | Select-Object -First 12) -join ' | '))")
 					$publisherXml = @(Get-ChildItem -LiteralPath $signedOut -Filter 'SelfX-*-Supplemental.xml' -ErrorAction SilentlyContinue)
 					Assert-True ($publisherXml.Count -eq 1) 'one publisher policy XML is written'
 					if ($publisherXml.Count -eq 1) {

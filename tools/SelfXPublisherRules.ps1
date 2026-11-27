@@ -96,9 +96,13 @@ function Get-SelfXFileSignerState {
     param([Parameter(Mandatory)][string]$Path)
     $name = Split-Path -Leaf $Path
     $signature = $null
+    $readError = $null
     try { $signature = Get-AuthenticodeSignature -LiteralPath $Path -ErrorAction Stop }
-    catch { $signature = $null }
-    return (ConvertTo-SelfXSignerState -Name $name -Signature $signature)
+    catch { $signature = $null; $readError = $_.Exception.GetType().Name }
+    $state = ConvertTo-SelfXSignerState -Name $name -Signature $signature
+    # A file that cannot be read is Invalid with its own status text (not a missing signature, and no text of the exception).
+    if ($null -ne $readError) { $state.Status = "ReadError ($readError)" }
+    return $state
 }
 
 function Get-SelfXSignerSetProblem {
@@ -116,8 +120,8 @@ function Get-SelfXSignerSetProblem {
     if ($list.Count -eq 0) { return 'No file to check.' }
     $invalid = @($list | Where-Object { $_.State -eq 'Invalid' })
     if ($invalid.Count -gt 0) {
-        $first = $invalid[0]
-        return ("The signature of {0} is not valid (status {1}); {2} file(s) are affected. Sign the files again or use the mode Hash." -f $first.Name, $first.Status, $invalid.Count)
+        $listed = @($invalid | Select-Object -First 5 | ForEach-Object { '{0} ({1})' -f $_.Name, $_.Status }) -join ', '
+        return ("The signature of {0} file(s) is not valid: {1}{2}. Sign the files again or use the mode Hash." -f $invalid.Count, $listed, $(if ($invalid.Count -gt 5) { ', ...' } else { '' }))
     }
     $unsigned = @($list | Where-Object { $_.State -eq 'Unsigned' })
     if ($RequireSigned -and $unsigned.Count -gt 0) {
