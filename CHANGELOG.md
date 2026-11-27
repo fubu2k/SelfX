@@ -14,6 +14,31 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Release-Workflow: Nutzlast-Archiv, Release-Notes, automatische Veröffentlichung (`.github\workflows\release.yml`,
+  `tools\SelfXRelease.Common.ps1` 3.1.0):** Ein Versions-Tag baut jetzt neben dem Intune-Paket (`.intunewin`), seinem Erkennungsskript, der
+  SBOM und `SHA256SUMS.txt` auch das **Nutzlast-Archiv** `SelfX-Service-<Version>-payload.zip`: der Paketordner, wie er gepackt wird
+  (`Install.ps1`, `Uninstall.ps1`, `Detection.ps1`, `Bin`, `App` mit `SelfX.Code.json`, `Config` mit der Standardkonfiguration und
+  `SelfX.Config.json`, `Service`), der Paketassistent und die Skripte, die er aufruft (`tools\Wizard`, `New-SelfXPackage.ps1` und die
+  Werkzeuge darunter), `LICENSE.md`, `NOTICE.md` und `NOTICE.en.md`. Das Archiv ist reproduzierbar (Namen in Ordinal-Reihenfolge, feste
+  Zeitmarke). Eine Verknüpfung, ein Name mit nicht erlaubten Zeichen, ein doppelter Name und eine fehlende Pflichtdatei stoppen den Bau.
+  Eine neue Datei des Assistenten muss in die Liste in `SelfXRelease.Common.ps1`; der Test schlägt fehl, bis sie dort steht.
+  `New-SelfXIntuneWin.ps1` hat den neuen Parameter `-PayloadFile` und schreibt das Archiv aus demselben Paketordner, der in die `.intunewin`
+  kommt. Die **Release-Notes** sind der Abschnitt der Version in `CHANGELOG.en.md` (Fehler, wenn er fehlt, doppelt oder leer ist) plus der
+  feste Block "Files and how to verify" (Dateitabelle, ein PowerShell-Befehl, der `SHA256SUMS.txt` prüft, und der Befehl für die
+  Herkunftsbestätigung). `SHA256SUMS.txt` deckt alle Release-Dateien ab. **Das Release wird automatisch veröffentlicht**, wenn im selben
+  Lauf alle Tests des CI-Workflows für den getaggten Commit bestanden haben (`service-ci.yml` hat den neuen Auslöser `workflow_call`;
+  `release.yml` ruft ihn auf) und die Dateien gegen `SHA256SUMS.txt` geprüft wurden (genau die fünf Release-Dateien, Format und jeder
+  Hash). Das Release entsteht zuerst als Entwurf und wird nach dem Hochladen veröffentlicht; schlägt ein Schritt fehl, bleibt kein Release
+  zurück. Die Repository-Variable `RELEASE_DRAFT=true` legt stattdessen einen Entwurf an, und `RELEASE_ATTEST=false` schaltet die optionale
+  Herkunftsbestätigung des Nutzlast-Archivs ab (`actions/attest-build-provenance`; nur dieser Job erhält die Rechte `id-token` und
+  `attestations`). Unverändert: Der Workflow startet nur auf Versions-Tags, das Token, das Releases schreiben kann, wird nur im letzten
+  Schritt des letzten Jobs verwendet (er führt keinen Code des Repositorys aus), es wird kein Geheimnis verwendet, alle Actions sind auf
+  einen Commit-SHA festgelegt (neu: `actions/upload-artifact` 7.0.2, `actions/download-artifact` 8.0.2, `actions/attest-build-provenance`
+  4.2.2). Ein bereits vorhandenes Release wird nie angefasst. Neuer Test `tools\Test-SelfXRelease.ps1` (Notes aus dem Changelog mit den
+  Negativfällen und dem Prüfbefehl der Notes, Nutzlast-Archiv mit Negativfällen und manipulierten Archiven, Prüfsummendatei, Aufbau
+  beider Workflows, Doku), in beiden Test-Jobs der CI. Doku: docs/de/Installation.md, "Alternative: Release auf GitHub", mit den
+  Schritten, den Workflow ohne Release auszuprobieren. Der Workflow selbst ist auf GitHub noch nicht gelaufen.
+
 - **Defender-ASR-Regel für ausführbare Dateien: Diagnose und Ausschluss (`tools\Get-SelfXAsrEvents.ps1` 3.1.0):** Ist die ASR-Regel
   „Block executable files from running unless they meet a prevalence, age, or trusted list criterion“ (`01443614-cd74-433a-b99e-2ecdc07bfc25`)
   aktiv, kann Defender Programme von SelfX blockieren. Das neue, nur lesende Skript `Get-SelfXAsrEvents.ps1` (Windows PowerShell 5.1 und

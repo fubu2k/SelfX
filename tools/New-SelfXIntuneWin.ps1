@@ -42,6 +42,11 @@
 .PARAMETER ToolPath
     Path of the Microsoft IntuneWinAppUtil.exe. Defaults to tools\IntuneWinAppUtil.exe.
 
+.PARAMETER PayloadFile
+    Optional. Also writes the payload archive (SelfX-Service-<version>-payload.zip) to this path: the staged package folder exactly as
+    it is packed into the .intunewin plus the package tools (New-SelfXPayloadArchive in tools\SelfXRelease.Common.ps1). The release
+    workflow uses it; a build with -SourceFolder (the package assistant) does not.
+
 .EXAMPLE
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXIntuneWin.ps1
 
@@ -67,6 +72,7 @@
     1.10.0   2026-11-27  fubu2k               The version comes from Version.txt (no longer from Tool_Config.xml) and is written only into SelfX.Code.json;
                                               SelfX.Config.json gets ConfigRevision
     3.1.0    2026-11-27  fubu2k               Package layout App\ and Config\ instead of Sources\ (ConvertTo-SelfXPackageLayout)
+    3.1.0    2026-11-27  fubu2k               New parameter -PayloadFile: also writes the payload archive of the release (tools\SelfXRelease.Common.ps1)
 #>
 
 [CmdletBinding()]
@@ -76,7 +82,9 @@ param(
     [string]$OutputFolder,
     [string]$ToolPath,
     # Package folder to build from instead of the folder of the repository (used by New-SelfXPackage.ps1: a configured copy).
-    [string]$SourceFolder
+    [string]$SourceFolder,
+    # Target of the payload archive of the release (optional; see .PARAMETER PayloadFile).
+    [string]$PayloadFile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -85,8 +93,12 @@ $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptFolder
 # File classes, SelfX.Code.json, SelfX.Config.json and the Detection.ps1 writer (shared with the tests).
 . (Join-Path $ScriptFolder 'SelfXPackage.Common.ps1')
+# The payload archive of the release.
+. (Join-Path $ScriptFolder 'SelfXRelease.Common.ps1')
 if (-not $OutputFolder) { $OutputFolder = Join-Path $RepositoryRoot 'build' }
 if (-not $ToolPath) { $ToolPath = Join-Path $ScriptFolder 'IntuneWinAppUtil.exe' }
+# A relative path is relative to the current folder of PowerShell (not to the process folder of .NET).
+if ($PayloadFile -and -not [IO.Path]::IsPathRooted($PayloadFile)) { $PayloadFile = Join-Path (Get-Location).ProviderPath $PayloadFile }
 
 # Source folder, setup file and version source of every product. The version is read from Version.txt (the code carries it, not the
 # configuration).
@@ -192,6 +204,12 @@ try {
                 Write-Host ('Service: {0} code files in App, {1} configuration files in Config.' -f $layout.Code, $layout.Config)
                 Write-Host ('Service: SelfX.Code.json lists {0} files.' -f (New-SelfXCodeManifest -Stage $stage -Version $version))
                 Write-Host ('Service: SelfX.Config.json lists {0} files.' -f (New-SelfXConfigManifest -Stage $stage))
+            }
+
+            if ($name -eq 'Service' -and $PayloadFile) {
+                # The package folder as it is now is also the content of the .intunewin; the archive adds the tools of the assistant.
+                $payloadEntries = New-SelfXPayloadArchive -Stage $stage -RepositoryRoot $RepositoryRoot -Target $PayloadFile
+                Write-Host "Service: payload archive with $payloadEntries files: $PayloadFile"
             }
 
             $created = New-PackageFile -Stage $stage -SetupFile $definition.Setup -OutputDir $toolOutput

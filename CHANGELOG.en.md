@@ -14,6 +14,30 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Release workflow: payload archive, release notes, automatic publishing (`.github\workflows\release.yml`, `tools\SelfXRelease.Common.ps1`
+  3.1.0):** A version tag now builds, besides the Intune package (`.intunewin`), its detection script, the SBOM and `SHA256SUMS.txt`, the
+  **payload archive** `SelfX-Service-<version>-payload.zip`: the package folder as it is packed (`Install.ps1`, `Uninstall.ps1`,
+  `Detection.ps1`, `Bin`, `App` with `SelfX.Code.json`, `Config` with the default configuration and `SelfX.Config.json`, `Service`), the
+  package assistant and the scripts it calls (`tools\Wizard`, `New-SelfXPackage.ps1` and the tools below it), `LICENSE.md`, `NOTICE.md` and
+  `NOTICE.en.md`. The archive is reproducible (names in ordinal order, fixed time stamp). A link, a name outside the allowed characters, a
+  name twice and a missing required file stop the build. A new file of the assistant has to be added to the list in
+  `SelfXRelease.Common.ps1`; the test fails until it is. `New-SelfXIntuneWin.ps1` has the new parameter `-PayloadFile` and writes the
+  archive from the same package folder that goes into the `.intunewin`. The **release notes** are the section of the version in
+  `CHANGELOG.en.md` (an error when it is missing, doubled or empty) plus the fixed block "Files and how to verify" (file table, a PowerShell
+  command that checks `SHA256SUMS.txt`, and the command for the build provenance). `SHA256SUMS.txt` covers all release files. **The release
+  is published automatically** when, in the same run, all tests of the CI workflow passed for the tagged commit (`service-ci.yml` has the
+  new trigger `workflow_call`; `release.yml` calls it) and the files were checked against `SHA256SUMS.txt` (exactly the five release files,
+  format and every hash). The release is created as a draft first and published after the upload; if a step fails, no release is left.
+  The repository variable `RELEASE_DRAFT=true` creates a draft instead, and `RELEASE_ATTEST=false` turns off the optional build
+  provenance of the payload archive (`actions/attest-build-provenance`; only that job gets the rights `id-token` and `attestations`).
+  Unchanged: the workflow starts only on version tags, the token that can write releases is used in the last step of the last job only
+  (it runs no code of the repository), no secret is used, all actions are pinned to a commit SHA (new: `actions/upload-artifact` 7.0.2,
+  `actions/download-artifact` 8.0.2, `actions/attest-build-provenance` 4.2.2). A release that already exists is never touched. New test
+  `tools\Test-SelfXRelease.ps1` (notes from the changelog with the negative cases and the check command of the notes, payload archive with
+  negative cases and manipulated archives, checksum file, structure of both workflows, docs), added to both test jobs of the CI. Docs:
+  docs/Installation.md, "Alternative: release on GitHub", with the steps to try the workflow without a release. The workflow itself has
+  not run on GitHub yet.
+
 - **Defender ASR rule for executable files: diagnosis and exclusion (`tools\Get-SelfXAsrEvents.ps1` 3.1.0):** If the ASR rule "Block
   executable files from running unless they meet a prevalence, age, or trusted list criterion" (`01443614-cd74-433a-b99e-2ecdc07bfc25`)
   is active, Defender can block programs of SelfX. New read-only script `Get-SelfXAsrEvents.ps1` (Windows PowerShell 5.1 and PowerShell 7)
