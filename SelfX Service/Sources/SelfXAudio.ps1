@@ -6,7 +6,7 @@
     Dot-sourced by SelfX_Audio_Restore.ps1 (PowerShell 7, user context). Install.ps1 checks the library against the manifest
     of the package and installs it into the folder Audio of the install folder (writable only by administrators). This helper
     adds the check at the moment of loading, in the same way as SelfXWinRT.ps1 (defense in depth):
-      - SelfX.Files.json of the install folder lists the library as "Audio/SelfXAudio.dll" with its SHA256 (written at package
+      - SelfX.Code.json of the install folder lists the library as "Audio/SelfXAudio.dll" with its SHA256 (written at package
         build). The file list, the folder Audio and the DLL must not be a link (junction, symbolic link).
       - Audio must contain exactly this one file. Anything else (changed, missing, additional file, folder, link, missing or
         invalid list) = nothing is loaded.
@@ -18,33 +18,34 @@
     Name    : SelfXAudio.ps1
     Package : SelfX Service
     Context : User, dot-sourced, PowerShell 7
-    Version : 2.8.18
+    Version : 2.9.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.18   2026-11-23  fubu2k               Initial version (hash check before SelfXAudio.dll is loaded).
+    2.9.0    2026-11-27  fubu2k               The hash is read from SelfX.Code.json (the library is code), no longer from SelfX.Files.json.
 #>
 
 # Open file handle of the checked DLL; it stays open until the process ends (see above).
 if ($null -eq $Script:SelfXAudioHandle) { $Script:SelfXAudioHandle = $null }
 
-# SHA256 of Audio/SelfXAudio.dll from SelfX.Files.json of the install folder. Throws when the list is missing, too large, a link,
+# SHA256 of Audio/SelfXAudio.dll from SelfX.Code.json of the install folder. Throws when the list is missing, too large, a link,
 # invalid or does not list the library.
 function Get-SelfXAudioExpectedHash {
 	param([Parameter(Mandatory = $true)][string]$InstallFolder)
-	$listPath = Join-Path $InstallFolder 'SelfX.Files.json'
+	$listPath = Join-Path $InstallFolder 'SelfX.Code.json'
 	$list = Get-Item -LiteralPath $listPath -Force -ErrorAction SilentlyContinue
-	if (-not $list -or $list.PSIsContainer) { throw 'SelfX.Files.json is missing.' }
-	if ($list.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'SelfX.Files.json is a link.' }
-	if ($list.Length -gt 1048576) { throw 'SelfX.Files.json is too large.' }
+	if (-not $list -or $list.PSIsContainer) { throw 'SelfX.Code.json is missing.' }
+	if ($list.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'SelfX.Code.json is a link.' }
+	if ($list.Length -gt 1048576) { throw 'SelfX.Code.json is too large.' }
 	try { $manifest = [IO.File]::ReadAllText($listPath) | ConvertFrom-Json -ErrorAction Stop }
-	catch { throw 'SelfX.Files.json is not valid JSON.' }
-	if (-not $manifest -or "$($manifest.ManifestVersion)" -ne '1' -or -not $manifest.Files) { throw 'SelfX.Files.json has an unknown format.' }
+	catch { throw 'SelfX.Code.json is not valid JSON.' }
+	if (-not $manifest -or "$($manifest.ManifestVersion)" -ne '1' -or -not $manifest.Files) { throw 'SelfX.Code.json has an unknown format.' }
 	$property = $manifest.Files.PSObject.Properties['Audio/SelfXAudio.dll']
-	if (-not $property) { throw 'SelfXAudio.dll is not listed in SelfX.Files.json.' }
+	if (-not $property) { throw 'SelfXAudio.dll is not listed in SelfX.Code.json.' }
 	$hash = "$($property.Value)"
-	if ($hash -notmatch '^[0-9A-Fa-f]{64}$') { throw 'SelfX.Files.json has an invalid hash for Audio/SelfXAudio.dll.' }
+	if ($hash -notmatch '^[0-9A-Fa-f]{64}$') { throw 'SelfX.Code.json has an invalid hash for Audio/SelfXAudio.dll.' }
 	return $hash.ToUpperInvariant()
 }
 
@@ -67,7 +68,7 @@ function Test-SelfXAudioFiles {
 	try {
 		$stream = New-Object IO.FileStream($entries[0].FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
 		$actual = [BitConverter]::ToString([Security.Cryptography.SHA256]::HashData($stream)).Replace('-', '')
-		if ($actual -ne $expected) { throw 'Audio\SelfXAudio.dll does not match SelfX.Files.json.' }
+		if ($actual -ne $expected) { throw 'Audio\SelfXAudio.dll does not match SelfX.Code.json.' }
 	}
 	catch {
 		if ($stream) { $stream.Dispose() }

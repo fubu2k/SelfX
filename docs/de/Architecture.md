@@ -6,11 +6,12 @@ Dieses Dokument beschreibt, wie die Dateien von **SelfX Service** in Klassen ein
 welche Listen sie erfassen, wie ein Gerät entscheidet, ihnen zu vertrauen, und wo die Grenzen
 dieses Vertrauens liegen. Es ist für Administratoren und Prüfer geschrieben.
 
-> **Stand.** Abschnitte mit **Heute** beschreiben SelfX Service 3.0.2: Eine Liste,
-> `SelfX.Files.json`, erfasst alle installierten Dateien (siehe
-> [Installation](Installation.md#die-dateiliste-selfxfilesjson)). Abschnitte mit **Ziel**
-> beschreiben die geplante Struktur mit zwei Listen und zwei Vertrauensmodi. Sie wird in
-> mehreren Schritten eingeführt; bis dahin gilt das Verhalten von 3.0.2.
+> **Stand.** Abschnitte mit **Heute** beschreiben das Umgesetzte: Die Dateien sind auf die Listen
+> `SelfX.Code.json` und `SelfX.Config.json` aufgeteilt (siehe
+> [Installation](Installation.md#die-dateilisten-selfxcodejson-und-selfxconfigjson)). Abschnitte
+> mit **Ziel** beschreiben die geplante Struktur mit Ordneraufbau, Version in der Code-Liste und
+> zwei Vertrauensmodi. Sie wird in mehreren Schritten eingeführt; bis dahin gilt das als
+> **Heute** beschriebene Verhalten.
 
 ## Inhalt
 
@@ -69,11 +70,12 @@ App-Control-Regeln, die darauf beruhen.
 
 ## Zuordnung jeder Datei
 
-Die Tabellen zeigen das Paket **SelfX Service**, wie `tools\New-SelfXIntuneWin.ps1` es heute baut
-(Funktion `New-SelfXFileManifest`). Pfade gelten relativ zum Ordner `SelfX Service` des
+Die Tabellen zeigen das Paket **SelfX Service**, wie `tools\New-SelfXIntuneWin.ps1` es heute baut;
+die Regel, die jeder Datei ihre Klasse gibt, ist die Funktion `Get-SelfXFileClass` in
+`tools\SelfXPackage.Common.ps1`. Pfade gelten relativ zum Ordner `SelfX Service` des
 Repositorys. „Installiert als“ ist der Pfad im Installationsordner (`%ProgramFiles%\SelfX`).
 
-**Heute** listet `SelfX.Files.json`: jede Datei unter `Sources` (89 Dateien), `Uninstall.ps1`, die
+**Heute** enthalten die zwei Listen zusammen: jede Datei unter `Sources` (89 Dateien), `Uninstall.ps1`, die
 DLLs aus `Bin\WinRT` (als `WinRT/<Name>`), `Bin\Audio\SelfXAudio.dll` (als
 `Audio/SelfXAudio.dll`) und die Programme `SelfXService.exe` und `SelfX.exe` aus `Bin`. Dateien
 mit dem Namen `Test-*.ps1` und der Ordner `Service\Projects` werden vor dem Verpacken aus dem
@@ -117,18 +119,37 @@ Die 89 Dateien unter `Sources` ergeben sich aus den Zeilen oben: 22 + 5 + 1 + 24
 | `Service\SelfXService.cs`, `SelfXLauncher.cs`, `SelfXSessionStarter.cs`, `SelfXWinRT.cs`, `SelfXAudio.cs` | nein | Code (Quelltext der Programme), nicht gelistet, **offen** (Punkt 1) |
 | `Bin\SelfXSessionStarter.dll` | nein (wird nur von `Install.ps1` geladen) | Code, nicht gelistet, **offen** (Punkt 1) |
 | `Bin\SelfX.Binaries.json` | nein | Bauprotokoll der Programme, nicht gelistet, **offen** (Punkt 1) |
-| `SelfX.Files.json` | ja (beim Bau geschrieben) | die Liste selbst; im Ziel durch die zwei Listen ersetzt |
+| `SelfX.Code.json`, `SelfX.Config.json` | ja (beim Bau geschrieben) | die zwei Listen selbst; sie listen jede andere installierte Datei, nicht sich selbst |
 
 ## Die zwei Listen
 
-### Heute: `SelfX.Files.json`
+### Heute: `SelfX.Code.json` und `SelfX.Config.json`
 
-Ein JSON-Objekt mit `ManifestVersion` (1), `ToolVersion`, `BuiltUtc` und `Files`. `Files`
+Jede Liste ist ein JSON-Objekt mit `ManifestVersion` (1) und `Files`; `SelfX.Code.json` hat außerdem
+`ToolVersion`, `SelfX.Config.json` außerdem `BuiltUtc`. Die Code-Liste hat keine Bauzeit, derselbe
+Code ergibt also immer dieselben Bytes. `Files`
 ordnet dem relativen Namen jeder Datei (Schrägstriche) ihren SHA256 zu. Ein Name besteht aus
 Buchstaben, Ziffern, `_`, Leerzeichen, `.`, `(`, `)` und `-`, und jeder Abschnitt beginnt mit
 einem Buchstaben, einer Ziffer oder `_`; ein Abschnitt ist nie `.` oder `..`. Der Paketbau
-schreibt die Liste, `Install.ps1` kopiert sie in den Installationsordner, und ihr Digest steckt
-in der `Detection.ps1`, die nach Intune hochgeladen wird.
+schreibt beide Listen, `Install.ps1` kopiert sie in den Installationsordner, und ihre zwei
+Digests stecken in der `Detection.ps1`, die nach Intune hochgeladen wird. Ein Paket einer
+früheren Version hat stattdessen `SelfX.Files.json`; `Install.ps1` leert den alten
+Installationsordner vor dem Kopieren, es bleibt also keine alte Liste zurück (der Dienst würde
+eine übrig gebliebene als Datei ohne Eintrag melden).
+
+**Zu welcher Liste eine Datei gehört.** `Get-SelfXFileClass` kennt die Dateien des Projekts nach
+Namen. Konfiguration sind die fünf Einstellungsdateien, alles unter `Branding` sowie jedes
+andere Skript in `Scripts_to_run` und `HealthChecks` und jede andere Sprachdatei in `Languages`,
+die nicht auf der Liste des Projekts steht (eigene Aktionen, eigene Prüfungen, eine eigene
+Sprache). Jede Datei, die keine Regel kennt, stoppt den Bau (fail closed). `Install.ps1` und der
+Dienst kennen die Namensliste nicht; sie prüfen nur, dass keine Datei in beiden Listen oder in
+keiner steht, dass die Code-Liste keine Einstellungsdatei und keine Datei aus `Branding` enthält
+und dass die Konfigurationsliste nur Einstellungsdateien, `Branding`-Dateien, eigene Skripte und
+eigene Sprachdateien enthält. So lässt sich kein Programm, keine Bibliothek, kein
+`Uninstall.ps1` und kein Skript des Projekts in die Liste verschieben, die die Dateien der Firma
+trägt. Der Test `Test-FileManifest.ps1` hält die Namensliste gleich den Dateien des Repositorys:
+Eine neue Projektdatei muss in `$script:SelfXCodeFileNames` ergänzt werden, sonst schlägt der
+Test fehl.
 
 **Digest einer Liste:** SHA256 über die Zeilen `<Name>=<SHA256 in Großbuchstaben>`, nach Namen
 sortiert (ordinal), mit LF verbunden, UTF-8 ohne BOM. `Detection.ps1` und der Bau verwenden
@@ -139,7 +160,7 @@ dieselbe Funktion.
 | | `SelfX.Code.json` | `SelfX.Config.json` |
 |---|---|---|
 | Listet | alle Dateien der Klasse *Code* | alle Dateien der Klassen *Konfiguration* und *eigener Code der Firma* |
-| Felder | `ManifestVersion`, `ToolVersion`, `BuiltUtc`, `Files` | `ManifestVersion`, `ConfigRevision` (UTC-Zeit des Assistentenlaufs), `MinCodeVersion` (nur in einem Paket, das allein die Konfiguration ersetzt), `Files` |
+| Felder | `ManifestVersion`, `ToolVersion`, `Files` (keine Bauzeit, damit die Datei reproduzierbar ist) | `ManifestVersion`, `ConfigRevision` (UTC-Zeit des Assistentenlaufs), `MinCodeVersion` (nur in einem Paket, das allein die Konfiguration ersetzt), `Files` |
 | `Files` | relativer Name → SHA256, gleiche Namensregeln wie heute | gleich |
 | Geschrieben von | dem Release-Build (GitHub Actions); für jede Firma identisch | dem Paketassistenten, automatisch; niemand bearbeitet sie von Hand |
 | Ändert sich, wenn | sich der Code ändert | sich die Konfiguration ändert |
@@ -225,9 +246,9 @@ Siehe [Installation](Installation.md#app-control-for-business-wdac).
 
 | Komponente | Läuft als | Heute | Ziel |
 |---|---|---|---|
-| `Install.ps1` | SYSTEM, von Intune gestartet, Windows PowerShell 5.1 | vergleicht das Paket vor dem Kopieren und den installierten Ordner nach dem Kopieren mit `SelfX.Files.json` | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signaturen und der Signierer |
-| `SelfXService.exe` | SYSTEM | vergleicht vor jedem Start den installierten Ordner mit `SelfX.Files.json`; keine Datei ohne Eintrag und keine Verknüpfung darf im Weg sein (Ereignis 4005) | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signatur der Skripte und des Katalogs |
-| `Detection.ps1` | Intune, Windows PowerShell 5.1 | Version und Digest von `SelfX.Files.json` | Code-Version und Konfigurations-Digest, getrennt |
+| `Install.ps1` | SYSTEM, von Intune gestartet, Windows PowerShell 5.1 | vergleicht das Paket vor dem Kopieren und den installierten Ordner nach dem Kopieren mit beiden Listen | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signaturen und der Signierer |
+| `SelfXService.exe` | SYSTEM | vergleicht vor jedem Start den installierten Ordner mit beiden Listen; keine Datei ohne Eintrag und keine Verknüpfung darf im Weg sein (Ereignis 4005) | dasselbe mit beiden Listen; im Modus Signatur zusätzlich die Signatur der Skripte und des Katalogs |
+| `Detection.ps1` | Intune, Windows PowerShell 5.1 | Version und die Digests beider Listen | Code-Version und Konfigurations-Digest, getrennt |
 | SelfX-Fenster, Statussymbol | der angemeldete Nutzer | nur lesend | nur lesend |
 
 Nutzer können dem Dienst weder Pfad noch Befehl, Argument oder Code übergeben. Der Dienst startet
@@ -241,18 +262,16 @@ abgebrochen wurde.
 
 ## Dateien mit offener Klasse
 
-Die Zuordnung oben wurde gegen die Dateien des Repositorys und gegen `New-SelfXFileManifest`
+Die Zuordnung oben wurde gegen die Dateien des Repositorys und gegen `Get-SelfXFileClass`
 geprüft. Diese Punkte lassen sich ohne eine weitere Regel nicht klären:
 
 1. **Dateien außerhalb des installierten Satzes:** `Install.ps1` prüft die Listen, kann also nicht
    in einer Liste stehen, die es prüft. `Detection.ps1` ist eine Vorlage: Der Bau ersetzt den
-   Platzhalter `__SELFX_FILES_HASH__`, sodass jedes Paket eine eigene Kopie hat. `README*.md`,
+   Platzhalter `__SELFX_CODE_HASH__` und `__SELFX_CONFIG_HASH__`, sodass jedes Paket eine eigene Kopie hat. `README*.md`,
    `Service\*.cs`, `Bin\SelfXSessionStarter.dll` und `Bin\SelfX.Binaries.json` werden
-   ausgeliefert, aber nicht installiert und stehen heute nicht in `SelfX.Files.json`.
-2. **Firmendateien in Projektordnern:** Die Dokumentation beschreibt, eigene Skripte in
-   `Scripts_to_run` und `HealthChecks` abzulegen und eine Sprache hinzuzufügen, indem man `en.xml`
-   nach `Languages\<Kultur>.xml` kopiert. Eine Regel, die eine Projektdatei von einer Firmendatei
-   im selben Ordner unterscheidet, ist noch nicht festgelegt.
+   ausgeliefert, aber nicht installiert und stehen heute nicht in den Listen.
+2. **Firmendateien in Projektordnern:** geklärt. Die Namensliste des Projekts unterscheidet eine
+   Projektdatei von einer Firmendatei im selben Ordner (siehe oben).
 3. **`Bin\WinRT\*.dll`:** Die Windows-SDK-Projektions-DLLs neben `SelfXWinRT.dll` sind die Ausgabe
    von `dotnet publish`. Der Ordner `Bin` gehört nicht zum Repository, daher lassen sich ihre
    Namen hier nicht aufführen.

@@ -425,13 +425,18 @@ after that 4099 reports the number of skipped ones.
 | 4002 | Warning | A request or connection was rejected (invalid, not allowed, limit). |
 | 4003 | Warning | PowerShell 7 is not protected against changes by users; actions as SYSTEM are not started. |
 | 4004 | Error | `%ProgramData%\SelfX` is not protected (link or foreign owner); the service writes nothing there until an administrator repairs it (reinstall SelfX). |
-| 4005 | Error | Installed scripts or configurations do not match `SelfX.Files.json`; the service starts nothing. With `Service_FileCheck` = `Audit` only a warning. |
+| 4005 | Error | Installed scripts or configurations do not match `SelfX.Code.json` and `SelfX.Config.json`; the service starts nothing. With `Service_FileCheck` = `Audit` only a warning. |
 | 4099 | Warning | Further events of the same ID were not written (limit). |
 
-### The file list `SelfX.Files.json`
+### The file lists `SelfX.Code.json` and `SelfX.Config.json`
 
-The package build writes the SHA256 of every installed file to `SelfX.Files.json`. It is created
-again with every build; you do not have to maintain anything by hand.
+The package build writes the SHA256 of every installed file to one of two lists. `SelfX.Code.json`
+holds the programs, libraries and the scripts, language files and images of the project;
+`SelfX.Config.json` holds the settings files, everything below `Branding` and your own scripts and
+language files. Every file is in exactly one list; a file in both lists, in none, or in the wrong
+list is refused. The lists are created again with every build; you do not have to maintain
+anything by hand. A changed company logo changes only `SelfX.Config.json`. Earlier versions had a
+single list `SelfX.Files.json`; the installation replaces it.
 
 - `Install.ps1` checks before and after copying that every file matches the list and that no
   file without an entry is in the package.
@@ -446,8 +451,8 @@ again with every build; you do not have to maintain anything by hand.
   not an attacker with administrator rights. The folder rights and App Control help against
   that.
 
-Which file belongs to which class, the planned split into a code list and a configuration list and
-the trust modes are described in [Architecture](Architecture.md).
+Which file belongs to which class, the split into the code list and the configuration list and the
+planned trust modes are described in [Architecture](Architecture.md).
 
 ### Execution policy `-ExecutionPolicy Bypass`
 

@@ -443,13 +443,19 @@ höchstens 10 Einträge in 10 Minuten; danach meldet 4099 die Zahl der ausgelass
 | 4002 | Warnung | Eine Anfrage oder Verbindung wurde abgelehnt (ungültig, nicht erlaubt, Begrenzung). |
 | 4003 | Warnung | PowerShell 7 ist nicht gegen Änderungen durch Nutzer geschützt; Aktionen als SYSTEM werden nicht gestartet. |
 | 4004 | Fehler | `%ProgramData%\SelfX` ist nicht geschützt (Verknüpfung oder fremder Besitzer); der Dienst schreibt dort nichts, bis ein Administrator es repariert (SelfX neu installieren). |
-| 4005 | Fehler | Installierte Skripte oder Konfigurationen stimmen nicht mit `SelfX.Files.json` überein; der Dienst startet nichts. Mit `Service_FileCheck` = `Audit` nur eine Warnung. |
+| 4005 | Fehler | Installierte Skripte oder Konfigurationen stimmen nicht mit `SelfX.Code.json` und `SelfX.Config.json` überein; der Dienst startet nichts. Mit `Service_FileCheck` = `Audit` nur eine Warnung. |
 | 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
 
-### Die Dateiliste `SelfX.Files.json`
+### Die Dateilisten `SelfX.Code.json` und `SelfX.Config.json`
 
-Der Paketbau schreibt den SHA256 jeder installierten Datei in `SelfX.Files.json`. Sie wird bei
-jedem Bau neu erzeugt; Sie müssen nichts von Hand pflegen.
+Der Paketbau schreibt den SHA256 jeder installierten Datei in eine von zwei Listen.
+`SelfX.Code.json` enthält die Programme, Bibliotheken sowie die Skripte, Sprachdateien und Bilder
+des Projekts; `SelfX.Config.json` enthält die Einstellungsdateien, alles unter `Branding` und Ihre
+eigenen Skripte und Sprachdateien. Jede Datei steht in genau einer Liste; eine Datei in beiden
+Listen, in keiner oder in der falschen Liste wird abgelehnt. Die Listen werden bei jedem Bau neu
+erzeugt; Sie müssen nichts von Hand pflegen. Ein geändertes Firmenlogo ändert nur
+`SelfX.Config.json`. Frühere Versionen hatten eine einzige Liste `SelfX.Files.json`; die
+Installation ersetzt sie.
 
 - `Install.ps1` prüft vor und nach dem Kopieren, dass jede Datei zur Liste passt und keine
   Datei ohne Eintrag im Paket liegt.
@@ -466,8 +472,8 @@ jedem Bau neu erzeugt; Sie müssen nichts von Hand pflegen.
   `SelfX.exe`, aber keinen Angreifer mit Administratorrechten. Dagegen helfen die
   Ordnerrechte und App Control.
 
-Welche Datei zu welcher Klasse gehört, die geplante Aufteilung in eine Code-Liste und eine
-Konfigurationsliste sowie die Vertrauensmodi beschreibt die [Architektur](Architecture.md).
+Welche Datei zu welcher Klasse gehört, die Aufteilung in eine Code-Liste und eine
+Konfigurationsliste sowie die geplanten Vertrauensmodi beschreibt die [Architektur](Architecture.md).
 
 ### Ausführungsrichtlinie `-ExecutionPolicy Bypass`
 

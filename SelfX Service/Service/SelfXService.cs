@@ -46,7 +46,7 @@ Notes:
     Name    : SelfXService.cs
     Package : SelfX Service
     Context : System (LOCAL SYSTEM service; current user in /console mode)
-    Version : 2.8.21
+    Version : 2.9.0
 
     History:
     Version  Date        Author               Change
@@ -66,6 +66,8 @@ Notes:
                                               N6: every PowerShell child (RUN, HEALTH, background) is put into a job object with
                                               KILL_ON_JOB_CLOSE; when the service stops, the whole process tree is ended, so an update or
                                               uninstall finds no SYSTEM process that still holds files. No new action starts while stopping.
+    2.9.0    2026-11-27  fubu2k               The file check reads two lists, SelfX.Code.json and SelfX.Config.json, instead of SelfX.Files.json; a file
+                                              in both lists or in the wrong list (placement rule) is an invalid entry (event 4005)
 */
 
 using System;
@@ -1011,16 +1013,22 @@ namespace SelfX
             finally { WTSFreeMemory(info); }
         }
 
-        const string FileListName = "SelfX.Files.json";
+        // The two lists written at package build (tools\SelfXPackage.Common.ps1): code (same for every company) and configuration.
+        const string CodeListName = "SelfX.Code.json";
+        const string ConfigListName = "SelfX.Config.json";
+        static readonly string[] FileListNames = { CodeListName, ConfigListName };
+        static readonly string[] ConfigFileNames = { "Health_Config.xml", "Issues_List.xml", "Network_Test_Config.xml", "Ticket_Config.xml", "Tool_Config.xml" };
+        static readonly Regex ConfigScriptPattern = new Regex(@"^(Scripts_to_run|HealthChecks)/[A-Za-z0-9._-]+\.ps1\z", RegexOptions.CultureInvariant);
+        static readonly Regex ConfigLanguagePattern = new Regex(@"^Languages/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml\z", RegexOptions.CultureInvariant);
         const long MaxFileListBytes = 1048576;
         const int MaxFileProblems = 20;
-        // Same rule as the generator (tools\New-SelfXIntuneWin.ps1): plain relative names with forward slashes.
+        // Same rule as the generator (tools\SelfXPackage.Common.ps1): plain relative names with forward slashes.
         static readonly Regex ListedNamePattern = new Regex(@"^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*\z", RegexOptions.CultureInvariant);
         static readonly Regex Sha256Pattern = new Regex(@"^[0-9A-Fa-f]{64}\z", RegexOptions.CultureInvariant);
         // The generator lists every file of the installation (scripts, configuration, images, WinRT and Audio libraries, both
         // programs), so no file of any type may exist in the install folder without an entry in the list (a stray .config,
-        // .json, .cmd, .manifest or .dll.config next to a checked program would otherwise go unnoticed). Only the list itself
-        // is exempt. A replaced SelfXService.exe skips its own check: this detects accidents (broken update); the protection
+        // .json, .cmd, .manifest or .dll.config next to a checked program would otherwise go unnoticed). Only the two lists
+        // themselves are exempt. A replaced SelfXService.exe skips its own check: this detects accidents (broken update); the protection
         // against an attacker is the folder ACL and App Control.
         // Checked first, so that a long list of other problems cannot hide them: the configuration read by CheckInstalledFiles
         // (Service_FileCheck) and the action catalog.
@@ -1029,11 +1037,80 @@ namespace SelfX
         const string TruncatedProblem = "check stopped: more problems may exist";
 
         /// <summary>
-        /// Compare the installed scripts and configuration with SelfX.Files.json (written at package build, copied
-        /// by Install.ps1). Every listed file must exist with the listed SHA256; no file below the root may be
-        /// missing from the list; no link (junction, symbolic link) may be in the way. Returns false and the problems (at most
-        /// 20, "kind: name", plus the entry TruncatedProblem when the check stopped there; Tool_Config.xml and Issues_List.xml
-        /// are checked first) when anything differs, when the list is missing, too large or invalid (fail closed).
+        /// Placement rule (same as Test-SelfXListPlacement in Install.ps1 and tools\SelfXPackage.Common.ps1): SelfX.Code.json may
+        /// hold any file that is not a settings file or below Branding; SelfX.Config.json only settings files, files below Branding,
+        /// own scripts in Scripts_to_run or HealthChecks and own language files. Both lists are written by the administrator of the
+        /// package, but a file that does not belong in a list is refused, so no program or script of the project can be moved
+        /// into the list that carries the company's own files.
+        /// </summary>
+        static bool IsAllowedInList(string name, string listName)
+        {
+            bool isConfigFile = name.StartsWith("Branding/", StringComparison.Ordinal) && name.Length > "Branding/".Length;
+            foreach (string known in ConfigFileNames)
+            {
+                if (string.Equals(known, name, StringComparison.Ordinal)) isConfigFile = true;
+            }
+            if (listName == CodeListName) return !isConfigFile;
+            return isConfigFile || ConfigScriptPattern.IsMatch(name) || ConfigLanguagePattern.IsMatch(name);
+        }
+
+        static bool HasDotSegment(string name)
+        {
+            foreach (string segment in name.Split('/'))
+            {
+                if (segment == "." || segment == "..") return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Reads one list into expected (name -> SHA256, case-insensitive names). A name that is already in expected (listed twice or
+        /// in both lists) or that is not allowed in this list is an invalid entry. Returns false and a problem text when the list
+        /// is missing, a link, too large or invalid (fail closed).
+        /// </summary>
+        static bool ReadFileList(string root, string listName, Dictionary<string, string> expected, out string problem)
+        {
+            problem = null;
+            string listPath = Path.Combine(root, listName);
+            FileInfo listInfo = new FileInfo(listPath);
+            if (!listInfo.Exists) { problem = "file list: " + listName + " missing"; return false; }
+            if ((listInfo.Attributes & FileAttributes.ReparsePoint) != 0) { problem = "file list: " + listName + " is a link"; return false; }
+            if (listInfo.Length > MaxFileListBytes) { problem = "file list: " + listName + " too large"; return false; }
+            int count = 0;
+            using (JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(listPath), new JsonDocumentOptions { MaxDepth = 4 }))
+            {
+                JsonElement top = document.RootElement;
+                JsonElement version, files;
+                if (top.ValueKind != JsonValueKind.Object || !top.TryGetProperty("ManifestVersion", out version) ||
+                    version.ValueKind != JsonValueKind.Number || version.GetInt32() != 1 ||
+                    !top.TryGetProperty("Files", out files) || files.ValueKind != JsonValueKind.Object)
+                {
+                    problem = "file list: " + listName + " unsupported format";
+                    return false;
+                }
+                foreach (JsonProperty entry in files.EnumerateObject())
+                {
+                    string hash = entry.Value.ValueKind == JsonValueKind.String ? entry.Value.GetString() : null;
+                    if (!ListedNamePattern.IsMatch(entry.Name) || HasDotSegment(entry.Name) ||
+                        hash == null || !Sha256Pattern.IsMatch(hash) || expected.ContainsKey(entry.Name) || !IsAllowedInList(entry.Name, listName))
+                    {
+                        problem = "file list: " + listName + " invalid entry";
+                        return false;
+                    }
+                    expected[entry.Name] = hash;
+                    count++;
+                }
+            }
+            if (count == 0) { problem = "file list: " + listName + " empty"; return false; }
+            return true;
+        }
+
+        /// <summary>
+        /// Compare the installed scripts and configuration with SelfX.Code.json and SelfX.Config.json (written at package build,
+        /// copied by Install.ps1). Every listed file must exist with the listed SHA256, in exactly one of the two lists; no file
+        /// below the root may be missing from the lists; no link (junction, symbolic link) may be in the way. Returns false and the
+        /// problems (at most 20, "kind: name", plus the entry TruncatedProblem when the check stopped there; Tool_Config.xml and
+        /// Issues_List.xml are checked first) when anything differs, when a list is missing, too large or invalid (fail closed).
         /// </summary>
         static bool VerifyInstalledFiles(string root, out List<string> problems)
         {
@@ -1042,35 +1119,12 @@ namespace SelfX
             try
             {
                 root = root.TrimEnd('\\');
-                string listPath = Path.Combine(root, FileListName);
-                FileInfo listInfo = new FileInfo(listPath);
-                if (!listInfo.Exists) { problems.Add("file list: missing"); return false; }
-                if ((listInfo.Attributes & FileAttributes.ReparsePoint) != 0) { problems.Add("file list: is a link"); return false; }
-                if (listInfo.Length > MaxFileListBytes) { problems.Add("file list: too large"); return false; }
                 Dictionary<string, string> expected = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                using (JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(listPath), new JsonDocumentOptions { MaxDepth = 4 }))
+                foreach (string listName in FileListNames)
                 {
-                    JsonElement top = document.RootElement;
-                    JsonElement version, files;
-                    if (top.ValueKind != JsonValueKind.Object || !top.TryGetProperty("ManifestVersion", out version) ||
-                        version.ValueKind != JsonValueKind.Number || version.GetInt32() != 1 ||
-                        !top.TryGetProperty("Files", out files) || files.ValueKind != JsonValueKind.Object)
-                    {
-                        problems.Add("file list: unsupported format");
-                        return false;
-                    }
-                    foreach (JsonProperty entry in files.EnumerateObject())
-                    {
-                        string hash = entry.Value.ValueKind == JsonValueKind.String ? entry.Value.GetString() : null;
-                        if (!ListedNamePattern.IsMatch(entry.Name) || hash == null || !Sha256Pattern.IsMatch(hash) || expected.ContainsKey(entry.Name))
-                        {
-                            problems.Add("file list: invalid entry");
-                            return false;
-                        }
-                        expected[entry.Name] = hash;
-                    }
+                    string listProblem;
+                    if (!ReadFileList(root, listName, expected, out listProblem)) { problems.Add(listProblem); return false; }
                 }
-                if (expected.Count == 0) { problems.Add("file list: empty"); return false; }
 
                 // Configuration and catalog first, then the rest.
                 List<KeyValuePair<string, string>> ordered = new List<KeyValuePair<string, string>>();
@@ -1111,7 +1165,7 @@ namespace SelfX
             }
             catch (Exception ex)
             {
-                // Fail closed: when the list or the files cannot be read, nothing is started.
+                // Fail closed: when a list or the files cannot be read, nothing is started.
                 problems.Add("check failed: " + ex.GetType().Name);
                 return false;
             }
@@ -1155,13 +1209,18 @@ namespace SelfX
                 DirectoryInfo sub = entry as DirectoryInfo;
                 if (sub != null) { FindUnlistedFiles(sub, root, listed, problems, ref truncated); continue; }
                 // Any file type: the list is the complete content of the install folder (see the comment at PriorityFiles).
-                if (string.Equals(relative, FileListName, StringComparison.OrdinalIgnoreCase)) continue;
+                bool isList = false;
+                foreach (string listName in FileListNames)
+                {
+                    if (string.Equals(relative, listName, StringComparison.OrdinalIgnoreCase)) isList = true;
+                }
+                if (isList) continue;
                 if (!listed.ContainsKey(relative)) AddProblem(problems, "not listed: " + relative, ref truncated);
             }
         }
 
         /// <summary>
-        /// Called before every start of a script. Returns true when the installed files match SelfX.Files.json. Otherwise
+        /// Called before every start of a script. Returns true when the installed files match SelfX.Code.json and SelfX.Config.json. Otherwise
         /// nothing is started (Enforce, default); with Service_FileCheck=Audit in Tool_Config.xml the problem is only logged.
         /// The setting counts only when the file list is intact, Tool_Config.xml itself is not among the problems and the check
         /// was not cut off at the problem limit (Tool_Config.xml is checked first, but a cut-off list cannot prove it).
@@ -1177,10 +1236,10 @@ namespace SelfX
             if (settingTrusted) audit = string.Equals(ReadToolConfigValue("Service_FileCheck"), "Audit", StringComparison.OrdinalIgnoreCase);
             string shown = string.Join("; ", problems.GetRange(0, Math.Min(5, problems.Count)));
             string cutOff = truncated ? " The check stopped after " + MaxFileProblems + " problems; the list is incomplete." : "";
-            Log("Installed files do not match " + FileListName + " (" + shown + ")." + cutOff + " '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
+            Log("Installed files do not match " + CodeListName + " and " + ConfigListName + " (" + shown + ")." + cutOff + " '" + scriptName + (audit ? "' is started anyway (Service_FileCheck=Audit)." : "' was not started."));
             SecurityEvent(EventFilesChanged, audit ? EventLogEntryType.Warning : EventLogEntryType.Error,
-                (audit ? "Installed SelfX files do not match SelfX.Files.json (Audit: actions as SYSTEM are still started). See the SelfX log."
-                       : "Installed SelfX files do not match SelfX.Files.json; SelfX actions as SYSTEM are not started. See the SelfX log.") + cutOff);
+                (audit ? "Installed SelfX files do not match SelfX.Code.json and SelfX.Config.json (Audit: actions as SYSTEM are still started). See the SelfX log."
+                       : "Installed SelfX files do not match SelfX.Code.json and SelfX.Config.json; SelfX actions as SYSTEM are not started. See the SelfX log.") + cutOff);
             return audit;
         }
 

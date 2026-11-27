@@ -14,6 +14,15 @@ The package version is `Tool_Version` in `SelfX Service\Sources\Tool_Config.xml`
 
 ## Unreleased (SelfX Service)
 
+- **Package, two file lists (`SelfX.Code.json`, `SelfX.Config.json`):** `SelfX.Files.json` is replaced by two lists. `SelfX.Code.json`
+  holds the programs, libraries and the scripts, language files and images of the project; `SelfX.Config.json` holds the settings
+  files, everything below `Branding` and own scripts and language files. Every file is in exactly one list, an unknown file stops the
+  build, and a file in both lists or in the wrong list is refused. The code list has no build time, so a changed company logo changes
+  only `SelfX.Config.json` and the configuration digest. New `tools\SelfXPackage.Common.ps1` (file classes, both lists, digest,
+  `Detection.ps1` writer). `Install.ps1` 2.9.0 checks the package and the installed folder against both lists; `Detection.ps1` 3.0.3
+  checks two digests; the service (2.9.0) reads both lists with the same rules (event 4005 unchanged, `Service_FileCheck` unchanged);
+  `SelfXWinRT.ps1` and `SelfXAudio.ps1` read the hashes of their libraries from `SelfX.Code.json`. `Tool_Version` is unchanged.
+  Tests adapted and extended (logo test, class and placement tests, negative tests).
 - **Documentation, architecture:** New `docs/Architecture.md` (German: `docs/de/Architecture.md`): the three file classes (code,
   configuration, company code), the assignment of every file of the package SelfX Service, the planned lists `SelfX.Code.json` and
   `SelfX.Config.json`, the trust modes hash and signature, the trust anchor and the limit of the checks against a local

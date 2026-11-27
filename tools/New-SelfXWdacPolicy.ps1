@@ -14,8 +14,8 @@
     first (see docs\Installation.md, "App Control for Business (WDAC)").
 
     The hash rules change with every release (every changed script has a new hash). Run this script again for every
-    package that you deploy and deploy the new supplemental policy together with it. SelfX.Files.json (see
-    docs\Installation.md) is created by the package build and does not replace this step.
+    package that you deploy and deploy the new supplemental policy together with it. SelfX.Code.json and SelfX.Config.json (see
+    docs\Installation.md) are created by the package build and do not replace this step.
 
     The scan of the whole package takes a few minutes.
 

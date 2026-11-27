@@ -22,7 +22,7 @@
     Name    : Test-ServicePipe.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI before building the package; not installed)
-    Version : 2.8.20
+    Version : 2.9.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -34,6 +34,7 @@
                                               folder must be listed. N3: rights check of PowerShell 7 for all identities and parent folders.
     2.8.21   2026-11-23  fubu2k               N5 (pass 2): unexpected exceptions in a request are answered with a fixed text. N6: the job object ends a
                                               child process and its descendants; nothing is added after it has ended.
+    2.9.0    2026-11-27  fubu2k               Two lists (SelfX.Code.json, SelfX.Config.json): placement, both lists, one list missing, left-over SelfX.Files.json.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -110,7 +111,7 @@ Assert-True (-not (Test-ProtectionResult $fakeInnerExe)) 'N3: Users may delete i
 Assert-True (Test-ProtectionResult $fakeInnerExe) 'N3: Users may only read and create folders in the parent folder: protected'
 Remove-Item -LiteralPath $fakeFolder, $fakeParent -Recurse -Force -ErrorAction SilentlyContinue
 
-# --- N4: the service checks the installed files against SelfX.Files.json before every start ---
+# --- N4: the service checks the installed files against SelfX.Code.json and SelfX.Config.json before every start ---
 $verifyMethod = [SelfX.SelfXService].GetMethod('VerifyInstalledFiles', [Reflection.BindingFlags]'NonPublic,Static')
 Assert-True ($null -ne $verifyMethod) 'N4: the service has the file list check'
 if ($verifyMethod) {
@@ -119,15 +120,23 @@ if ($verifyMethod) {
 		$ok = [bool]$verifyMethod.Invoke($null, $arguments)
 		return [pscustomobject]@{ Ok = $ok; Problems = @($arguments[1]) -join '; ' }
 	}
-	function New-FileList([string]$Root, [hashtable]$Overrides = @{}) {
-		$files = [ordered]@{}
-		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Extension -in '.ps1', '.xml', '.exe' }) {
+	# Same placement as the package build: settings files and Branding go to SelfX.Config.json, everything else to SelfX.Code.json.
+	function Get-ListOf([string]$Relative) {
+		if ($Relative -in 'Tool_Config.xml', 'Issues_List.xml', 'Health_Config.xml', 'Ticket_Config.xml', 'Network_Test_Config.xml' -or $Relative -like 'Branding/*') { return 'SelfX.Config.json' }
+		return 'SelfX.Code.json'
+	}
+	function Write-ListFile([string]$Root, [string]$ListName, $Files) {
+		$json = [ordered]@{ ManifestVersion = 1; ToolVersion = '9.9.9'; Files = $Files } | ConvertTo-Json -Depth 4
+		[IO.File]::WriteAllText((Join-Path $Root $ListName), $json, (New-Object Text.UTF8Encoding($false)))
+	}
+	function New-FileList([string]$Root, [hashtable]$Overrides = @{}, [string]$OverrideList = 'SelfX.Code.json') {
+		$lists = @{ 'SelfX.Code.json' = [ordered]@{}; 'SelfX.Config.json' = [ordered]@{} }
+		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Extension -in '.ps1', '.xml', '.exe', '.png' -and $_.Name -notin 'SelfX.Code.json', 'SelfX.Config.json' }) {
 			$relative = $file.FullName.Substring($Root.Length + 1).Replace('\', '/')
-			$files[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+			$lists[(Get-ListOf $relative)][$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
 		}
-		foreach ($key in $Overrides.Keys) { $files[$key] = $Overrides[$key] }
-		$json = [ordered]@{ ManifestVersion = 1; ToolVersion = '9.9.9'; Files = $files } | ConvertTo-Json -Depth 4
-		[IO.File]::WriteAllText((Join-Path $Root 'SelfX.Files.json'), $json, (New-Object Text.UTF8Encoding($false)))
+		foreach ($key in $Overrides.Keys) { $lists[$OverrideList][$key] = $Overrides[$key] }
+		foreach ($listName in $lists.Keys) { Write-ListFile $Root $listName $lists[$listName] }
 	}
 	$fileRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFilesTest_' + [guid]::NewGuid().ToString('N'))
 	New-Item -ItemType Directory -Path (Join-Path $fileRoot 'Scripts_to_run') -Force | Out-Null
@@ -135,6 +144,8 @@ if ($verifyMethod) {
 	Set-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_Test.ps1') -Value 'Write-Output 2'
 	Set-Content -LiteralPath (Join-Path $fileRoot 'Issues_List.xml') -Value '<Issues />'
 	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfXService.exe') -Value 'binary of the service'
+	New-Item -ItemType Directory -Path (Join-Path $fileRoot 'Branding') -Force | Out-Null
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Branding\company_logo.png') -Value 'logo of the company'
 	New-FileList $fileRoot
 	$result = Test-FileList $fileRoot
 	Assert-True $result.Ok "N4: unchanged files are accepted ($($result.Problems))"
@@ -169,17 +180,51 @@ if ($verifyMethod) {
 	Set-Content -LiteralPath (Join-Path $fileRoot 'HealthStatus.ps1') -Value 'Write-Output 1'
 	New-FileList $fileRoot @{ '../Outside.ps1' = ('A' * 64) }
 	$result = Test-FileList $fileRoot
-	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: invalid entry') 'N4: a name with a path traversal is refused'
-	New-FileList $fileRoot @{ 'Issues_List.xml' = 'not-a-hash' }
-	Assert-True ((Test-FileList $fileRoot).Problems -match 'file list: invalid entry') 'N4: an invalid hash is refused'
-	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json') -Value '{ broken'
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Code.json invalid entry') 'N4: a name with a path traversal is refused'
+	New-FileList $fileRoot @{ 'Issues_List.xml' = 'not-a-hash' } 'SelfX.Config.json'
+	Assert-True ((Test-FileList $fileRoot).Problems -match 'file list: SelfX.Config.json invalid entry') 'N4: an invalid hash is refused'
+	New-FileList $fileRoot
+	# A changed logo of the company is reported (it is checked like every other file).
+	Add-Content -LiteralPath (Join-Path $fileRoot 'Branding\company_logo.png') -Value 'x'
 	$result = Test-FileList $fileRoot
-	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: ') 'N4: a broken list is refused (fail closed)'
-	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json') -Value '{"ManifestVersion":2,"Files":{"a.ps1":"%s"}}'.Replace('%s', ('A' * 64))
-	Assert-True ((Test-FileList $fileRoot).Problems -match 'unsupported format') 'N4: an unknown format is refused'
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'changed: Branding/company_logo.png') 'N4: a changed logo is refused'
+	New-FileList $fileRoot
+	# Placement: a file in both lists, a settings file in the code list and a program or script of the project in the configuration list are refused.
+	New-FileList $fileRoot @{ 'HealthStatus.ps1' = ('A' * 64) } 'SelfX.Config.json'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Config.json invalid entry') 'N4: a file in both lists or a project script in the configuration list is refused'
+	New-FileList $fileRoot @{ 'Tool_Config.xml' = ('A' * 64) } 'SelfX.Code.json'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Code.json invalid entry') 'N4: a settings file in the code list is refused'
+	New-FileList $fileRoot @{ 'SelfXService.exe' = ('A' * 64) } 'SelfX.Config.json'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Config.json invalid entry') 'N4: a program in the configuration list is refused'
+	New-FileList $fileRoot @{ 'Scripts_to_run/SelfX_Test.ps1' = ((Get-FileHash -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\SelfX_Test.ps1') -Algorithm SHA256).Hash) } 'SelfX.Config.json'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: SelfX.Config.json invalid entry') 'N4: a file that is already in the code list is refused in the configuration list too (listed twice)'
+	# An own script of the company in the configuration list is accepted.
+	Set-Content -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\Own_Action.ps1') -Value 'Write-Output 5'
+	New-FileList $fileRoot @{ 'Scripts_to_run/Own_Action.ps1' = ((Get-FileHash -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\Own_Action.ps1') -Algorithm SHA256).Hash) } 'SelfX.Config.json'
+	$result = Test-FileList $fileRoot
+	Assert-True $result.Ok "N4: an own script in the configuration list is accepted ($($result.Problems))"
+	Remove-Item -LiteralPath (Join-Path $fileRoot 'Scripts_to_run\Own_Action.ps1')
+	New-FileList $fileRoot
+	# The old SelfX.Files.json of an earlier version is not a list any more: left in the folder it is an unlisted file.
+	Set-Content -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json') -Value '{"ManifestVersion":1,"Files":{}}'
+	$result = Test-FileList $fileRoot
+	Assert-True ((-not $result.Ok) -and $result.Problems -match 'not listed: SelfX.Files.json') 'N4: a left-over SelfX.Files.json is refused'
 	Remove-Item -LiteralPath (Join-Path $fileRoot 'SelfX.Files.json')
-	$result = Test-FileList $fileRoot
-	Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: missing') 'N4: a missing list is refused (fail closed)'
+	foreach ($listName in 'SelfX.Code.json', 'SelfX.Config.json') {
+		New-FileList $fileRoot
+		Set-Content -LiteralPath (Join-Path $fileRoot $listName) -Value '{ broken'
+		$result = Test-FileList $fileRoot
+		Assert-True ((-not $result.Ok) -and $result.Problems -match 'file list: |check failed') "N4: a broken $listName is refused (fail closed)"
+		Set-Content -LiteralPath (Join-Path $fileRoot $listName) -Value '{"ManifestVersion":2,"Files":{"a.ps1":"%s"}}'.Replace('%s', ('A' * 64))
+		Assert-True ((Test-FileList $fileRoot).Problems -match "$([regex]::Escape($listName)) unsupported format") "N4: an unknown format of $listName is refused"
+		Remove-Item -LiteralPath (Join-Path $fileRoot $listName)
+		$result = Test-FileList $fileRoot
+		Assert-True ((-not $result.Ok) -and $result.Problems -match "file list: $([regex]::Escape($listName)) missing") "N4: a missing $listName is refused (fail closed)"
+	}
 	# A junction in the way is refused: the files behind it are not the files of the package.
 	New-FileList $fileRoot
 	$elsewhere = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFilesElsewhere_' + [guid]::NewGuid().ToString('N'))
@@ -198,12 +243,12 @@ if ($verifyMethod) {
 	$checkRoot = Join-Path ([IO.Path]::GetTempPath()) ('SelfXFilesTest2_' + [guid]::NewGuid().ToString('N'))
 	New-Item -ItemType Directory -Path (Join-Path $checkRoot 'Scripts_to_run') -Force | Out-Null
 	function Write-CheckList([string]$Root) {
-		$files = [ordered]@{}
-		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Name -ne 'SelfX.Files.json' }) {
-			$files[$file.FullName.Substring($Root.Length + 1).Replace('\', '/')] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+		$lists = @{ 'SelfX.Code.json' = [ordered]@{}; 'SelfX.Config.json' = [ordered]@{} }
+		foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Name -notin 'SelfX.Code.json', 'SelfX.Config.json' }) {
+			$relative = $file.FullName.Substring($Root.Length + 1).Replace('\', '/')
+			$lists[(Get-ListOf $relative)][$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
 		}
-		$json = [ordered]@{ ManifestVersion = 1; ToolVersion = '9.9.9'; Files = $files } | ConvertTo-Json -Depth 4
-		[IO.File]::WriteAllText((Join-Path $Root 'SelfX.Files.json'), $json, (New-Object Text.UTF8Encoding($false)))
+		foreach ($listName in $lists.Keys) { Write-ListFile $Root $listName $lists[$listName] }
 	}
 	function Test-CheckList([string]$Root) {
 		$arguments = [object[]]@($Root, $null)

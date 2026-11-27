@@ -37,7 +37,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.8.6
+    Version : 2.9.0
 
     History:
     Version  Date        Author               Change
@@ -51,6 +51,9 @@
                                               loaded from these bytes (no time between check and load in the Intune staging folder)
     2.8.6    2026-11-24  fubu2k               Security: the PowerShell 7 rights check is the same as the service's (SID based, only SYSTEM,
                                               Administrators and TrustedInstaller, folders above pwsh.exe included, unreadable rights refuse)
+    2.9.0    2026-11-27  fubu2k               Two file lists instead of SelfX.Files.json: SelfX.Code.json (programs, libraries, scripts, language
+                                              files, images of the project) and SelfX.Config.json (settings, Branding, own scripts and language
+                                              files); every file in exactly one list, a file in the wrong list is refused
 #>
 
 [CmdletBinding()]
@@ -192,33 +195,88 @@ function Test-SelfXPrebuiltBinaries {
 	Return $Verified
 }
 
-function Test-SelfXFileManifest {
-	# Checks the package against SelfX.Files.json: every file below Sources, Uninstall.ps1, the DLLs of Bin\WinRT and
-	# Bin\Audio (listed as WinRT/<name> and Audio/<name>) and the programs SelfXService.exe and SelfX.exe (from Bin) must be
-	# listed and unchanged, and nothing may be in the package that is not listed. Returns the number of checked files, or $null
-	# when the package has no such file (older package: warning only). A mismatch throws before anything is installed.
-	param([Parameter(Mandatory = $true)][string]$PackageFolder)
-	$ManifestPath = Join-Path $PackageFolder 'SelfX.Files.json'
-	If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { return $null }
-	Try { $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json }
-	Catch { throw "SelfX.Files.json is not valid JSON: $($_.Exception.Message)" }
-	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '1' -or -not $Manifest.Files) { throw 'SelfX.Files.json has an unknown format.' }
-	$Sources = Join-Path $PackageFolder 'Sources'
-	$ProgramNames = @('SelfXService.exe', 'SelfX.exe')
-	$Listed = @{}
+function Test-SelfXListPlacement {
+	# Placement rule: may this name be in this list? Same rule as Test-SelfXListPlacement in tools\SelfXPackage.Common.ps1 and
+	# in the service (Test-ServicePipe.ps1 and Test-FileManifest.ps1 check that all copies answer alike). SelfX.Code.json
+	# may hold any file that is not a settings file or below Branding; SelfX.Config.json only settings files, files below
+	# Branding, own scripts in Scripts_to_run or HealthChecks and own language files, so no program, library, Uninstall.ps1,
+	# script of the project or image can be moved into the list that the company writes.
+	param([string]$Name, [string]$List)
+	If($Name -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Name -match '(^|/)\.\.?(/|$)') { return $false }
+	$ConfigFiles = @('Health_Config.xml', 'Issues_List.xml', 'Network_Test_Config.xml', 'Ticket_Config.xml', 'Tool_Config.xml')
+	$IsConfigFile = ($ConfigFiles -contains $Name) -or ($Name -match '^Branding/.+')
+	If($List -eq 'Code') { return (-not $IsConfigFile) }
+	If($IsConfigFile) { return $true }
+	If($Name -match '^(Scripts_to_run|HealthChecks)/[A-Za-z0-9._-]+\.ps1$') { return $true }
+	If($Name -match '^Languages/[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}\.xml$') { return $true }
+	Return $false
+}
+
+function Read-SelfXFileList {
+	# Reads SelfX.Code.json or SelfX.Config.json and returns its entries (Name, Hash). Throws when the file is not valid JSON, has an
+	# unknown format, lists a name that is not allowed or lists a name in the wrong list (Test-SelfXListPlacement).
+	# $Where is the place for the messages ('the package' or 'the installation folder').
+	param(
+		[Parameter(Mandatory = $true)][string]$Path,
+		[Parameter(Mandatory = $true)][ValidateSet('SelfX.Code.json', 'SelfX.Config.json')][string]$ListName,
+		[Parameter(Mandatory = $true)][string]$Where
+	)
+	$List = If($ListName -eq 'SelfX.Code.json') { 'Code' } Else { 'Config' }
+	Try { $Manifest = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+	Catch { throw "$ListName in $Where is not valid JSON: $($_.Exception.Message)" }
+	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '1' -or -not $Manifest.Files) { throw "$ListName in $Where has an unknown format." }
+	$Entries = New-Object System.Collections.Generic.List[object]
 	ForEach($Property in @($Manifest.Files.PSObject.Properties))
 	{
 		$Relative = "$($Property.Name)"
-		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "SelfX.Files.json lists an unsupported name '$Relative'." }
-		$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf(($Relative -like 'WinRT/*') -or ($Relative -like 'Audio/*') -or ($ProgramNames -contains $Relative)) { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
-		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in SelfX.Files.json but missing in the package." }
-		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Property.Value)") { throw "$Relative does not match its SHA256 in SelfX.Files.json." }
-		$Listed[$Relative.ToLowerInvariant()] = $true
+		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "$ListName lists an unsupported name '$Relative'." }
+		If(-not (Test-SelfXListPlacement -Name $Relative -List $List))
+		{
+			$Reason = If($List -eq 'Code') { 'it is a configuration file' } Else { 'it is not a configuration file or an own script or language file' }
+			throw "$Relative must not be listed in $ListName ($Reason)."
+		}
+		$Entries.Add([pscustomobject]@{ Name = $Relative; Hash = "$($Property.Value)" })
+	}
+	Return $Entries.ToArray()
+}
+
+function Test-SelfXFileManifest {
+	# Checks the package against SelfX.Code.json and SelfX.Config.json: every file below Sources, Uninstall.ps1, the DLLs of
+	# Bin\WinRT and Bin\Audio (listed as WinRT/<name> and Audio/<name>) and the programs SelfXService.exe and SelfX.exe (from Bin)
+	# must be listed in exactly one of the two lists and unchanged, and nothing may be in the package that is not listed. Returns
+	# the number of checked files, or $null when the package has neither list (older package: warning only). A mismatch, a
+	# missing list or a file in both lists throws before anything is installed.
+	param([Parameter(Mandatory = $true)][string]$PackageFolder)
+	$CodePath = Join-Path $PackageFolder 'SelfX.Code.json'
+	$ConfigPath = Join-Path $PackageFolder 'SelfX.Config.json'
+	$HasCode = Test-Path -LiteralPath $CodePath -PathType Leaf
+	$HasConfig = Test-Path -LiteralPath $ConfigPath -PathType Leaf
+	If(-not $HasCode -and -not $HasConfig) { return $null }
+	If(-not $HasCode) { throw 'SelfX.Code.json is missing in the package (SelfX.Config.json is present).' }
+	If(-not $HasConfig) { throw 'SelfX.Config.json is missing in the package (SelfX.Code.json is present).' }
+	$Sources = Join-Path $PackageFolder 'Sources'
+	$ProgramNames = @('SelfXService.exe', 'SelfX.exe')
+	$Listed = @{}
+	ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json'))
+	{
+		ForEach($Entry in @(Read-SelfXFileList -Path (Join-Path $PackageFolder $ListName) -ListName $ListName -Where 'the package'))
+		{
+			$Relative = $Entry.Name
+			If($Listed.ContainsKey($Relative.ToLowerInvariant()))
+			{
+				If($Listed[$Relative.ToLowerInvariant()] -eq $ListName) { throw "$Relative is listed twice in $ListName." }
+				throw "$Relative is listed in both SelfX.Code.json and SelfX.Config.json."
+			}
+			$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf(($Relative -like 'WinRT/*') -or ($Relative -like 'Audio/*') -or ($ProgramNames -contains $Relative)) { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
+			If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in $ListName but missing in the package." }
+			If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne $Entry.Hash) { throw "$Relative does not match its SHA256 in $ListName." }
+			$Listed[$Relative.ToLowerInvariant()] = $ListName
+		}
 	}
 	ForEach($Item in @(Get-ChildItem -LiteralPath $Sources -Recurse -File -Force))
 	{
 		$Relative = $Item.FullName.Substring($Sources.Length + 1).Replace('\', '/')
-		If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
+		If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Code.json or SelfX.Config.json." }
 	}
 	# The WinRT libraries of the package (installed into WinRT) must all be listed too.
 	$WinRTSource = Join-Path (Join-Path $PackageFolder 'Bin') 'WinRT'
@@ -227,7 +285,7 @@ function Test-SelfXFileManifest {
 		ForEach($Item in @(Get-ChildItem -LiteralPath $WinRTSource -Recurse -File -Force))
 		{
 			$Relative = 'WinRT/' + $Item.FullName.Substring($WinRTSource.Length + 1).Replace('\', '/')
-			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
+			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Code.json or SelfX.Config.json." }
 		}
 	}
 	# The audio library of the package (installed into Audio) must be listed too.
@@ -237,36 +295,42 @@ function Test-SelfXFileManifest {
 		ForEach($Item in @(Get-ChildItem -LiteralPath $AudioSource -Recurse -File -Force))
 		{
 			$Relative = 'Audio/' + $Item.FullName.Substring($AudioSource.Length + 1).Replace('\', '/')
-			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Files.json." }
+			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Code.json or SelfX.Config.json." }
 		}
 	}
-	If(-not $Listed.ContainsKey('uninstall.ps1')) { throw 'Uninstall.ps1 is not listed in SelfX.Files.json.' }
-	ForEach($Program in $ProgramNames) { If(-not $Listed.ContainsKey($Program.ToLowerInvariant())) { throw "$Program is not listed in SelfX.Files.json." } }
+	If(-not $Listed.ContainsKey('uninstall.ps1')) { throw 'Uninstall.ps1 is not listed in SelfX.Code.json.' }
+	ForEach($Program in $ProgramNames) { If(-not $Listed.ContainsKey($Program.ToLowerInvariant())) { throw "$Program is not listed in SelfX.Code.json." } }
 	Return $Listed.Count
 }
 
 function Test-SelfXInstalledFiles {
-	# After copying: compares the installed folder with the SelfX.Files.json copied into it. This closes
+	# After copying: compares the installed folder with the SelfX.Code.json and SelfX.Config.json copied into it. This closes
 	# the gap between the check of the package and the copy: every listed file (scripts, configuration, WinRT libraries,
-	# SelfXService.exe, SelfX.exe) must exist in the install folder with the listed SHA256. Throws at the first difference.
-	# Returns the number of checked files.
+	# SelfXService.exe, SelfX.exe) must exist in the install folder with the listed SHA256, in exactly one of the two lists.
+	# Throws at the first difference. Returns the number of checked files.
 	param([Parameter(Mandatory = $true)][string]$InstallFolder)
 	$Root = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
-	$ManifestPath = Join-Path $Root 'SelfX.Files.json'
-	If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw 'SelfX.Files.json is missing in the installation folder.' }
-	Try { $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json }
-	Catch { throw "SelfX.Files.json in the installation folder is not valid JSON: $($_.Exception.Message)" }
-	If(-not $Manifest -or "$($Manifest.ManifestVersion)" -ne '1' -or -not $Manifest.Files) { throw 'SelfX.Files.json in the installation folder has an unknown format.' }
 	$Count = 0
-	ForEach($Property in @($Manifest.Files.PSObject.Properties))
+	$Listed = @{}
+	ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json'))
 	{
-		$Relative = "$($Property.Name)"
-		If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*$' -or $Relative -match '(^|/)\.\.?(/|$)') { throw "SelfX.Files.json lists an unsupported name '$Relative'." }
-		$File = [IO.Path]::GetFullPath((Join-Path $Root $Relative.Replace('/', '\')))
-		If(-not $File.StartsWith($Root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "$Relative points outside the installation folder." }
-		If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is missing in the installation folder." }
-		If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne "$($Property.Value)") { throw "$Relative in the installation folder does not match its SHA256 in SelfX.Files.json." }
-		$Count++
+		$ManifestPath = Join-Path $Root $ListName
+		If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw "$ListName is missing in the installation folder." }
+		ForEach($Entry in @(Read-SelfXFileList -Path $ManifestPath -ListName $ListName -Where 'the installation folder'))
+		{
+			$Relative = $Entry.Name
+			If($Listed.ContainsKey($Relative.ToLowerInvariant()))
+			{
+				If($Listed[$Relative.ToLowerInvariant()] -eq $ListName) { throw "$Relative is listed twice in $ListName." }
+				throw "$Relative is listed in both SelfX.Code.json and SelfX.Config.json."
+			}
+			$File = [IO.Path]::GetFullPath((Join-Path $Root $Relative.Replace('/', '\')))
+			If(-not $File.StartsWith($Root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "$Relative points outside the installation folder." }
+			If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is missing in the installation folder." }
+			If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne $Entry.Hash) { throw "$Relative in the installation folder does not match its SHA256 in $ListName." }
+			$Listed[$Relative.ToLowerInvariant()] = $ListName
+			$Count++
+		}
 	}
 	Return $Count
 }
@@ -380,8 +444,8 @@ Try
 	# installation stays untouched and still works.
 	Write-Output 'Programs in Bin checked against the manifest (before the data folder was prepared).'
 	$CheckedFiles = Test-SelfXFileManifest -PackageFolder $PackageFolder
-	If($null -eq $CheckedFiles) { Write-Warning 'SelfX.Files.json is missing in the package: the files are not checked against a hash list. The installation continues.' }
-	Else { Write-Output "Package files checked against SelfX.Files.json ($CheckedFiles files)." }
+	If($null -eq $CheckedFiles) { Write-Warning 'SelfX.Code.json and SelfX.Config.json are missing in the package: the files are not checked against a hash list. The installation continues.' }
+	Else { Write-Output "Package files checked against SelfX.Code.json and SelfX.Config.json ($CheckedFiles files)." }
 	$PowerShell7 = Test-SelfXPowerShell7
 	If($PowerShell7.Ready) { Write-Output "PowerShell $($PowerShell7.Version) found (machine-wide)." }
 	Else { Write-Warning "$($PowerShell7.Reason) The installation continues." }
@@ -420,7 +484,7 @@ Try
 	If($Locked.Count -gt 0) { throw "Files in '$InstallFolder' are in use and cannot be replaced: $($Locked -join ', ')" }
 	Copy-Item -Path (Join-Path $SourcesFolder '*') -Destination $InstallFolder -Recurse -Force
 	Copy-Item -LiteralPath (Join-Path $PackageFolder 'Uninstall.ps1') -Destination $InstallFolder -Force
-	If($null -ne $CheckedFiles) { Copy-Item -LiteralPath (Join-Path $PackageFolder 'SelfX.Files.json') -Destination $InstallFolder -Force }
+	If($null -ne $CheckedFiles) { ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json')) { Copy-Item -LiteralPath (Join-Path $PackageFolder $ListName) -Destination $InstallFolder -Force } }
 	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM.
 	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$InstallFolder' (exit code $LASTEXITCODE)." }
@@ -451,7 +515,7 @@ Try
 	If($null -ne $CheckedFiles)
 	{
 		$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder
-		Write-Output "Installed files checked against SelfX.Files.json ($InstalledFiles files)."
+		Write-Output "Installed files checked against SelfX.Code.json and SelfX.Config.json ($InstalledFiles files)."
 	}
 
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null

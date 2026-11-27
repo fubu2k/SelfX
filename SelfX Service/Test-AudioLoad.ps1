@@ -17,13 +17,14 @@
     Name    : Test-AudioLoad.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI; not installed)
-    Version : 2.8.18
+    Version : 2.9.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.18   2026-11-23  fubu2k               Initial version (audio library load check).
+    2.9.0    2026-11-27  fubu2k               The hash comes from SelfX.Code.json.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -50,7 +51,7 @@ function Get-Hash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm S
 function Close-Handle { if ($Script:SelfXAudioHandle) { $Script:SelfXAudioHandle.Dispose(); $Script:SelfXAudioHandle = $null } }
 function Write-List([hashtable]$Files, [int]$Version = 1) {
 	$json = [ordered]@{ ManifestVersion = $Version; ToolVersion = '9.9.9'; Files = $Files } | ConvertTo-Json -Depth 4
-	[IO.File]::WriteAllText((Join-Path $install 'SelfX.Files.json'), $json)
+	[IO.File]::WriteAllText((Join-Path $install 'SelfX.Code.json'), $json)
 }
 function New-Install {
 	Close-Handle
@@ -95,9 +96,9 @@ try {
 	Assert-Refused 'folder Audio is missing' 'a missing folder Audio is refused'
 
 	# --- the list ---
-	New-Install; Remove-Item -LiteralPath (Join-Path $install 'SelfX.Files.json')
-	Assert-Refused 'SelfX.Files.json is missing' 'a missing list is refused'
-	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Files.json'), '{ not json')
+	New-Install; Remove-Item -LiteralPath (Join-Path $install 'SelfX.Code.json')
+	Assert-Refused 'SelfX.Code.json is missing' 'a missing list is refused'
+	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Code.json'), '{ not json')
 	Assert-Refused 'not valid JSON' 'a broken list is refused'
 	New-Install; Write-List @{ 'Audio/SelfXAudio.dll' = (Get-Hash $dll) } 2
 	Assert-Refused 'unknown format' 'an unknown list format is refused'
@@ -105,7 +106,7 @@ try {
 	Assert-Refused 'SelfXAudio.dll is not listed' 'a list without SelfXAudio.dll is refused'
 	New-Install; Write-List @{ 'Audio/SelfXAudio.dll' = 'ABC' }
 	Assert-Refused 'invalid hash' 'an invalid hash in the list is refused'
-	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Files.json'), ('{"ManifestVersion":1,"Files":{"x":"' + ('A' * 1100000) + '"}}'))
+	New-Install; [IO.File]::WriteAllText((Join-Path $install 'SelfX.Code.json'), ('{"ManifestVersion":1,"Files":{"x":"' + ('A' * 1100000) + '"}}'))
 	Assert-Refused 'too large' 'an oversized list is refused'
 	# The hash of the WinRT library must not be accepted for the audio library.
 	New-Install; Write-List @{ 'WinRT/SelfXAudio.dll' = (Get-Hash $dll) }

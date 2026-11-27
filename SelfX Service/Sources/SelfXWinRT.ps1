@@ -7,7 +7,7 @@
     projection DLLs from the folder WinRT of the install folder. Install.ps1 checks them against the manifest of the package
     and the service checks the file list before it starts a SYSTEM script. This helper adds the check at the moment of
     loading (defense in depth):
-      - SelfX.Files.json of the install folder lists every DLL of WinRT as "WinRT/<name>" with its SHA256 (written at package
+      - SelfX.Code.json of the install folder lists every DLL of WinRT as "WinRT/<name>" with its SHA256 (written at package
         build). The file list, the folder WinRT and each DLL must not be a link (junction, symbolic link).
       - Every *.dll in WinRT must be listed, every listed DLL must exist and match its SHA256, and SelfXWinRT.dll must be
         listed. Anything else (changed, missing, additional, unlisted, link, missing or invalid list) = nothing is loaded.
@@ -24,37 +24,38 @@
     Name    : SelfXWinRT.ps1
     Package : SelfX Service
     Context : User (status checks) and System (service actions), dot-sourced, PowerShell 7
-    Version : 2.8.14
+    Version : 2.9.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.14   2026-11-23  fubu2k               Initial version.
+    2.9.0    2026-11-27  fubu2k               The hashes are read from SelfX.Code.json (the libraries are code), no longer from SelfX.Files.json.
 #>
 
 # Open file handles of the checked DLLs; they stay open until the process ends (see above).
 if ($null -eq $Script:SelfXWinRTHandles) { $Script:SelfXWinRTHandles = New-Object System.Collections.Generic.List[IO.FileStream] }
 
-# Reads the SHA256 of the WinRT DLLs from SelfX.Files.json of the install folder. Returns a hashtable
+# Reads the SHA256 of the WinRT DLLs from SelfX.Code.json of the install folder. Returns a hashtable
 # (lower case file name -> upper case SHA256). Throws when the list is missing, too large, a link or invalid.
 function Get-SelfXWinRTExpectedHashes {
 	param([Parameter(Mandatory = $true)][string]$InstallFolder)
-	$listPath = Join-Path $InstallFolder 'SelfX.Files.json'
+	$listPath = Join-Path $InstallFolder 'SelfX.Code.json'
 	$list = Get-Item -LiteralPath $listPath -Force -ErrorAction SilentlyContinue
-	if (-not $list -or $list.PSIsContainer) { throw 'SelfX.Files.json is missing.' }
-	if ($list.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'SelfX.Files.json is a link.' }
-	if ($list.Length -gt 1048576) { throw 'SelfX.Files.json is too large.' }
+	if (-not $list -or $list.PSIsContainer) { throw 'SelfX.Code.json is missing.' }
+	if ($list.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'SelfX.Code.json is a link.' }
+	if ($list.Length -gt 1048576) { throw 'SelfX.Code.json is too large.' }
 	try { $manifest = [IO.File]::ReadAllText($listPath) | ConvertFrom-Json -ErrorAction Stop }
-	catch { throw 'SelfX.Files.json is not valid JSON.' }
-	if (-not $manifest -or "$($manifest.ManifestVersion)" -ne '1' -or -not $manifest.Files) { throw 'SelfX.Files.json has an unknown format.' }
+	catch { throw 'SelfX.Code.json is not valid JSON.' }
+	if (-not $manifest -or "$($manifest.ManifestVersion)" -ne '1' -or -not $manifest.Files) { throw 'SelfX.Code.json has an unknown format.' }
 	$expected = @{}
 	foreach ($property in @($manifest.Files.PSObject.Properties)) {
 		if ($property.Name -match '^WinRT/([A-Za-z0-9._-]+\.dll)$') { $dllName = $Matches[1].ToLowerInvariant() } else { continue }
 		$hash = "$($property.Value)"
-		if ($hash -notmatch '^[0-9A-Fa-f]{64}$') { throw "SelfX.Files.json has an invalid hash for $($property.Name)." }
+		if ($hash -notmatch '^[0-9A-Fa-f]{64}$') { throw "SelfX.Code.json has an invalid hash for $($property.Name)." }
 		$expected[$dllName] = $hash.ToUpperInvariant()
 	}
-	if (-not $expected.ContainsKey('selfxwinrt.dll')) { throw 'SelfXWinRT.dll is not listed in SelfX.Files.json.' }
+	if (-not $expected.ContainsKey('selfxwinrt.dll')) { throw 'SelfXWinRT.dll is not listed in SelfX.Code.json.' }
 	return $expected
 }
 
@@ -73,7 +74,7 @@ function Test-SelfXWinRTFiles {
 		if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "WinRT\$($entry.Name) is a link." }
 		if ($entry.PSIsContainer) { throw "WinRT\$($entry.Name) is a folder." }
 		if ($entry.Extension -ieq '.dll') {
-			if (-not $expected.ContainsKey($entry.Name.ToLowerInvariant())) { throw "WinRT\$($entry.Name) is not listed in SelfX.Files.json." }
+			if (-not $expected.ContainsKey($entry.Name.ToLowerInvariant())) { throw "WinRT\$($entry.Name) is not listed in SelfX.Code.json." }
 			$present[$entry.Name.ToLowerInvariant()] = $entry.FullName
 		}
 	}
@@ -84,7 +85,7 @@ function Test-SelfXWinRTFiles {
 			$stream = New-Object IO.FileStream($present[$name], [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
 			$opened.Add($stream)
 			$actual = [BitConverter]::ToString([Security.Cryptography.SHA256]::HashData($stream)).Replace('-', '')
-			if ($actual -ne $expected[$name]) { throw "WinRT\$name does not match SelfX.Files.json." }
+			if ($actual -ne $expected[$name]) { throw "WinRT\$name does not match SelfX.Code.json." }
 		}
 	}
 	catch {
