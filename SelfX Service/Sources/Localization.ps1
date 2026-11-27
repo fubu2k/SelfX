@@ -482,7 +482,7 @@ Function Import-SelfXTextOverride
 	$Reference = Get-SelfXTextReference -Document @($Script:SelfX_Language, $Script:SelfX_LanguageFallback, $BaseDocument)
 	$Override = Read-SelfXTextOverride -Path $Path -Culture $Culture -Reference $Reference
 	If($Override.Loaded) { $Info.Applied = Set-SelfXTextOverride -Document $Script:SelfX_Language -Texts $Override.Texts }
-	$Info.Problems = @($Override.Problems)
+	$Info.Problems = $Override.Problems.ToArray()
 	If(Get-Command -Name Write-SelfXLog -ErrorAction SilentlyContinue)
 		{
 			Write-SelfXLog ("Text override {0}.xml: {1} texts applied, {2} entries ignored or rejected." -f $Culture, $Info.Applied, $Info.Problems.Count) $(If($Info.Problems.Count -gt 0) { 'Warning' } Else { 'Info' })

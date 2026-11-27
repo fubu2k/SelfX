@@ -122,13 +122,7 @@ try {
 	Write-Override 'de' $goodBody
 	$result = Read-SelfXTextOverride -Path (Join-Path $texts 'de.xml') -Culture 'de' -Reference $deReference
 	Assert-Equal $result.Loaded $true 'read: a valid file is loaded'
-	# TEMP-DIAG
-	[Console]::Out.WriteLine("DIAG type: $($result.GetType().FullName) / problems: $(if ($null -eq $result.Problems) { 'null' } else { $result.Problems.GetType().FullName })")
-	foreach ($variant in @({ $result.Problems.Count }, { @($result.Problems).Count }, { ($result.Problems | Measure-Object).Count }, { $x = @($result.Problems); $x.Count }, { @($result.Texts.Keys).Count })) {
-		try { [Console]::Out.WriteLine("DIAG ok: $($variant.ToString().Trim()) -> $(& $variant)") } catch { [Console]::Out.WriteLine("DIAG fail: $($variant.ToString().Trim()) -> $($_.Exception.Message)") }
-	}
-	# END-TEMP-DIAG
-	Assert-Equal (@($result.Problems).Count) 0 'read: a valid file has no problems'
+	Assert-Equal ($result.Problems.Count) 0 'read: a valid file has no problems'
 	Assert-Equal (@($result.Texts.Keys | Sort-Object) -join ',') 'Action/Q_Teams/Explanation,Action/Q_Teams/Name,Category/Device,Message/Msg_Teams_Restart,SystemInfo/Category_Device,UI/Action_Success_Text,UI/Main_Title_Text' 'read: UI, SystemInfo, Category, Message and Action texts are accepted'
 	Assert-Equal $result.Texts['UI/Main_Title_Text'] "Hilfe`r`nvom Team" 'read: the indentation of a multi-line text is removed like in language files'
 
@@ -170,12 +164,12 @@ try {
 	Assert-Equal (@($result.Texts.Keys) -join ',') 'UI/Health_Fix' 'refused: only the valid text remains'
 	Assert-Equal (@($result.Problems | Where-Object { $_.Kind -eq 'Rejected' }).Count) 4 'refused: markup, missing placeholder, entity and too long text are refused'
 	Assert-Equal ((Get-ProblemText $result).Contains($marker)) $false 'refused: no problem contains a text of the file'
-	Assert-Equal (@($result.Problems).Count -le $Script:SelfXTextOverrideMaxProblems) $true 'refused: the number of problems is limited'
+	Assert-Equal ($result.Problems.Count -le $Script:SelfXTextOverrideMaxProblems) $true 'refused: the number of problems is limited'
 	# Many unknown ids: the list of problems stays short.
 	$many = (1..200 | ForEach-Object { "<Unknown_$_>x</Unknown_$_>" }) -join ''
 	Write-Override 'de' "<UI>$many</UI>"
 	$result = Read-SelfXTextOverride -Path (Join-Path $texts 'de.xml') -Culture 'de' -Reference $deReference
-	Assert-Equal (@($result.Problems).Count) $Script:SelfXTextOverrideMaxProblems '200 unknown ids give at most 50 problems'
+	Assert-Equal ($result.Problems.Count) $Script:SelfXTextOverrideMaxProblems '200 unknown ids give at most 50 problems'
 
 	# --- Reading a file: the file as a whole ---
 	$path = Join-Path $texts 'de.xml'
