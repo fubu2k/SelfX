@@ -342,7 +342,8 @@ try {
     $guiText = [IO.File]::ReadAllText((Join-Path $WizardFolder 'SelfXWizardGui.ps1'))
     Assert ($guiText -notmatch '(?i)Invoke-Expression|\biex\b|Add-Type\s+-TypeDefinition') 'no Invoke-Expression and no compiled source text'
     Assert ($guiText -notmatch '(?i)ConvertTo-WizardValue\s+-Kind\s+''(mail|url)''.*-replace') 'the window does not change the checks'
-    Assert (@([regex]::Matches($guiText, 'AddScript\(([^)]*)\)') | Where-Object { $_.Groups[1].Value -ne '$script:WizardGuiBuildScript.ToString()' }).Count -eq 0) 'the runspace runs only the constant build script (values are parameters)'
+    $addScript = @([regex]::Matches($guiText, '\.AddScript\((.+?)\)\.AddParameters\('))
+    Assert ($addScript.Count -eq 1 -and $addScript[0].Groups[1].Value -eq '$script:WizardGuiBuildScript.ToString()' -and ([regex]::Matches($guiText, 'AddScript\(')).Count -eq 1) 'the runspace runs only the constant build script (values are parameters)'
     $tokens = $null; $errors = $null
     $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $WizardFolder 'SelfXWizardGui.ps1'), [ref]$tokens, [ref]$errors)
     Assert (@($errors).Count -eq 0) 'SelfXWizardGui.ps1 parses'
