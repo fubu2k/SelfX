@@ -2,12 +2,12 @@
 
 [English](README.md) | **Deutsch**
 
-SelfX ist ein Self-Service-Werkzeug für die Fehlerbehebung unter Windows,
-geschrieben in PowerShell und WPF. Nutzer ohne technisches Wissen sehen den
-Zustand ihres Geräts und beheben häufige Probleme mit Teams, Office, OneDrive,
-Outlook, Intune, Windows Update und dem Netzwerk selbst, bevor sie den Support
-anrufen. Sie können die Protokolle ihres Geräts außerdem mit wenigen Klicks an
-den Support senden.
+[![CI](https://github.com/fubu2k/SelfX/actions/workflows/service-ci.yml/badge.svg)](https://github.com/fubu2k/SelfX/actions/workflows/service-ci.yml) [![Release](https://img.shields.io/github/v/release/fubu2k/SelfX)](https://github.com/fubu2k/SelfX/releases) [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](LICENSE.md)
+
+SelfX ist ein Self-Service-Werkzeug zur Fehlerbehebung unter Windows 11 mit Intune.
+Nutzer beheben häufige Probleme mit Teams, Office, OneDrive, Outlook, Windows Update
+und dem Netzwerk selbst, bevor sie den Support anrufen.
+Es arbeitet vollständig offline und braucht kein Backend.
 
 **SelfX Service** wird für das ganze Gerät installiert und arbeitet vollständig
 offline. Es führt Aktionen entweder als angemeldeter Nutzer aus oder über den
@@ -24,10 +24,32 @@ Service** weiterentwickelt.
 Die Arbeit in diesem Fork konzentriert sich auf
 Sicherheit, Tests und Bereitstellung von SelfX Service: siehe
 [Sicherheitshärtung in diesem Fork](#sicherheitshärtung-in-diesem-fork) und das
-[Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **3.0.2**.
+[Änderungsprotokoll](CHANGELOG.md). Aktuelle Version: **3.1.0**.
 
 Deutsch ist die Basissprache der Oberfläche; Englisch ist der Rückfall für fehlende
 Texte. Die Dokumentation steht auf Englisch in `docs/`, die deutsche Fassung in `docs/de/`.
+
+## Download und Test in 10 Minuten
+
+1. Öffne das [neueste Release](https://github.com/fubu2k/SelfX/releases/latest) und lade alle Dateien in einen Ordner.
+2. Prüfe die Dateien. Führe in PowerShell in diesem Ordner den folgenden Befehl aus. Jede Zeile muss mit `OK` beginnen:
+
+   ```powershell
+   Get-Content -LiteralPath .\SHA256SUMS.txt | ForEach-Object {
+       if ($_ -match '^([0-9a-f]{64})  (\S+)$') {
+           $hash = (Get-FileHash -LiteralPath $Matches[2] -Algorithm SHA256).Hash.ToLowerInvariant()
+           '{0}  {1}' -f $(if ($hash -eq $Matches[1]) { 'OK    ' } else { 'FAILED' }), $Matches[2]
+       }
+   }
+   ```
+
+   Steht bei einer Datei `FAILED`, verwende sie nicht.
+
+3. Wähle einen Weg:
+   - **Schnell testen:** Verwende `SelfX-Service-<Version>.intunewin` mit der Standardkonfiguration (Beispielfirma *Contoso*). Lade `SelfX-Service-<Version>.Detection.ps1` in Intune als Erkennungsskript hoch.
+   - **Eigenes Paket bauen:** Entpacke `SelfX-Service-<Version>-payload.zip` und starte `tools\New-SelfXPackage.ps1`. Das Programm stellt einige Fragen (Logo, Support-Kontakt, Ticket-Adresse) und schreibt das eigene `.intunewin`, das Erkennungsskript und eine kurze Intune-Anleitung. Es benötigt das Microsoft Win32 Content Prep Tool (`IntuneWinAppUtil.exe`).
+
+Mehr dazu: [Installation](docs/de/Installation.md) und [Assistent](docs/de/Assistent.md).
 
 ## Bildschirmfotos
 

@@ -14,6 +14,8 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Startseite des Repositorys (`README.md`, `README.de.md`):** kurze Beschreibung von SelfX, Badges (CI, Release, Lizenz), Schritt-für-Schritt-Anleitung zum Herunterladen und Prüfen der Hashes sowie die Version 3.1.0. Nur Dokumentation; keine Änderung an Programmen, Skripten oder dem Paket. Auf einem Gerät nicht getestet.
+
 - **Release-Workflow: Nutzlast-Archiv, Release-Notes, automatische Veröffentlichung (`.github\workflows\release.yml`,
   `tools\SelfXRelease.Common.ps1` 3.1.0):** Ein Versions-Tag baut jetzt neben dem Intune-Paket (`.intunewin`), seinem Erkennungsskript, der
   SBOM und `SHA256SUMS.txt` auch das **Nutzlast-Archiv** `SelfX-Service-<Version>-payload.zip`: der Paketordner, wie er gepackt wird

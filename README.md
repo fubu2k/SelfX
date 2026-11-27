@@ -2,11 +2,12 @@
 
 **English** | [Deutsch](README.de.md)
 
-SelfX is a self-service troubleshooting tool for Windows, written in PowerShell
-and WPF. Users without technical knowledge can see the health of their device
-and fix common problems with Teams, Office, OneDrive, Outlook, Intune, Windows
-Update and the network on their own, before they call the support. They can also
-send the logs of their device to the support in a few clicks.
+[![CI](https://github.com/fubu2k/SelfX/actions/workflows/service-ci.yml/badge.svg)](https://github.com/fubu2k/SelfX/actions/workflows/service-ci.yml) [![Release](https://img.shields.io/github/v/release/fubu2k/SelfX)](https://github.com/fubu2k/SelfX/releases) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+
+SelfX is a self-service troubleshooting tool for Windows 11 with Intune.
+Users fix common problems with Teams, Office, OneDrive, Outlook, Windows Update
+and the network themselves, before they call the support.
+It works fully offline and needs no backend.
 
 **SelfX Service** is installed machine-wide and works fully offline. It runs
 actions either as the signed-in user or, through the local **SelfXService**
@@ -22,7 +23,29 @@ projects are not part of this fork; use the upstream repositories if you need
 them. The work in this fork concentrates on the security, the tests and the
 deployment of SelfX Service: see
 [Security hardening in this fork](#security-hardening-in-this-fork) and the
-[Changelog](CHANGELOG.en.md). Current version: **3.0.2**.
+[Changelog](CHANGELOG.en.md). Current version: **3.1.0**.
+
+## Download and test in 10 minutes
+
+1. Open the [latest release](https://github.com/fubu2k/SelfX/releases/latest) and download all of its files into one folder.
+2. Check the files. Run this in PowerShell in that folder. Every line must start with `OK`:
+
+   ```powershell
+   Get-Content -LiteralPath .\SHA256SUMS.txt | ForEach-Object {
+       if ($_ -match '^([0-9a-f]{64})  (\S+)$') {
+           $hash = (Get-FileHash -LiteralPath $Matches[2] -Algorithm SHA256).Hash.ToLowerInvariant()
+           '{0}  {1}' -f $(if ($hash -eq $Matches[1]) { 'OK    ' } else { 'FAILED' }), $Matches[2]
+       }
+   }
+   ```
+
+   If a line says `FAILED`, do not use the file.
+
+3. Choose one way:
+   - **Test quickly:** use `SelfX-Service-<version>.intunewin` with the default configuration (sample company *Contoso*). Upload `SelfX-Service-<version>.Detection.ps1` as the detection script in Intune.
+   - **Make your own package:** unzip `SelfX-Service-<version>-payload.zip` and run `tools\New-SelfXPackage.ps1`. It asks a few questions (logo, support contact, ticket address) and writes your own `.intunewin`, the detection script and a short Intune guide. It needs the Microsoft Win32 Content Prep Tool (`IntuneWinAppUtil.exe`).
+
+More details: [Installation](docs/Installation.md) and [Guided setup](docs/Guided-Setup.md).
 
 ## Screenshots
 
