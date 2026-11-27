@@ -89,6 +89,7 @@
 		<Service_Unavailable_Text>SelfX 服務未執行：帶盾牌圖示的操作不可用。</Service_Unavailable_Text>
 		<Service_Busy_Text>另一項操作仍在執行。請等待其完成。</Service_Busy_Text>
 		<Service_OtherSessions_Text>其他使用者登入此裝置時，無法執行此操作。請聯絡 IT 支援，或在您是唯一使用者時重試。</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>此電腦由多人同時使用，因此無法使用此操作。請聯絡 IT 支援。</Service_TerminalServer_Text>
 		<Action_Running_Text>正在執行操作：{0}</Action_Running_Text>
 		<Action_Running_Label>正在執行…</Action_Running_Label>
 		<Action_Success_Text>操作已完成：{0}</Action_Success_Text>

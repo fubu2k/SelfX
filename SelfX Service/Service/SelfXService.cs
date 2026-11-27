@@ -103,6 +103,11 @@ Notes:
     3.1.0    2026-11-27  fubu2k               SafeTree /cleanold:<root> /minage:<days>: deletes old entries below one of four fixed folders
                                               (Windows\Temp and three Intune Management Extension content folders, resolved in this file, never
                                               from an argument) through handles, without following links (free disk space, SelfX_Device_FreeSpace.ps1)
+    3.1.0    2026-11-27  fubu2k               Environment_Mode (Tool_Config.xml: Client or TerminalServer). TerminalServer: RUN refuses a
+                                              script unless all its catalog entries or its remediation are classified TerminalServer Show, for
+                                              every caller (event 4008); an unreadable Tool_Config.xml counts as TerminalServer. At the start a
+                                              warning when Windows is a session host but the mode is Client (event 4009); the mode is never
+                                              switched by the service. The check of other active sessions (OtherSessions) is the same in both modes
 */
 
 using System;
@@ -215,6 +220,34 @@ namespace SelfX
 
         const int WtsActive = 0;
 
+        // Version data of the running Windows, only for the warning "session host in Environment_Mode Client" (never a decision).
+        // RtlGetVersion is not subject to the compatibility manifest like GetVersionEx and VerifyVersionInfo (deprecated since
+        // Windows 10). Layout: RTL_OSVERSIONINFOEXW (wdm.h) = OSVERSIONINFOEXW (winnt.h).
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct OsVersionInfoEx
+        {
+            public int OSVersionInfoSize;
+            public int MajorVersion;
+            public int MinorVersion;
+            public int BuildNumber;
+            public int PlatformId;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string CSDVersion;
+            public ushort ServicePackMajor;
+            public ushort ServicePackMinor;
+            public ushort SuiteMask;
+            public byte ProductType;
+            public byte Reserved;
+        }
+
+        [DllImport("ntdll.dll")]
+        static extern int RtlGetVersion(ref OsVersionInfoEx versionInformation);
+
+        // wProductType and wSuiteMask values of OSVERSIONINFOEXW (winnt.h).
+        const byte VerNtWorkstation = 1;
+        const ushort VerSuiteTerminal = 0x0010;
+        const ushort VerSuiteSingleUserTs = 0x0100;
+
         static readonly Regex ScriptNamePattern = new Regex(@"^[A-Za-z0-9_\-\.]{1,100}\.ps1\z", RegexOptions.IgnoreCase);
         static readonly Regex HealthRequestPattern = new Regex(
             @"^HEALTH(?: (IME|Defender|Compliance|Applications|Disk|BitLocker|PendingReboot|Updates|Service|Custom)(?: ([A-Za-z0-9+/]{2,400}={0,2}))?)?\z",
@@ -261,6 +294,10 @@ namespace SelfX
         const int EventFilesChanged = 4005;
         const int EventTrustAnchor = 4006;
         const int EventSignature = 4007;
+        // Environment_Mode TerminalServer: a request for an action that is not classified TerminalServer Show was refused.
+        const int EventTerminalServerRefused = 4008;
+        // Windows is a session host for several users, but Environment_Mode is Client (warning at the start, nothing is switched).
+        const int EventSessionHostClient = 4009;
         const int EventSuppressed = 4099;
         sealed class EventWindow { public DateTime Start = DateTime.MinValue; public int Count; public int Suppressed; }
         volatile string backgroundState = "Active";
@@ -374,6 +411,7 @@ namespace SelfX
             background.Name = "SelfXBackgroundHealth";
             background.Start();
             Log("Service started. Version " + Version + ", pipe '" + pipeName + "', code '" + installRoot + "', configuration '" + configRoot + "'.");
+            CheckEnvironmentMode();
         }
 
         /// <summary>
@@ -899,11 +937,27 @@ namespace SelfX
 
             int timeoutSeconds;
             bool blockOtherSessions;
+            bool hideOnTerminalServer;
             // Elevation is granted only to System entries, never arbitrary client-supplied scripts.
-            if (!TryGetSystemAction(scriptName, out timeoutSeconds, out blockOtherSessions))
+            if (!TryGetSystemAction(scriptName, out timeoutSeconds, out blockOtherSessions, out hideOnTerminalServer))
             {
                 LogRejected("Rejected request from " + user + ": '" + scriptName + "' is not a System action in the catalog.");
                 return "ERROR Action is not allowed";
+            }
+
+            // Environment_Mode TerminalServer (Tool_Config.xml): an action that is not classified TerminalServer Show is refused for
+            // every caller, also for elevated administrators. The window hides these actions, but the window is no security boundary.
+            // An unreadable Tool_Config.xml counts as TerminalServer (fail closed; the file check would not start the script anyway).
+            if (hideOnTerminalServer)
+            {
+                string mode = ReadToolConfigValue("Environment_Mode");
+                bool modeValid;
+                if (mode == null || IsTerminalServerMode(mode, out modeValid))
+                {
+                    LogRejected("Request from " + user + " for '" + scriptName + "' refused: the action is not available in Environment_Mode TerminalServer.",
+                        EventTerminalServerRefused, "A SelfX action that is not available on a terminal server or session host (Environment_Mode TerminalServer) was requested and refused. Details are in SelfXService.log in the protected log folder.");
+                    return "ERROR TerminalServer";
+                }
             }
 
             // The script of the project (App\Scripts_to_run) or an own script of the company that SelfX.Config.json lists with its
@@ -952,12 +1006,79 @@ namespace SelfX
         }
 
         /// <summary>
+        /// Environment_Mode of Tool_Config.xml: true only for TerminalServer (case is ignored). Empty (element missing, for example in
+        /// an older configuration) and Client are Client; any other value is Client too and valid is false (logged at the start).
+        /// </summary>
+        static bool IsTerminalServerMode(string value, out bool valid)
+        {
+            string text = (value ?? "").Trim();
+            bool terminalServer = string.Equals(text, "TerminalServer", StringComparison.OrdinalIgnoreCase);
+            valid = terminalServer || text.Length == 0 || string.Equals(text, "Client", StringComparison.OrdinalIgnoreCase);
+            return terminalServer;
+        }
+
+        /// <summary>
+        /// True when the product type and suite mask describe a session host for several users: Windows Enterprise multi-session
+        /// reports the product type of a server (3), and a Remote Desktop Session Host runs in application server mode
+        /// (VER_SUITE_TERMINAL without VER_SUITE_SINGLEUSERTS).
+        /// </summary>
+        static bool IsSessionHostProduct(byte productType, ushort suiteMask)
+        {
+            if (productType != VerNtWorkstation) return true;
+            return (suiteMask & VerSuiteTerminal) != 0 && (suiteMask & VerSuiteSingleUserTs) == 0;
+        }
+
+        /// <summary>Session host check of the running Windows; null when the version data cannot be read.</summary>
+        static bool? IsSessionHost()
+        {
+            try
+            {
+                OsVersionInfoEx info = new OsVersionInfoEx();
+                info.OSVersionInfoSize = Marshal.SizeOf(typeof(OsVersionInfoEx));
+                if (RtlGetVersion(ref info) != 0) return null;
+                return IsSessionHostProduct(info.ProductType, info.SuiteMask);
+            }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// Logs the Environment_Mode at the start and warns (log and event 4009) when Windows is a session host but the mode is
+        /// Client. The service never switches the mode: the administrator decides (Tool_Config.xml, package wizard).
+        /// </summary>
+        void CheckEnvironmentMode()
+        {
+            try
+            {
+                string value = ReadToolConfigValue("Environment_Mode");
+                bool terminalServer = true;
+                if (value == null) Log("Environment_Mode: Tool_Config.xml cannot be read; requests are handled as in TerminalServer.");
+                else
+                {
+                    bool valid;
+                    terminalServer = IsTerminalServerMode(value, out valid);
+                    if (!valid) Log("Environment_Mode in Tool_Config.xml is not Client or TerminalServer; Client is used.");
+                    Log("Environment_Mode: " + (terminalServer ? "TerminalServer" : "Client") + ".");
+                }
+                bool? host = IsSessionHost();
+                if (host == null) Log("The product type of Windows could not be read; the session host check was skipped.");
+                else if (host.Value && !terminalServer)
+                {
+                    Log("Warning: Windows is a session host for several users (Windows Enterprise multi-session or Remote Desktop Session Host), but Environment_Mode is Client. Set Environment_Mode to TerminalServer in Tool_Config.xml (package wizard: question \"Where does SelfX run?\"). The service does not switch the mode.");
+                    SecurityEvent(EventSessionHostClient, EventLogEntryType.Warning, "Windows is a session host for several users, but the SelfX setting Environment_Mode is Client. Actions that affect all users stay visible. Set Environment_Mode to TerminalServer. See the SelfX log.");
+                }
+            }
+            catch (Exception e) { Log("Environment_Mode check failed: " + e.Message); }
+        }
+
+        /// <summary>
         /// Check the installed System-action whitelist and resolve a bounded execution timeout.
         /// </summary>
-        bool TryGetSystemAction(string scriptName, out int timeoutSeconds, out bool blockOtherSessions)
+        bool TryGetSystemAction(string scriptName, out int timeoutSeconds, out bool blockOtherSessions, out bool hideOnTerminalServer)
         {
             timeoutSeconds = DefaultTimeoutSeconds;
             blockOtherSessions = false;
+            // Not classified = Hide (fail closed): only an explicit TerminalServer Show keeps an action in Environment_Mode TerminalServer.
+            hideOnTerminalServer = true;
             XmlReaderSettings settings = new XmlReaderSettings();
             // Catalog loading must not resolve external entities or fetch network resources.
             settings.DtdProcessing = DtdProcessing.Prohibit;
@@ -984,6 +1105,8 @@ namespace SelfX
                 if (remediation == null) return false;
                 XmlAttribute remediationSessions = remediation.Attributes["OtherSessions"];
                 blockOtherSessions = remediationSessions != null && remediationSessions.Value.Trim() == "Block";
+                XmlAttribute remediationTerminalServer = remediation.Attributes["TerminalServer"];
+                hideOnTerminalServer = remediationTerminalServer == null || remediationTerminalServer.Value.Trim() != "Show";
                 // Optional TimeoutSeconds attribute (long repairs such as installing updates), bounded like catalog actions.
                 XmlAttribute remediationTimeout = remediation.Attributes["TimeoutSeconds"];
                 int remediationConfigured;
@@ -997,6 +1120,10 @@ namespace SelfX
             // A script can have several catalog entries: Block applies when any System entry of the script says Block.
             blockOtherSessions = catalog.SelectSingleNode(
                 "//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "' and normalize-space(OtherSessions)='Block']") != null;
+            // Hide when any System entry of the script is not classified Show by exactly one element (one script, one classification;
+            // Test-Catalog.ps1 checks it). A second TerminalServer element must not turn a Hide into the Show of the first one.
+            hideOnTerminalServer = catalog.SelectSingleNode(
+                "//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "' and not(count(TerminalServer)=1 and normalize-space(TerminalServer)='Show')]") != null;
 
             XmlNode timeoutNode = action.SelectSingleNode("TimeoutSeconds");
             int configured;
@@ -1893,7 +2020,8 @@ namespace SelfX
                 XmlNode node = document.SelectSingleNode("/GUI_Config/" + name);
                 return node == null ? "" : node.InnerText.Trim();
             }
-            catch { return ""; }
+            // null = the file cannot be read; each caller decides how to fail closed.
+            catch { return null; }
         }
 
         /// <summary>Fixed path of PowerShell 7 (machine-wide installation, writable only by administrators).</summary>
@@ -2628,7 +2756,7 @@ namespace SelfX
         /// <summary>
         /// Log a rejected request, at most MaxRejectedLogsPerWindow per minute; the rest is only counted.
         /// </summary>
-        void LogRejected(string message)
+        void LogRejected(string message, int eventId = EventRejected, string eventText = null)
         {
             string summary = null;
             bool write = false;
@@ -2662,7 +2790,7 @@ namespace SelfX
             if (write)
             {
                 Log(message);
-                SecurityEvent(EventRejected, EventLogEntryType.Warning, "A request or connection to the SelfX service was rejected. Details are in SelfXService.log in the protected log folder.");
+                SecurityEvent(eventId, EventLogEntryType.Warning, eventText ?? "A request or connection to the SelfX service was rejected. Details are in SelfXService.log in the protected log folder.");
             }
         }
 

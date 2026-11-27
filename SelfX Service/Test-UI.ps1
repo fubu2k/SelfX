@@ -9,10 +9,12 @@
     files are written only to a temporary folder. Start-Process and the scheduled task cmdlets are mocked.
     Run in Windows PowerShell 5.1 (STA): powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-UI.ps1
 .NOTES
-    Version: 2.6.9
+    Version: 3.1.0
     History:
     2.5.0  2026-11-04  Wolfgang Baeck  Initial UI tests (modern UI, tray icon, theme, caches).
     2.6.9  2026-11-19  Wolfgang Baeck  Test that the cached status read does not block a repair.
+    3.1.0  2026-11-27  fubu2k          Environment_Mode: actions not classified Show are hidden with TerminalServer (also the delivered
+                                       catalogue), status cards, tray item and the message for a refusal of the service.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -449,6 +451,30 @@ try {
     Set-TrayText ('x' * 100)
     Assert-Equal $Global:Tray.Text.Length 63 'Long tooltip is shortened'
     [void][SelfXTray.Native]::DestroyIcon($Global:Tray_Icon_Handle)
+
+    # --- Environment_Mode (Tool_Config.xml): with TerminalServer only actions classified Show are shown ------------------------
+    . "$sources\SelfXEnvironment.ps1"
+    . ([scriptblock]::Create((Get-FunctionText $gui 'Select-SelfXEnvironmentActions')))
+    $envActions = @(
+        [pscustomobject]@{ Id = 'A_Show'; TerminalServer = 'Show' },
+        [pscustomobject]@{ Id = 'A_Hide'; TerminalServer = 'Hide' },
+        [pscustomobject]@{ Id = 'A_None'; TerminalServer = '' },
+        [pscustomobject]@{ Id = 'A_Lower'; TerminalServer = 'show' })
+    Assert-Equal ((@(Select-SelfXEnvironmentActions $envActions 'TerminalServer') | ForEach-Object { $_.Id }) -join ',') 'A_Show' 'Environment_Mode TerminalServer: only actions classified exactly Show are shown'
+    Assert-Equal ((@(Select-SelfXEnvironmentActions $envActions 'Client') | ForEach-Object { $_.Id }) -join ',') 'A_Show,A_Hide,A_None,A_Lower' 'Environment_Mode Client: every action is shown'
+    $catalogXml = [xml][IO.File]::ReadAllText("$sources\Issues_List.xml")
+    $delivered = @(Get-SelfXLocalizedActions -Catalog $catalogXml -Section 'Quick_Solution') + @(Get-SelfXLocalizedActions -Catalog $catalogXml -Section 'Detailed_Solution')
+    $tsDelivered = @(Select-SelfXEnvironmentActions $delivered 'TerminalServer')
+    Assert-Equal @($delivered | Where-Object { $_.TerminalServer -cnotin @('Show', 'Hide') }).Count 0 'Environment_Mode: the catalogue field TerminalServer travels with every delivered action'
+    Assert-Equal @($tsDelivered | Where-Object { $_.Context -eq 'System' }).Count 0 'Environment_Mode TerminalServer: no delivered System action is shown'
+    Assert-Equal ($tsDelivered.Count -gt 0 -and $tsDelivered.Count -lt $delivered.Count) $true "Environment_Mode TerminalServer: actions of the own session stay ($($tsDelivered.Count) of $($delivered.Count))"
+    Assert-Equal ($guiText.Contains('$Global:SelfX_Quick_Actions = @(Select-SelfXEnvironmentActions $Global:SelfX_Quick_Actions $Global:SelfX_Environment.Mode)') -and $guiText.Contains('$Global:SelfX_Detailed_Actions = @(Select-SelfXEnvironmentActions $Global:SelfX_Detailed_Actions $Global:SelfX_Environment.Mode)')) $true 'Environment_Mode: both lists of actions are filtered'
+    Assert-Equal ($guiText.IndexOf('Select-SelfXEnvironmentActions $Global:SelfX_Detailed_Actions') -lt $guiText.IndexOf('$Global:SysInfo_SendLogs_Action = ')) $true 'Environment_Mode: "Send logs" is chosen from the filtered actions'
+    Assert-Equal ($guiText.Contains('$Offered = Test-SelfXRemediationOffered') -and $guiText.Contains('Remediation = $Remediation; UserRemediation = $UserRemediation; HasFix = [bool]$Remediation;')) $true 'Environment_Mode: status cards offer only repairs that are offered in the mode (also no part of the user)'
+    Assert-Equal ($trayText.Contains('Test-SelfXShownInEnvironment $Tray_Mode')) $true 'Environment_Mode: the tray offers "Send logs" only when the action is shown'
+    $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
+    Assert-Equal ($clientText.Contains("'^ERROR TerminalServer`$' { return [pscustomobject]@{ Status = 'TerminalServer'") -and $guiText.Contains("'TerminalServer' { `$msgbar.SetWarningAlert((Get-SelfXString 'Service_TerminalServer_Text')) }")) $true 'Environment_Mode: the refusal of the service has its own message'
+    Assert-Equal ([bool](Get-SelfXString 'Service_TerminalServer_Text')) $true 'Environment_Mode: the message exists in en.xml'
 } finally {
     Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }

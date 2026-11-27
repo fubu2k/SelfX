@@ -13,6 +13,8 @@
   Version 2.6.3 | 2026-11-06 | Wolfgang Baeck | Updates are installed through the Windows Update Agent again (UsoClient fails on 24H2).
   Version 3.1.0 | 2026-11-27 | fubu2k         | Fix button "Free up space" on the disk row of the system drive (part as the user, then as SYSTEM);
                                                 thresholds of the SYSTEM part in DiskCleanup; Remediation attribute UserScript.
+  Version 3.1.0 | 2026-11-27 | fubu2k         | Required Remediation attribute TerminalServer (Show or Hide) for Environment_Mode TerminalServer;
+                                                all delivered repairs are Hide (they affect the whole device).
   -->
 <HealthConfig>
   <!-- Background checks: the service runs all checks regularly and keeps the result for SelfX and the tray icon.
@@ -71,31 +73,34 @@
          Optional When="NotOK" offers the button only while the status is not OK (default: Always).
          Optional OtherSessions="Block": a normal user cannot start the repair while another user has an active
          session (elevated administrators are not restricted).
+         Required TerminalServer="Show" or "Hide": with Environment_Mode TerminalServer (Tool_Config.xml) only Show is offered;
+         Hide hides the button (also the UserScript part) and the service refuses the repair for every caller.
+         Test-Catalog.ps1 requires the attribute.
     <Remediation Id="IME" Script="SelfX_Intune_RestartService.ps1" />
     <Remediation Id="Service" Name="Spooler" Script="Repair-Spooler.ps1" />
     -->
     <!-- Defender signature update (Update-MpSignature): offered on the Defender and Compliance rows
          only while they are not OK, because outdated signatures after a longer absence are a frequent
          cause of non-compliance. -->
-    <Remediation Id="Defender" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
-    <Remediation Id="Compliance" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" />
+    <Remediation Id="Defender" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" TerminalServer="Hide" />
+    <Remediation Id="Compliance" Script="SelfX_Defender_UpdateSignature.ps1" When="NotOK" TerminalServer="Hide" />
     <!-- Install the pending Windows updates now (policies of the device apply, never restarts) and start the
          Microsoft Store app updates as SYSTEM. Windows 11 24H2+: through the Windows Update orchestrator, as
          "Check for updates" in Settings; the Windows Update Agent installs only what is left. SelfX shows
          "Running..." until the installation has finished and then checks the whole status again.
          Optional TimeoutSeconds (max. 7200); the orchestrator is watched at most 90 minutes. -->
-    <Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" OtherSessions="Block" />
+    <Remediation Id="Updates" Script="SelfX_Updates_Install.ps1" When="NotOK" TimeoutSeconds="7200" OtherSessions="Block" TerminalServer="Hide" />
     <!-- Restart Windows to complete a pending restart, only after the user confirmed the restart warning. -->
-    <Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" OtherSessions="Block" />
+    <Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" OtherSessions="Block" TerminalServer="Hide" />
     <!-- Retry failed Intune app installations now (instead of after the IME retry schedule of 24 hours):
          resets the cached error of the failed apps and restarts the Intune Management Extension. -->
-    <Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" />
+    <Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" TerminalServer="Hide" />
     <!-- Free up space on the system drive while the disk row is not OK. SelfX asks once, lists what is deleted, then runs
          UserScript as the signed-in user (own recycle bin, own TEMP, own Teams cache only while Teams is closed) and after
          it Script as SYSTEM (component store cleanup with DISM, Delivery Optimization cache, old files in Windows\Temp, old
          Intune content). Never part of "Fix all problems": it can take long and empties the recycle bin.
          Optional UserScript: a script of the user context, started by SelfX itself (never by the service) before Script.
          Name="C:" limits the button to the system drive; change it when Windows is on another drive. -->
-    <Remediation Id="Disk" Name="C:" Script="SelfX_Device_FreeSpace.ps1" UserScript="SelfX_Device_FreeSpaceUser.ps1" When="NotOK" TimeoutSeconds="3600" />
+    <Remediation Id="Disk" Name="C:" Script="SelfX_Device_FreeSpace.ps1" UserScript="SelfX_Device_FreeSpaceUser.ps1" When="NotOK" TimeoutSeconds="3600" TerminalServer="Hide" />
   </Remediations>
 </HealthConfig>

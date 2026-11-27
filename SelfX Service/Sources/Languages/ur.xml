@@ -87,6 +87,7 @@
 		<Service_Unavailable_Text>SelfX سروس نہیں چل رہی ہے: شیلڈ سے نشان زد ایکشن دستیاب نہیں ہیں۔</Service_Unavailable_Text>
 		<Service_Busy_Text>ایک اور کارروائی ابھی جاری ہے۔ براہ کرم اس کے مکمل ہونے تک انتظار کریں۔</Service_Busy_Text>
 		<Service_OtherSessions_Text>جب تک کوئی اور صارف اس آلے میں سائن اِن ہے، یہ کارروائی ممکن نہیں۔ IT سپورٹ سے رابطہ کریں یا جب آپ واحد صارف ہوں تو دوبارہ کوشش کریں۔</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>یہ کارروائی اس کمپیوٹر پر دستیاب نہیں، کیونکہ کئی لوگ اسے ایک ہی وقت میں استعمال کرتے ہیں۔ IT سپورٹ سے رابطہ کریں۔</Service_TerminalServer_Text>
 		<Action_Running_Text>کارروائی جاری ہے: {0}</Action_Running_Text>
 		<Action_Running_Label>جاری ہے…</Action_Running_Label>
 		<Action_Success_Text>کارروائی مکمل ہو گئی: {0}</Action_Success_Text>

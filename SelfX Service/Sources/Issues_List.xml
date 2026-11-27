@@ -24,6 +24,10 @@
 	  OtherSessions  Only for Context System. Block = a normal user cannot start the action while another user has an
 	                 active session on the device (restart, network, disk check, ...). Elevated administrators are not
 	                 restricted. Default: no restriction. Set it on every entry of the same script (Test-Catalog.ps1 checks this).
+	  TerminalServer Required for every action. Show = the action only affects the own session or profile and is offered with
+	                 Environment_Mode TerminalServer (Tool_Config.xml); Hide = it affects the device, the network or all users and is
+	                 not shown there (System actions are also refused by the service, for every caller). With Environment_Mode Client
+	                 every action is shown. Use the same value on every entry of the same script (Test-Catalog.ps1 checks both).
 	  Requires       Optional. DomainJoined = the action is shown only on a domain or hybrid joined device (hidden when the device is
 	                 clearly not joined; if the state cannot be read it stays visible). Only a User action should use it; the script
 	                 must check the requirement itself (Test-Catalog.ps1 allows only this value).
@@ -38,9 +42,10 @@
 	  1.0.0    2022-10-04  Damien Van Robaeys   Initial version
 	  2.4.10   2026-11-23  fubu2k               New action D_Device_NoSound (unmute the default playback device, minimum volume 30 %, SelfXAudio.dll, Context User)
 	  2.4.11   2026-11-23  fubu2k               New optional field Requires (DomainJoined); D_Device_GpUpdate is hidden on devices that are not domain / hybrid joined
+	  2.4.12   2026-11-27  fubu2k               New required field TerminalServer (Show or Hide) on every action, for Environment_Mode TerminalServer
 -->
 <Actions>
-	<XML_Version>2.4.11</XML_Version>
+	<XML_Version>2.4.12</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -93,6 +98,7 @@ Do you want to continue?</Message>
 			<Explanation>You are experiencing an issue with the Teams client (slowness, incorrect status, transfer error, etc.).</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG>Teams will close and its local cache folders will be cleared. Save any open work before continuing. Teams will reopen if it was running.
 
@@ -105,6 +111,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You are working in Word, but it has stopped responding and you can no longer do anything.</Explanation>
 			<Script>SelfX_Word_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Office</Category>
 			<Alerte_MSG>Word will close and start again. Documents are not reopened automatically. Unsaved work is lost.
 
@@ -117,6 +124,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You are working in Excel, but it has stopped responding and you can no longer do anything.</Explanation>
 			<Script>SelfX_Excel_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Office</Category>
 			<Alerte_MSG>Excel will close and start again. Workbooks are not reopened automatically. Unsaved work is lost.
 
@@ -129,6 +137,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You are working in Outlook, but it has stopped responding, no longer sends or receives mail or does not display your mailbox correctly.</Explanation>
 			<Script>SelfX_Outlook_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Outlook</Category>
 			<Alerte_MSG>Outlook will close and start again. Mails you are writing that are not saved as a draft are lost. After the start Outlook may need some time to check its data. Your profile and mailbox are not changed. The new Outlook is not affected.
 
@@ -141,6 +150,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You have issues with the Microsoft Store (opening the Store, installing apps, etc.).</Explanation>
 			<Script>SelfX_Poste_WSReset.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<Category>Device</Category>
 			<Alerte_MSG>The Microsoft Store cache will be reset and the Store will open.
 
@@ -153,6 +163,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You are experiencing issues with the OneDrive client (file or folder synchronization, opening files, etc.).</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG>OneDrive will close and reopen automatically.
 
@@ -167,6 +178,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You are experiencing issues with the OneDrive client (file or folder synchronization, opening files, etc.) and have already tried method 1.</Explanation>
 			<Script>SelfX_OneDrive_Reset.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Reset"/>
 		</Action>
@@ -177,6 +189,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>The "New Teams meeting" button is missing in Outlook.</Explanation>
 			<Script>SelfX_Outlook_TeamsAddIn.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Outlook</Category>
 			<Alerte_MSG>The Teams meeting add-in will be enabled again. Outlook will close and reopen automatically. Unsaved work may be lost.
 
@@ -191,6 +204,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You are trying to open a website, but the connection does not work, the site cannot be reached or you get errors.</Explanation>
 			<Script>SelfX_Device_ClearCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<Category>Device</Category>
 			<Alerte_MSG>The DNS cache of your device will be cleared in the background. Try again after clicking OK.
 
@@ -203,6 +217,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Your device is running slow.</Explanation>
 			<Script>SelfX_Device_DeviceSlow.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Device</Category>
 			<Alerte_MSG>Temporary files and the content of the recycle bin will be deleted.
 
@@ -215,6 +230,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Sign-in or certificate errors occur, or the clock of your device shows the wrong time. This action runs with administrator rights through the local SelfX service.</Explanation>
 			<Script>SelfX_Device_SyncTime.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>120</TimeoutSeconds>
 			<Category>Device</Category>
@@ -229,6 +245,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation Ref="Msg_Intune_Sync_Explanation"/>
 			<Script>SelfX_Intune_RestartService.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>300</TimeoutSeconds>
 			<Category>Intune</Category>
@@ -241,6 +258,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You have network issues and want to restart the network adapters. This action runs with administrator rights through the local SelfX service.</Explanation>
 			<Script>SelfX_Device_AirePlaneMode.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>300</TimeoutSeconds>
 			<Category>Device</Category>
@@ -255,6 +273,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
@@ -267,6 +286,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation Ref="Msg_SendLogs_Explanation"/>
 			<Script>SelfX_Device_CollectLogs.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<TimeoutSeconds>1800</TimeoutSeconds>
 			<Post_Action>MailReport</Post_Action>
 			<Category>Device</Category>
@@ -281,6 +301,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Websites do not load or display correctly in Google Chrome. The action deletes saved browsing data of the default profile.</Explanation>
 			<Script>SelfX_Browser_ClearChromeCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Browser</Category>
 			<Alerte_MSG>Google Chrome will close immediately; unsaved input on websites is lost. In the default profile the cache, cookies, history, visited links, top sites and saved form data (autofill) are deleted. You will be signed out of many websites. Bookmarks and saved passwords are kept. Other Chrome profiles are not affected.
 
@@ -293,6 +314,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Websites do not load or display correctly in Microsoft Edge. The action clears the cache of the default profile only.</Explanation>
 			<Script>SelfX_Browser_ClearEdgeCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Browser</Category>
 			<Alerte_MSG>Microsoft Edge will close immediately; unsaved input on websites is lost. Then the cache of the default profile is cleared. Cookies, history, saved passwords, bookmarks and other profiles are not affected, so you stay signed in to websites.
 
@@ -305,6 +327,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Websites do not load or display correctly in Firefox. The action deletes saved browsing data of all Firefox profiles.</Explanation>
 			<Script>SelfX_Browser_ClearFirefoxCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Browser</Category>
 			<Alerte_MSG>Firefox will close immediately; unsaved input on websites is lost. In all profiles the cache, cookies and stored website data are deleted. You will be signed out of many websites. Bookmarks and saved passwords are kept.
 
@@ -317,6 +340,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>The "New Teams meeting" button is missing in Outlook.</Explanation>
 			<Script>SelfX_Outlook_TeamsAddIn.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Outlook</Category>
 			<Alerte_MSG>Outlook will close and then open again automatically. Unsaved work may be lost.
 
@@ -329,6 +353,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>When you type a name in a new e-mail, Outlook suggests addresses that are wrong, no longer exist or belong to another person.</Explanation>
 			<Script>SelfX_Outlook_CleanAutoComplete.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Outlook</Category>
 			<Alerte_MSG>The list of suggested e-mail addresses (auto-complete list) of Outlook will be cleared. Outlook will close and start again. Mails you are writing that are not saved as a draft may be lost. Outlook builds the list again while you send new mails. Your mailbox, contacts and profile are not changed. The new Outlook is not affected.
 
@@ -341,6 +366,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You want to compare two workbooks side by side, for example on two screens, but Excel always opens the second file in the same window.</Explanation>
 			<Script>SelfX_Excel_NewInstance.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Office</Category>
 			<Alerte_MSG>A second, independent Excel window will be started. Excel windows and workbooks that are already open are not closed or changed.
 
@@ -355,6 +381,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>A program is running, but you cannot see its window. This often happens after an external monitor was disconnected, for example when you move from the home office to the office.</Explanation>
 			<Script>SelfX_Device_BringWindowsBack.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Device</Category>
 			<Alerte_MSG>Program windows that lie outside the screen are moved to your main screen. Nothing is closed or saved, and windows that you already see are not changed.
 
@@ -369,6 +396,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>The Citrix Workspace app hangs, does not sign in or does not show your applications and desktops.</Explanation>
 			<Script>SelfX_Citrix_RestartWorkspace.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Citrix</Category>
 			<Alerte_MSG>The Citrix Workspace app of your user account will close and start again. Application and desktop sessions that are already open are not ended by SelfX. Your saved sign-in and the settings of the app are not changed.
 
@@ -383,6 +411,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Word, Excel, Outlook or another Office app shows "Unlicensed Product", asks again and again to activate or to sign in, or says that your account does not have a license although it has one.</Explanation>
 			<Script>SelfX_Office_ResetLicence.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Office</Category>
 			<Alerte_MSG>All open Office apps (Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio, Project, Skype for Business) will close. Unsaved work is lost. Then the saved license data of your user account is removed. Your documents, settings, mailbox and Office program files are not changed. Teams is not closed.
 
@@ -397,6 +426,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>OneDrive is not running.</Explanation>
 			<Script>SelfX_OneDrive_Run.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG>Your OneDrive client will be started.
 
@@ -409,6 +439,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Restarting OneDrive can solve some issues, for example synchronization issues.</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Restart"/>
 		</Action>
@@ -423,6 +454,7 @@ This first step restarts OneDrive. OneDrive will close and then open again autom
 If the issue persists, run the action "Reset the OneDrive client".</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Restart_Step1"/>
 		</Action>
@@ -433,6 +465,7 @@ If the issue persists, run the action "Reset the OneDrive client".</Explanation>
 			<Explanation>The error 0x8004def4 is displayed when OneDrive starts.</Explanation>
 			<Script>SelfX_OneDrive_Reset.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Reset"/>
 		</Action>
@@ -443,6 +476,7 @@ If the issue persists, run the action "Reset the OneDrive client".</Explanation>
 			<Explanation>Your device is running slow and OneDrive seems to use a lot of memory.</Explanation>
 			<Script>SelfX_OneDrive_Reset.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Reset"/>
 		</Action>
@@ -453,6 +487,7 @@ If the issue persists, run the action "Reset the OneDrive client".</Explanation>
 			<Explanation>A red cross is displayed on the OneDrive icon.</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Restart_Step1"/>
 		</Action>
@@ -463,6 +498,7 @@ If the issue persists, run the action "Reset the OneDrive client".</Explanation>
 			<Explanation>OneDrive opens and then closes again by itself.</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Restart_Step1"/>
 		</Action>
@@ -473,6 +509,7 @@ If the issue persists, run the action "Reset the OneDrive client".</Explanation>
 			<Explanation>A white cross is displayed on OneDrive files or folders.</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Restart_Step1"/>
 		</Action>
@@ -485,6 +522,7 @@ If the issue persists, run the action "Reset the OneDrive client".</Explanation>
 This step restarts the OneDrive client.</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Restart_Step1"/>
 		</Action>
@@ -495,6 +533,7 @@ This step restarts the OneDrive client.</Explanation>
 			<Explanation>Files stored in OneDrive do not open.</Explanation>
 			<Script>SelfX_OneDrive_Reboot.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Restart_Step1"/>
 		</Action>
@@ -505,6 +544,7 @@ This step restarts the OneDrive client.</Explanation>
 			<Explanation Ref="Msg_OneDrive_Teams_Sync"/>
 			<Script>SelfX_OneDrive_Reset.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Reset"/>
 		</Action>
@@ -517,6 +557,7 @@ This step restarts the OneDrive client.</Explanation>
 This step resets your OneDrive client. Resetting the OneDrive client does not cause any data loss.</Explanation>
 			<Script>SelfX_OneDrive_Reset.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>OneDrive</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Reset"/>
 		</Action>
@@ -527,6 +568,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>You cannot connect to Teams.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -537,6 +579,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Your profile picture is not displayed in Teams or is not updated.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -547,6 +590,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_OneDrive_Teams_Sync"/>
 			<Script>SelfX_OneDrive_Reset.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_OneDrive_Reset"/>
 		</Action>
@@ -557,6 +601,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>When you open Teams, the window is stuck on "Loading Microsoft Teams".</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -567,6 +612,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>You have synchronization issues in Teams.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -577,6 +623,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>You try to open Teams, but the client does not open.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -587,6 +634,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Teams freezes during an audio call.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -597,6 +645,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Your video is frozen or not visible during a meeting or call.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart_Short"/>
 		</Action>
@@ -607,6 +656,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Messages in Teams are not sent and Teams shows "Failed to send".</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -617,6 +667,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Teams does not display correctly when you join a meeting.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -627,6 +678,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Teams opens, but it does not connect.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -637,6 +689,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Your status in Teams stays "Offline" although you are signed in.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -647,6 +700,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Notifications of incoming Teams calls are no longer displayed.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -657,6 +711,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>You see the message notification and preview, but not the content of the message.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -667,6 +722,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>You cannot connect to Teams after changing your password.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -677,6 +733,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>When you open tabs in Teams, they do not load correctly.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -687,6 +744,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Your status in Teams is not correct or is not updated.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -697,6 +755,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>Teams meetings do not open when you click the link to join.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -707,6 +766,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>The sound cuts out during Teams meetings.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -717,6 +777,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>You cannot create a Teams meeting from the Outlook calendar.</Explanation>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -727,6 +788,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Intune_Sync_Explanation"/>
 			<Script>SelfX_Intune_RestartService.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>300</TimeoutSeconds>
 			<Category>Intune</Category>
@@ -739,6 +801,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
@@ -751,6 +814,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
@@ -763,6 +827,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation Ref="Msg_Chkdsk_Explanation"/>
 			<Script>SelfX_OneDrive_CHKDSK.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>600</TimeoutSeconds>
 			<Category>OneDrive</Category>
@@ -775,6 +840,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Explanation>You suspect a virus, a suspicious file was opened or Windows Security shows a warning. The action runs a quick scan with Microsoft Defender and tells you at the end whether it found threats.</Explanation>
 			<Script>SelfX_Defender_QuickScan.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<TimeoutSeconds>2400</TimeoutSeconds>
 			<Category>Device</Category>
 			<Alerte_MSG>A quick scan with Microsoft Defender starts. It checks the places where threats are found most often and usually takes 5 to 30 minutes. You can keep working, but the PC may be slower meanwhile. SelfX shows the result when the scan has finished.
@@ -790,6 +856,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>Settings of your company, such as network drives, printers or security rules, do not arrive or are out of date. The action asks Windows to apply the group policies again. It only works on devices that are joined to a domain (also hybrid joined devices).</Explanation>
 			<Script>SelfX_Device_GpUpdate.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Requires>DomainJoined</Requires>
 			<Category>Device</Category>
 			<Alerte_MSG>Windows checks and applies the group policies of your company again. This can take a few minutes. You are not signed out and Windows does not restart; a setting that needs a restart or a new sign-in takes effect after the next one. If your device is not joined to a domain, the action ends with the exit code 3 and changes nothing.
@@ -803,6 +870,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>There is no sound from the speakers or headphones, although everything was fine before. The sound may be switched off (muted) or turned down very low.</Explanation>
 			<Script>SelfX_Audio_Restore.ps1</Script>
 			<Context>User</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<Category>Device</Category>
 			<Alerte_MSG>SelfX switches the sound of your current playback device (speakers or headphones) on again. If it is muted, the sound is switched on; if the volume is below 30 %, it is raised to 30 %. A higher volume stays as it is. Other devices, the microphone and drivers are not changed.
 
@@ -815,6 +883,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation Ref="Msg_SendLogs_Explanation"/>
 			<Script>SelfX_Device_CollectLogs.ps1</Script>
 			<Context>System</Context>
+			<TerminalServer>Hide</TerminalServer>
 			<TimeoutSeconds>1800</TimeoutSeconds>
 			<Post_Action>MailReport</Post_Action>
 			<Category>Device</Category>
@@ -827,6 +896,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You forgot your password, it has expired or your account is locked. You can set a new password yourself on the sign-in page of your company account, without calling the support.</Explanation>
 			<Link>Link_PasswordReset</Link>
 			<Context>Link</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Account</Category>
 			<Alerte_MSG>The page to reset your password opens in your web browser. Sign in with your work e-mail address and follow the steps. You may be asked to confirm your identity, for example with your phone or the authenticator app. SelfX does not see or save your password.
 
@@ -839,6 +909,7 @@ Do you want to continue?</Alerte_MSG>
 			<Explanation>You have a new phone, lost your authenticator app or want to change the phone number or sign-in method of your company account.</Explanation>
 			<Link>Link_SecurityInfo</Link>
 			<Context>Link</Context>
+			<TerminalServer>Show</TerminalServer>
 			<Category>Account</Category>
 			<Alerte_MSG>The security info page of your account opens in your web browser. Sign in with your work account to add, change or remove sign-in methods such as the authenticator app or your phone number. SelfX does not see or save your data.
 

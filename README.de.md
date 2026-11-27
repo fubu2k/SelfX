@@ -276,7 +276,9 @@ Einzelheiten stehen im [Änderungsprotokoll](CHANGELOG.md) und im
   erhöhten Rechten fragt ihn an. Aktionen, die andere stören würden (Neustart,
   Windows-Updates, Datenträgerprüfung, Neustart der Netzwerkadapter), stehen
   einem normalen Nutzer nicht zur Verfügung, solange ein anderer Nutzer
-  angemeldet ist (`OtherSessions`).
+  angemeldet ist (`OtherSessions`). Auf einem Terminalserver oder Sitzungshost
+  (`Environment_Mode` = `TerminalServer`) sind Aktionen, die das ganze Gerät betreffen,
+  ausgeblendet, und der Dienst lehnt sie ab.
 - **Sorgfältiger Umgang mit Dateien.** SYSTEM liest keine Protokolle aus
   Ordnern, die Nutzer ändern können, und die Deinstallation folgt keinen
   Junctions.

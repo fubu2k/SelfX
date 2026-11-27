@@ -24,7 +24,7 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 | Seite | Was Sie einstellen |
 |---|---|
 | Sprache | Sprache des Assistenten (de, en) und Standardsprache von SelfX auf den Geräten |
-| Grundlagen | Name Ihrer Organisation und des Programms |
+| Grundlagen | Name Ihrer Organisation und des Programms, wo SelfX läuft |
 | Support | E-Mail-Adresse, Telefon, Servicezeiten, Webseite und Teams-Kontakt des Supports |
 | Branding | Logo (Dateiauswahl, Vorschau) und Firmenfarbe; das Fenster zeigt die Farbe sofort |
 | Ticket | Ticket-E-Mail und, bei mehreren Organisationen, ein Postfach je Organisation, zugeordnet über Gruppentag, OU oder Geräteklasse |
@@ -92,7 +92,7 @@ Wichtige Parameter:
 
 ## Die Fragen
 
-1. **Grundlagen:** Standardsprache, Sprachwahl durch Nutzer, Name der Organisation, Name des Werkzeugs.
+1. **Grundlagen:** Standardsprache, Sprachwahl durch Nutzer, Name der Organisation, Name des Werkzeugs, wo SelfX läuft (`Client` für einen PC oder ein Notebook, `TerminalServer` für einen Terminalserver oder Sitzungshost mit mehreren Nutzern; siehe [Konfiguration](Configuration.md#terminalserver-und-sitzungshost-environment_mode)).
 2. **Support-Kontakte:** Funktionspostfach, Telefon, Servicezeiten, Webseite, Teams.
 3. **Branding:** Logo (wird kopiert) und Firmenfarbe.
 4. **Ticket per E-Mail:** Ticket-Funktion an oder aus, Standard-Empfänger, Betreff-Kennzeichen.

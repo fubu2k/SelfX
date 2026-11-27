@@ -708,6 +708,8 @@ after that 4099 reports the number of skipped ones.
 | 4005 | Error | Installed scripts or configurations do not match `SelfX.Code.json` and `SelfX.Config.json`; the service starts nothing. With `Service_FileCheck` = `Audit` only a warning. |
 | 4006 | Error | The trust anchor `HKLM\SOFTWARE\SelfX\Trust` is missing, invalid or can be changed by an identity other than SYSTEM and Administrators; the service starts nothing. Install SelfX again. |
 | 4007 | Error | Trust mode signature: an installed script or library has no valid signature of an allowed signer, or a signed catalog (`SelfX.Code.cat`, `SelfX.Config.cat`) is missing or does not match; the service starts nothing, also with `Service_FileCheck` = `Audit`. The SelfX log names the file and the reason. |
+| 4008 | Warning | `Environment_Mode` = `TerminalServer`: a request for an action that is not classified `TerminalServer` = `Show` was refused. The SelfX log names the action. |
+| 4009 | Warning | Windows is a session host for several users, but `Environment_Mode` is `Client`. Set `Environment_Mode` to `TerminalServer`; the service does not change it. |
 | 4099 | Warning | Further events of the same ID were not written (limit). |
 
 ### The file lists `SelfX.Code.json` and `SelfX.Config.json`

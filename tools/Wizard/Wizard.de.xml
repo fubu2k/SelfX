@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.4.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.5.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -31,6 +31,8 @@
 	<T Id="OrgName.rec">Der Kurzname Ihrer Firma oder Behörde, zum Beispiel Contoso.</T>
 	<T Id="ToolName.ask">Name des Werkzeugs in der Titelleiste und in den Verknüpfungen</T>
 	<T Id="ToolName.rec">Behalten Sie SelfX. Nutzer finden es schneller, wenn der Name überall gleich ist.</T>
+	<T Id="EnvironmentMode.ask">Wo läuft SelfX? Client (PC oder Notebook einer Person) oder TerminalServer (Terminalserver oder Sitzungshost mit mehreren Nutzern gleichzeitig)</T>
+	<T Id="EnvironmentMode.rec">Client für PCs und Notebooks. TerminalServer für Windows Enterprise multi-session oder einen Remotedesktop-Sitzungshost: SelfX blendet dann Aktionen und Reparaturen aus, die das ganze Gerät oder alle Nutzer betreffen, und der Dienst lehnt sie ab. Bauen Sie je Geräteart ein eigenes Paket.</T>
 	<T Id="SupportMail.ask">E-Mail-Adresse des Supports (Funktionspostfach)</T>
 	<T Id="SupportMail.rec">Nehmen Sie ein Funktionspostfach, nie ein persönliches. Die Adresse ist auch der Empfänger der E-Mail mit den Geräteprotokollen.</T>
 	<T Id="SupportPhone.ask">Telefonnummer des Supports (leer = ausblenden)</T>

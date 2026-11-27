@@ -89,6 +89,7 @@ La visualizzazione dettagliata elenca diversi problemi specifici per prodotto ch
 		<Service_Unavailable_Text>Il servizio SelfX non è in esecuzione: le azioni con lo scudo non sono disponibili.</Service_Unavailable_Text>
 		<Service_Busy_Text>È in esecuzione un’altra azione. Attendi che sia terminata.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Questa azione non è possibile mentre un altro utente è connesso a questo dispositivo. Rivolgiti al supporto IT oppure riprova quando sei l’unico utente.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>Questa azione non è disponibile su questo computer, perché più persone lo usano contemporaneamente. Rivolgiti al supporto IT.</Service_TerminalServer_Text>
 		<Action_Running_Text>Azione in esecuzione: {0}</Action_Running_Text>
 		<Action_Running_Label>In esecuzione…</Action_Running_Label>
 		<Action_Success_Text>Azione completata: {0}</Action_Success_Text>

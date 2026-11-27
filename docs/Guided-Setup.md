@@ -23,7 +23,7 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 | Page | What you set |
 |---|---|
 | Language | Language of the wizard (de, en) and the default language of SelfX on the devices |
-| Basics | Name of your organisation and of the tool |
+| Basics | Name of your organisation and of the tool, where SelfX runs |
 | Support | E-mail address, phone, hours, website and Teams contact of the support |
 | Branding | Logo (file dialog, preview) and company color; the window shows the color at once |
 | Ticket | Ticket e-mail and, for several organisations, one mailbox per organisation, chosen by group tag, OU or device class |
@@ -88,7 +88,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 
 ## The questions
 
-1. **Basics:** default language, language choice by users, organisation name, tool name.
+1. **Basics:** default language, language choice by users, organisation name, tool name, where SelfX runs (`Client` for a PC or notebook, `TerminalServer` for a terminal server or session host with several users; see [Configuration](Configuration.md#terminal-server-and-session-host-environment_mode)).
 2. **Support contacts:** shared mailbox, phone, hours, website, Teams.
 3. **Branding:** logo (copied) and company color.
 4. **Ticket by e-mail:** on or off, default recipient, subject marker. If **other organisations or

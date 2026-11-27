@@ -30,6 +30,7 @@
                                               was stopped is refused
     3.1.0    2026-11-27  fubu2k               Health results may carry UserRemediation (first part of a repair in the context of the user);
                                               checked with the same name rule and only together with a Remediation
+    3.1.0    2026-11-27  fubu2k               Answer ERROR TerminalServer (action refused in Environment_Mode TerminalServer) = status TerminalServer
 #>
 
 $Script:SelfXDefaultPipeName = 'SelfX.Service'
@@ -195,6 +196,7 @@ function Invoke-SelfXSystemAction {
 	switch -Regex ($response) {
 		'^BUSY'    { return [pscustomobject]@{ Status = 'Busy'; ExitCode = $null; Message = $response } }
 		'^ERROR OtherSessions$' { return [pscustomobject]@{ Status = 'OtherSessions'; ExitCode = $null; Message = $response } }
+		'^ERROR TerminalServer$' { return [pscustomobject]@{ Status = 'TerminalServer'; ExitCode = $null; Message = $response } }
 		'^TIMEOUT' { return [pscustomobject]@{ Status = 'Timeout'; ExitCode = $null; Message = $response } }
 		default    { return [pscustomobject]@{ Status = 'Error'; ExitCode = $null; Message = "$response" } }
 	}

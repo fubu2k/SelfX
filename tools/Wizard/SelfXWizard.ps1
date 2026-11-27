@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.5
+    Version : 3.1.6
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -35,6 +35,7 @@
                                               package, and the instructions for both (Supersedence explained)
     3.1.5    2026-11-27  fubu2k               Network targets: answers NetworkEnabled, NetworkMicrosoft, NetworkHostNames and NetworkTargets (kind netTarget), Set-SelfXNetworkTestConfig
                                               writes Network_Test_Config.xml (settings and own targets next to the delivered Microsoft targets)
+    3.1.6    2026-11-27  fubu2k               Question EnvironmentMode (Where does SelfX run? Client or TerminalServer) writes Environment_Mode
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -524,6 +525,7 @@ function Get-WizardQuestions {
     & $add @{ Id = 'ShowLanguageSetting'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'OrgName'; Kind = 'text'; Max = 60; Required = $true; Default = '' }
     & $add @{ Id = 'ToolName'; Kind = 'text'; Max = 40; Required = $true; Default = 'SelfX' }
+    & $add @{ Id = 'EnvironmentMode'; Kind = 'choice'; Choices = @('Client', 'TerminalServer'); Default = 'Client' }
     & $add @{ Section = 'support'; Id = 'SupportMail'; Kind = 'mail'; Default = '' }
     & $add @{ Id = 'SupportPhone'; Kind = 'phone'; Default = '' }
     & $add @{ Id = 'SupportHours'; Kind = 'text'; Max = 60; Default = '' }
@@ -751,6 +753,7 @@ function Get-WizardToolConfigValues {
         Shortcut_Desktop            = $A.ShortcutDesktop
         Shortcut_StartMenu          = $A.ShortcutStartMenu
         Show_Tray_Icon              = $A.TrayIcon
+        Environment_Mode            = $(if ($A.EnvironmentMode) { $A.EnvironmentMode } else { 'Client' })
         Support_Mail                = $A.SupportMail
         Support_Phone_number        = $A.SupportPhone
         Support_Hours               = $A.SupportHours

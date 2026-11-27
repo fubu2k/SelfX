@@ -89,6 +89,7 @@
 		<Service_Unavailable_Text>Служба SelfX не работает: действия со значком щита недоступны.</Service_Unavailable_Text>
 		<Service_Busy_Text>Выполняется другое действие. Дождитесь его завершения.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Это действие невозможно, пока на устройстве выполнен вход другого пользователя. Обратитесь в ИТ-поддержку или повторите попытку, когда вы будете единственным пользователем.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>Это действие недоступно на этом компьютере, так как им одновременно пользуются несколько человек. Обратитесь в ИТ-поддержку.</Service_TerminalServer_Text>
 		<Action_Running_Text>Выполняется действие: {0}</Action_Running_Text>
 		<Action_Running_Label>Выполняется…</Action_Running_Label>
 		<Action_Success_Text>Действие выполнено: {0}</Action_Success_Text>

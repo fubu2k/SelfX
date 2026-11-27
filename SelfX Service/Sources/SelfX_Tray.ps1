@@ -37,6 +37,7 @@
     3.1.0    2026-11-27  fubu2k               Code and configuration in two folders (App, Config): Tool_Config.xml, the catalog, the icon and own
                                               language files are resolved by SelfXPaths.ps1
     3.1.0    2026-11-27  fubu2k               Text overrides: Config\Texts\<culture>.xml replaces single texts of the language file (Localization.ps1)
+    3.1.0    2026-11-27  fubu2k               Environment_Mode TerminalServer: the menu item to send the device logs only when that action is classified Show
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -99,6 +100,7 @@ Add-Type -Namespace SelfXTray -Name Native -MemberDefinition '[DllImport("user32
 
 . (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1')
 . (Join-Path $Global:Tray_Folder 'Localization.ps1')
+. (Join-Path $Global:Tray_Folder 'SelfXEnvironment.ps1')
 . (Join-Path $Global:Tray_Folder 'SelfXNetwork.ps1')
 . (Join-Path $Global:Tray_Folder 'SystemInfo.ps1')
 # Logging to ProgramData\SelfX\Logs\Users\<SID> (SelfXLog.ps1)
@@ -350,7 +352,9 @@ $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
 $XmlSettings.XmlResolver = $null
 $XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Issues_List.xml' -CodeRoot $Global:Tray_Folder), $XmlSettings)
 Try { $Catalog.Load($XmlReader) } Finally { $XmlReader.Dispose() }
-If($Catalog.SelectSingleNode("//Action[normalize-space(Post_Action)='MailReport' and normalize-space(Context)='System']"))
+# Environment_Mode TerminalServer: only when the action is classified TerminalServer Show (the same rule as the window).
+$Tray_Mode = (ConvertTo-SelfXEnvironmentMode (Get-TrayConfig 'Environment_Mode' '')).Mode
+If(@($Catalog.SelectNodes("//Action[normalize-space(Post_Action)='MailReport' and normalize-space(Context)='System']") | Where-Object { Test-SelfXShownInEnvironment $Tray_Mode ([string]$_.TerminalServer) }).Count)
 	{
 		[void]$Menu.Items.Add((Get-SelfXString 'SystemInfo_SendLogs_Text'), $null, { Open-SelfX 'SendLogs' })
 	}

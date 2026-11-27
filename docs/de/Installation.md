@@ -742,6 +742,8 @@ höchstens 10 Einträge in 10 Minuten; danach meldet 4099 die Zahl der ausgelass
 | 4005 | Fehler | Installierte Skripte oder Konfigurationen stimmen nicht mit `SelfX.Code.json` und `SelfX.Config.json` überein; der Dienst startet nichts. Mit `Service_FileCheck` = `Audit` nur eine Warnung. |
 | 4006 | Fehler | Der Vertrauensanker `HKLM\SOFTWARE\SelfX\Trust` fehlt, ist ungültig oder kann von einer anderen Identität als SYSTEM und Administratoren geändert werden; der Dienst startet nichts. SelfX neu installieren. |
 | 4007 | Fehler | Vertrauensmodus Signatur: Ein installiertes Skript oder eine Bibliothek hat keine gültige Signatur eines erlaubten Signierers, oder ein signierter Katalog (`SelfX.Code.cat`, `SelfX.Config.cat`) fehlt oder passt nicht; der Dienst startet nichts, auch mit `Service_FileCheck` = `Audit`. Das SelfX-Protokoll nennt Datei und Grund. |
+| 4008 | Warnung | `Environment_Mode` = `TerminalServer`: Eine Anfrage für eine Aktion, die nicht als `TerminalServer` = `Show` eingestuft ist, wurde abgelehnt. Das SelfX-Protokoll nennt die Aktion. |
+| 4009 | Warnung | Windows ist ein Sitzungshost für mehrere Nutzer, `Environment_Mode` steht aber auf `Client`. Stellen Sie `Environment_Mode` auf `TerminalServer`; der Dienst ändert das nicht selbst. |
 | 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
 
 ### Die Dateilisten `SelfX.Code.json` und `SelfX.Config.json`

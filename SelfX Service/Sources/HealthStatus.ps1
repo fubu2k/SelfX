@@ -23,6 +23,8 @@
                                        Config\HealthChecks with an entry in SelfX.Config.json (SelfXPaths.ps1)
     3.1.0  2026-11-27  fubu2k          Remediation UserScript (part in the context of the user, started by SelfX before the
                                        SYSTEM part): returned as UserRemediation, same name rule, never the same file as Script
+    3.1.0  2026-11-27  fubu2k          Environment_Mode TerminalServer (Tool_Config.xml): a repair not classified TerminalServer="Show"
+                                       is returned without Remediation and UserRemediation (SelfXEnvironment.ps1)
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -74,6 +76,8 @@ function Get-SelfXDiskHealth {
 
 # Paths of the configuration (Health_Config.xml) and of the health scripts (App\HealthChecks, Config\HealthChecks).
 . (Join-Path $PSScriptRoot 'SelfXPaths.ps1')
+# Environment_Mode and the TerminalServer classification of the repairs.
+. (Join-Path $PSScriptRoot 'SelfXEnvironment.ps1')
 
 # Defender status through CIM (SelfXDefender.ps1, no Defender module).
 . (Join-Path $PSScriptRoot 'SelfXDefender.ps1')
@@ -496,6 +500,7 @@ function Get-SelfXHealth {
         )
         # Multi-row checks (Disk, BitLocker) are narrowed to the requested drive afterwards.
         if ($OnlyId -and $OnlyName) { $results = @($results | Where-Object { $_.Name -eq $OnlyName -or -not $_.Name }) }
+        $environment = Get-SelfXEnvironmentMode -ToolConfigPath (Get-SelfXConfigPath -Name 'Tool_Config.xml' -CodeRoot $Root)
         foreach ($result in $results) {
             # When="NotOK" offers the remediation only while the status is not OK (default: Always).
             $matches = @($config.SelectNodes('/HealthConfig/Remediations/Remediation') | Where-Object {
@@ -512,6 +517,7 @@ function Get-SelfXHealth {
                 $script = $matches[0].GetAttribute('Script')
                 # Read before the first -match/-notmatch below: they overwrite the automatic variable $Matches (= $matches).
                 $userScript = $matches[0].GetAttribute('UserScript')
+                $terminalServer = $matches[0].GetAttribute('TerminalServer')
                 if ($script -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,90}\.ps1$' -or $script.Contains('..')) {
                     throw "Invalid remediation filename for $($result.Id)."
                 }
@@ -520,6 +526,8 @@ function Get-SelfXHealth {
                     throw "Invalid remediation UserScript for $($result.Id)."
                 }
                 if ($when -eq 'NotOK' -and $result.Status -eq 'OK') { $script = ''; $userScript = '' }
+                # Environment_Mode TerminalServer: a repair that is not classified Show is not offered (the service refuses it as well).
+                if (-not (Test-SelfXShownInEnvironment $environment.Mode $terminalServer)) { $script = ''; $userScript = '' }
             }
             $result | Add-Member -NotePropertyName Remediation -NotePropertyValue $script
             $result | Add-Member -NotePropertyName UserRemediation -NotePropertyValue $userScript

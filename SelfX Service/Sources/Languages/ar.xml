@@ -89,6 +89,7 @@
 		<Service_Unavailable_Text>خدمة SelfX لا تعمل: الإجراءات المميزة بالدرع غير متوفرة.</Service_Unavailable_Text>
 		<Service_Busy_Text>لا يزال هناك إجراء آخر قيد التنفيذ. يرجى الانتظار حتى يتم الانتهاء منه.</Service_Busy_Text>
 		<Service_OtherSessions_Text>لا يمكن تنفيذ هذا الإجراء أثناء تسجيل دخول مستخدم آخر إلى هذا الجهاز. تواصل مع دعم تقنية المعلومات أو أعد المحاولة عندما تكون المستخدم الوحيد.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>هذا الإجراء غير متاح على هذا الكمبيوتر، لأن عدة أشخاص يستخدمونه في الوقت نفسه. تواصل مع دعم تقنية المعلومات.</Service_TerminalServer_Text>
 		<Action_Running_Text>الإجراء قيد التشغيل: {0}</Action_Running_Text>
 		<Action_Running_Label>قيد التشغيل…</Action_Running_Label>
 		<Action_Success_Text>اكتمل الإجراء: {0}</Action_Success_Text>

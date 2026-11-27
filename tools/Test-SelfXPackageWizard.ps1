@@ -17,9 +17,10 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.1.0
+    Version : 1.3.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
+              1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -183,6 +184,11 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
 Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 'Intune service' }) -ExistingLabels @('intune service') } 'network targets: a label of the delivered targets is refused'
     Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Everything' -Choices @('Enforce', 'Audit') } 'choice rejects unknown'
     Assert ((ConvertTo-WizardValue -Kind 'choice' -Value 'audit' -Choices @('Enforce', 'Audit')) -eq 'Audit') 'choice case insensitive'
+    $environmentQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'EnvironmentMode' })
+    Assert ($environmentQuestion.Count -eq 1 -and $environmentQuestion[0].Default -eq 'Client' -and (($environmentQuestion[0].Choices) -join ',') -eq 'Client,TerminalServer') 'EnvironmentMode: one question, default Client, choices Client and TerminalServer'
+    Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Server' -Choices $environmentQuestion[0].Choices } 'EnvironmentMode: another value is refused'
+    Assert ((Get-WizardToolConfigValues -A @{ EnvironmentMode = 'TerminalServer' }).Environment_Mode -eq 'TerminalServer') 'EnvironmentMode: TerminalServer is written as Environment_Mode'
+    Assert ((Get-WizardToolConfigValues -A @{}).Environment_Mode -eq 'Client') 'EnvironmentMode: an answer file without the answer writes Client'
     Assert-Throws { ConvertTo-WizardValue -Kind 'text' -Value "a`r`nb" -Max 40 } 'text rejects line breaks'
     Assert ((ConvertTo-WizardValue -Kind 'list' -Value 'A, B ,,C').Count -eq 3) 'list splits at commas'
     Assert-Throws { Test-WizardUnitValues -Unit ([pscustomobject]@{ GroupTags = @('x;y'); Categories = @(); OUs = @() }) } 'group tag rejects ;'
@@ -249,6 +255,7 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ($g.Brand_Accent_Color -eq '#E20074' -and $g.Brand_Logo -eq 'Branding\logo.png') 'Tool_Config: branding'
     Assert ((Test-Path (Join-Path $out 'package\Config\Branding\logo.png')) -and -not (Test-Path (Join-Path $out 'package\Config\Branding\company_logo.png'))) 'logo copied, placeholder removed'
     Assert ($g.Service_FileCheck -eq 'Enforce' -and $g.Service_Privileges -eq 'Restricted') 'secure defaults stay without expert mode'
+    Assert ($g.Environment_Mode -eq 'Client') 'Tool_Config: Environment_Mode Client without an answer'
     Assert (-not (Test-Path (Join-Path $out 'package\Service\Projects')) -and @(Get-ChildItem (Join-Path $out 'package') -Recurse -Filter 'Test-*.ps1').Count -eq 0) 'copy has no project files and no tests'
 
     $ticket = Read-SelfXTicketConfig -Path (Join-Path $out 'package\Config\Ticket_Config.xml')

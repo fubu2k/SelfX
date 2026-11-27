@@ -15,7 +15,9 @@
         user action, and has a TimeoutSeconds between 1 and 7200 when it is set;
       - every script that can run as SYSTEM declares "Context : System" in its header, has no mandatory
         parameter in its script-level param block (the service starts it without parameters) and parses;
-      - user scripts do not declare "Context : System" in their header.
+      - user scripts do not declare "Context : System" in their header;
+      - every action (element TerminalServer) and every remediation (attribute TerminalServer) is classified Show or Hide,
+        the same on every entry of a script (Environment_Mode TerminalServer); negative examples prove the rule.
 
     Nothing is executed and nothing is changed: the files are only read and parsed.
     Run in Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-Catalog.ps1
@@ -36,6 +38,8 @@
     2.6.10   2026-11-22  fubu2k               Initial version.
     3.1.0    2026-11-27  fubu2k               Remediation UserScript: plain file name, exists, declares 'Context : User', is not a SYSTEM
                                               script of the catalogue or of another remediation and has no mandatory parameter.
+    3.1.0    2026-11-27  fubu2k               Required classification TerminalServer (Show or Hide) on every action and remediation, the same
+                                              for every entry of a script, with negative examples
 #>
 param(
 	[string]$SourcesFolder = (Join-Path $PSScriptRoot 'Sources')
@@ -150,6 +154,70 @@ foreach ($scriptKey in $sessionsByScript.Keys) {
 }
 foreach ($remediation in @($health.SelectNodes('//Remediation[@OtherSessions]'))) {
 	Assert-True ($remediation.GetAttribute('OtherSessions') -ceq 'Block') "Remediation $($remediation.GetAttribute('Script')) OtherSessions is Block (found '$($remediation.GetAttribute('OtherSessions'))')"
+}
+
+# TerminalServer (Environment_Mode TerminalServer) is required on every action (one element) and every remediation (attribute): exactly
+# Show or Hide, and the same on every entry of a script, also between the catalogue and Health_Config.xml. The service hides a System
+# script when any of its entries is not Show; the window decides per entry, so different values would show what the service refuses.
+function Get-TerminalServerProblems {
+	param([xml]$Catalog, [xml]$Health)
+	$problems = New-Object System.Collections.Generic.List[string]
+	$byScript = @{}
+	foreach ($action in @($Catalog.SelectNodes('//Action'))) {
+		$nodes = @($action.SelectNodes('TerminalServer'))
+		$value = if ($nodes.Count -eq 1) { "$($nodes[0].InnerText)".Trim() } else { '' }
+		if ($nodes.Count -ne 1 -or $value -cnotin @('Show', 'Hide')) {
+			$problems.Add("Action $($action.GetAttribute('Id')) has exactly one TerminalServer of Show or Hide (found $($nodes.Count) element(s), '$value')")
+			continue
+		}
+		$scriptKey = "$($action.Script)".Trim().ToLowerInvariant()
+		if (-not $scriptKey) { continue }
+		if (-not $byScript.ContainsKey($scriptKey)) { $byScript[$scriptKey] = New-Object System.Collections.Generic.List[string] }
+		$byScript[$scriptKey].Add($value)
+	}
+	foreach ($remediation in @($Health.SelectNodes('//Remediation'))) {
+		$value = $remediation.GetAttribute('TerminalServer')
+		if (-not $remediation.HasAttribute('TerminalServer') -or $value -cnotin @('Show', 'Hide')) {
+			$problems.Add("Remediation $($remediation.GetAttribute('Id')) $($remediation.GetAttribute('Script')) has TerminalServer Show or Hide (found '$value')")
+			continue
+		}
+		$scriptKey = "$($remediation.GetAttribute('Script'))".Trim().ToLowerInvariant()
+		if (-not $byScript.ContainsKey($scriptKey)) { $byScript[$scriptKey] = New-Object System.Collections.Generic.List[string] }
+		$byScript[$scriptKey].Add($value)
+	}
+	foreach ($scriptKey in $byScript.Keys) {
+		$values = @($byScript[$scriptKey] | Sort-Object -Unique)
+		if ($values.Count -ne 1) { $problems.Add("All entries of $scriptKey have the same TerminalServer value (found $($values -join ', '))") }
+	}
+	return $problems.ToArray()
+}
+$terminalServerProblems = @(Get-TerminalServerProblems $catalog $health)
+Assert-True ($terminalServerProblems.Count -eq 0) ("Every action and remediation is classified TerminalServer Show or Hide, the same for every entry of a script" + $(if ($terminalServerProblems.Count) { ': ' + ($terminalServerProblems -join '; ') }))
+
+# Negative examples: the rule must find each mistake.
+function New-TerminalServerExample([string]$Actions, [string]$Remediations = '') {
+	return [pscustomobject]@{
+		Catalog = [xml]"<Actions><Quick_Solution>$Actions</Quick_Solution></Actions>"
+		Health  = [xml]"<HealthConfig><Remediations>$Remediations</Remediations></HealthConfig>"
+	}
+}
+$goodAction = '<Action Id="A"><Script>A.ps1</Script><Context>User</Context><TerminalServer>Show</TerminalServer></Action>'
+$goodRemediation = '<Remediation Id="Disk" Script="B.ps1" TerminalServer="Hide" />'
+$examples = [ordered]@{
+	'a valid example'                          = @((New-TerminalServerExample ($goodAction + '<Action Id="L"><Link>Link_X</Link><Context>Link</Context><TerminalServer>Show</TerminalServer></Action>') $goodRemediation), 0)
+	'an action without TerminalServer'         = @((New-TerminalServerExample '<Action Id="A"><Script>A.ps1</Script><Context>User</Context></Action>'), 1)
+	'an empty TerminalServer'                  = @((New-TerminalServerExample '<Action Id="A"><Script>A.ps1</Script><Context>User</Context><TerminalServer> </TerminalServer></Action>'), 1)
+	'show in lower case'                       = @((New-TerminalServerExample '<Action Id="A"><Script>A.ps1</Script><Context>User</Context><TerminalServer>show</TerminalServer></Action>'), 1)
+	'two TerminalServer elements'              = @((New-TerminalServerExample '<Action Id="A"><Script>A.ps1</Script><Context>User</Context><TerminalServer>Show</TerminalServer><TerminalServer>Hide</TerminalServer></Action>'), 1)
+	'Show and Hide for one script'             = @((New-TerminalServerExample ($goodAction + '<Action Id="A2"><Script>a.ps1</Script><Context>User</Context><TerminalServer>Hide</TerminalServer></Action>')), 1)
+	'a remediation without the attribute'      = @((New-TerminalServerExample $goodAction '<Remediation Id="Disk" Script="B.ps1" />'), 1)
+	'a remediation with another value'         = @((New-TerminalServerExample $goodAction '<Remediation Id="Disk" Script="B.ps1" TerminalServer="Maybe" />'), 1)
+	'catalogue and remediation disagree'       = @((New-TerminalServerExample $goodAction '<Remediation Id="Disk" Script="A.ps1" TerminalServer="Hide" />'), 1)
+}
+foreach ($name in $examples.Keys) {
+	$example = $examples[$name][0]
+	$found = @(Get-TerminalServerProblems $example.Catalog $example.Health)
+	Assert-True ($found.Count -eq $examples[$name][1]) "TerminalServer rule: $name gives $($examples[$name][1]) problem(s) (found $($found.Count): $($found -join '; '))"
 }
 
 # --- Remediations of Health_Config.xml -------------------------------------------------------------

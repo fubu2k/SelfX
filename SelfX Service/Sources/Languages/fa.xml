@@ -89,6 +89,7 @@
 		<Service_Unavailable_Text>سرویس SelfX در حال اجرا نیست: اقدامات علامت گذاری شده با سپر در دسترس نیستند.</Service_Unavailable_Text>
 		<Service_Busy_Text>اقدام دیگری همچنان در حال اجراست. لطفا صبر کنید تا تمام شود.</Service_Busy_Text>
 		<Service_OtherSessions_Text>تا زمانی که کاربر دیگری در این دستگاه وارد شده است، این اقدام ممکن نیست. با پشتیبانی فناوری اطلاعات تماس بگیرید یا وقتی تنها کاربر هستید دوباره تلاش کنید.</Service_OtherSessions_Text>
+		<Service_TerminalServer_Text>این اقدام در این رایانه در دسترس نیست، زیرا چند نفر هم‌زمان از آن استفاده می‌کنند. با پشتیبانی فناوری اطلاعات تماس بگیرید.</Service_TerminalServer_Text>
 		<Action_Running_Text>اقدام در حال اجرا است: {0}</Action_Running_Text>
 		<Action_Running_Label>در حال اجرا…</Action_Running_Label>
 		<Action_Success_Text>اقدام انجام شد: {0}</Action_Success_Text>
