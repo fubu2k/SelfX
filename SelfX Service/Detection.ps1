@@ -3,15 +3,17 @@
     Detect the expected locally installed SelfX Service package version.
 
 .DESCRIPTION
-    Read-only Intune/SCCM detection for ProgramFiles\SelfX. Requires SelfXService.exe, SelfX.exe,
-    Tool_Config.xml, a registered SelfXService, an exact match of the code version 3.0.2 and the two file lists of the
-    package. The code version is ToolVersion in SelfX.Code.json of the install folder (the version is a property of the code;
-    Tool_Config.xml is not read for it). SelfX.Code.json and SelfX.Config.json in the install folder must have the digests that
+    Read-only Intune/SCCM detection for ProgramFiles\SelfX. Requires App\SelfXService.exe, App\SelfX.exe,
+    Config\Tool_Config.xml, a registered SelfXService, an exact match of the code version 3.1.0 and the two file lists of the
+    package. The code version is ToolVersion in App\SelfX.Code.json (the version is a property of the code;
+    Tool_Config.xml is not read for it). App\SelfX.Code.json and Config\SelfX.Config.json must have the digests that
     tools\New-SelfXIntuneWin.ps1 writes into $ExpectedCodeHash and $ExpectedConfigHash of the Detection.ps1 it creates
     (build\SelfX-Service-<version>.Detection.ps1; upload that file to Intune). The three checks are independent: a new code
     version, changed code files without a new version, and a changed configuration (for example a logo) each fail with their own reason,
     and a changed logo changes only the configuration digest.
     The copy in the repository still has the placeholders: it checks the version only and logs that.
+    An installation in the layout of an older version (all files directly in ProgramFiles\SelfX) is not detected, so Intune
+    installs the update.
     Does not start the service, contact the pipe, verify that it is running or execute
     remediation scripts. Writes an installed message and exits 0 when checks pass; exits
     1 for a missing prerequisite or version mismatch. XML read/parse errors are not caught.
@@ -21,7 +23,7 @@
     Name    : Detection.ps1
     Package : SelfX Service
     Context : Detection
-    Version : 3.0.4
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -36,15 +38,19 @@
     3.0.3    2026-11-27  fubu2k               Two digests (SelfX.Code.json and SelfX.Config.json) instead of the digest of SelfX.Files.json
     3.0.4    2026-11-27  fubu2k               The installed version is read from ToolVersion of SelfX.Code.json, no longer from Tool_Version of Tool_Config.xml;
                                               the check is the function Test-SelfXInstalledPackage (version, code digest, configuration digest)
+    3.1.0    2026-11-27  fubu2k               Detect version 3.1.0 in the layout App\ and Config\ (programs and SelfX.Code.json in App, Tool_Config.xml
+                                              and SelfX.Config.json in Config); the old layout is not detected
 #>
 
-$ExpectedVersion = '3.0.2'
+$ExpectedVersion = '3.1.0'
 # Digests of the two file lists of the package. tools\New-SelfXIntuneWin.ps1 replaces the placeholders in the Detection.ps1 it
 # writes to the build folder; the repository copy keeps them (version check only).
 $ExpectedCodeHash = '__SELFX_CODE_HASH__'
 $ExpectedConfigHash = '__SELFX_CONFIG_HASH__'
 $InstallFolder = Join-Path $env:ProgramFiles 'SelfX'
-$ToolConfigFile = Join-Path $InstallFolder 'Tool_Config.xml'
+# Code in App, configuration in Config (Install.ps1).
+$AppFolder = Join-Path $InstallFolder 'App'
+$ToolConfigFile = Join-Path $InstallFolder 'Config\Tool_Config.xml'
 $LogFolder = Join-Path $env:ProgramData 'SelfX\Logs'
 
 # Detection runs standalone (without the package files): small own logger, only when SelfX was installed
@@ -122,19 +128,19 @@ function Test-SelfXInstalledPackage {
 	)
 	$notes = New-Object System.Collections.Generic.List[string]
 	# Compare the package catalog version, not the service protocol version.
-	$installedVersion = Get-SelfXInstalledVersion -Path (Join-Path $InstallFolder 'SelfX.Code.json')
+	$installedVersion = Get-SelfXInstalledVersion -Path (Join-Path $InstallFolder 'App\SelfX.Code.json')
 	If($null -eq $installedVersion) { return [pscustomobject]@{ Reason = 'no code version in SelfX.Code.json'; Notes = $notes.ToArray() } }
 	If($installedVersion -ne $ExpectedVersion) { return [pscustomobject]@{ Reason = "installed version $installedVersion"; Notes = $notes.ToArray() } }
 	# The two file lists of the package: changed files without a new version are an update too.
 	$checks = @(
-		@{ File = 'SelfX.Code.json'; Expected = $ExpectedCodeHash; Placeholder = '__SELFX_CODE_HASH__' },
-		@{ File = 'SelfX.Config.json'; Expected = $ExpectedConfigHash; Placeholder = '__SELFX_CONFIG_HASH__' }
+		@{ File = 'SelfX.Code.json'; Folder = 'App'; Expected = $ExpectedCodeHash; Placeholder = '__SELFX_CODE_HASH__' },
+		@{ File = 'SelfX.Config.json'; Folder = 'Config'; Expected = $ExpectedConfigHash; Placeholder = '__SELFX_CONFIG_HASH__' }
 	)
 	ForEach($check in $checks)
 	{
 		If($check.Expected -match '^[0-9A-Fa-f]{64}\z')
 		{
-			$problem = Test-SelfXFilesList -Path (Join-Path $InstallFolder $check.File) -ExpectedHash $check.Expected
+			$problem = Test-SelfXFilesList -Path (Join-Path (Join-Path $InstallFolder $check.Folder) $check.File) -ExpectedHash $check.Expected
 			If($problem) { return [pscustomobject]@{ Reason = $problem; Notes = $notes.ToArray() } }
 		}
 		ElseIf($check.Expected -ceq $check.Placeholder) { $notes.Add("No digest of $($check.File) embedded (script not created by New-SelfXIntuneWin.ps1): version check only.") }
@@ -150,9 +156,9 @@ function Exit-Detection {
 	exit $Code
 }
 
-If(-not (Test-Path -LiteralPath (Join-Path $InstallFolder 'SelfXService.exe'))) { Exit-Detection 1 'not detected (SelfXService.exe missing)' }
-If(-not (Test-Path -LiteralPath (Join-Path $InstallFolder 'SelfX.exe'))) { Exit-Detection 1 'not detected (SelfX.exe missing)' }
-If(-not (Test-Path -LiteralPath $ToolConfigFile)) { Exit-Detection 1 'not detected (Tool_Config.xml missing)' }
+If(-not (Test-Path -LiteralPath (Join-Path $AppFolder 'SelfXService.exe'))) { Exit-Detection 1 'not detected (App\SelfXService.exe missing)' }
+If(-not (Test-Path -LiteralPath (Join-Path $AppFolder 'SelfX.exe'))) { Exit-Detection 1 'not detected (App\SelfX.exe missing)' }
+If(-not (Test-Path -LiteralPath $ToolConfigFile)) { Exit-Detection 1 'not detected (Config\Tool_Config.xml missing)' }
 # Registration is sufficient here; detection does not require the service to be running.
 If(-not (Get-Service -Name 'SelfXService' -ErrorAction SilentlyContinue)) { Exit-Detection 1 'not detected (service SelfXService not registered)' }
 

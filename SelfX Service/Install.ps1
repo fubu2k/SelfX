@@ -8,10 +8,11 @@
     Stops and deletes an existing SelfXService, deletes the entire content of InstallFolder
     (default ProgramFiles\SelfX; the folder itself is kept because an open SelfX window or
     status icon may use it as working directory, locked files are retried for 20 seconds),
-    copies Sources and Uninstall.ps1, and installs the service SelfXService.exe and the console-less
+    copies App (code) and Config (configuration) of the package into InstallFolder\App and InstallFolder\Config, puts
+    Uninstall.ps1 into App, and installs the service SelfXService.exe and the console-less
     starter SelfX.exe (SelfXLauncher.cs) used by the shortcuts and the status icon. Both are .NET 10
     programs (self-contained: no .NET runtime is needed on the device) that are built centrally by
-    tools\Build-SelfXBinaries.ps1 into the folder Bin of the package. Before anything on the device is
+    tools\Build-SelfXBinaries.ps1 into the folder Bin of the package (installed into App). Before anything on the device is
     changed, Install.ps1 checks them: the manifest Bin\SelfX.Binaries.json must list the SHA256 of the
     sources in the package and of each file. A missing Bin folder or any failed check stops the
     installation with the old installation still in place (nothing is compiled on the device any more).
@@ -37,7 +38,7 @@
     Name    : Install.ps1
     Package : SelfX Service
     Context : Installer (SYSTEM via Intune/SCCM)
-    Version : 2.9.1
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -57,6 +58,11 @@
     2.9.1    2026-11-27  fubu2k               The version is read from ToolVersion of SelfX.Code.json (the version is a property of the code), no
                                               longer from Tool_Version of Tool_Config.xml (an old element there is ignored); a package without
                                               SelfX.Code.json has no version and is refused before anything is changed
+    3.1.0    2026-11-27  fubu2k               Code and configuration in two folders: the package has App\ and Config\, the device gets
+                                              InstallFolder\App (programs, libraries, scripts, Uninstall.ps1, SelfX.Code.json) and InstallFolder\Config
+                                              (settings, Branding, own scripts and language files, SelfX.Config.json), rights unchanged; an
+                                              installation in the old layout is removed completely before the copy, and afterwards the install
+                                              folder may hold nothing but App and Config; a package in the old layout (Sources) is refused
 #>
 
 [CmdletBinding()]
@@ -68,8 +74,11 @@ $ErrorActionPreference = 'Stop'
 $ServiceName = 'SelfXService'
 $ServiceDisplayName = 'SelfX Service'
 $PackageFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
-$SourcesFolder = Join-Path $PackageFolder 'Sources'
+# Package: App (code) and Config (configuration); device: InstallFolder\App and InstallFolder\Config.
+$ConfigSource = Join-Path $PackageFolder 'Config'
 $BinFolder = Join-Path $PackageFolder 'Bin'
+$AppFolder = Join-Path $InstallFolder 'App'
+$ConfigFolder = Join-Path $InstallFolder 'Config'
 $DataFolder = Join-Path $env:ProgramData 'SelfX'
 $LogFolder = Join-Path $DataFolder 'Logs'
 $UninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SelfX'
@@ -244,25 +253,30 @@ function Read-SelfXFileList {
 }
 
 function Test-SelfXFileManifest {
-	# Checks the package against SelfX.Code.json and SelfX.Config.json: every file below Sources, Uninstall.ps1, the DLLs of
-	# Bin\WinRT and Bin\Audio (listed as WinRT/<name> and Audio/<name>) and the programs SelfXService.exe and SelfX.exe (from Bin)
-	# must be listed in exactly one of the two lists and unchanged, and nothing may be in the package that is not listed. Returns
-	# the number of checked files, or $null when the package has neither list (the caller refuses it: no version). A mismatch, a
-	# missing list or a file in both lists throws before anything is installed.
+	# Checks the package against App\SelfX.Code.json and Config\SelfX.Config.json. Code names are relative to the code folder:
+	# Uninstall.ps1 (top of the package), the programs SelfXService.exe and SelfX.exe and the DLLs WinRT/<name> and Audio/<name>
+	# (from Bin), everything else from App. Configuration names are relative to Config. Every file below App and Config, every DLL
+	# of Bin\WinRT and Bin\Audio, Uninstall.ps1 and both programs must be listed in exactly one of the two lists and unchanged,
+	# and nothing may be in App or Config that is not listed. Returns the number of checked files, or $null when the package has
+	# neither list (the caller refuses it: no version). A package in the old layout (folder Sources), a mismatch, a missing list
+	# or a file in both lists throws before anything is installed.
 	param([Parameter(Mandatory = $true)][string]$PackageFolder)
-	$CodePath = Join-Path $PackageFolder 'SelfX.Code.json'
-	$ConfigPath = Join-Path $PackageFolder 'SelfX.Config.json'
+	$AppSource = Join-Path $PackageFolder 'App'
+	$ConfigSource = Join-Path $PackageFolder 'Config'
+	If(Test-Path -LiteralPath (Join-Path $PackageFolder 'Sources')) { throw 'The package has the old layout (folder Sources). Build it again with tools\New-SelfXIntuneWin.ps1 (folders App and Config).' }
+	$CodePath = Join-Path $AppSource 'SelfX.Code.json'
+	$ConfigPath = Join-Path $ConfigSource 'SelfX.Config.json'
 	$HasCode = Test-Path -LiteralPath $CodePath -PathType Leaf
 	$HasConfig = Test-Path -LiteralPath $ConfigPath -PathType Leaf
 	If(-not $HasCode -and -not $HasConfig) { return $null }
-	If(-not $HasCode) { throw 'SelfX.Code.json is missing in the package (SelfX.Config.json is present).' }
-	If(-not $HasConfig) { throw 'SelfX.Config.json is missing in the package (SelfX.Code.json is present).' }
-	$Sources = Join-Path $PackageFolder 'Sources'
+	If(-not $HasCode) { throw 'App\SelfX.Code.json is missing in the package (Config\SelfX.Config.json is present).' }
+	If(-not $HasConfig) { throw 'Config\SelfX.Config.json is missing in the package (App\SelfX.Code.json is present).' }
 	$ProgramNames = @('SelfXService.exe', 'SelfX.exe')
 	$Listed = @{}
-	ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json'))
+	ForEach($List in @(@{ Name = 'SelfX.Code.json'; Path = $CodePath }, @{ Name = 'SelfX.Config.json'; Path = $ConfigPath }))
 	{
-		ForEach($Entry in @(Read-SelfXFileList -Path (Join-Path $PackageFolder $ListName) -ListName $ListName -Where 'the package'))
+		$ListName = $List.Name
+		ForEach($Entry in @(Read-SelfXFileList -Path $List.Path -ListName $ListName -Where 'the package'))
 		{
 			$Relative = $Entry.Name
 			If($Listed.ContainsKey($Relative.ToLowerInvariant()))
@@ -270,49 +284,45 @@ function Test-SelfXFileManifest {
 				If($Listed[$Relative.ToLowerInvariant()] -eq $ListName) { throw "$Relative is listed twice in $ListName." }
 				throw "$Relative is listed in both SelfX.Code.json and SelfX.Config.json."
 			}
-			$File = If($Relative -eq 'Uninstall.ps1') { Join-Path $PackageFolder 'Uninstall.ps1' } ElseIf(($Relative -like 'WinRT/*') -or ($Relative -like 'Audio/*') -or ($ProgramNames -contains $Relative)) { Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') } Else { Join-Path $Sources $Relative.Replace('/', '\') }
+			If($ListName -eq 'SelfX.Config.json') { $File = Join-Path $ConfigSource $Relative.Replace('/', '\') }
+			ElseIf($Relative -eq 'Uninstall.ps1') { $File = Join-Path $PackageFolder 'Uninstall.ps1' }
+			ElseIf(($Relative -like 'WinRT/*') -or ($Relative -like 'Audio/*') -or ($ProgramNames -contains $Relative)) { $File = Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') }
+			Else { $File = Join-Path $AppSource $Relative.Replace('/', '\') }
 			If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in $ListName but missing in the package." }
 			If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne $Entry.Hash) { throw "$Relative does not match its SHA256 in $ListName." }
 			$Listed[$Relative.ToLowerInvariant()] = $ListName
 		}
 	}
-	ForEach($Item in @(Get-ChildItem -LiteralPath $Sources -Recurse -File -Force))
+	# Every file of App, Config and of the libraries in Bin\WinRT and Bin\Audio must be listed in the list of its folder.
+	$Folders = @(
+		@{ Path = $AppSource; Prefix = ''; List = 'SelfX.Code.json' },
+		@{ Path = $ConfigSource; Prefix = ''; List = 'SelfX.Config.json' },
+		@{ Path = (Join-Path (Join-Path $PackageFolder 'Bin') 'WinRT'); Prefix = 'WinRT/'; List = 'SelfX.Code.json' },
+		@{ Path = (Join-Path (Join-Path $PackageFolder 'Bin') 'Audio'); Prefix = 'Audio/'; List = 'SelfX.Code.json' }
+	)
+	ForEach($Folder in $Folders)
 	{
-		$Relative = $Item.FullName.Substring($Sources.Length + 1).Replace('\', '/')
-		If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Code.json or SelfX.Config.json." }
-	}
-	# The WinRT libraries of the package (installed into WinRT) must all be listed too.
-	$WinRTSource = Join-Path (Join-Path $PackageFolder 'Bin') 'WinRT'
-	If(Test-Path -LiteralPath $WinRTSource -PathType Container)
-	{
-		ForEach($Item in @(Get-ChildItem -LiteralPath $WinRTSource -Recurse -File -Force))
+		If(-not (Test-Path -LiteralPath $Folder.Path -PathType Container)) { continue }
+		$Root = (Get-Item -LiteralPath $Folder.Path -Force).FullName.TrimEnd('\')
+		ForEach($Item in @(Get-ChildItem -LiteralPath $Root -Recurse -File -Force))
 		{
-			$Relative = 'WinRT/' + $Item.FullName.Substring($WinRTSource.Length + 1).Replace('\', '/')
-			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Code.json or SelfX.Config.json." }
+			$Relative = $Folder.Prefix + $Item.FullName.Substring($Root.Length + 1).Replace('\', '/')
+			If(($Folder.Prefix -eq '') -and ($Relative -ceq $Folder.List)) { continue }
+			If($Listed[$Relative.ToLowerInvariant()] -ne $Folder.List) { throw "$Relative is in the package but not listed in $($Folder.List)." }
 		}
 	}
-	# The audio library of the package (installed into Audio) must be listed too.
-	$AudioSource = Join-Path (Join-Path $PackageFolder 'Bin') 'Audio'
-	If(Test-Path -LiteralPath $AudioSource -PathType Container)
-	{
-		ForEach($Item in @(Get-ChildItem -LiteralPath $AudioSource -Recurse -File -Force))
-		{
-			$Relative = 'Audio/' + $Item.FullName.Substring($AudioSource.Length + 1).Replace('\', '/')
-			If(-not $Listed.ContainsKey($Relative.ToLowerInvariant())) { throw "$Relative is in the package but not listed in SelfX.Code.json or SelfX.Config.json." }
-		}
-	}
-	If(-not $Listed.ContainsKey('uninstall.ps1')) { throw 'Uninstall.ps1 is not listed in SelfX.Code.json.' }
-	ForEach($Program in $ProgramNames) { If(-not $Listed.ContainsKey($Program.ToLowerInvariant())) { throw "$Program is not listed in SelfX.Code.json." } }
+	If($Listed['uninstall.ps1'] -ne 'SelfX.Code.json') { throw 'Uninstall.ps1 is not listed in SelfX.Code.json.' }
+	ForEach($Program in $ProgramNames) { If($Listed[$Program.ToLowerInvariant()] -ne 'SelfX.Code.json') { throw "$Program is not listed in SelfX.Code.json." } }
 	Return $Listed.Count
 }
 
 function Get-SelfXPackageToolVersion {
-	# The version of the package: ToolVersion of SelfX.Code.json (the only source; Tool_Config.xml is not read for it). It is written
+	# The version of the package: ToolVersion of App\SelfX.Code.json (the only source; Tool_Config.xml is not read for it). It is written
 	# into the registry and the log, so it must be 1 to 30 letters, digits, '.' or '-'. A missing list, a missing or invalid version
 	# throws (fail closed).
 	param([Parameter(Mandatory = $true)][string]$PackageFolder)
-	$ListPath = Join-Path $PackageFolder 'SelfX.Code.json'
-	If(-not (Test-Path -LiteralPath $ListPath -PathType Leaf)) { throw 'SelfX.Code.json is missing in the package: the package has no version.' }
+	$ListPath = Join-Path (Join-Path $PackageFolder 'App') 'SelfX.Code.json'
+	If(-not (Test-Path -LiteralPath $ListPath -PathType Leaf)) { throw 'App\SelfX.Code.json is missing in the package: the package has no version.' }
 	Try { $List = Get-Content -LiteralPath $ListPath -Raw | ConvertFrom-Json }
 	Catch { throw 'SelfX.Code.json is not valid JSON.' }
 	$Version = If($List) { "$($List.ToolVersion)".Trim() } Else { '' }
@@ -321,18 +331,26 @@ function Get-SelfXPackageToolVersion {
 }
 
 function Test-SelfXInstalledFiles {
-	# After copying: compares the installed folder with the SelfX.Code.json and SelfX.Config.json copied into it. This closes
-	# the gap between the check of the package and the copy: every listed file (scripts, configuration, WinRT libraries,
-	# SelfXService.exe, SelfX.exe) must exist in the install folder with the listed SHA256, in exactly one of the two lists.
-	# Throws at the first difference. Returns the number of checked files.
+	# After copying: compares the installed folders with the lists copied into them. App\SelfX.Code.json lists the code folder App
+	# (scripts, WinRT and Audio libraries, SelfXService.exe, SelfX.exe, Uninstall.ps1; names relative to App), Config\SelfX.Config.json
+	# the configuration folder Config (names relative to Config). This closes the gap between the check of the package and the copy:
+	# every listed file must exist with the listed SHA256, in exactly one of the two lists; no file in App or Config may be unlisted;
+	# no link may be in the way; and the install folder itself may hold nothing but App and Config (no mixed state with an older
+	# layout; an empty folder that a running process still uses as working folder is allowed). Throws at the first difference.
+	# Returns the number of checked files.
 	param([Parameter(Mandatory = $true)][string]$InstallFolder)
 	$Root = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
 	$Count = 0
 	$Listed = @{}
-	ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json'))
+	ForEach($List in @(@{ Name = 'SelfX.Code.json'; Folder = 'App' }, @{ Name = 'SelfX.Config.json'; Folder = 'Config' }))
 	{
-		$ManifestPath = Join-Path $Root $ListName
-		If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw "$ListName is missing in the installation folder." }
+		$ListName = $List.Name
+		$FolderRoot = Join-Path $Root $List.Folder
+		$FolderItem = Get-Item -LiteralPath $FolderRoot -Force -ErrorAction SilentlyContinue
+		If(-not $FolderItem -or -not $FolderItem.PSIsContainer) { throw "The folder $($List.Folder) is missing in the installation folder." }
+		If($FolderItem.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "The folder $($List.Folder) in the installation folder is a link." }
+		$ManifestPath = Join-Path $FolderRoot $ListName
+		If(-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw "$($List.Folder)\$ListName is missing in the installation folder." }
 		ForEach($Entry in @(Read-SelfXFileList -Path $ManifestPath -ListName $ListName -Where 'the installation folder'))
 		{
 			$Relative = $Entry.Name
@@ -341,15 +359,100 @@ function Test-SelfXInstalledFiles {
 				If($Listed[$Relative.ToLowerInvariant()] -eq $ListName) { throw "$Relative is listed twice in $ListName." }
 				throw "$Relative is listed in both SelfX.Code.json and SelfX.Config.json."
 			}
-			$File = [IO.Path]::GetFullPath((Join-Path $Root $Relative.Replace('/', '\')))
-			If(-not $File.StartsWith($Root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "$Relative points outside the installation folder." }
-			If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is missing in the installation folder." }
-			If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne $Entry.Hash) { throw "$Relative in the installation folder does not match its SHA256 in $ListName." }
+			$File = [IO.Path]::GetFullPath((Join-Path $FolderRoot $Relative.Replace('/', '\')))
+			If(-not $File.StartsWith($FolderRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "$Relative points outside the folder $($List.Folder)." }
+			If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is missing in the folder $($List.Folder)." }
+			If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne $Entry.Hash) { throw "$Relative in the folder $($List.Folder) does not match its SHA256 in $ListName." }
 			$Listed[$Relative.ToLowerInvariant()] = $ListName
 			$Count++
 		}
+		ForEach($Item in @(Get-ChildItem -LiteralPath $FolderRoot -Recurse -Force))
+		{
+			$Relative = $Item.FullName.Substring($FolderRoot.Length + 1).Replace('\', '/')
+			If($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "$($List.Folder)/$Relative is a link." }
+			If($Item.PSIsContainer -or ($Relative -ceq $ListName)) { continue }
+			If($Listed[$Relative.ToLowerInvariant()] -ne $ListName) { throw "$($List.Folder)/$Relative is not listed in $ListName." }
+		}
+	}
+	# The install folder itself: only App and Config. Anything else is left over from an older layout (mixed state).
+	ForEach($Item in @(Get-ChildItem -LiteralPath $Root -Force))
+	{
+		If(($Item.Name -ieq 'App') -or ($Item.Name -ieq 'Config')) { continue }
+		If($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "$($Item.Name) in the installation folder is a link." }
+		If(-not $Item.PSIsContainer) { throw "$($Item.Name) in the installation folder is left over from an older installation." }
+		$Left = @(Get-ChildItem -LiteralPath $Item.FullName -Recurse -Force | Where-Object { (-not $_.PSIsContainer) -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) })
+		If($Left.Count -gt 0) { throw "The folder $($Item.Name) in the installation folder is left over from an older installation and is not empty." }
 	}
 	Return $Count
+}
+
+function Resolve-SelfXInstalledImage {
+	# Path of an image named in Tool_Config.xml (Brand_Icon): Branding\... in Config, another relative value in App (default images),
+	# a rooted value as it is; $null for a relative value that leaves its folder. Same rule as Get-SelfXImagePath in SelfXPaths.ps1.
+	param([string]$Value, [Parameter(Mandatory = $true)][string]$AppFolder, [Parameter(Mandatory = $true)][string]$ConfigFolder)
+	$Text = "$Value".Trim()
+	If($Text -eq '') { return $null }
+	If([IO.Path]::IsPathRooted($Text)) { return $Text }
+	$Relative = $Text.Replace('\', '/')
+	If($Relative -notmatch '^[A-Za-z0-9_][A-Za-z0-9_ .()\-]*(/[A-Za-z0-9_][A-Za-z0-9_ .()\-]*)*\z' -or $Relative -match '(^|/)\.\.?(/|$)') { return $null }
+	$Base = $(If($Relative -match '^Branding/.+') { $ConfigFolder } Else { $AppFolder })
+	$Base = [IO.Path]::GetFullPath($Base).TrimEnd('\')
+	$Full = [IO.Path]::GetFullPath((Join-Path $Base $Relative.Replace('/', '\')))
+	If(-not $Full.StartsWith($Base + '\', [StringComparison]::OrdinalIgnoreCase)) { return $null }
+	Return $Full
+}
+
+function Clear-SelfXInstallFolder {
+	# Deletes the whole content of the install folder, so that no old script survives an update. This also removes an installation
+	# in the old layout (scripts, configuration and programs directly in the install folder) completely; Test-SelfXInstalledFiles
+	# refuses any file that is left next to App and Config afterwards (no mixed state). The folder itself is kept: Windows refuses
+	# to delete a folder that is the working directory of a running process (e.g. an open SelfX window or status icon of an older
+	# version), which made the update fail with exit code 1. Remaining empty folders do not matter, only files do; locked files are
+	# retried (Attempts x DelaySeconds), then the installation stops.
+	param(
+		[Parameter(Mandatory = $true)][string]$InstallFolder,
+		[int]$Attempts = 10,
+		[int]$DelaySeconds = 2
+	)
+	New-Item -ItemType Directory -Path $InstallFolder -Force | Out-Null
+	For($Attempt = 1; $Attempt -le $Attempts; $Attempt++)
+	{
+		ForEach($Item in @(Get-ChildItem -LiteralPath $InstallFolder -Force)) { Remove-Item -LiteralPath $Item.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+		If(@(Get-ChildItem -LiteralPath $InstallFolder -Recurse -Force -File).Count -eq 0) { break }
+		Start-Sleep -Seconds $DelaySeconds
+	}
+	$Locked = @(Get-ChildItem -LiteralPath $InstallFolder -Recurse -Force -File | Select-Object -ExpandProperty FullName)
+	If($Locked.Count -gt 0) { throw "Files in '$InstallFolder' are in use and cannot be replaced: $($Locked -join ', ')" }
+}
+
+function Copy-SelfXPayload {
+	# Copies the checked package into the emptied install folder: App\* (code, SelfX.Code.json), Uninstall.ps1, SelfXService.exe,
+	# SelfX.exe, Bin\WinRT\*.dll (as listed in Bin\SelfX.Binaries.json) and Bin\Audio\SelfXAudio.dll into InstallFolder\App, and
+	# Config\* (configuration, SelfX.Config.json) into InstallFolder\Config. Nothing is copied to the install folder itself.
+	param(
+		[Parameter(Mandatory = $true)][string]$PackageFolder,
+		[Parameter(Mandatory = $true)][string]$InstallFolder
+	)
+	$Bin = Join-Path $PackageFolder 'Bin'
+	$App = Join-Path $InstallFolder 'App'
+	$Config = Join-Path $InstallFolder 'Config'
+	# A folder of the old layout that is still in use (working directory) may remain empty; App and Config are created fresh.
+	New-Item -ItemType Directory -Path $App, $Config -Force | Out-Null
+	Copy-Item -Path (Join-Path (Join-Path $PackageFolder 'App') '*') -Destination $App -Recurse -Force
+	Copy-Item -Path (Join-Path (Join-Path $PackageFolder 'Config') '*') -Destination $Config -Recurse -Force
+	Copy-Item -LiteralPath (Join-Path $PackageFolder 'Uninstall.ps1') -Destination $App -Force
+	ForEach($Program in @('SelfXService.exe', 'SelfX.exe')) { Copy-Item -LiteralPath (Join-Path $Bin $Program) -Destination (Join-Path $App $Program) -Force }
+	# Library for PowerShell 7 (Windows Update orchestrator).
+	$WinRT = Join-Path $App 'WinRT'
+	New-Item -ItemType Directory -Path $WinRT -Force | Out-Null
+	ForEach($Name in @((Get-Content -LiteralPath (Join-Path $Bin 'SelfX.Binaries.json') -Raw | ConvertFrom-Json).Binaries.PSObject.Properties.Name | Where-Object { $_ -like 'WinRT/*' }))
+	{
+		Copy-Item -LiteralPath (Join-Path $Bin $Name.Replace('/', '\')) -Destination $WinRT -Force
+	}
+	# Library for PowerShell 7 (Core Audio, action "No sound").
+	$Audio = Join-Path $App 'Audio'
+	New-Item -ItemType Directory -Path $Audio -Force | Out-Null
+	Copy-Item -LiteralPath (Join-Path (Join-Path $Bin 'Audio') 'SelfXAudio.dll') -Destination $Audio -Force
 }
 
 function Get-SelfXServicePrivileges {
@@ -453,7 +556,16 @@ Start-Transcript -Path (Join-Path $LogFolder 'Install.log') -Append | Out-Null
 Try
 {
 	# Tool_Config.xml is a configuration file: the version is not read from it (an old Tool_Version element is ignored).
-	$ToolConfig = [xml](Get-Content -LiteralPath (Join-Path $SourcesFolder 'Tool_Config.xml') -Raw)
+	# Read without DTD (fail closed for a DTD or an external entity).
+	$ToolConfigFile = Join-Path $ConfigSource 'Tool_Config.xml'
+	If(-not (Test-Path -LiteralPath $ToolConfigFile -PathType Leaf)) { throw 'Config\Tool_Config.xml is missing in the package (old package layout or broken package). The existing installation was not changed.' }
+	$ToolConfig = New-Object System.Xml.XmlDocument
+	$ToolConfig.XmlResolver = $null
+	$ToolConfigSettings = New-Object System.Xml.XmlReaderSettings
+	$ToolConfigSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+	$ToolConfigSettings.XmlResolver = $null
+	$ToolConfigReader = [System.Xml.XmlReader]::Create($ToolConfigFile, $ToolConfigSettings)
+	Try { $ToolConfig.Load($ToolConfigReader) } Finally { $ToolConfigReader.Dispose() }
 	$ShortcutName = $ToolConfig.GUI_Config.Shortcut_Name.Trim()
 
 	# The programs of the package are checked first: when they are missing or do not match, the existing
@@ -479,7 +591,8 @@ Try
 	}
 
 	# Close running status icons of all users; the new version is started again at the end.
-	$TrayPattern = [regex]::Escape($InstallFolder.TrimEnd('\')) + '\\SelfX_Tray\.ps1'
+	# Old layout (SelfX_Tray.ps1 directly in the install folder) and new layout (App\SelfX_Tray.ps1).
+	$TrayPattern = [regex]::Escape($InstallFolder.TrimEnd('\')) + '\\(App\\)?SelfX_Tray\.ps1'
 	$TrayProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name = 'powershell.exe' OR Name = 'pwsh.exe'" -ErrorAction SilentlyContinue |
 		Where-Object { ($_.ProcessId -ne $PID) -and ("$($_.CommandLine)" -match $TrayPattern) })
 	ForEach($Process in $TrayProcesses)
@@ -488,51 +601,23 @@ Try
 		Write-Output "Closed status icon process $($Process.ProcessId)."
 	}
 
-	# Replace the complete payload so old scripts cannot survive a package upgrade. The folder itself is
-	# kept: Windows refuses to delete a folder that is the working directory of a running process (e.g. an
-	# open SelfX window or status icon of an older version), which made the update fail with exit code 1.
-	New-Item -ItemType Directory -Path $InstallFolder -Force | Out-Null
-	For($Attempt = 1; $Attempt -le 10; $Attempt++)
-	{
-		ForEach($Item in @(Get-ChildItem -LiteralPath $InstallFolder -Force)) { Remove-Item -LiteralPath $Item.FullName -Recurse -Force -ErrorAction SilentlyContinue }
-		# Remaining empty folders (working directory of a running process) do not matter, only files do.
-		If(@(Get-ChildItem -LiteralPath $InstallFolder -Recurse -Force -File).Count -eq 0) { break }
-		Start-Sleep -Seconds 2
-	}
-	$Locked = @(Get-ChildItem -LiteralPath $InstallFolder -Recurse -Force -File | Select-Object -ExpandProperty FullName)
-	If($Locked.Count -gt 0) { throw "Files in '$InstallFolder' are in use and cannot be replaced: $($Locked -join ', ')" }
-	Copy-Item -Path (Join-Path $SourcesFolder '*') -Destination $InstallFolder -Recurse -Force
-	Copy-Item -LiteralPath (Join-Path $PackageFolder 'Uninstall.ps1') -Destination $InstallFolder -Force
-	ForEach($ListName in @('SelfX.Code.json', 'SelfX.Config.json')) { Copy-Item -LiteralPath (Join-Path $PackageFolder $ListName) -Destination $InstallFolder -Force }
-	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM.
+	# Replace the complete payload so old scripts cannot survive a package upgrade (also an installation in the old layout).
+	Clear-SelfXInstallFolder -InstallFolder $InstallFolder
+	# Code into App, configuration into Config; the programs and libraries from Bin that were checked at the start (.NET 10, self-contained).
+	Copy-SelfXPayload -PackageFolder $PackageFolder -InstallFolder $InstallFolder
+	Write-Output 'Installed App (code, SelfXService.exe, SelfX.exe, WinRT and audio libraries from Bin) and Config (configuration).'
+	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM (App and Config inherit the rights).
 	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$InstallFolder' (exit code $LASTEXITCODE)." }
-
-	# Service host and the starter without console window (shortcuts and status icon): the programs from Bin
-	# that were checked at the start (.NET 10, self-contained).
-	$ServiceExe = Join-Path $InstallFolder 'SelfXService.exe'
-	$LauncherExe = Join-Path $InstallFolder 'SelfX.exe'
-	Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfXService.exe') -Destination $ServiceExe -Force
-	Copy-Item -LiteralPath (Join-Path $BinFolder 'SelfX.exe') -Destination $LauncherExe -Force
-	Write-Output 'Installed SelfXService.exe and SelfX.exe from Bin.'
-	# Library for PowerShell 7 (Windows Update orchestrator): the files checked above, into the protected install folder.
-	$WinRTFolder = Join-Path $InstallFolder 'WinRT'
-	New-Item -ItemType Directory -Path $WinRTFolder -Force | Out-Null
-	ForEach($Name in @((Get-Content -LiteralPath (Join-Path $BinFolder 'SelfX.Binaries.json') -Raw | ConvertFrom-Json).Binaries.PSObject.Properties.Name | Where-Object { $_ -like 'WinRT/*' }))
-	{
-		Copy-Item -LiteralPath (Join-Path $BinFolder $Name.Replace('/', '\')) -Destination $WinRTFolder -Force
-	}
-	Write-Output 'Installed the WinRT library from Bin.'
-	# Library for PowerShell 7 (Core Audio, action "No sound"): the file checked above, into the protected install folder.
-	$AudioFolder = Join-Path $InstallFolder 'Audio'
-	New-Item -ItemType Directory -Path $AudioFolder -Force | Out-Null
-	Copy-Item -LiteralPath (Join-Path (Join-Path $BinFolder 'Audio') 'SelfXAudio.dll') -Destination $AudioFolder -Force
-	Write-Output 'Installed the audio library from Bin.'
+	# Service host and the starter without console window (shortcuts and status icon).
+	$ServiceExe = Join-Path $AppFolder 'SelfXService.exe'
+	$LauncherExe = Join-Path $AppFolder 'SelfX.exe'
 	If(-not (Test-Path -LiteralPath $ServiceExe)) { throw 'SelfXService.exe is missing after the installation step.' }
 	If(-not (Test-Path -LiteralPath $LauncherExe)) { throw 'SelfX.exe is missing after the installation step.' }
-	# The installed folder must equal the checked package (scripts, configuration, WinRT libraries, both programs).
+	# The installed folders must equal the checked package (scripts, configuration, WinRT libraries, both programs), and nothing of
+	# an older layout may be left next to App and Config.
 	$InstalledFiles = Test-SelfXInstalledFiles -InstallFolder $InstallFolder
-	Write-Output "Installed files checked against SelfX.Code.json and SelfX.Config.json ($InstalledFiles files)."
+	Write-Output "Installed files checked against App\SelfX.Code.json and Config\SelfX.Config.json ($InstalledFiles files)."
 
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null
 	& sc.exe description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null
@@ -553,20 +638,17 @@ Try
 	If($ToolConfig.GUI_Config.Shortcut_Desktop -eq 'True') { $ShortcutTargets += Join-Path $env:PUBLIC 'Desktop' }
 	If($ToolConfig.GUI_Config.Shortcut_StartMenu -eq 'True') { $ShortcutTargets += Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs' }
 	# Retain the fallback icon unless the configured branding is an existing ICO file.
-	$ShortcutIcon = Join-Path $InstallFolder 'Repair.ico'
-	$BrandIcon = "$($ToolConfig.GUI_Config.Brand_Icon)".Trim()
-	If($BrandIcon -like '*.ico')
-	{
-		If(-not [IO.Path]::IsPathRooted($BrandIcon)) { $BrandIcon = Join-Path $InstallFolder $BrandIcon }
-		If(Test-Path -LiteralPath $BrandIcon -PathType Leaf) { $ShortcutIcon = $BrandIcon }
-	}
+	$ShortcutIcon = Join-Path $AppFolder 'Repair.ico'
+	# Branding\... in Config, a default icon in App, a rooted value as it is (same rule as SelfXPaths.ps1).
+	$BrandIcon = Resolve-SelfXInstalledImage -Value "$($ToolConfig.GUI_Config.Brand_Icon)" -AppFolder $AppFolder -ConfigFolder $ConfigFolder
+	If($BrandIcon -and ($BrandIcon -like '*.ico') -and (Test-Path -LiteralPath $BrandIcon -PathType Leaf)) { $ShortcutIcon = $BrandIcon }
 	$Shell = New-Object -ComObject WScript.Shell
 	ForEach($Folder in $ShortcutTargets)
 	{
 		$Shortcut = $Shell.CreateShortcut((Join-Path $Folder "$ShortcutName.lnk"))
 		$Shortcut.TargetPath = $LauncherExe
 		$Shortcut.Arguments = $ShortcutArguments
-		$Shortcut.WorkingDirectory = $InstallFolder
+		$Shortcut.WorkingDirectory = $AppFolder
 		$Shortcut.IconLocation = $ShortcutIcon
 		$Shortcut.Save()
 	}
@@ -578,7 +660,7 @@ Try
 	Set-ItemProperty -Path $UninstallKey -Name Publisher -Value 'SelfX'
 	Set-ItemProperty -Path $UninstallKey -Name InstallLocation -Value $InstallFolder
 	Set-ItemProperty -Path $UninstallKey -Name DisplayIcon -Value $ShortcutIcon
-	Set-ItemProperty -Path $UninstallKey -Name UninstallString -Value "`"$PowerShellExe`" -NoProfile -ExecutionPolicy Bypass -File `"$InstallFolder\Uninstall.ps1`""
+	Set-ItemProperty -Path $UninstallKey -Name UninstallString -Value "`"$PowerShellExe`" -NoProfile -ExecutionPolicy Bypass -File `"$AppFolder\Uninstall.ps1`""
 	Set-ItemProperty -Path $UninstallKey -Name NoModify -Value 1 -Type DWord
 	Set-ItemProperty -Path $UninstallKey -Name NoRepair -Value 1 -Type DWord
 

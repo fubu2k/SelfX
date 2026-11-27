@@ -48,7 +48,7 @@
     Path of Collect-DeviceLogs.ps1. Default: the same folder. Only for tests.
 
 .PARAMETER ConfigPath
-    Path of Tool_Config.xml. Default: the install folder. Only for tests.
+    Path of Tool_Config.xml. Default: the configuration folder (Config next to App; SelfXPaths.ps1). Only for tests.
 
 .PARAMETER LogRoot
     Folder of the SelfX logs. Default: ProgramData\SelfX\Logs. Only for tests.
@@ -57,7 +57,7 @@
     Name    : SelfX_Device_CollectLogs.ps1
     Package : SelfX Service
     Context : System
-    Version : 2.8.21
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
@@ -65,6 +65,7 @@
     2.4.0    2026-11-02  Wolfgang Baeck       Initial version: device logs for the support by e-mail
     2.6.10   2026-11-22  fubu2k               Normal users get the reduced report of their own data (-UserView); user logs are added by the GUI
     2.8.21   2026-11-24  fubu2k               Security: only a user account SID (S-1-5-21-*, S-1-12-1-*) may be the report reader; groups (Everyone, Users, ...) are refused
+    3.1.0    2026-11-27  fubu2k               Tool_Config.xml is read from the configuration folder (Get-SelfXConfigPath in SelfXPaths.ps1)
 #>
 
 [CmdletBinding()]
@@ -77,7 +78,11 @@ param(
 
 # Windows PowerShell 5.1 leaves $PSScriptRoot empty in parameter defaults, so the paths are resolved here.
 if (-not $CollectorPath) { $CollectorPath = Join-Path $PSScriptRoot 'Collect-DeviceLogs.ps1' }
-if (-not $ConfigPath) { $ConfigPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'Tool_Config.xml' }
+if (-not $ConfigPath) {
+    $codeRoot = Split-Path -Parent $PSScriptRoot
+    . (Join-Path $codeRoot 'SelfXPaths.ps1')
+    $ConfigPath = Get-SelfXConfigPath -Name 'Tool_Config.xml' -CodeRoot $codeRoot
+}
 
 # Returns a setting of Tool_Config.xml, or Default when the file or the value is missing.
 function Get-ConfigValue {

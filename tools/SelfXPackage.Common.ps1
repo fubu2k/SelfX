@@ -24,11 +24,18 @@
     Get-SelfXVersionFromFile) and is written only into SelfX.Code.json. Tool_Config.xml does not carry it any more, so a change of
     the version changes no configuration file and a change of the configuration does not change the version.
 
+    Layout of the package (ConvertTo-SelfXPackageLayout; the repository keeps the folder Sources):
+      App\     the code files of Sources (names unchanged) and SelfX.Code.json
+      Config\  the configuration files of Sources (names unchanged) and SelfX.Config.json
+      Bin\, Service\*.cs, Install.ps1, Uninstall.ps1, Detection.ps1 stay at the top of the package. Install.ps1 installs App\, the
+      programs and libraries of Bin and Uninstall.ps1 into %ProgramFiles%\SelfX\App and Config\ into %ProgramFiles%\SelfX\Config.
+    The names in both lists are relative to their own folder (App or Config), so they are the same as before.
+
 .NOTES
     Name    : SelfXPackage.Common.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 1.1.0
+    Version : 3.1.0
     Works in Windows PowerShell 5.1 and PowerShell 7.
 
     History:
@@ -37,6 +44,8 @@
     1.0.0    2026-11-27  fubu2k               Initial version: file classes, SelfX.Code.json, SelfX.Config.json, digest and Detection.ps1 writer
     1.1.0    2026-11-27  fubu2k               The version comes from Version.txt (Get-SelfXVersionFromFile) and is written only into SelfX.Code.json;
                                               SelfX.Config.json has ConfigRevision (UTC time of the run) instead of BuiltUtc
+    3.1.0    2026-11-27  fubu2k               Package layout App\ and Config\ (ConvertTo-SelfXPackageLayout); the lists are written into
+                                              App\SelfX.Code.json and Config\SelfX.Config.json; SelfXPaths.ps1 is a file of the project
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -70,7 +79,7 @@ $script:SelfXCodeFileNames = @(
     'Scripts_to_run/SelfX_Poste_WSReset.ps1', 'Scripts_to_run/SelfX_Teams_Reboot.ps1',
     'Scripts_to_run/SelfX_Teams_ResetCache.ps1', 'Scripts_to_run/SelfX_Updates_Install.ps1',
     'Scripts_to_run/SelfX_Word_Reboot.ps1', 'SelfX.exe', 'SelfXAudio.ps1', 'SelfXDefender.ps1',
-    'SelfXDeviceSecurity.ps1', 'SelfXLog.ps1', 'SelfXNetwork.ps1', 'SelfXOffice.ps1', 'SelfXService.exe',
+    'SelfXDeviceSecurity.ps1', 'SelfXLog.ps1', 'SelfXNetwork.ps1', 'SelfXOffice.ps1', 'SelfXPaths.ps1', 'SelfXService.exe',
     'SelfXServiceClient.ps1', 'SelfXWinRT.ps1', 'SelfXWindows.ps1', 'SelfX_Tray.ps1', 'Self_X.ps1',
     'SupportLinks.ps1', 'SupportReport.ps1', 'SystemInfo.ps1', 'TicketMail.ps1', 'TicketSend.ps1', 'Uninstall.ps1',
     'icon_systray.ico', 'logo.png'
@@ -141,40 +150,80 @@ function Get-SelfXFileClass {
     throw "The file '$Name' belongs to no file class (see docs\Architecture.md)."
 }
 
-function Get-SelfXPackageEntries {
-    # Every file that Install.ps1 installs, with its name in the installation folder, its path in the package and its class:
-    # everything below Sources, Uninstall.ps1, the DLLs of Bin\WinRT (WinRT/<name>), Bin\Audio (Audio/<name>) and the two
-    # programs SelfXService.exe and SelfX.exe from Bin. Sorted by name (ordinal). Throws for a name that is not allowed,
-    # a duplicate, a missing program and a file that has no class.
+function ConvertTo-SelfXPackageLayout {
+    # Sorts the files of Stage\Sources into Stage\App (class Code) and Stage\Config (class Config) by Get-SelfXFileClass, with the
+    # same relative names, and removes Sources. Throws when Sources is missing, App or Config already exist, a file has no class
+    # or Sources is not empty afterwards (fail closed). Returns an object with the numbers of code and configuration files.
     param([Parameter(Mandatory = $true)][string]$Stage)
     $sources = Join-Path $Stage 'Sources'
+    $app = Join-Path $Stage 'App'
+    $config = Join-Path $Stage 'Config'
     if (-not (Test-Path -LiteralPath $sources -PathType Container)) { throw 'The folder Sources is missing in the package.' }
-    $entries = New-Object System.Collections.Generic.List[object]
-    foreach ($item in (@(Get-ChildItem -LiteralPath $sources -Recurse -File -Force) + @(Get-Item -LiteralPath (Join-Path $Stage 'Uninstall.ps1') -Force))) {
-        $relative = if ($item.FullName.StartsWith($sources + '\', [StringComparison]::OrdinalIgnoreCase)) { $item.FullName.Substring($sources.Length + 1) } else { $item.Name }
-        $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = $relative.Replace('\', '/') })
+    if ((Test-Path -LiteralPath $app) -or (Test-Path -LiteralPath $config)) { throw 'The package already has a folder App or Config.' }
+    $root = (Get-Item -LiteralPath $sources -Force).FullName.TrimEnd('\')
+    $moves = New-Object System.Collections.Generic.List[object]
+    foreach ($item in @(Get-ChildItem -LiteralPath $root -Recurse -Force)) {
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "A link is not allowed in the package: $($item.FullName.Substring($root.Length + 1))" }
+        if ($item.PSIsContainer) { continue }
+        $name = $item.FullName.Substring($root.Length + 1).Replace('\', '/')
+        $class = Get-SelfXFileClass -Name $name
+        $moves.Add([pscustomobject]@{ Path = $item.FullName; Name = $name; Target = $(if ($class -eq 'Code') { $app } else { $config }) })
     }
-    # The WinRT libraries come from Bin (built by tools\Build-SelfXBinaries.ps1) and are installed into the folder WinRT.
+    New-Item -ItemType Directory -Path $app, $config -Force | Out-Null
+    foreach ($move in $moves) {
+        $target = Join-Path $move.Target $move.Name.Replace('/', '\')
+        New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+        Move-Item -LiteralPath $move.Path -Destination $target
+    }
+    if (@(Get-ChildItem -LiteralPath $root -Recurse -File -Force).Count -ne 0) { throw 'Sources is not empty after sorting the files into App and Config.' }
+    Remove-Item -LiteralPath $root -Recurse -Force
+    return [pscustomobject]@{
+        Code   = @($moves | Where-Object { $_.Target -eq $app }).Count
+        Config = @($moves | Where-Object { $_.Target -eq $config }).Count
+    }
+}
+
+function Get-SelfXPackageEntries {
+    # Every file that Install.ps1 installs, with its name (relative to App or Config, '/' as separator), its path in the package
+    # and its class: everything below App (except SelfX.Code.json) and Config (except SelfX.Config.json), Uninstall.ps1, the DLLs of
+    # Bin\WinRT (WinRT/<name>), Bin\Audio (Audio/<name>) and the two programs SelfXService.exe and SelfX.exe from Bin. Sorted by name
+    # (ordinal). Throws for the old layout (Sources), a name that is not allowed, a duplicate, a missing program, a file that has no
+    # class and a file in the wrong folder (a configuration file in App or a code file in Config).
+    param([Parameter(Mandatory = $true)][string]$Stage)
+    if (Test-Path -LiteralPath (Join-Path $Stage 'Sources')) { throw 'The package still has the folder Sources: call ConvertTo-SelfXPackageLayout first.' }
+    $entries = New-Object System.Collections.Generic.List[object]
+    foreach ($folder in @(@{ Name = 'App'; Class = 'Code'; List = 'SelfX.Code.json' }, @{ Name = 'Config'; Class = 'Config'; List = 'SelfX.Config.json' })) {
+        $path = Join-Path $Stage $folder.Name
+        if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw "The folder $($folder.Name) is missing in the package." }
+        $root = (Get-Item -LiteralPath $path -Force).FullName.TrimEnd('\')
+        foreach ($item in @(Get-ChildItem -LiteralPath $root -Recurse -File -Force)) {
+            $relative = $item.FullName.Substring($root.Length + 1).Replace('\', '/')
+            if ($relative -ceq $folder.List) { continue }
+            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = $relative; Folder = $folder.Class })
+        }
+    }
+    $entries.Add([pscustomobject]@{ Path = (Get-Item -LiteralPath (Join-Path $Stage 'Uninstall.ps1') -Force).FullName; Name = 'Uninstall.ps1'; Folder = 'Code' })
+    # The WinRT libraries come from Bin (built by tools\Build-SelfXBinaries.ps1) and are installed into the folder App\WinRT.
     $winRT = Join-Path $Stage 'Bin\WinRT'
     if (Test-Path -LiteralPath $winRT -PathType Container) {
         foreach ($item in @(Get-ChildItem -LiteralPath $winRT -Recurse -File -Force)) {
             if ($item.DirectoryName -ne (Get-Item -LiteralPath $winRT).FullName) { throw "Unexpected sub folder in Bin\WinRT: $($item.DirectoryName)" }
-            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'WinRT/' + $item.Name })
+            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'WinRT/' + $item.Name; Folder = 'Code' })
         }
     }
-    # The audio library comes from Bin too and is installed into the folder Audio.
+    # The audio library comes from Bin too and is installed into the folder App\Audio.
     $audio = Join-Path $Stage 'Bin\Audio'
     if (Test-Path -LiteralPath $audio -PathType Container) {
         foreach ($item in @(Get-ChildItem -LiteralPath $audio -Recurse -File -Force)) {
             if ($item.DirectoryName -ne (Get-Item -LiteralPath $audio).FullName) { throw "Unexpected sub folder in Bin\Audio: $($item.DirectoryName)" }
-            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'Audio/' + $item.Name })
+            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'Audio/' + $item.Name; Folder = 'Code' })
         }
     }
-    # The two programs (service and starter) come from Bin and are installed next to the scripts; a missing one is an error.
+    # The two programs (service and starter) come from Bin and are installed into App next to the scripts; a missing one is an error.
     foreach ($program in 'SelfXService.exe', 'SelfX.exe') {
         $programPath = Join-Path $Stage "Bin\$program"
         if (-not (Test-Path -LiteralPath $programPath -PathType Leaf)) { throw "Bin\$program is missing in the package." }
-        $entries.Add([pscustomobject]@{ Path = $programPath; Name = $program })
+        $entries.Add([pscustomobject]@{ Path = $programPath; Name = $program; Folder = 'Code' })
     }
     $names = [string[]]@($entries | ForEach-Object { $_.Name })
     $order = [string[]]@($names)
@@ -186,9 +235,18 @@ function Get-SelfXPackageEntries {
         if ($byName.ContainsKey($name.ToLowerInvariant())) { throw "Duplicate file name in the package: $name" }
         $byName[$name.ToLowerInvariant()] = $true
         $entry = $entries | Where-Object { $_.Name -ceq $name } | Select-Object -First 1
-        $result.Add([pscustomobject]@{ Name = $name; Path = $entry.Path; Class = (Get-SelfXFileClass -Name $name) })
+        $class = Get-SelfXFileClass -Name $name
+        if ($class -ne $entry.Folder) { throw "$name is in the folder $(if ($entry.Folder -eq 'Code') { 'App' } else { 'Config' }) but belongs to the class $class." }
+        $result.Add([pscustomobject]@{ Name = $name; Path = $entry.Path; Class = $class })
     }
     return $result.ToArray()
+}
+
+function Get-SelfXListPath {
+    # Path of a list in the staged package: App\SelfX.Code.json or Config\SelfX.Config.json.
+    param([Parameter(Mandatory = $true)][string]$Stage, [Parameter(Mandatory = $true)][ValidateSet('SelfX.Code.json', 'SelfX.Config.json')][string]$ListName)
+    $folder = if ($ListName -eq 'SelfX.Code.json') { 'App' } else { 'Config' }
+    return (Join-Path (Join-Path $Stage $folder) $ListName)
 }
 
 function Get-SelfXClassHashes {
@@ -201,7 +259,7 @@ function Get-SelfXClassHashes {
 }
 
 function New-SelfXCodeManifest {
-    # Writes SelfX.Code.json into the staged package: the SHA256 of every file of the class Code. Same contents give the same
+    # Writes App\SelfX.Code.json into the staged package: the SHA256 of every file of the class Code. Same contents give the same
     # bytes (no build time). Returns the number of files.
     param([Parameter(Mandatory = $true)][string]$Stage, [Parameter(Mandatory = $true)][string]$Version)
     if (-not (Test-SelfXVersionText $Version)) { throw "Invalid version '$Version'." }
@@ -211,12 +269,12 @@ function New-SelfXCodeManifest {
         ToolVersion     = $Version
         Files           = $files
     }
-    [IO.File]::WriteAllText((Join-Path $Stage 'SelfX.Code.json'), ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+    [IO.File]::WriteAllText((Get-SelfXListPath -Stage $Stage -ListName 'SelfX.Code.json'), ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
     return $files.Count
 }
 
 function New-SelfXConfigManifest {
-    # Writes SelfX.Config.json into the staged package: the SHA256 of every file of the class Config and ConfigRevision, the UTC
+    # Writes Config\SelfX.Config.json into the staged package: the SHA256 of every file of the class Config and ConfigRevision, the UTC
     # time of this packaging run (yyyy-MM-ddTHH:mm:ssZ; the caller may pass it, otherwise it is now). The revision is not part of the
     # digest that Detection.ps1 compares. Returns the number of files.
     param([Parameter(Mandatory = $true)][string]$Stage, [string]$ConfigRevision)
@@ -228,7 +286,7 @@ function New-SelfXConfigManifest {
         ConfigRevision  = $ConfigRevision
         Files           = $files
     }
-    [IO.File]::WriteAllText((Join-Path $Stage 'SelfX.Config.json'), ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+    [IO.File]::WriteAllText((Get-SelfXListPath -Stage $Stage -ListName 'SelfX.Config.json'), ($manifest | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
     return $files.Count
 }
 
@@ -247,7 +305,7 @@ function Get-SelfXFilesDigest {
 function Get-SelfXListDigest {
     # Digest of SelfX.Code.json or SelfX.Config.json of the staged package, read back from the file (exactly what Install.ps1 installs).
     param([Parameter(Mandatory = $true)][string]$Stage, [Parameter(Mandatory = $true)][ValidateSet('SelfX.Code.json', 'SelfX.Config.json')][string]$ListName)
-    $list = Get-Content -LiteralPath (Join-Path $Stage $ListName) -Raw | ConvertFrom-Json
+    $list = Get-Content -LiteralPath (Get-SelfXListPath -Stage $Stage -ListName $ListName) -Raw | ConvertFrom-Json
     $files = [ordered]@{}
     foreach ($property in @($list.Files.PSObject.Properties)) { $files[$property.Name] = "$($property.Value)" }
     if ($files.Count -eq 0) { throw "$ListName lists no files." }
