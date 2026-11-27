@@ -14,6 +14,11 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Korrektur (Tests): `tools\Test-SelfXSigning.ps1` hält die CI-Jobs „Signing library“ nicht mehr an.** Teil 2 fügte seine
+  Testzertifikate in `Cert:\CurrentUser\Root` ein; dort stellt Windows eine Rückfrage, und ein Prozess ohne Desktop wartet darauf, bis der
+  Job abgebrochen wird. Mit Administratorrechten verwendet der Test jetzt `Cert:\LocalMachine\Root` (keine Rückfrage); auf GitHub Actions
+  läuft Teil 2 nur mit Administratorrechten. Zwei Erwartungen folgen dem, was Windows meldet: Ein Skript mit Text hinter dem
+  Signaturblock hat den Status `NotSigned`, ein vor dem Block geändertes Skript `HashMismatch`. `tools\SelfXSigning.ps1` ist unverändert.
 - **Signaturbibliothek (`tools\SelfXSigning.ps1`, nur Werkzeuge, nicht Teil des Pakets):** Funktionen für den Vertrauensmodus „Signatur“
   (docs/de/Architecture.md), lauffähig in Windows PowerShell 5.1 und PowerShell 7: `Get-SelfXSigningCertificate` (Zertifikate aus
   `Cert:\CurrentUser\My` und `Cert:\LocalMachine\My` mit privatem Schlüssel, Schlüsselverwendung Codesignatur und gültigem Zeitraum, oder
