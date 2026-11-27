@@ -37,6 +37,7 @@
     3.1.0    2026-11-27  fubu2k               Initial version.
 #>
 $ErrorActionPreference = 'Stop'
+trap { [Console]::Out.WriteLine("ERROR: $($_.Exception.GetType().FullName): $($_.Exception.Message)`n$($_.ScriptStackTrace)"); break }
 $script:checks = 0
 $script:errors = New-Object System.Collections.Generic.List[string]
 function Assert-Equal($Actual, $Expected, $Message) {
