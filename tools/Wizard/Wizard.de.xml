@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.1.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.2.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -14,13 +14,14 @@
 	<T Id="yesno">j = ja, n = nein</T>
 	<T Id="invalid">Dieser Wert ist nicht gültig: {0}</T>
 	<T Id="required">Dieser Wert ist erforderlich.</T>
-	<T Id="section.basics">1/7 Grundlagen</T>
-	<T Id="section.support">2/7 Support-Kontakte</T>
-	<T Id="section.branding">3/7 Branding</T>
-	<T Id="section.ticket">4/7 Ticket per E-Mail und Organisationen</T>
-	<T Id="section.copilot">5/7 Copilot Chat und Firmen-Wiki</T>
-	<T Id="section.behavior">6/7 Verhalten auf dem Gerät</T>
-	<T Id="section.build">7/7 Paket bauen</T>
+	<T Id="section.basics">1/8 Grundlagen</T>
+	<T Id="section.support">2/8 Support-Kontakte</T>
+	<T Id="section.branding">3/8 Branding</T>
+	<T Id="section.ticket">4/8 Ticket per E-Mail und Organisationen</T>
+	<T Id="section.copilot">5/8 Copilot Chat und Firmen-Wiki</T>
+	<T Id="section.behavior">6/8 Verhalten auf dem Gerät</T>
+	<T Id="section.rules">7/8 AppLocker und App Control</T>
+	<T Id="section.build">8/8 Paket bauen</T>
 	<T Id="ToolLanguage.ask">Standardsprache von SelfX auf den Geräten (de, en, fr, es ... oder Auto)</T>
 	<T Id="ToolLanguage.rec">Auto folgt der Anzeigesprache von Windows. Wählen Sie Auto, wenn Ihre Nutzer mehrere Sprachen sprechen.</T>
 	<T Id="ShowLanguageSetting.ask">Dürfen Nutzer ihre Sprache in den Einstellungen selbst wählen?</T>
@@ -39,7 +40,7 @@
 	<T Id="SupportWebsite.rec">Tragen Sie Ihr Self-Service-Portal ein, falls vorhanden. Nur https://-Adressen werden akzeptiert.</T>
 	<T Id="SupportTeams.ask">Teams-Kontakt (Adresse eines gemeinsamen Kontos oder https://-Link, leer = ausblenden)</T>
 	<T Id="SupportTeams.rec">Optional. Lassen Sie es leer, wenn der Service Desk in Teams nicht erreichbar ist.</T>
-	<T Id="LogoPath.ask">Pfad Ihrer Logo-Datei (png, jpg, ico, bmp oder gif, leer = kein Logo)</T>
+	<T Id="LogoPath.ask">Pfad Ihrer Logo-Datei (png, jpg oder ico, höchstens 2 MB, leer = kein Logo)</T>
 	<T Id="LogoPath.rec">Ein transparentes PNG, etwa 400 x 120 Pixel, sieht im hellen und im dunklen Design gut aus.</T>
 	<T Id="AccentColor.ask">Firmenfarbe als #RRGGBB (leer = SelfX-Blau #0072BC behalten)</T>
 	<T Id="AccentColor.rec">Nehmen Sie Ihre Hausfarbe. SelfX passt zu dunkle oder zu helle Farben an.</T>
@@ -98,6 +99,10 @@
 	<T Id="FileCheck.rec">Enforce. Audit meldet nur und ist für einen kurzen Pilot gedacht.</T>
 	<T Id="Privileges.ask">Rechte des Dienstes: Restricted oder Default</T>
 	<T Id="Privileges.rec">Restricted. Default nur zur Fehlersuche.</T>
+	<T Id="AppLockerRules.ask">AppLocker-Regeln für die Programme von SelfX erzeugen?</T>
+	<T Id="AppLockerRules.rec">Ja, wenn Sie AppLocker einsetzen. Die Datei SelfX.AppLocker.xml enthält Hash-Regeln (signiertes Paket: eine Herausgeberregel, die für jede Version gleich bleibt). Antworten Sie Nein, wenn dieser PC die AppLocker-Cmdlets nicht hat.</T>
+	<T Id="WdacBasePolicyId.ask">Basisrichtlinien-ID (GUID) Ihrer App-Control-for-Business-Richtlinie (WDAC) (leer = keine App-Control-Datei)</T>
+	<T Id="WdacBasePolicyId.rec">Nur wenn Sie App Control einsetzen. Der Assistent erzeugt dann eine ergänzende Richtlinie zu dieser Basisrichtlinie. Das braucht Windows 11 mit dem Modul ConfigCI und dauert einige Minuten. Leer erzeugt nichts.</T>
 	<T Id="Tool.ask">Pfad von IntuneWinAppUtil.exe (Win32 Content Prep Tool von Microsoft)</T>
 	<T Id="Tool.rec">Laden Sie es von https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool (Datei IntuneWinAppUtil.exe im Repository, nehmen Sie das neueste Release-Tag). Das Skript prüft die Microsoft-Signatur.</T>
 	<T Id="BuildBinaries.ask">Die Programme (Ordner Bin) fehlen oder sind veraltet. Jetzt mit dem .NET SDK 10 bauen?</T>
@@ -111,6 +116,14 @@
 	<T Id="step.bin">Programme werden gebaut ...</T>
 	<T Id="step.pack">Intune-Paket wird erstellt ...</T>
 	<T Id="step.guide">Skripte und Anleitung werden geschrieben ...</T>
+	<T Id="step.check">Eingaben und Nutzlast werden geprüft ...</T>
+	<T Id="step.copy">Paket wird kopiert ...</T>
+	<T Id="step.sign">Programme und Skripte werden signiert ...</T>
+	<T Id="step.catalog">Signierter Katalog wird erstellt ...</T>
+	<T Id="step.detection">Erkennungsskript wird geschrieben ...</T>
+	<T Id="step.rules">AppLocker- und App-Control-Dateien werden erzeugt ...</T>
+	<T Id="step.finish">Ergebnis wird geschrieben ...</T>
+	<T Id="pfx.password">Kennwort der PFX-Datei (wird nicht gespeichert)</T>
 	<T Id="done">Fertig. Ihre Dateien liegen in: {0}</T>
 	<T Id="done.config">Konfiguration geschrieben (kein Paket gebaut): {0}</T>
 	<T Id="aborted">Abgebrochen. Es wurde nichts gebaut.</T>
@@ -127,12 +140,16 @@
 	<T Id="guide.s7">7. Ticket-Zuordnung: Legen Sie je Datei unten ein Plattformskript an (Geräte > Skripte und Fehlerbehebungen > Plattformskripts). Mit den Anmeldeinformationen des angemeldeten Benutzers ausführen: Nein. Skripthost in 64-Bit-PowerShell ausführen: Ja. Weisen Sie jedes Skript der passenden Entra-Gerätegruppe zu; die Gruppen sollten sich gegenseitig ausschließen.</T>
 	<T Id="guide.s7item">   {0}: Group Tags {1}; Geräteklassen {2}</T>
 	<T Id="guide.s7tag">   Tipp für eine dynamische Gerätegruppe zu einem Group Tag: (device.devicePhysicalIds -any (_ -eq "[OrderID]:TAG"))</T>
+	<T Id="guide.trust">{0}. Vertrauensmodus Signatur: Der Installationsbefehl oben enthält -TrustedSigner mit dem Fingerabdruck Ihres Signaturzertifikats. Entfernen Sie ihn nicht: Ohne ihn lehnt Install.ps1 das signierte Paket ab, und ein Gerät in diesem Modus lehnt ein unsigniertes Paket ab. Das Paket enthält die Kataloge SelfX.Code.cat und Config\SelfX.Config.cat.</T>
+	<T Id="guide.trust2">   Um auf einem Gerät zu unsignierten Paketen zurückzukehren, installieren Sie einmal das unsignierte Paket mit dem Schalter -AllowHashMode. Einzelheiten: docs\de\Installation.md, Abschnitt "Einmal einrichten statt je Version".</T>
+	<T Id="guide.rules">{0}. AppLocker / App Control: Führen Sie diese Dateien aus dem Ausgabeordner in Ihre Richtlinien ein. Die Regeln sind Hash-Regeln: Für jede neue Version ein neues Paket bauen, die Dateien neu erzeugen und die alten Regeln ersetzen.</T>
+	<T Id="guide.rules.signed">{0}. AppLocker / App Control: Führen Sie diese Dateien aus dem Ausgabeordner einmal in Ihre Richtlinien ein. Die Regeln vertrauen dem Herausgeber Ihres Signaturzertifikats und bleiben für jede damit signierte Version gleich: Schützen Sie das Zertifikat.</T>
 	<T Id="guide.asr">{0}. Defender-Verringerung der Angriffsfläche (nur wenn die Regel "Block executable files from running unless they meet a prevalence, age, or trusted list criterion", ID 01443614-cd74-433a-b99e-2ecdc07bfc25, in Ihrem Mandanten aktiv ist): Der Cloud-Schutz von Microsoft entscheidet, welche Programme starten dürfen, und Sie können seine Kriterien nicht einstellen. Ein Programm von SelfX kann deshalb blockiert werden. Das ist möglich, nicht sicher: Prüfen Sie es auf den Pilotgeräten, bevor Sie die Zuweisung erweitern.</T>
 	<T Id="guide.asr1">   Welche Datei wird blockiert? Kopieren Sie tools\Get-SelfXAsrEvents.ps1 aus dem Repository auf ein Pilotgerät und führen Sie es dort aus (nur lesend, keine Benutzernamen in der Ausgabe, mit -SelfXOnly nur die SelfX-Dateien; mit erhöhten Rechten, wenn das Protokoll sonst nicht lesbar ist). Ereignis 1121 = blockiert, 1122 = nur im Überwachungsmodus protokolliert.</T>
 	<T Id="guide.asr2">   Stellen Sie die Regel zuerst auf den Überwachungsmodus (Audit). Nennen die Ereignisse SelfX-Dateien, tragen Sie genau diese Dateien (nie mehr als die folgenden vier) in die Einstellung "ASR Only Per Rule Exclusions" dieser Regel ein (Name der englischen Oberfläche): Endpoint Security > Verringerung der Angriffsfläche > Ihre Richtlinie vom Typ "Attack surface reduction rules".</T>
 	<T Id="guide.asr3">   Schließen Sie nicht den Ordner SelfX aus und nutzen Sie nicht die globale Einstellung "Attack Surface Reduction Only Exclusions" (sie gilt für jede ASR-Regel). Ein Ausschluss gilt erst, wenn das Programm startet: starten Sie den Dienst SelfXService oder das Gerät neu. Ausgeschlossene Dateien schreiben keine Ereignisse. Das Signieren des Pakets ist keine Zusage, dass die Regel die Dateien durchlässt. Einzelheiten: docs\de\Installation.md, Abschnitt "Defender ASR: Regel für ausführbare Dateien".</T>
 	<T Id="guide.s8">{0}. Auf einem Pilotgerät testen: Das Startmenü zeigt SelfX, der Dienst SelfXService läuft, die Protokolle liegen in %ProgramData%\SelfX\Logs. Danach die Zuweisung erweitern.</T>
-	<T Id="guide.update">Update später: Version.txt (SelfX Service) und ExpectedVersion in Detection.ps1 im Repository erhöhen, den Assistenten mit Ihren gespeicherten Antworten erneut starten ({0}) und das neue Paket als neue Version der App hochladen.</T>
+	<T Id="guide.update">Update später: das Nutzlast-Archiv des neuen Release entpacken, den Assistenten mit Ihren gespeicherten Antworten erneut starten ({0}) und das neue Paket als neue Version der App hochladen.</T>
 	<T Id="guide.answers">Ihre Antworten sind in {0} gespeichert. Die Datei enthält Ihre Postfachadressen: nicht in Git einchecken.</T>
 	<T Id="guide.script.header">Set-SelfXSupportUnit-Skript für die Einheit {0}. Weisen Sie es der Entra-Gerätegruppe dieser Einheit zu.</T>
 </Wizard_Language>

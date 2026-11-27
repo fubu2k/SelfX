@@ -48,6 +48,8 @@
     3.1.0    2026-11-27  fubu2k               Package layout App\ and Config\ (ConvertTo-SelfXPackageLayout); the lists are written into
                                               App\SelfX.Code.json and Config\SelfX.Config.json; SelfXPaths.ps1 is a file of the project
     3.1.0    2026-11-27  fubu2k               Text overrides: Texts/<culture>.xml is a configuration file; nothing below Texts may be in SelfX.Code.json
+    3.1.0    2026-11-27  fubu2k               One-step build (Invoke-SelfXPackageBuild): Copy-SelfXPayloadPackage, Test-SelfXPayloadFolder, New-SelfXPayloadFromRepository,
+                                              Assert-SelfXIntuneWinTool, New-SelfXIntuneWinFile
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -337,4 +339,155 @@ function New-SelfXDetectionScript {
     }
     [IO.File]::WriteAllText($Target, $text, (New-Object System.Text.UTF8Encoding($hasBom)))
     return [pscustomobject]@{ Code = $codeDigest; Config = $configDigest }
+}
+
+# ------------------------------------------------------------------------------------------------ payload and packaging (one-step build)
+
+# The entries at the top of the payload folder that are the package itself (what goes into the .intunewin).
+$script:SelfXPackageTopLevel = @('Install.ps1', 'Uninstall.ps1', 'Detection.ps1', 'README.md', 'README.en.md', 'Bin', 'App', 'Config', 'Service')
+# Entries of the payload archive that are not part of the package (tools of the assistant, licence texts); they are not copied.
+$script:SelfXPayloadOnlyTopLevel = @('tools', 'LICENSE.md', 'NOTICE.md', 'NOTICE.en.md')
+
+function Copy-SelfXPayloadPackage {
+    # Copies the package part of an unpacked payload archive (see $script:SelfXPackageTopLevel) into Target (a new, empty folder or one
+    # that does not exist yet). The payload folder is never changed. Throws for a link anywhere in the payload, for an entry at the top
+    # that is neither package nor tool/licence file (fail closed) and for a missing Install.ps1, App, Config or Bin.
+    param([Parameter(Mandatory = $true)][string]$PayloadFolder, [Parameter(Mandatory = $true)][string]$Target)
+    if (-not (Test-Path -LiteralPath $PayloadFolder -PathType Container)) { throw "The payload folder does not exist: $PayloadFolder" }
+    $root = (Get-Item -LiteralPath $PayloadFolder -Force).FullName.TrimEnd('\', '/')
+    foreach ($item in @(Get-ChildItem -LiteralPath $root -Recurse -Force)) {
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "A link is not allowed in the payload: $($item.FullName.Substring($root.Length + 1))" }
+    }
+    $comparer = [StringComparer]::OrdinalIgnoreCase
+    $copy = New-Object System.Collections.Generic.List[object]
+    foreach ($item in @(Get-ChildItem -LiteralPath $root -Force)) {
+        $known = $false
+        foreach ($name in $script:SelfXPackageTopLevel) { if ($comparer.Equals($name, $item.Name)) { $known = $true } }
+        if ($known) { $copy.Add($item); continue }
+        $skip = $false
+        foreach ($name in $script:SelfXPayloadOnlyTopLevel) { if ($comparer.Equals($name, $item.Name)) { $skip = $true } }
+        if (-not $skip) { throw "The payload folder has an entry that is not part of SelfX: '$($item.Name)'. Use the unpacked payload archive of a release." }
+    }
+    foreach ($required in 'Install.ps1', 'Uninstall.ps1', 'Detection.ps1') {
+        if (-not (@($copy | Where-Object { $_.Name -ieq $required -and -not $_.PSIsContainer }).Count)) { throw "The payload folder has no $required." }
+    }
+    foreach ($required in 'App', 'Config', 'Bin') {
+        if (-not (@($copy | Where-Object { $_.Name -ieq $required -and $_.PSIsContainer }).Count)) { throw "The payload folder has no folder $required." }
+    }
+    New-Item -ItemType Directory -Path $Target -Force | Out-Null
+    foreach ($item in $copy) {
+        Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $Target $item.Name) -Recurse -Force
+    }
+}
+
+function Test-SelfXPayloadFolder {
+    # Checks a package folder (a copy of the payload) before anything is changed: it is not signed yet, App\SelfX.Code.json lists exactly
+    # the files of the class Code with their SHA256, Bin\SelfX.Binaries.json matches the sources in Service and the programs in Bin, and
+    # Detection.ps1 expects the version of the list and holds both placeholders once. Throws with a plain text at the first problem
+    # (fail closed). Returns Version and the number of listed code files.
+    param([Parameter(Mandatory = $true)][string]$Package)
+    if (Test-Path -LiteralPath (Join-Path $Package 'Sources')) { throw 'The payload has the old layout (folder Sources). Use the payload archive of a release.' }
+    foreach ($catalog in 'SelfX.Code.cat', 'App\SelfX.Code.cat', 'Config\SelfX.Config.cat') {
+        if (Test-Path -LiteralPath (Join-Path $Package $catalog)) { throw "The payload is already signed ($catalog exists). Use the unpacked payload archive of a release." }
+    }
+    $listPath = Get-SelfXListPath -Stage $Package -ListName 'SelfX.Code.json'
+    if (-not (Test-Path -LiteralPath $listPath -PathType Leaf)) { throw 'App\SelfX.Code.json is missing in the payload.' }
+    try { $list = Get-Content -LiteralPath $listPath -Raw | ConvertFrom-Json } catch { throw 'App\SelfX.Code.json is not valid JSON.' }
+    if ("$($list.ManifestVersion)" -ne '1' -or $null -eq $list.Files) { throw 'App\SelfX.Code.json has an unknown format.' }
+    $version = "$($list.ToolVersion)"
+    if (-not (Test-SelfXVersionText $version)) { throw 'App\SelfX.Code.json has no valid ToolVersion.' }
+
+    $listed = @{}
+    foreach ($property in @($list.Files.PSObject.Properties)) { $listed[$property.Name] = "$($property.Value)".ToUpperInvariant() }
+    $actual = Get-SelfXClassHashes -Stage $Package -Class Code
+    $differences = New-Object System.Collections.Generic.List[string]
+    foreach ($name in $actual.Keys) {
+        if (-not $listed.ContainsKey($name)) { $differences.Add("$name (not in the list)") }
+        elseif ($listed[$name] -ne "$($actual[$name])".ToUpperInvariant()) { $differences.Add("$name (changed)") }
+    }
+    foreach ($name in $listed.Keys) { if (-not $actual.Contains($name)) { $differences.Add("$name (missing)") } }
+    if ($differences.Count -gt 0) {
+        $shown = (@($differences | Sort-Object | Select-Object -First 5)) -join ', '
+        throw "The payload does not match App\SelfX.Code.json: $($differences.Count) difference(s), for example $shown. The archive is damaged or was changed."
+    }
+
+    $bin = Join-Path $Package 'Bin'
+    $manifestPath = Join-Path $bin 'SelfX.Binaries.json'
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Bin\SelfX.Binaries.json is missing in the payload.' }
+    try { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json } catch { throw 'Bin\SelfX.Binaries.json is not valid JSON.' }
+    if ("$($manifest.ManifestVersion)" -ne '3' -or $null -eq $manifest.Sources -or $null -eq $manifest.Binaries) { throw 'Bin\SelfX.Binaries.json has an unknown format.' }
+    foreach ($property in @($manifest.Sources.PSObject.Properties)) {
+        if ($property.Name -notmatch '^Service/[A-Za-z0-9._-]+\.cs$') { throw "Bin\SelfX.Binaries.json lists an unexpected source '$($property.Name)'." }
+        $path = Join-Path $Package $property.Name.Replace('/', '\')
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "The source $($property.Name) is missing in the payload." }
+        if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne "$($property.Value)".ToUpperInvariant()) { throw "The source $($property.Name) does not match Bin\SelfX.Binaries.json." }
+    }
+    foreach ($required in 'SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll', 'WinRT/SelfXWinRT.dll', 'Audio/SelfXAudio.dll') {
+        if ($null -eq $manifest.Binaries.PSObject.Properties[$required]) { throw "Bin\SelfX.Binaries.json does not list $required." }
+    }
+    foreach ($property in @($manifest.Binaries.PSObject.Properties)) {
+        if ($property.Name -notmatch '^((WinRT|Audio)/)?[A-Za-z0-9._-]+\.(exe|dll)$') { throw "Bin\SelfX.Binaries.json lists an unexpected file '$($property.Name)'." }
+        $path = Join-Path $bin $property.Name.Replace('/', '\')
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Bin\$($property.Name) is missing in the payload." }
+        if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne "$($property.Value)".ToUpperInvariant()) { throw "Bin\$($property.Name) does not match Bin\SelfX.Binaries.json." }
+    }
+
+    $detection = Get-Content -LiteralPath (Join-Path $Package 'Detection.ps1') -Raw
+    if ($detection -notmatch "\`$ExpectedVersion\s*=\s*'([^']+)'") { throw 'Detection.ps1 has no $ExpectedVersion.' }
+    if ($Matches[1] -ne $version) { throw "Detection.ps1 expects version $($Matches[1]) but App\SelfX.Code.json has $version." }
+    foreach ($assignment in @(@{ Variable = 'ExpectedCodeHash'; Placeholder = '__SELFX_CODE_HASH__' }, @{ Variable = 'ExpectedConfigHash'; Placeholder = '__SELFX_CONFIG_HASH__' })) {
+        $pattern = "\`$$($assignment.Variable)\s*=\s*'$($assignment.Placeholder)'"
+        if (@([regex]::Matches($detection, $pattern)).Count -ne 1) { throw "Detection.ps1 must set `$$($assignment.Variable) to the placeholder $($assignment.Placeholder) exactly once." }
+    }
+    return [pscustomobject]@{ Version = $version; CodeFiles = $listed.Count }
+}
+
+function New-SelfXPayloadFromRepository {
+    # Makes a payload-like package folder from the package folder of the repository ('SelfX Service' with the built folder Bin), the same
+    # way as tools\New-SelfXIntuneWin.ps1 stages it: without tests, Version.txt and the project files, sorted into App and Config, with
+    # SelfX.Code.json and SelfX.Config.json. Target must not exist. Returns the version.
+    param([Parameter(Mandatory = $true)][string]$SourceFolder, [Parameter(Mandatory = $true)][string]$Target)
+    $version = Get-SelfXVersionFromFile -Path (Join-Path $SourceFolder 'Version.txt')
+    if (-not (Test-Path -LiteralPath (Join-Path $SourceFolder 'Bin\SelfX.Binaries.json') -PathType Leaf)) {
+        throw 'The folder Bin with SelfX.Binaries.json is missing. Run tools\Build-SelfXBinaries.ps1 first or use -BuildBinaries.'
+    }
+    if (Test-Path -LiteralPath $Target) { throw "The folder already exists: $Target" }
+    New-Item -ItemType Directory -Path $Target -Force | Out-Null
+    Copy-Item -Path (Join-Path $SourceFolder '*') -Destination $Target -Recurse -Force
+    Get-ChildItem -LiteralPath $Target -Recurse -File -Filter 'Test-*.ps1' | Remove-Item -Force
+    Remove-Item -LiteralPath (Join-Path $Target 'Version.txt') -Force -ErrorAction SilentlyContinue
+    $projects = Join-Path $Target 'Service\Projects'
+    if (Test-Path -LiteralPath $projects) { Remove-Item -LiteralPath $projects -Recurse -Force }
+    $null = ConvertTo-SelfXPackageLayout -Stage $Target
+    $null = New-SelfXCodeManifest -Stage $Target -Version $version
+    $null = New-SelfXConfigManifest -Stage $Target
+    return $version
+}
+
+function Assert-SelfXIntuneWinTool {
+    # IntuneWinAppUtil.exe must exist and carry a valid Microsoft Authenticode signature; otherwise it is not run.
+    param([Parameter(Mandatory = $true)][string]$ToolPath)
+    if (-not (Test-Path -LiteralPath $ToolPath -PathType Leaf)) { throw "IntuneWinAppUtil.exe not found: $ToolPath" }
+    $signature = Get-AuthenticodeSignature -LiteralPath $ToolPath
+    if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notlike 'CN=Microsoft Corporation,*') {
+        throw "IntuneWinAppUtil.exe is not validly signed by Microsoft ($($signature.Status))."
+    }
+}
+
+function New-SelfXIntuneWinFile {
+    # Runs IntuneWinAppUtil.exe on the staged package and moves the result to Target. OutputDir is a new, empty working folder.
+    param(
+        [Parameter(Mandatory = $true)][string]$ToolPath,
+        [Parameter(Mandatory = $true)][string]$Stage,
+        [Parameter(Mandatory = $true)][string]$SetupFile,
+        [Parameter(Mandatory = $true)][string]$OutputDir,
+        [Parameter(Mandatory = $true)][string]$Target
+    )
+    $created = Join-Path $OutputDir ([IO.Path]::GetFileNameWithoutExtension($SetupFile) + '.intunewin')
+    # -q: no prompts and overwrite.
+    $toolLog = @(& $ToolPath -c $Stage -s $SetupFile -o $OutputDir -q 2>&1)
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $created -PathType Leaf)) {
+        throw "IntuneWinAppUtil.exe failed (exit code $LASTEXITCODE): $(($toolLog | Select-Object -Last 5) -join ' / ')"
+    }
+    Move-Item -LiteralPath $created -Destination $Target -Force
 }

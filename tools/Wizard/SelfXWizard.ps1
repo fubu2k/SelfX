@@ -7,10 +7,29 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.0
+    Version : 3.1.1
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
+
+    Invoke-SelfXPackageBuild does everything of a package build in one run, without a question: it checks the payload, copies it,
+    writes the settings and the logo, signs (optional), writes the file lists and catalogs, packs, writes the detection script, the
+    AppLocker / App Control files, the scripts for Intune and the instructions. Progress goes to a callback (step id, text), an error
+    is an exception with a plain text. The result appears in the output folder in one piece: an abort leaves no half-finished folder.
+    The answers (the content of selfx-answers.json) never contain a password or a key; the certificate is a parameter of the function.
+
+    History:
+    Version  Date        Author               Change
+    -------  ----------  -------------------  ------------------------------------------------------------
+    3.1.0    2026-11-27  fubu2k               Package layout App\Config, ASR step in the instructions
+    3.1.1    2026-11-27  fubu2k               Invoke-SelfXPackageBuild (one-step build on the unpacked payload archive), logo check by file header,
+                                              answers AppLockerRules and WdacBasePolicyId, -TrustedSigner in the instructions
 #>
+
+$script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
+$script:WizardToolsFolder = Split-Path -Parent $script:WizardFolder
+# File classes, file lists, payload and packaging functions; the signing library. Both only define functions.
+. (Join-Path $script:WizardToolsFolder 'SelfXPackage.Common.ps1')
+. (Join-Path $script:WizardToolsFolder 'SelfXSigning.ps1')
 
 $script:WizardTexts = @{}
 $script:WizardAnswerFile = $null
@@ -79,6 +98,7 @@ function Get-WText {
 
 # ---------------------------------------------------------------- validation
 
+$script:WizardMaxLogoBytes = 2MB
 $script:MailPattern = '^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,}\z'
 $script:TagPattern = '^[A-Za-z0-9._ -]{1,64}\z'
 
@@ -114,6 +134,12 @@ function ConvertTo-WizardValue {
             if ($text -eq '') { return '' }
             if ($text -match $script:MailPattern) { return $text }
             return (ConvertTo-WizardValue -Kind 'url' -Value $text)
+        }
+        'guid' {
+            if ($text -eq '') { return '' }
+            $guid = [guid]::Empty
+            if (-not [guid]::TryParse($text, [ref]$guid) -or $guid -eq [guid]::Empty) { throw 'a GUID such as 12345678-1234-1234-1234-123456789abc' }
+            return $guid.ToString('D')
         }
         'phone' { if ($text -ne '' -and $text -notmatch '^[0-9+()./ -]{3,30}\z') { throw 'digits and + ( ) . / - only'}; return $text }
         'color' { if ($text -ne '' -and $text -notmatch '^#[0-9A-Fa-f]{6}\z') { throw '#RRGGBB' }; return $text.ToUpperInvariant() }
@@ -268,9 +294,15 @@ function New-SelfXIntuneGuide {
         [Parameter(Mandatory = $true)][string]$PackageFile,
         [Parameter(Mandatory = $true)][string]$DetectionFile,
         [string[]]$ScriptFiles = @(),
-        [string]$AnswersFile = ''
+        [string]$AnswersFile = '',
+        [string[]]$TrustedSigner = @(),
+        [string[]]$RuleFiles = @()
     )
     $ps = '%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
+    # Trust mode Signature: the install command names the signer (SHA1 thumbprints, 40 hex characters, separated by commas without a space).
+    $signers = @($TrustedSigner | ForEach-Object { "$_".ToUpperInvariant() })
+    foreach ($signer in $signers) { if ($signer -notmatch '^[0-9A-F]{40}\z') { throw 'A thumbprint for -TrustedSigner is not valid.' } }
+    $installArguments = $(if ($signers.Count) { ' -TrustedSigner ' + ($signers -join ',') } else { '' })
     $org = $Answers.OrgName
     $lines = New-Object System.Collections.Generic.List[string]
     $lines.Add((Get-WText 'guide.title' @($org, $Version)))
@@ -279,7 +311,7 @@ function New-SelfXIntuneGuide {
     $lines.Add('')
     $lines.Add((Get-WText 'guide.s1' @($PackageFile, "SelfX Service - $org", $org)))
     $lines.Add('')
-    $lines.Add((Get-WText 'guide.s2' @("$ps .\Install.ps1")))
+    $lines.Add((Get-WText 'guide.s2' @("$ps .\Install.ps1$installArguments")))
     $lines.Add((Get-WText 'guide.s2b' @("$ps .\Uninstall.ps1")))
     $lines.Add((Get-WText 'guide.s2c'))
     $lines.Add('')
@@ -303,6 +335,18 @@ function New-SelfXIntuneGuide {
         $lines.Add('')
     }
     $step = if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }
+    if ($signers.Count) {
+        $lines.Add((Get-WText 'guide.trust' @($step)))
+        $lines.Add((Get-WText 'guide.trust2'))
+        $lines.Add('')
+        $step++
+    }
+    if ($RuleFiles.Count -gt 0) {
+        $lines.Add((Get-WText $(if ($signers.Count) { 'guide.rules.signed' } else { 'guide.rules' }) @($step)))
+        foreach ($file in $RuleFiles) { $lines.Add("   - $file") }
+        $lines.Add('')
+        $step++
+    }
     $lines.Add((Get-WText 'guide.asr' @($step)))
     $lines.Add((Get-WText 'guide.asr1'))
     $lines.Add((Get-WText 'guide.asr2'))
@@ -357,6 +401,8 @@ function Get-WizardQuestions {
     & $add @{ Id = 'LogRetention'; Kind = 'int'; Min = 1; Max = 3650; When = { param($a) $a.Expert }; Default = 90 }
     & $add @{ Id = 'FileCheck'; Kind = 'choice'; Choices = @('Enforce', 'Audit'); When = { param($a) $a.Expert }; Default = 'Enforce' }
     & $add @{ Id = 'Privileges'; Kind = 'choice'; Choices = @('Restricted', 'Default'); When = { param($a) $a.Expert }; Default = 'Restricted' }
+    & $add @{ Section = 'rules'; Id = 'AppLockerRules'; Kind = 'bool'; Default = $true }
+    & $add @{ Id = 'WdacBasePolicyId'; Kind = 'guid'; Default = '' }
     return , $q.ToArray()
 }
 
@@ -518,19 +564,36 @@ function Get-WizardToolConfigValues {
     return $values
 }
 
+# Kind of an image by its first bytes (never by the extension alone): png, jpg or ico; $null for anything else.
+function Get-WizardImageKind {
+    param([byte[]]$Bytes)
+    if ($Bytes.Length -ge 8 -and $Bytes[0] -eq 0x89 -and $Bytes[1] -eq 0x50 -and $Bytes[2] -eq 0x4E -and $Bytes[3] -eq 0x47 -and $Bytes[4] -eq 0x0D -and $Bytes[5] -eq 0x0A -and $Bytes[6] -eq 0x1A -and $Bytes[7] -eq 0x0A) { return 'png' }
+    if ($Bytes.Length -ge 3 -and $Bytes[0] -eq 0xFF -and $Bytes[1] -eq 0xD8 -and $Bytes[2] -eq 0xFF) { return 'jpg' }
+    if ($Bytes.Length -ge 6 -and $Bytes[0] -eq 0 -and $Bytes[1] -eq 0 -and $Bytes[2] -eq 1 -and $Bytes[3] -eq 0 -and ($Bytes[4] -ne 0 -or $Bytes[5] -ne 0)) { return 'ico' }
+    return $null
+}
+
 # Copies the logo into <configuration folder>\Branding and returns the relative path for Brand_Logo (relative to the configuration
-# folder: Branding\<name>, resolved by SelfXPaths.ps1 on the device).
+# folder: Branding\<name>, resolved by SelfXPaths.ps1 on the device). The file is read once: it must be a normal file of at most 2 MB, the
+# extension must be png, jpg, jpeg or ico and the first bytes must be a png, jpg or ico image of the same kind. The copy gets the name
+# logo.<kind> from the checked bytes.
 function Copy-WizardLogo {
     param([string]$LogoPath, [string]$SourcesFolder)
     $item = Get-Item -LiteralPath $LogoPath -Force -ErrorAction Stop
     if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'The logo must be a normal file.' }
-    if ($item.Extension -notmatch '^\.(png|jpg|jpeg|bmp|gif|ico)$') { throw 'The logo must be png, jpg, bmp, gif or ico.' }
-    if ($item.Length -gt 2MB) { throw 'The logo is larger than 2 MB.' }
+    if ($item.Extension -notmatch '^\.(png|jpg|jpeg|ico)$') { throw 'The logo must be png, jpg or ico.' }
+    if ($item.Length -gt $script:WizardMaxLogoBytes) { throw 'The logo is larger than 2 MB.' }
+    $bytes = [IO.File]::ReadAllBytes($item.FullName)
+    if ($bytes.Length -gt $script:WizardMaxLogoBytes) { throw 'The logo is larger than 2 MB.' }
+    $kind = Get-WizardImageKind -Bytes $bytes
+    if ($null -eq $kind) { throw 'The logo is not a png, jpg or ico image (the file header does not match).' }
+    $extensionKind = $item.Extension.TrimStart('.').ToLowerInvariant().Replace('jpeg', 'jpg')
+    if ($extensionKind -ne $kind) { throw "The logo has the extension $($item.Extension) but is a $kind image." }
     $folder = Join-Path $SourcesFolder 'Branding'
     New-Item -ItemType Directory -Path $folder -Force | Out-Null
     foreach ($old in @(Get-ChildItem -LiteralPath $folder -File -Force)) { Remove-Item -LiteralPath $old.FullName -Force }
-    $name = 'logo' + $item.Extension.ToLowerInvariant()
-    Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $folder $name) -Force
+    $name = "logo.$kind"
+    [IO.File]::WriteAllBytes((Join-Path $folder $name), $bytes)
     return "Branding\$name"
 }
 
@@ -568,4 +631,317 @@ function Get-WizardSummary {
         $lines.Add(('  Unit {0}: {1} (Cc {2}); GroupTags: {3}; OUs: {4}; Classes: {5}' -f $unit.Id, $unit.Mail, $unit.Cc, (@($unit.GroupTags) -join ', '), (@($unit.OUs) -join ', '), (@($unit.Categories) -join ', ')))
     }
     return $lines.ToArray()
+}
+
+# ---------------------------------------------------------------- one-step package build
+
+# Answers (hashtable of Read-WizardAnswers, or an object with the same properties) -> the Source of Read-WizardAnswers (the shape of
+# selfx-answers.json). Units may have the properties Id/Mail/... (New-WizardUnit) or UnitId/UnitMail/... (answer file).
+function ConvertTo-WizardAnswerSource {
+    param([Parameter(Mandatory = $true)]$Answers)
+    $source = @{}
+    if ($Answers -is [System.Collections.IDictionary]) { foreach ($key in $Answers.Keys) { $source["$key"] = $Answers[$key] } }
+    elseif ($Answers -is [psobject]) { foreach ($property in $Answers.PSObject.Properties) { $source[$property.Name] = $property.Value } }
+    else { throw 'The answers must be a hashtable or an object.' }
+    $get = { param($o, [string[]]$names) foreach ($n in $names) { if ($o -is [System.Collections.IDictionary]) { if ($o.Contains($n)) { return $o[$n] } } elseif ($null -ne $o.PSObject.Properties[$n]) { return $o.$n } } return $null }
+    $units = New-Object System.Collections.Generic.List[object]
+    foreach ($unit in @($source['Units'])) {
+        if ($null -eq $unit) { continue }
+        $units.Add([pscustomobject]@{
+                UnitId         = (& $get $unit @('UnitId', 'Id'))
+                UnitMail       = (& $get $unit @('UnitMail', 'Mail'))
+                UnitCc         = (& $get $unit @('UnitCc', 'Cc'))
+                UnitGroupTags  = (& $get $unit @('UnitGroupTags', 'GroupTags'))
+                UnitOUs        = (& $get $unit @('UnitOUs', 'OUs'))
+                UnitCategories = (& $get $unit @('UnitCategories', 'Categories'))
+            })
+    }
+    $source['Units'] = $units.ToArray()
+    return $source
+}
+
+# Checks all answers again like an answer file (every value normalized, unknown answers refused) and returns the normalized answers.
+# There is no place for a password or a key: such a name is an unknown answer and stops the build.
+function Test-WizardAnswerSet {
+    param([Parameter(Mandatory = $true)]$Answers)
+    $source = ConvertTo-WizardAnswerSource -Answers $Answers
+    $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'WizardLanguage')
+    foreach ($key in $source.Keys) { if ($known -notcontains $key) { throw "Unknown answer '$key'. The answers contain no password and no key." } }
+    $previous = $script:WizardInteractive
+    $script:WizardInteractive = $false
+    try { return (Read-WizardAnswers -Source $source) }
+    finally { $script:WizardInteractive = $previous }
+}
+
+# Writes the answers (without any secret) as selfx-answers.json.
+function Save-WizardAnswers {
+    param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][hashtable]$Answers, [string]$Language = 'en')
+    $saved = [ordered]@{ WizardLanguage = $Language }
+    foreach ($key in ($Answers.Keys | Where-Object { $_ -ne 'Units' } | Sort-Object)) { $saved[$key] = $Answers[$key] }
+    $saved['Units'] = @($Answers.Units | ForEach-Object { [ordered]@{ UnitId = $_.Id; UnitMail = $_.Mail; UnitCc = $_.Cc; UnitGroupTags = @($_.GroupTags); UnitOUs = @($_.OUs); UnitCategories = @($_.Categories) } })
+    [IO.File]::WriteAllText($Path, ($saved | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# Writes the Intune platform scripts of the ticket routing into Folder and returns their file names.
+function Write-SelfXSupportUnitScripts {
+    param([Parameter(Mandatory = $true)][hashtable]$Answers, [Parameter(Mandatory = $true)][string]$Folder)
+    $scriptFiles = New-Object System.Collections.Generic.List[string]
+    $safe = { param($s) ("$s" -replace '[^A-Za-z0-9._-]', '_') }
+    foreach ($unit in @($Answers.Units)) {
+        $tags = @($unit.GroupTags); $classes = @($unit.Categories)
+        $combos = New-Object System.Collections.Generic.List[object]
+        if ($tags.Count -and $classes.Count) { foreach ($t in $tags) { foreach ($c in $classes) { $combos.Add(@($t, $c)) } } }
+        elseif ($tags.Count) { foreach ($t in $tags) { $combos.Add(@($t, '')) } }
+        elseif ($classes.Count) { foreach ($c in $classes) { $combos.Add(@('', $c)) } }
+        # Units that are matched by OU only need no script: the rules of Ticket_Config.xml route them.
+        if ($combos.Count -gt 50) { throw "The unit '$($unit.Id)' needs more than 50 scripts. Reduce the group tags or device classes." }
+        foreach ($combo in $combos) {
+            $name = 'Set-SelfXSupportUnit-' + (& $safe $unit.Id)
+            if ($combo[0]) { $name += '-' + (& $safe $combo[0]) }
+            if ($combo[1]) { $name += '-' + (& $safe $combo[1]) }
+            [IO.File]::WriteAllText((Join-Path $Folder ($name + '.ps1')), (New-SelfXSupportUnitScript -Unit $unit -GroupTag $combo[0] -Category $combo[1]), (New-Object System.Text.UTF8Encoding($false)))
+            $scriptFiles.Add($name + '.ps1')
+        }
+    }
+    return , $scriptFiles.ToArray()
+}
+
+# Runs one of the rule scripts (New-SelfXAppLockerRules.ps1, New-SelfXWdacPolicy.ps1) in Windows PowerShell 5.1 (AppLocker and ConfigCI exist
+# only there) as a child process. Every value is its own argument (no command line is built from text). Throws with the end of the output
+# when the script fails. Tests replace this function.
+function Invoke-SelfXRuleScript {
+    param([Parameter(Mandatory = $true)][string]$Script, [Parameter(Mandatory = $true)][string[]]$Arguments)
+    $windowsPowerShell = Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\v1.0\powershell.exe'
+    if (-not (Test-Path -LiteralPath $windowsPowerShell -PathType Leaf)) { throw 'Windows PowerShell 5.1 was not found (needed for the AppLocker and App Control rules).' }
+    $output = @(& $windowsPowerShell -NoProfile -ExecutionPolicy Bypass -File $Script @Arguments 2>&1 | ForEach-Object { "$_" })
+    if ($LASTEXITCODE -ne 0) { throw "$(Split-Path -Leaf $Script) failed (exit code $LASTEXITCODE): $((@($output | Select-Object -Last 4)) -join ' / ')" }
+}
+
+# After signing the programs in Bin the hashes in Bin\SelfX.Binaries.json must be the signed ones (Install.ps1 compares them).
+function Update-SelfXBinariesManifest {
+    param([Parameter(Mandatory = $true)][string]$Package)
+    $path = Join-Path $Package 'Bin\SelfX.Binaries.json'
+    $manifest = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    $binaries = [ordered]@{}
+    foreach ($property in @($manifest.Binaries.PSObject.Properties)) {
+        $file = Join-Path (Join-Path $Package 'Bin') $property.Name.Replace('/', '\')
+        $binaries[$property.Name] = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
+    }
+    $result = [ordered]@{}
+    foreach ($property in @($manifest.PSObject.Properties)) {
+        if ($property.Name -eq 'Binaries') { $result['Binaries'] = $binaries }
+        elseif ($property.Name -eq 'Sources') { $sources = [ordered]@{}; foreach ($source in @($property.Value.PSObject.Properties)) { $sources[$source.Name] = $source.Value }; $result['Sources'] = $sources }
+        else { $result[$property.Name] = $property.Value }
+    }
+    [IO.File]::WriteAllText($path, ($result | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+}
+
+function Test-WizardOutputFolder {
+    # The output folder is new, empty or the result of an earlier run (it then has selfx-answers.json or a folder package); anything else
+    # is not touched. It must not be inside the payload and must not contain it.
+    param([Parameter(Mandatory = $true)][string]$OutputFolder, [Parameter(Mandatory = $true)][string]$PayloadFolder)
+    $out = [IO.Path]::GetFullPath($OutputFolder).TrimEnd('\', '/')
+    $payload = [IO.Path]::GetFullPath($PayloadFolder).TrimEnd('\', '/')
+    if ([IO.Path]::GetPathRoot($out + '\') -eq ($out + '\')) { throw 'The output folder must not be the root of a drive.' }
+    if ($out -ieq $payload -or $out.StartsWith($payload + '\', [StringComparison]::OrdinalIgnoreCase) -or $payload.StartsWith($out + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'The output folder and the payload folder must not contain each other.'
+    }
+    if (Test-Path -LiteralPath $out) {
+        $item = Get-Item -LiteralPath $out -Force
+        if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'The output path is not a normal folder.' }
+        $entries = @(Get-ChildItem -LiteralPath $out -Force)
+        if ($entries.Count -gt 0 -and -not (@($entries | Where-Object { $_.Name -ieq 'selfx-answers.json' -or ($_.Name -ieq 'package' -and $_.PSIsContainer) }).Count)) {
+            throw 'The output folder is not empty and holds no earlier SelfX result. Use an empty folder.'
+        }
+    }
+    return $out
+}
+
+function Invoke-SelfXPackageBuild {
+    <#
+    .SYNOPSIS
+        Builds the configured Intune package in one run, without a question.
+
+    .DESCRIPTION
+        Order: check the answers, the tool and the certificate; copy the package part of the unpacked payload; check the copy against
+        App\SelfX.Code.json; write the settings and the logo; trust mode Signature (with -Certificate): sign every program and script,
+        rewrite Bin\SelfX.Binaries.json and App\SelfX.Code.json, write SelfX.Code.cat from the package without Config; then
+        Config\SelfX.Config.json (and in the mode Signature Config\SelfX.Config.cat); pack with IntuneWinAppUtil.exe (Microsoft signature
+        checked); write Detection.ps1 with the digests (signed in the mode Signature); AppLocker and App Control files for the mode;
+        platform scripts, instructions and selfx-answers.json.
+
+        Everything is built in a work folder next to the output folder. Only when every step worked, the result replaces the output
+        folder; an error leaves no half-finished output (an earlier result stays as it was). Errors are exceptions with a plain text.
+        The caller disposes -Certificate; the function never reads, stores or logs a password.
+
+        Progress: -OnProgress is called as & $OnProgress <step id> <text>. Step ids: check, copy, config, sign, catalog, pack,
+        detection, rules, guide, finish.
+
+    .OUTPUTS
+        An object with OutputFolder, Version, Mode (Hash or Signature), PackageFile, DetectionFile, RuleFiles, ScriptFiles, GuideFile.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]$Answers,
+        [Parameter(Mandatory = $true)][string]$PayloadFolder,
+        [Parameter(Mandatory = $true)][string]$OutputFolder,
+        [string]$ToolPath,
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+        [string]$TimestampServer,
+        [scriptblock]$OnProgress,
+        [string]$Language = 'en',
+        [switch]$ConfigureOnly
+    )
+    $progress = { param([string]$id) if ($null -ne $OnProgress) { & $OnProgress $id (Get-WText "step.$id") } }
+    $signed = ($null -ne $Certificate)
+
+    # ---- input, before anything is written
+    & $progress 'check'
+    $a = Test-WizardAnswerSet -Answers $Answers
+    if ($ConfigureOnly -and $signed) { throw 'A package that is only configured is not signed: do not combine -ConfigureOnly with a certificate.' }
+    if ($TimestampServer -and -not $signed) { throw 'A time stamp server needs a certificate.' }
+    if (-not $ConfigureOnly) { Assert-SelfXIntuneWinTool -ToolPath $ToolPath }
+    if ($signed) {
+        $problem = Get-SelfXSigningCertificateProblem $Certificate
+        if ($null -ne $problem) { throw "The certificate cannot be used for code signing: $problem." }
+        if ($TimestampServer -and -not (Test-SelfXTimestampUrl $TimestampServer)) { throw 'The time stamp server must be an absolute http or https address without user information.' }
+    }
+    $final = Test-WizardOutputFolder -OutputFolder $OutputFolder -PayloadFolder $PayloadFolder
+    $parent = Split-Path -Parent $final
+    if (-not (Test-Path -LiteralPath $parent -PathType Container)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+
+    $work = Join-Path $parent ('.selfx-build-' + [guid]::NewGuid().ToString('N').Substring(0, 12))
+    $out = Join-Path $work 'out'
+    $tmp = Join-Path $work 'tmp'
+    $backup = $null
+    try {
+        New-Item -ItemType Directory -Path $out, $tmp -Force | Out-Null
+        $package = Join-Path $out 'package'
+
+        # ---- copy and check
+        & $progress 'copy'
+        Copy-SelfXPayloadPackage -PayloadFolder $PayloadFolder -Target $package
+        $payload = Test-SelfXPayloadFolder -Package $package
+        $version = $payload.Version
+
+        # ---- settings and logo
+        & $progress 'config'
+        Set-WizardPackageConfiguration -PackageFolder $package -Answers $a
+
+        # The detection script is made from the unsigned file with the lists of the finished package (a signature block is not copied).
+        $detectStage = Join-Path $tmp 'detect'
+        New-Item -ItemType Directory -Path (Join-Path $detectStage 'App'), (Join-Path $detectStage 'Config') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $package 'Detection.ps1') -Destination (Join-Path $detectStage 'Detection.ps1')
+
+        if ($signed) {
+            & $progress 'sign'
+            $types = @('.exe', '.dll', '.ps1', '.psm1', '.psd1')
+            $files = @(Get-ChildItem -LiteralPath $package -Recurse -File -Force | Where-Object { $types -contains $_.Extension.ToLowerInvariant() } | ForEach-Object { $_.FullName })
+            $signArguments = @{ Path = $files; Certificate = $Certificate }
+            if ($TimestampServer) { $signArguments.TimestampServer = $TimestampServer }
+            $null = Set-SelfXCodeSignature @signArguments
+            Update-SelfXBinariesManifest -Package $package
+            $null = New-SelfXCodeManifest -Stage $package -Version $version
+
+            # SelfX.Code.cat covers everything outside Config: Config is set aside while the catalog is made, and the catalog must lie outside
+            # the folder it covers until it is moved in.
+            & $progress 'catalog'
+            $held = Join-Path $tmp 'config-held'
+            Move-Item -LiteralPath (Join-Path $package 'Config') -Destination $held
+            try {
+                $catalogArguments = @{ Path = $package; CatalogFilePath = (Join-Path $tmp 'SelfX.Code.cat'); Certificate = $Certificate }
+                if ($TimestampServer) { $catalogArguments.TimestampServer = $TimestampServer }
+                $null = New-SelfXSignedCatalog @catalogArguments
+            }
+            finally { Move-Item -LiteralPath $held -Destination (Join-Path $package 'Config') }
+            Move-Item -LiteralPath (Join-Path $tmp 'SelfX.Code.cat') -Destination (Join-Path $package 'SelfX.Code.cat')
+        }
+
+        $null = New-SelfXConfigManifest -Stage $package
+        if ($signed) {
+            $configCatalogArguments = @{ Path = (Join-Path $package 'Config'); CatalogFilePath = (Join-Path $tmp 'SelfX.Config.cat'); Certificate = $Certificate }
+            if ($TimestampServer) { $configCatalogArguments.TimestampServer = $TimestampServer }
+            $null = New-SelfXSignedCatalog @configCatalogArguments
+            Move-Item -LiteralPath (Join-Path $tmp 'SelfX.Config.cat') -Destination (Join-Path $package 'Config\SelfX.Config.cat')
+        }
+
+        $packageFile = $null
+        $detectionFile = $null
+        $ruleFiles = New-Object System.Collections.Generic.List[string]
+        if (-not $ConfigureOnly) {
+            # ---- pack
+            & $progress 'pack'
+            $toolOutput = Join-Path $tmp 'tool'
+            New-Item -ItemType Directory -Path $toolOutput -Force | Out-Null
+            $packageFile = "SelfX-Service-$version.intunewin"
+            New-SelfXIntuneWinFile -ToolPath $ToolPath -Stage $package -SetupFile 'Install.ps1' -OutputDir $toolOutput -Target (Join-Path $out $packageFile)
+
+            # ---- detection script with the digests
+            & $progress 'detection'
+            Copy-Item -LiteralPath (Get-SelfXListPath -Stage $package -ListName 'SelfX.Code.json') -Destination (Get-SelfXListPath -Stage $detectStage -ListName 'SelfX.Code.json')
+            Copy-Item -LiteralPath (Get-SelfXListPath -Stage $package -ListName 'SelfX.Config.json') -Destination (Get-SelfXListPath -Stage $detectStage -ListName 'SelfX.Config.json')
+            $detectionFile = "SelfX-Service-$version.Detection.ps1"
+            $null = New-SelfXDetectionScript -Stage $detectStage -Target (Join-Path $out $detectionFile)
+            if ($signed) {
+                $detectSign = @{ Path = @((Join-Path $out $detectionFile)); Certificate = $Certificate }
+                if ($TimestampServer) { $detectSign.TimestampServer = $TimestampServer }
+                $null = Set-SelfXCodeSignature @detectSign
+            }
+
+            # ---- AppLocker and App Control files for the mode
+            & $progress 'rules'
+            $mode = $(if ($signed) { 'Publisher' } else { 'Hash' })
+            if ($a.AppLockerRules) {
+                $programs = @(((Get-Content -LiteralPath (Join-Path $package 'Bin\SelfX.Binaries.json') -Raw | ConvertFrom-Json).Binaries.PSObject.Properties) | ForEach-Object { Join-Path $package ('Bin\' + $_.Name.Replace('/', '\')) })
+                if ($signed) { $programs += (Join-Path $package 'Install.ps1') }
+                if ($programs | Where-Object { $_ -match '\|' }) { throw 'A file name contains the character |.' }
+                Invoke-SelfXRuleScript -Script (Join-Path $script:WizardToolsFolder 'New-SelfXAppLockerRules.ps1') -Arguments @(
+                    '-PathList', ($programs -join '|'), '-OutputFile', (Join-Path $out 'SelfX.AppLocker.xml'), '-RuleNamePrefix', $(if ($signed) { 'SelfX' } else { "SelfX $version" }), '-Mode', $mode)
+                $ruleFiles.Add('SelfX.AppLocker.xml')
+            }
+            if ($a.WdacBasePolicyId) {
+                Invoke-SelfXRuleScript -Script (Join-Path $script:WizardToolsFolder 'New-SelfXWdacPolicy.ps1') -Arguments @(
+                    '-BasePolicyId', $a.WdacBasePolicyId, '-Level', $mode, '-PackageFolder', $package, '-DetectionFile', (Join-Path $out $detectionFile), '-OutputFolder', (Join-Path $out 'AppControl'))
+                $ruleFiles.Add('AppControl\')
+            }
+        }
+
+        # ---- platform scripts, answers, instructions
+        & $progress 'guide'
+        $scriptFiles = @(Write-SelfXSupportUnitScripts -Answers $a -Folder $out)
+        Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language
+        $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
+        $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })
+        $guideText = New-SelfXIntuneGuide -Answers $a -Version $version -PackageFile "$packageFile" -DetectionFile "$detectionFile" -ScriptFiles $scriptFiles `
+            -AnswersFile 'selfx-answers.json' -TrustedSigner $(if ($signed) { @($Certificate.Thumbprint) } else { @() }) -RuleFiles @($ruleFiles)
+        $guideFile = "SelfX-Intune-Guide.$guideLanguage.txt"
+        [IO.File]::WriteAllText((Join-Path $out $guideFile), $guideText, (New-Object System.Text.UTF8Encoding($true)))
+
+        # ---- the result replaces the output folder in one move
+        & $progress 'finish'
+        if (Test-Path -LiteralPath $final) {
+            $backup = Join-Path $parent ('.selfx-old-' + [guid]::NewGuid().ToString('N').Substring(0, 12))
+            Move-Item -LiteralPath $final -Destination $backup
+        }
+        try { Move-Item -LiteralPath $out -Destination $final }
+        catch {
+            if ($null -ne $backup -and (Test-Path -LiteralPath $backup)) { Move-Item -LiteralPath $backup -Destination $final; $backup = $null }
+            throw
+        }
+        return [pscustomobject]@{
+            OutputFolder  = $final
+            Version       = $version
+            Mode          = $(if ($signed) { 'Signature' } else { 'Hash' })
+            PackageFile   = $packageFile
+            DetectionFile = $detectionFile
+            RuleFiles     = @($ruleFiles)
+            ScriptFiles   = $scriptFiles
+            GuideFile     = $guideFile
+            GuideText     = $guideText
+        }
+    }
+    finally {
+        if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($null -ne $backup -and (Test-Path -LiteralPath $backup)) { Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue }
+    }
 }
