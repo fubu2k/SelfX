@@ -125,12 +125,37 @@ Das Skript prüft vorher: Die Setup-Datei ist da, alle XML-Dateien sind gültig,
 zu den Quelltexten, die beiden Versionen sind gleich und `IntuneWinAppUtil.exe` hat die
 Microsoft-Signatur. Es lädt nichts nach Intune hoch.
 
-**Alternative: Release auf GitHub.** Setzen Sie nach dem Merge das Tag `v<Version>`
-(die Nummer aus `Version.txt`, zum Beispiel `v3.0.0`) auf `main`. Der Workflow `.github/workflows/release.yml` baut
-Programme, `.intunewin`, eine Stückliste (SBOM) und `SHA256SUMS.txt` und legt einen
-**Entwurf** unter *Releases* an. Er veröffentlicht nichts. Prüfen Sie die Hashes und
-veröffentlichen Sie den Entwurf erst danach. Der Workflow bricht ab, wenn Tag und
-`Version.txt` nicht übereinstimmen.
+**Alternative: Release auf GitHub.** Benennen Sie nach dem Merge `## Unveröffentlicht` in `CHANGELOG.md` und `## Unreleased` in
+`CHANGELOG.en.md` in `## <Version> - <Datum>` um und setzen Sie das Tag `v<Version>` (die Nummer aus `Version.txt`, zum Beispiel
+`v3.1.0`) auf `main`. Der Workflow `.github/workflows/release.yml` erledigt dann in einem Lauf:
+
+1. Er prüft, ob Tag und `Version.txt` übereinstimmen und ob `CHANGELOG.en.md` einen Abschnitt für die Version hat. Dieser Abschnitt
+   ist die Beschreibung des Releases, dazu kommt ein fester Block "Files and how to verify".
+2. Er baut die Programme und die Dateien der Tabelle unten.
+3. Er führt alle Tests des CI-Workflows (`service-ci.yml`) für den getaggten Commit aus.
+4. Er prüft die Dateien gegen `SHA256SUMS.txt` (genau diese Dateien, jeder Hash), im Build und noch einmal im veröffentlichenden Job, bevor er sie hochlädt.
+5. Er veröffentlicht das Release.
+
+Schlägt ein Schritt fehl, entsteht kein Release. Ein zweiter Lauf für dasselbe Tag fasst ein vorhandenes Release nicht an.
+
+| Datei | Zweck |
+|---|---|
+| `SelfX-Service-<Version>.intunewin` | Das Paket für Intune mit der Standardkonfiguration, für Tests. |
+| `SelfX-Service-<Version>.Detection.ps1` | Das Erkennungsskript dieses Pakets. |
+| `SelfX-Service-<Version>-payload.zip` | Das Nutzlast-Archiv: der Paketordner, wie er gepackt wird (`Install.ps1`, `Uninstall.ps1`, `Detection.ps1`, `Bin`, `App` mit `SelfX.Code.json`, `Config` mit der Standardkonfiguration und `SelfX.Config.json`, `Service`), der Paketassistent und die Skripte, die er aufruft (`tools`), `LICENSE.md`, `NOTICE.md`, `NOTICE.en.md`. Damit konfigurieren und packen Sie SelfX für Ihre Firma ohne .NET SDK. |
+| `SelfX-Service-<Version>.sbom.cdx.json` | Stückliste (SBOM). |
+| `SHA256SUMS.txt` | SHA-256 aller anderen Dateien. Die Release-Notes zeigen einen Befehl zur Prüfung. |
+
+Zwei Repository-Variablen (Settings, Secrets and variables, Actions, *Variables*) ändern das Verhalten:
+
+- `RELEASE_DRAFT` = `true` legt einen Entwurf statt eines veröffentlichten Releases an (nach der Prüfung der Dateien von Hand veröffentlichen).
+- `RELEASE_ATTEST` = `false` schaltet die Herkunftsbestätigung (Build Provenance) des Nutzlast-Archivs ab. Ohne die Variable wird sie
+  erstellt (`gh attestation verify <Datei> --repo <Besitzer>/<Repository>` prüft sie).
+
+**Den Workflow ohne Release ausprobieren.** Setzen Sie `RELEASE_DRAFT` auf `true`. Tragen Sie auf einem Branch, den Sie nicht mergen, eine
+Version ein, die es nicht gibt (zum Beispiel `9.9.9`): in `SelfX Service\Version.txt`, in `$ExpectedVersion` von `Detection.ps1` und als
+Abschnitt `## 9.9.9` in `CHANGELOG.en.md`, und pushen Sie das Tag `v9.9.9` auf diesen Commit. Prüfen Sie nach dem Lauf den Entwurf und das
+Protokoll, löschen Sie dann Entwurf, Tag und Branch und setzen Sie `RELEASE_DRAFT` zurück.
 
 ### Offline-Build: Paketordner erneuern
 

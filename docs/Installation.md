@@ -119,11 +119,37 @@ The script checks beforehand: the setup file exists, all XML files are valid, `B
 source code, the two versions are the same and `IntuneWinAppUtil.exe` has the Microsoft
 signature. It uploads nothing to Intune.
 
-**Alternative: release on GitHub.** After the merge, set the tag `v<version>` (the number in
-`Version.txt`, for example `v3.0.0`) on `main`. The workflow `.github/workflows/release.yml` builds the programs, the
-`.intunewin`, a bill of materials (SBOM) and `SHA256SUMS.txt` and creates a **draft** under
-*Releases*. It publishes nothing. Check the hashes and publish the draft only afterwards. The
-workflow stops if the tag and `Version.txt` do not match.
+**Alternative: release on GitHub.** After the merge, rename `## Unreleased` in `CHANGELOG.en.md` to
+`## <version> - <date>` and set the tag `v<version>` (the number in `Version.txt`, for example `v3.1.0`) on `main`. The workflow
+`.github/workflows/release.yml` then does this in one run:
+
+1. It checks that the tag and `Version.txt` match and that `CHANGELOG.en.md` has a section for the version. That section is the
+   description of the release, followed by a fixed block "Files and how to verify".
+2. It builds the programs and the files of the table below.
+3. It runs all tests of the CI workflow (`service-ci.yml`) for the tagged commit.
+4. It checks the files against `SHA256SUMS.txt` (exactly these files, every hash), in the build and again in the job that publishes, before it uploads them.
+5. It publishes the release.
+
+If one step fails, no release is created. A second run for the same tag does not touch an existing release.
+
+| File | Purpose |
+|---|---|
+| `SelfX-Service-<version>.intunewin` | The package for Intune with the default configuration, for tests. |
+| `SelfX-Service-<version>.Detection.ps1` | The detection script of that package. |
+| `SelfX-Service-<version>-payload.zip` | The payload archive: the package folder as it is packed (`Install.ps1`, `Uninstall.ps1`, `Detection.ps1`, `Bin`, `App` with `SelfX.Code.json`, `Config` with the default configuration and `SelfX.Config.json`, `Service`), the package assistant and the scripts it calls (`tools`), `LICENSE.md`, `NOTICE.md`, `NOTICE.en.md`. Use it to configure and package SelfX for your company without the .NET SDK. |
+| `SelfX-Service-<version>.sbom.cdx.json` | Bill of materials (SBOM). |
+| `SHA256SUMS.txt` | SHA-256 of all other files. The release notes show a command to check them. |
+
+Two repository variables (Settings, Secrets and variables, Actions, *Variables*) change the behaviour:
+
+- `RELEASE_DRAFT` = `true` creates a draft instead of a published release (publish it by hand after checking the files).
+- `RELEASE_ATTEST` = `false` turns off the build provenance attestation of the payload archive. Without the variable it is created
+  (`gh attestation verify <file> --repo <owner>/<repository>` checks it).
+
+**Try the workflow without a release.** Set `RELEASE_DRAFT` to `true`. On a branch that you do not merge, set a version that does not exist
+(for example `9.9.9`) in `SelfX Service\Version.txt`, in `$ExpectedVersion` of `Detection.ps1` and as a section `## 9.9.9` in
+`CHANGELOG.en.md`, and push the tag `v9.9.9` on that commit. After the run, check the draft and the log, then delete the draft, the tag and
+the branch, and set `RELEASE_DRAFT` back.
 
 ### Offline build: renew the package folder
 
