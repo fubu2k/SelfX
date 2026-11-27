@@ -496,6 +496,74 @@ try {
             if ($null -ne $testCertificate) { Remove-SelfXTestCertificate -Thumbprint $testCertificate.Thumbprint -Location $root.Location }
         }
     }
+
+    # ---------------------------------------------------------- order of the signing steps (signing replaced by a recorder; runs everywhere)
+    Write-Host 'Signing order (signing and catalogs replaced by a recorder)'
+    $stubCertificate = $null
+    try {
+        $stubCertificate = New-SelfXTestCertificate -Name 'Ord'
+        $script:SignedFiles = New-Object System.Collections.Generic.List[string]
+        $script:CatalogCalls = New-Object System.Collections.Generic.List[object]
+        function Set-SelfXCodeSignature {
+            param([string[]]$Path, $Certificate, [string]$TimestampServer)
+            $script:StampSeen = $TimestampServer
+            foreach ($file in $Path) {
+                $script:SignedFiles.Add($file)
+                if ($file -like '*.ps1') { [IO.File]::AppendAllText($file, "`r`n# SIG # Begin signature block`r`n") } else { [IO.File]::AppendAllText($file, 'S') }
+            }
+        }
+        function New-SelfXSignedCatalog {
+            param([string]$Path, [string]$CatalogFilePath, $Certificate, [string]$TimestampServer)
+            $names = @(Get-ChildItem -LiteralPath $Path -Recurse -File | ForEach-Object { $_.FullName.Substring($Path.TrimEnd('\').Length + 1) })
+            $script:CatalogCalls.Add([pscustomobject]@{ Folder = (Split-Path -Leaf $Path); Names = $names; ConfigPresent = (Test-Path -LiteralPath (Join-Path $Path 'Config')); File = $CatalogFilePath; OutsideFolder = (-not $CatalogFilePath.StartsWith($Path.TrimEnd('\') + '\')) })
+            [IO.File]::WriteAllText($CatalogFilePath, ($names -join "`n"))
+        }
+        $script:RuleCalls.Clear()
+        $order = Join-Path $work 'result\order'
+        $steps.Clear()
+        $orderResult = Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $order -ToolPath $dummyTool -Certificate $stubCertificate -TimestampServer 'https://timestamp.example/ts' -OnProgress { param($id, $text) $steps.Add($id) }
+        Assert ($orderResult.Mode -eq 'Signature' -and (@($steps) -join ',') -eq 'check,copy,config,sign,catalog,pack,detection,rules,guide,finish') 'signature mode: steps in order'
+        $pkg = Join-Path $order 'package'
+        Assert ($script:StampSeen -eq 'https://timestamp.example/ts') 'the time stamp server is passed on'
+        $signedNames = @($script:SignedFiles | ForEach-Object { $_.Substring($_.IndexOf('\package\') + 9) -replace '^.*\\', '' })
+        Assert (($signedNames -contains 'Install.ps1') -and ($signedNames -contains 'Detection.ps1') -and ($signedNames -contains 'Uninstall.ps1') -and ($signedNames -contains 'SelfXService.exe') -and ($signedNames -contains 'SelfXWinRT.dll') -and ($signedNames -contains 'SelfXAudio.dll')) 'every program, library and script of the package is signed'
+        Assert (@($script:SignedFiles | Where-Object { $_ -match '\.(xml|json|png|cs|cat)$' }).Count -eq 0) 'no data file is signed (they are covered by the catalogs)'
+        Assert (@($script:SignedFiles | Where-Object { $_ -like '*Detection.ps1' }).Count -eq 2) 'the Detection.ps1 of the package and the generated detection script are signed'
+        $codeCatalog = @($script:CatalogCalls | Where-Object { $_.Folder -eq 'package' })
+        $configCatalog = @($script:CatalogCalls | Where-Object { $_.Folder -eq 'Config' })
+        Assert ($codeCatalog.Count -eq 1 -and $configCatalog.Count -eq 1 -and $script:CatalogCalls[0].Folder -eq 'package') 'one catalog of the package, then one of the folder Config'
+        Assert ((-not $codeCatalog[0].ConfigPresent) -and @($codeCatalog[0].Names | Where-Object { $_ -like 'Config\*' }).Count -eq 0) 'SelfX.Code.cat is made without the folder Config'
+        Assert ($codeCatalog[0].Names -contains 'App\SelfX.Code.json' -and $codeCatalog[0].Names -contains 'Bin\SelfX.Binaries.json' -and $codeCatalog[0].Names -contains 'Install.ps1' -and ($codeCatalog[0].Names | Where-Object { $_ -like 'Service\*.cs' })) 'SelfX.Code.cat covers the lists, the scripts and the sources'
+        Assert ($codeCatalog[0].OutsideFolder -and $configCatalog[0].OutsideFolder) 'both catalogs are made outside the folder they cover'
+        Assert ($configCatalog[0].Names -contains 'SelfX.Config.json' -and $configCatalog[0].Names -contains 'Tool_Config.xml' -and $configCatalog[0].Names -contains 'Branding\logo.png') 'SelfX.Config.cat covers SelfX.Config.json and the configuration'
+        Assert ((Test-Path -LiteralPath (Join-Path $pkg 'SelfX.Code.cat')) -and (Test-Path -LiteralPath (Join-Path $pkg 'Config\SelfX.Config.cat')) -and (Test-Path -LiteralPath (Join-Path $pkg 'Config\Tool_Config.xml'))) 'the catalogs are in the package, Config is back in place'
+        $binaries = Get-Content -LiteralPath (Join-Path $pkg 'Bin\SelfX.Binaries.json') -Raw | ConvertFrom-Json
+        $codeList = Get-Content -LiteralPath (Join-Path $pkg 'App\SelfX.Code.json') -Raw | ConvertFrom-Json
+        $hashOk = $true
+        foreach ($property in $binaries.Binaries.PSObject.Properties) { if ($property.Value -ne (Get-FileHash -LiteralPath (Join-Path $pkg ('Bin\' + $property.Name.Replace('/', '\'))) -Algorithm SHA256).Hash) { $hashOk = $false } }
+        Assert $hashOk 'SelfX.Binaries.json has the hashes of the signed programs'
+        Assert ($codeList.Files.'SelfXService.exe' -eq (Get-FileHash -LiteralPath (Join-Path $pkg 'Bin\SelfXService.exe') -Algorithm SHA256).Hash -and $codeList.Files.'Uninstall.ps1' -eq (Get-FileHash -LiteralPath (Join-Path $pkg 'Uninstall.ps1') -Algorithm SHA256).Hash) 'SelfX.Code.json lists the signed files'
+        Assert ($codeList.Files.'SelfXService.exe' -ne (Get-Content -LiteralPath (Join-Path $payload 'App\SelfX.Code.json') -Raw | ConvertFrom-Json).Files.'SelfXService.exe') 'SelfX.Code.json differs from the payload (new hashes)'
+        $orderDetection = Get-Content -LiteralPath (Join-Path $order $orderResult.DetectionFile) -Raw
+        Assert ($orderDetection -match 'ExpectedCodeHash = ''[0-9A-F]{64}''' -and ($orderDetection -split '# SIG # Begin signature block').Count -eq 2) 'the detection script has one signature block and the digests of the finished package'
+        Assert ($orderDetection -match ("ExpectedCodeHash = '" + (Get-SelfXListDigest -Stage $pkg -ListName 'SelfX.Code.json') + "'")) 'the digest in the detection script is the one of the final SelfX.Code.json'
+        $publisherCall = @($script:RuleCalls | Where-Object { $_.Script -eq 'New-SelfXAppLockerRules.ps1' })
+        Assert ($publisherCall.Count -eq 1 -and $publisherCall[0].Arguments[$publisherCall[0].Arguments.IndexOf('-Mode') + 1] -eq 'Publisher' -and $publisherCall[0].Arguments[$publisherCall[0].Arguments.IndexOf('-PathList') + 1] -match 'Install\.ps1') 'AppLocker: mode Publisher with a program, a library and a script'
+        Assert ($publisherCall[0].Arguments[$publisherCall[0].Arguments.IndexOf('-RuleNamePrefix') + 1] -eq 'SelfX') 'AppLocker: rule name without a version'
+        $orderGuide = Get-Content -LiteralPath (Join-Path $order 'SelfX-Intune-Guide.en.txt') -Raw
+        Assert ($orderGuide -match "Install\.ps1 -TrustedSigner $($stubCertificate.Thumbprint)") 'the guide has the install command with the thumbprint'
+        Assert ((Get-Content -LiteralPath (Join-Path $order 'selfx-answers.json') -Raw) -notmatch $stubCertificate.Thumbprint) 'selfx-answers.json does not name the certificate'
+        # Aborts in the signing steps leave nothing.
+        $abortOut = Join-Path $work 'result\abort-sign'
+        function New-SelfXSignedCatalog { param([string]$Path, [string]$CatalogFilePath, $Certificate, [string]$TimestampServer) throw 'catalog failed (test)' }
+        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate } 'a failing catalog stops the run'
+        Assert (-not (Test-Path -LiteralPath $abortOut) -and @(Get-ChildItem -LiteralPath (Join-Path $work 'result') -Force | Where-Object { $_.Name -like '.selfx-*' }).Count -eq 0) 'abort while signing: no output and no work folder'
+        Assert ((Get-TreeDigest -Folder $payload) -eq $payloadBefore) 'the payload is still unchanged after the signing runs'
+        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate -TimestampServer 'ftp://timestamp.example' } 'a time stamp server that is no http or https address is refused'
+    }
+    finally {
+        if ($null -ne $stubCertificate) { Remove-SelfXTestCertificate -Thumbprint $stubCertificate.Thumbprint }
+    }
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
