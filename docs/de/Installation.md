@@ -466,6 +466,9 @@ jedem Bau neu erzeugt; Sie müssen nichts von Hand pflegen.
   `SelfX.exe`, aber keinen Angreifer mit Administratorrechten. Dagegen helfen die
   Ordnerrechte und App Control.
 
+Welche Datei zu welcher Klasse gehört, die geplante Aufteilung in eine Code-Liste und eine
+Konfigurationsliste sowie die Vertrauensmodi beschreibt die [Architektur](Architecture.md).
+
 ### Ausführungsrichtlinie `-ExecutionPolicy Bypass`
 
 Dienst, Starter, Fenster, Statussymbol und Gesundheitsprüfung starten PowerShell mit
