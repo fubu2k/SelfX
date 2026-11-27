@@ -78,7 +78,7 @@ Auf dem Build-Rechner wird nichts aus dem Internet geladen. Alles Nötige kommt 
 
 ## Schritt 2: Paket bauen
 
-> **Einfacher mit dem Assistenten:** `tools\New-SelfXPackage.ps1` stellt Fragen mit Empfehlungen, baut das Paket danach
+> **Einfacher mit dem Assistenten:** `tools\Start-SelfXPackageWizard.cmd` (Fenster) oder `tools\New-SelfXPackage.ps1` (Konsole) stellt Fragen mit Empfehlungen, baut das Paket danach
 > in einem Lauf (Einstellungen, Logo, optional Signatur, Verpacken, Erkennungsskript, AppLocker- und App-Control-Dateien) und erklärt die
 > Schritte in Intune. Er arbeitet mit dem entpackten **Nutzlast-Archiv** eines Release, das .NET SDK ist also nicht nötig. Siehe
 > [Paketassistent](Assistent.md). Die folgenden Schritte zeigen den manuellen Weg.

@@ -76,7 +76,7 @@ Nothing is downloaded on the build machine. Everything it needs comes from the r
 
 ## Step 2: Build the package
 
-> **Easier with the wizard:** `tools\New-SelfXPackage.ps1` asks questions with recommendations, then builds the package
+> **Easier with the wizard:** `tools\Start-SelfXPackageWizard.cmd` (window) or `tools\New-SelfXPackage.ps1` (console) asks questions with recommendations, then builds the package
 > in one run (settings, logo, optional signature, packing, detection script, AppLocker and App Control files) and explains the steps
 > in Intune. It works on the unpacked **payload archive** of a release, so the .NET SDK is not needed. See
 > [Package wizard](Guided-Setup.md). The steps below show the manual way.

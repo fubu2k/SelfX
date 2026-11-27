@@ -14,6 +14,43 @@ Intune and the instructions. The result replaces the output folder only when eve
 and an earlier result stays as it was. The same run is available to other programs as the function `Invoke-SelfXPackageBuild`
 (`tools\Wizard\SelfXWizard.ps1`): answers, payload folder, output folder, tool path, optional certificate and a callback for the progress.
 
+## The window (recommended)
+
+`tools\Start-SelfXPackageWizard.cmd` opens the wizard as a window in the style of SelfX. Double-click it in the unpacked payload
+archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfile -STA`; PowerShell 7 works as well
+(`pwsh -NoProfile -STA -File .\tools\Wizard\SelfXWizardGui.ps1`). No administrator rights are needed.
+
+| Page | What you set |
+|---|---|
+| Language | Language of the wizard (de, en) and the default language of SelfX on the devices |
+| Basics | Name of your organisation and of the tool |
+| Support | E-mail address, phone, hours, website and Teams contact of the support |
+| Branding | Logo (file dialog, preview) and company color; the window shows the color at once |
+| Ticket | Ticket e-mail and, for several organisations, one mailbox per organisation, chosen by group tag, OU or device class |
+| Further settings | Copilot Chat, company wiki, status icon, shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
+| Summary | Your answers, the package folder, the output folder, `IntuneWinAppUtil.exe`, "only write the configuration" |
+| Build the Intune package | One click; a list shows every step; **Cancel** stops the build, the output folder stays unchanged |
+| Result | Files, **Open folder**, **Copy instructions** and the instructions for Intune |
+
+![Package wizard window: Branding page with logo preview and company color](images/selfx-wizard-branding-en.png)
+
+- Every value is checked as you type, with the same rules as the console; the error is shown at the field and **Next** stays on the
+  page until the marked fields are correct.
+- **Load answers** reads a `selfx-answers.json` (an answer with an unknown name is refused), **Save answers** writes one. The file
+  never contains a password or a key.
+- The build runs in the background: the window stays usable. The result is the same as `New-SelfXPackage.ps1` with the same answers.
+- Keyboard: Tab moves through the fields, Enter is **Next**, the underlined letters work with Alt. Screen readers read the name of every
+  field, its recommendation and its error.
+- The window follows the light or dark mode of Windows and uses the colors and styles of SelfX.
+- Not yet in the window: signing (trust mode Signature; use the console with `-CertificateThumbprint` or `-PfxPath`) and the network
+  targets of the connection test.
+
+![Package wizard window: build with the progress list](images/selfx-wizard-build-en.png)
+
+![Package wizard window: result with the instructions for Intune](images/selfx-wizard-result-en.png)
+
+The console version below stays for automation (answer file) and for signing.
+
 ## Run it
 
 The best starting point is the **payload archive** of a release (`SelfX-Service-<version>-payload.zip`, see the

@@ -87,7 +87,7 @@ installed catalogue and the files -> `pwsh.exe -File <script>.ps1` as SYSTEM. Pi
 | `SelfX Service\` | The package: `Install.ps1`, `Uninstall.ps1`, `Detection.ps1`, `Version.txt`, 32 `Test-*.ps1`, `Service\` (C# sources, `Service\Projects\` with the project files and `packages.lock.json`), `Sources\` |
 | `SelfX Service\Sources\` | Window, helpers (`SelfX*.ps1`, `Localization.ps1`, `SelfXPaths.ps1`), catalogue `Issues_List.xml`, `Health_Config.xml`, `Tool_Config.xml`, `Ticket_Config.xml`, `Network_Test_Config.xml`, `Languages\` (24 files), `Branding\`, `Scripts_to_run\` (33), `HealthChecks\` |
 | `SelfX Service\Bin\` | Not in Git. Output of `tools\Build-SelfXBinaries.ps1` with `SelfX.Binaries.json` |
-| `tools\` | Build (`Build-SelfXBinaries.ps1`), packaging (`New-SelfXIntuneWin.ps1`, `SelfXPackage.Common.ps1`), wizard (`New-SelfXPackage.ps1`, `Wizard\`), offline feed (`Export-SelfXOfflineFeed.ps1`, `SelfXOfflineFeed.Common.ps1`), release (`SelfXRelease.Common.ps1`), signing (`SelfXSigning.ps1`), AppLocker / WDAC / SBOM / ASR tools, and their tests |
+| `tools\` | Build (`Build-SelfXBinaries.ps1`), packaging (`New-SelfXIntuneWin.ps1`, `SelfXPackage.Common.ps1`), wizard (console `New-SelfXPackage.ps1`, window `Start-SelfXPackageWizard.cmd`, `Wizard\`), offline feed (`Export-SelfXOfflineFeed.ps1`, `SelfXOfflineFeed.Common.ps1`), release (`SelfXRelease.Common.ps1`), signing (`SelfXSigning.ps1`), AppLocker / WDAC / SBOM / ASR tools, and their tests |
 | `offline-feed\` | NuGet packages of the build and `SelfX.OfflineFeed.json` (SHA512 of each file). `NuGet.config` allows only this folder. |
 | `docs\`, `docs\de\`, `docs\images\` | Installation, Configuration, Architecture, Guided-Setup, User-Manual (English; German in `docs\de`) |
 | `.github\` | `workflows\service-ci.yml`, `workflows\release.yml`, `CODEOWNERS`, `dependabot.yml`, `PSScriptAnalyzerSettings.psd1` |
@@ -227,8 +227,8 @@ as done. A failing or skipped test is reported, never hidden.
 | Set | Files | Where |
 |---|---|---|
 | Package tests | all 32 `SelfX Service\Test-*.ps1` | PowerShell 7 (job "Tests in PowerShell 7") |
-| Tool tests | `tools\Test-SelfXPackageWizard.ps1`, `Test-SelfXOfflineFeed.ps1`, `Test-SelfXAppLockerRules.ps1`, `Test-SelfXAsrEvents.ps1`, `Test-SelfXRelease.ps1` | PowerShell 7 and Windows PowerShell 5.1 |
-| Windows PowerShell 5.1 set (the CI expects exactly ten) | `Test-Compat51.ps1`, `Test-Detection.ps1`, `Test-FileManifest.ps1`, `Test-InstallBinaries.ps1`, `Test-Uninstall.ps1` and the five tool tests | job "Tests in Windows PowerShell 5.1" |
+| Tool tests | `tools\Test-SelfXPackageWizard.ps1`, `Test-SelfXOfflineFeed.ps1`, `Test-SelfXAppLockerRules.ps1`, `Test-SelfXAsrEvents.ps1`, `Test-SelfXRelease.ps1`, `Test-SelfXWizardGui.ps1` | PowerShell 7 and Windows PowerShell 5.1 |
+| Windows PowerShell 5.1 set (the CI expects exactly eleven) | `Test-Compat51.ps1`, `Test-Detection.ps1`, `Test-FileManifest.ps1`, `Test-InstallBinaries.ps1`, `Test-Uninstall.ps1` and the six tool tests | job "Tests in Windows PowerShell 5.1" |
 | Signing | `tools\Test-SelfXSigning.ps1` | both editions (job "Signing library") |
 | Build | `tools\Build-SelfXBinaries.ps1` twice, SBOM, `Test-InstallBinaries.ps1` and `Test-SafeDelete.ps1` with the built `Bin` (`SELFX_REQUIRE_BIN=1`), DLL load, service in console mode | job "Build with .NET 10 (self-contained)" |
 | Script analysis | PSScriptAnalyzer 1.23.0 on `SelfX Service` and `tools` with `.github\PSScriptAnalyzerSettings.psd1`; zero findings | job "PSScriptAnalyzer (security rules)" |
@@ -240,7 +240,7 @@ Run locally (each test in its own process, so mocks of one test cannot affect th
 
 ```powershell
 $tests = @(Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1') +
-         @(Get-Item .\tools\Test-SelfXPackageWizard.ps1, .\tools\Test-SelfXOfflineFeed.ps1, .\tools\Test-SelfXAppLockerRules.ps1, .\tools\Test-SelfXAsrEvents.ps1, .\tools\Test-SelfXRelease.ps1)
+         @(Get-Item .\tools\Test-SelfXPackageWizard.ps1, .\tools\Test-SelfXOfflineFeed.ps1, .\tools\Test-SelfXAppLockerRules.ps1, .\tools\Test-SelfXAsrEvents.ps1, .\tools\Test-SelfXRelease.ps1, .\tools\Test-SelfXWizardGui.ps1)
 foreach ($t in $tests) { pwsh -NoProfile -ExecutionPolicy Bypass -File $t.FullName; if ($LASTEXITCODE -ne 0) { Write-Warning "$($t.Name) failed" } }
 ```
 
