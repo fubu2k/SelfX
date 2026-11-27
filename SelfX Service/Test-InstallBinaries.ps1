@@ -500,7 +500,7 @@ else {
 		}
 		return [pscustomobject]@{ Status = 'Valid'; HashAlgorithm = "$($catalog.HashAlgorithm)"; CatalogItems = $catalogItems; PathItems = $pathItems }
 	}
-	function New-FakeCatalog([string]$Folder, [string]$CatalogPath, [string]$Thumbprint, [string[]]$Skip = @(), [string]$Algorithm = 'SHA256', [switch]$Empty) {
+	function New-FakeCatalog([string]$Folder, [string]$CatalogPath, [string]$Thumbprint, [string[]]$Skip = @(), [string]$HashName = 'SHA256', [switch]$Empty) {
 		$rootFolder = (Get-Item -LiteralPath $Folder -Force).FullName.TrimEnd('\')
 		$entries = [ordered]@{}
 		if (-not $Empty) {
@@ -511,21 +511,30 @@ else {
 				$entries[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
 			}
 		}
-		[IO.File]::WriteAllText($CatalogPath, (([ordered]@{ HashAlgorithm = $Algorithm; Files = $entries }) | ConvertTo-Json -Depth 4))
+		[IO.File]::WriteAllText($CatalogPath, (([ordered]@{ HashAlgorithm = $HashName; Files = $entries }) | ConvertTo-Json -Depth 4))
 		if ($Thumbprint) { Set-FakeSignature $CatalogPath $Thumbprint }
 	}
 	$signedPackage = Join-Path $root 'signed\package'
 	$configCatalog = Join-Path $signedPackage 'Config\SelfX.Config.cat'
 	$codeCatalog = Join-Path $signedPackage 'SelfX.Code.cat'
-	function New-SignedPackage([string]$Signer = $signerA) {
-		# The package of the layout tests plus Install.ps1, Detection.ps1 and a source file; every program and script "signed" by
-		# Signer, the catalog of Config and the catalog of everything else "signed" by Signer.
+	function New-SignedPackage([string]$Signer = $signerA, [switch]$Full) {
+		# A small package with the names the cases below use (default) or, with -Full, the package of the layout tests with all scripts
+		# of the project; plus Install.ps1, Detection.ps1 and a source file. Every program and script is "signed" by Signer, also the
+		# catalog of Config and the catalog of everything else. The small package keeps the many cases fast.
 		$script:fakeSignatures = @{}
 		$script:fakeSignatureError = ''
 		$script:fakeCatalogError = $false
 		if (Test-Path -LiteralPath $signedPackage) { Remove-Item -LiteralPath $signedPackage -Recurse -Force }
 		New-Item -ItemType Directory -Path (Split-Path -Parent $signedPackage) -Force | Out-Null
-		Copy-Item -LiteralPath $layoutPackage -Destination $signedPackage -Recurse
+		if ($Full) { Copy-Item -LiteralPath $layoutPackage -Destination $signedPackage -Recurse }
+		else {
+			foreach ($name in 'Uninstall.ps1', 'App\Self_X.ps1', 'App\SelfX_Tray.ps1', 'App\Localization.ps1', 'App\Scripts_to_run\SelfX_Device_Restart.ps1', 'App\SelfX.Code.json', 'App\Languages\de.xml', 'App\Languages\fr.xml', 'App\logo.png',
+				'Bin\SelfXService.exe', 'Bin\SelfX.exe', 'Bin\SelfXSessionStarter.dll', 'Bin\WinRT\SelfXWinRT.dll', 'Bin\Audio\SelfXAudio.dll', 'Bin\SelfX.Binaries.json', 'Config\Tool_Config.xml', 'Config\Health_Config.xml', 'Config\SelfX.Config.json') {
+				$path = Join-Path $signedPackage $name
+				New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
+				[IO.File]::WriteAllText($path, "content of $name")
+			}
+		}
 		New-Item -ItemType Directory -Path (Join-Path $signedPackage 'Service') -Force | Out-Null
 		[IO.File]::WriteAllText((Join-Path $signedPackage 'Install.ps1'), "# installer`r`n")
 		[IO.File]::WriteAllText((Join-Path $signedPackage 'Detection.ps1'), "# detection`r`n")
@@ -536,8 +545,8 @@ else {
 	}
 	function Test-Signed([string[]]$Allowed = @($signerA)) { return (Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $Allowed }) }
 
-	# 4. A completely signed package is accepted.
-	New-SignedPackage
+	# 4. A completely signed package is accepted (the package with all scripts of the project).
+	New-SignedPackage -Full
 	$signableCount = @(Get-ChildItem -LiteralPath $signedPackage -Recurse -File -Force | Where-Object { $_.Extension -in '.exe', '.dll', '.ps1' }).Count
 	$verified = Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $signerA
 	Assert-Equal $verified.Files $signableCount "signature: every program and script of the package was checked ($signableCount)"
@@ -548,8 +557,12 @@ else {
 	Assert-Equal ((Get-Refusal { Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint @('') }) -match '^-TrustedSigner') $true 'signature: an empty list of signers never means "everything is allowed"'
 
 	# 5. Negative cases of the signatures (the cases of the signing library: not signed, changed, wrong signer, not trusted).
+	New-SignedPackage
+	$slimCount = @(Get-ChildItem -LiteralPath $signedPackage -Recurse -File -Force | Where-Object { $_.Extension -in '.exe', '.dll', '.ps1' }).Count
+	Assert-Equal $slimCount 12 'the small test package has 12 programs and scripts'
+	Assert-Equal (Test-Signed) 'accepted' 'the small signed test package is accepted'
 	$answer = Test-Signed @($signerB)
-	Assert-Equal ($answer -match 'SignerNotAllowed' -and $answer -match "$signableCount of $signableCount" -and $answer -match 'Nothing was changed') $true "wrong signer: valid signatures of a signer that is not allowed are refused ($answer)"
+	Assert-Equal ($answer -match 'SignerNotAllowed' -and $answer -match "$slimCount of $slimCount" -and $answer -match 'Nothing was changed') $true "wrong signer: valid signatures of a signer that is not allowed are refused ($answer)"
 	Assert-Equal ($answer -match ' and \d+ more') $true 'many problems: the message names ten files and the number of the rest'
 	New-SignedPackage
 	$script:fakeSignatures.Remove((Get-FakeKey (Join-Path $signedPackage 'App\Self_X.ps1')))
@@ -615,7 +628,7 @@ else {
 	Remove-Item -LiteralPath (Join-Path $signedPackage 'Config\Health_Config.xml') -Force
 	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*missing: health_config\.xml') $true 'missing file: a configuration file of the catalog that is not in the package stops'
 	New-SignedPackage
-	New-FakeCatalog (Join-Path $signedPackage 'Config') $configCatalog $signerA -Algorithm 'SHA1'
+	New-FakeCatalog (Join-Path $signedPackage 'Config') $configCatalog $signerA -HashName 'SHA1'
 	Assert-Equal ((Test-Signed) -match 'SelfX\.Config\.cat.*HashAlgorithm') $true 'a catalog that does not use SHA256 is refused'
 	New-SignedPackage
 	New-FakeCatalog (Join-Path $signedPackage 'Config') $configCatalog $signerA -Empty
@@ -682,7 +695,7 @@ else {
 
 	# 10. The lists and the copy step with a signed package: the catalog of Config is accepted only in the mode Signature and is
 	#     not installed; the installed lists are the checked ones.
-	New-SignedPackage
+	New-SignedPackage -Full
 	$verified = Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $signerA
 	Assert-Equal (Get-Refusal { Test-SelfXFileManifest -PackageFolder $signedPackage -SignedPackage }) 'accepted' 'mode Signature: the lists accept Config\SelfX.Config.cat'
 	Assert-Equal (Test-SelfXFileManifest -PackageFolder $signedPackage -SignedPackage) $packageCount 'mode Signature: the catalog is not counted as a file of the lists'
