@@ -25,7 +25,8 @@
                                               answers AppLockerRules and WdacBasePolicyId, -TrustedSigner in the instructions
     3.1.2    2026-11-27  fubu2k               Get-WizardBuildDefaults and Invoke-SelfXWizardBuild: default paths and the build of the repository
                                               package, shared by New-SelfXPackage.ps1 and the window SelfXWizardGui.ps1; Read-WizardLogo (the
-                                              check of Copy-WizardLogo, also used by the logo preview of the window)
+                                              check of Copy-WizardLogo, also used by the logo preview of the window); several platform scripts
+                                              are listed one per line in the instructions and in the result (they were joined into one line)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -922,7 +923,8 @@ function Invoke-SelfXPackageBuild {
 
         # ---- platform scripts, answers, instructions
         & $progress 'guide'
-        $scriptFiles = @(Write-SelfXSupportUnitScripts -Answers $a -Folder $out)
+        # The function returns one array (return , ...); @() around it would nest it and join the names into one line of the instructions.
+        $scriptFiles = [string[]](Write-SelfXSupportUnitScripts -Answers $a -Folder $out)
         Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language
         $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
         $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })

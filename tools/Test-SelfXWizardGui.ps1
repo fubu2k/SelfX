@@ -299,6 +299,11 @@ try {
             $a = Join-Path $consoleOut $name; $b = Join-Path $context.State.Build.Output $name
             Assert ((Test-Path -LiteralPath $a) -and (Test-Path -LiteralPath $b) -and (Get-FileHash $a).Hash -eq (Get-FileHash $b).Hash) "$($case.Name): $name of the window is identical to the console"
         }
+        if ($case.Units.Count) {
+            $guide = Get-Content -LiteralPath (Join-Path $context.State.Build.Output 'SelfX-Intune-Guide.de.txt') -Raw
+            $scripts = @($build.Sync.Result.ScriptFiles)
+            Assert ($scripts.Count -eq 3 -and @($scripts | Where-Object { $guide -match ('(?m)^   - ' + [regex]::Escape($_) + '\r?$') }).Count -eq 3) "$($case.Name): each platform script is its own entry of the result and its own line of the instructions"
+        }
         $saved = Get-Content -LiteralPath (Join-Path $context.State.Build.Output 'selfx-answers.json') -Raw
         Assert ($saved -notmatch '(?i)password|pfx|secret|privatekey|thumbprint') "$($case.Name): selfx-answers.json of the window has no password, key or certificate"
         $context.Window.Close()
