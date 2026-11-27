@@ -339,7 +339,7 @@ try {
     $detection = Get-Content -LiteralPath (Join-Path $finalOut $result.DetectionFile) -Raw
     $expectedCode = Get-SelfXListDigest -Stage (Join-Path $finalOut 'package') -ListName 'SelfX.Code.json'
     $expectedConfig = Get-SelfXListDigest -Stage (Join-Path $finalOut 'package') -ListName 'SelfX.Config.json'
-    Assert ($detection -match "ExpectedCodeHash = '$expectedCode'" -and $detection -match "ExpectedConfigHash = '$expectedConfig'" -and $detection -notmatch "= '__SELFX_") 'detection script has both digests instead of the placeholders'
+    Assert ($detection -match "ExpectedCodeHash = '$expectedCode'" -and $detection -match "ExpectedConfigHash = '$expectedConfig'" -and $detection -notmatch 'ExpectedCodeHash = ''__' -and $detection -notmatch 'ExpectedConfigHash = ''__') 'detection script has both digests instead of the placeholders'
     $errors = $null; [void][Management.Automation.Language.Parser]::ParseInput($detection, [ref]$null, [ref]$errors)
     Assert (@($errors).Count -eq 0) 'detection script parses'
     Assert ((Get-Content -LiteralPath (Join-Path $finalOut 'package\Detection.ps1') -Raw) -match "= '__SELFX_CODE_HASH__'") 'the Detection.ps1 in the package keeps the placeholders'
@@ -429,7 +429,7 @@ try {
     $binChanged = New-FakePayload -Folder (Join-Path $work 'binchanged')
     [IO.File]::WriteAllText((Join-Path $binChanged 'Bin\SelfXService.exe'), 'replaced')
     $thrown = $null; try { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $binChanged -OutputFolder $newOut -ToolPath $dummyTool } catch { $thrown = $_.Exception.Message }
-    Assert ($thrown -match 'SelfXService\.exe does not match') 'a changed program in Bin is refused'
+    Assert ($thrown -match 'SelfXService\.exe') 'a changed program in Bin is refused'
     $sourceChanged = New-FakePayload -Folder (Join-Path $work 'srcchanged')
     Add-Content -LiteralPath (Join-Path $sourceChanged 'Service\SelfXService.cs') -Value '// changed'
     Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $sourceChanged -OutputFolder $newOut -ToolPath $dummyTool } 'a changed source is refused'

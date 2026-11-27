@@ -865,22 +865,25 @@ function Invoke-SelfXPackageBuild {
             Move-Item -LiteralPath (Join-Path $tmp 'SelfX.Config.cat') -Destination (Join-Path $package 'Config\SelfX.Config.cat')
         }
 
+        # The names are also named in the instructions of a package that is only configured.
+        $packageName = "SelfX-Service-$version.intunewin"
+        $detectionName = "SelfX-Service-$version.Detection.ps1"
         $packageFile = $null
         $detectionFile = $null
         $ruleFiles = New-Object System.Collections.Generic.List[string]
         if (-not $ConfigureOnly) {
             # ---- pack
             & $progress 'pack'
+            $packageFile = $packageName
             $toolOutput = Join-Path $tmp 'tool'
             New-Item -ItemType Directory -Path $toolOutput -Force | Out-Null
-            $packageFile = "SelfX-Service-$version.intunewin"
             New-SelfXIntuneWinFile -ToolPath $ToolPath -Stage $package -SetupFile 'Install.ps1' -OutputDir $toolOutput -Target (Join-Path $out $packageFile)
 
             # ---- detection script with the digests
             & $progress 'detection'
+            $detectionFile = $detectionName
             Copy-Item -LiteralPath (Get-SelfXListPath -Stage $package -ListName 'SelfX.Code.json') -Destination (Get-SelfXListPath -Stage $detectStage -ListName 'SelfX.Code.json')
             Copy-Item -LiteralPath (Get-SelfXListPath -Stage $package -ListName 'SelfX.Config.json') -Destination (Get-SelfXListPath -Stage $detectStage -ListName 'SelfX.Config.json')
-            $detectionFile = "SelfX-Service-$version.Detection.ps1"
             $null = New-SelfXDetectionScript -Stage $detectStage -Target (Join-Path $out $detectionFile)
             if ($signed) {
                 $detectSign = @{ Path = @((Join-Path $out $detectionFile)); Certificate = $Certificate }
@@ -912,7 +915,7 @@ function Invoke-SelfXPackageBuild {
         Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language
         $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
         $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })
-        $guideText = New-SelfXIntuneGuide -Answers $a -Version $version -PackageFile "$packageFile" -DetectionFile "$detectionFile" -ScriptFiles $scriptFiles `
+        $guideText = New-SelfXIntuneGuide -Answers $a -Version $version -PackageFile $packageName -DetectionFile $detectionName -ScriptFiles $scriptFiles `
             -AnswersFile 'selfx-answers.json' -TrustedSigner $(if ($signed) { @($Certificate.Thumbprint) } else { @() }) -RuleFiles @($ruleFiles)
         $guideFile = "SelfX-Intune-Guide.$guideLanguage.txt"
         [IO.File]::WriteAllText((Join-Path $out $guideFile), $guideText, (New-Object System.Text.UTF8Encoding($true)))
