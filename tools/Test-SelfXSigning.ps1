@@ -11,7 +11,8 @@
 
     Part 2 needs Windows. The test creates self-signed certificates with New-SelfSignedCertificate in Cert:\CurrentUser\My only
     (never in LocalMachine) and removes them (with the private key) at the end. The checks of the signature status need a trusted
-    root: for them the test adds the public part of the test certificates to Cert:\CurrentUser\Root and removes it at the end.
+    root: for them the test adds the public part of the test certificates to Cert:\CurrentUser\Root (on GitHub Actions: Cert:\LocalMachine\Root of
+    the disposable runner, because CurrentUser\Root waits for a confirmation dialog there) and removes it at the end.
     Windows asks for a confirmation when a root is added on an interactive desktop (certutil.exe -user is used, which the runner accepts), so this part runs only on GitHub Actions
     or when the variable SELFX_TEST_ALLOW_ROOT_IMPORT=1 is set; otherwise it is skipped (and said so).
 
@@ -217,6 +218,12 @@ try {
         $slow = ($env:SELFX_TEST_SLOW -eq '1')
         $timestampUrl = $env:SELFX_TEST_TIMESTAMP_URL
         $createdMy = New-Object System.Collections.Generic.List[string]
+        # On GitHub Actions (disposable administrator runner) the roots go to LocalMachine: Windows shows no confirmation dialog there, while it
+        # waits forever for an answer for CurrentUser\Root. Everywhere else the roots go to CurrentUser.
+        $rootScope = 'CurrentUser'
+        if ($env:GITHUB_ACTIONS -eq 'true') { $rootScope = 'LocalMachine' }
+        $certutilScope = @('-user')
+        if ($rootScope -eq 'LocalMachine') { $certutilScope = @() }
         $addedRoot = New-Object System.Collections.Generic.List[string]
 
         function New-StoreCertificate {
@@ -244,7 +251,7 @@ try {
             [IO.File]::WriteAllBytes($file, $Certificate.RawData)
             $outFile = Join-Path $work 'certutil.out.txt'
             $errFile = Join-Path $work 'certutil.err.txt'
-            $process = Start-Process -FilePath 'certutil.exe' -ArgumentList '-user', '-addstore', '-f', 'Root', "`"$file`"" -PassThru -NoNewWindow `
+            $process = Start-Process -FilePath 'certutil.exe' -ArgumentList (@($certutilScope) + @('-addstore', '-f', 'Root', "`"$file`"")) -PassThru -NoNewWindow `
                 -RedirectStandardOutput $outFile -RedirectStandardError $errFile
             $null = $process.Handle
             if (-not $process.WaitForExit(60000)) {
@@ -254,7 +261,7 @@ try {
             $process.WaitForExit()
             if ($process.ExitCode -ne 0) {
                 $detail = ((Get-Content -LiteralPath $outFile, $errFile -ErrorAction SilentlyContinue) -join ' ')
-                throw "certutil could not add the test certificate to Cert:\CurrentUser\Root (exit code $($process.ExitCode)): $(ConvertTo-SelfXSafeText $detail)"
+                throw "certutil could not add the test certificate to Cert:\$rootScope\Root (exit code $($process.ExitCode)): $(ConvertTo-SelfXSafeText $detail)"
             }
             $addedRoot.Add($Certificate.Thumbprint)
         }
@@ -347,7 +354,7 @@ try {
             if (-not $canTrust) {
                 Skip 'Part 2: signatures, catalog, expiry' 'a trusted root is needed; set SELFX_TEST_ALLOW_ROOT_IMPORT=1 (adds the test certificates to Cert:\CurrentUser\Root until the end of the test) or run on GitHub Actions'
             } else {
-                Write-Host 'Part 2: trusted test roots (Cert:\CurrentUser\Root)'
+                Write-Host "Part 2: trusted test roots (Cert:\$rootScope\Root)"
                 Add-TestRoot $certA
                 Add-TestRoot $certB
 
@@ -472,7 +479,7 @@ try {
             Assert $false "unexpected error in part 2: $(ConvertTo-SelfXSafeText $_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
         } finally {
             Write-Host 'Part 2: cleanup'
-            foreach ($thumbprint in $addedRoot) { $null = Start-Process -FilePath 'certutil.exe' -ArgumentList '-user', '-delstore', 'Root', $thumbprint -NoNewWindow -Wait -PassThru }
+            foreach ($thumbprint in $addedRoot) { $null = Start-Process -FilePath 'certutil.exe' -ArgumentList (@($certutilScope) + @('-delstore', 'Root', $thumbprint)) -NoNewWindow -Wait -PassThru }
             foreach ($thumbprint in $createdMy) {
                 $entry = "Cert:\CurrentUser\My\$thumbprint"
                 if (Test-Path -LiteralPath $entry) {
@@ -482,9 +489,9 @@ try {
                 }
             }
             $leftMy = @(Get-ChildItem Cert:\CurrentUser\My | Where-Object { $createdMy -contains $_.Thumbprint })
-            $leftRoot = @(Get-ChildItem Cert:\CurrentUser\Root | Where-Object { $addedRoot -contains $_.Thumbprint })
+            $leftRoot = @(Get-ChildItem "Cert:\$rootScope\Root" | Where-Object { $addedRoot -contains $_.Thumbprint })
             Assert ($leftMy.Count -eq 0) 'no test certificate is left in Cert:\CurrentUser\My'
-            Assert ($leftRoot.Count -eq 0) 'no test certificate is left in Cert:\CurrentUser\Root'
+            Assert ($leftRoot.Count -eq 0) "no test certificate is left in Cert:\$rootScope\Root"
         }
     }
 } finally {
