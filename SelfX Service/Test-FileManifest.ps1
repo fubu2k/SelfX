@@ -526,7 +526,7 @@ try {
 	$configFiles['Scripts_to_run/SelfX_Device_SyncTime.ps1'] = $codeFiles['Scripts_to_run/SelfX_Device_SyncTime.ps1']
 	Set-List (Get-ListPath $installed 'SelfX.Config.json') $configFiles
 	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'listed in both SelfX.Code.json and SelfX.Config.json' 'installed: a file in both lists is refused'
-	New-InstalledCopy; Add-Content -LiteralPath (Join-Path $installed 'Branding\company_logo.png') -Value 'x'
+	New-InstalledCopy; Add-Content -LiteralPath (Join-Path $installed 'Config\Branding\company_logo.png') -Value 'x'
 	Assert-Throws { Test-SelfXInstalledFiles -InstallFolder $installed } 'Branding/company_logo.png in the folder Config does not match its SHA256 in SelfX.Config.json' 'installed: a changed logo is reported against SelfX.Config.json'
 
 	# The icon rule of Install.ps1 (shortcuts) equals Get-SelfXImagePath of SelfXPaths.ps1 (window, status icon).
