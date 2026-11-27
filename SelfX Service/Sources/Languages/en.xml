@@ -326,6 +326,23 @@ The data comes from the diagnostic tool SelfX. Names and addresses are replaced 
 		<Latency_Value>{0} ms (min {1}, max {2}, {3} of {4} lost)</Latency_Value>
 		<Latency_Failed>not reachable ({0} of {1} failed)</Latency_Failed>
 		<Latency_Skipped>not measured (time limit reached)</Latency_Skipped>
+		<Check_Local>Local network (Wi-Fi, router)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Microsoft services (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Company network</Check_Company>
+		<Check_Result>Connection result</Check_Result>
+		<Check_State_Ok>reachable ({0} of {1})</Check_State_Ok>
+		<Check_State_Partial>partly reachable ({0} of {1})</Check_State_Partial>
+		<Check_State_Fail>not reachable ({0} of {1})</Check_State_Fail>
+		<Check_State_None>not measured</Check_State_None>
+		<Verdict_LocalDown>Your Wi-Fi or router does not answer.</Verdict_LocalDown>
+		<Verdict_InternetDown>The internet cannot be reached.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>The internet works, but the Microsoft services for the management of this device cannot be reached.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>The internet works, but the company network cannot be reached: check the VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>The internet works, but the company network cannot be reached: check the network connection at your location.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Most connections work, but some targets cannot be reached.</Verdict_Partial>
+		<Verdict_AllOk>Everything can be reached.</Verdict_AllOk>
+		<Verdict_NoData>Nothing could be measured.</Verdict_NoData>
 		<Collected_At>Collected at</Collected_At>
 		<Error>Error</Error>
 		<Yes>Yes</Yes>

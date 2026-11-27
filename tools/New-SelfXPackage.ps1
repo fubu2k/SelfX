@@ -76,7 +76,7 @@
     Name    : New-SelfXPackage.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 1.2.0
+    Version : 1.3.1
     Exit code: 0 = done, 1 = error or aborted
     Works in Windows PowerShell 5.1 and PowerShell 7. The wizard sends nothing; only -PfxPath makes it ask for the password of the PFX file (hidden, not stored).
 
@@ -91,6 +91,7 @@
                                               Invoke-SelfXWizardBuild (shared with the window tools\Wizard\SelfXWizardGui.ps1); same behavior
     1.2.0    2026-11-27  fubu2k               -AdditionalSigner (further thumbprints for -TrustedSigner, change of the certificate)
     1.3.0    2026-11-27  fubu2k               -ConfigPackage (the configuration package) and -SeparateConfig (the full package of a setup with a configuration package)
+    1.3.1    2026-11-27  fubu2k               Answer file: the answer NetworkTargets (own network targets) is known
 #>
 [CmdletBinding()]
 param(
@@ -161,7 +162,7 @@ try {
         $json = Get-Content -LiteralPath $AnswerFile -Raw -Encoding UTF8 | ConvertFrom-Json
         $source = @{}
         foreach ($property in $json.PSObject.Properties) { $source[$property.Name] = $property.Value }
-        $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'WizardLanguage')
+        $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'NetworkTargets', 'WizardLanguage')
         foreach ($key in $source.Keys) { if ($known -notcontains $key) { throw "Unknown answer '$key' in the answer file." } }
     }
     $answers = Read-WizardAnswers -Source $source

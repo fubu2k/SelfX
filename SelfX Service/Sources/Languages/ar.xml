@@ -283,6 +283,23 @@
 		<Latency_Value>{0} مللي ثانية (الأدنى {1}، الأقصى {2}، فُقد {3} من {4})</Latency_Value>
 		<Latency_Failed>لا يمكن الوصول ({0} من {1} فشلت)</Latency_Failed>
 		<Latency_Skipped>لم يتم القياس (تم بلوغ حد الوقت)</Latency_Skipped>
+		<Check_Local>الشبكة المحلية (Wi-Fi، الموجّه)</Check_Local>
+		<Check_Internet>الإنترنت</Check_Internet>
+		<Check_Microsoft>خدمات Microsoft (Intune وEntra ID)</Check_Microsoft>
+		<Check_Company>شبكة الشركة</Check_Company>
+		<Check_Result>نتيجة الاتصال</Check_Result>
+		<Check_State_Ok>يمكن الوصول ({0} من {1})</Check_State_Ok>
+		<Check_State_Partial>يمكن الوصول جزئيًا ({0} من {1})</Check_State_Partial>
+		<Check_State_Fail>لا يمكن الوصول ({0} من {1})</Check_State_Fail>
+		<Check_State_None>لم يتم القياس</Check_State_None>
+		<Verdict_LocalDown>شبكة Wi-Fi أو الموجّه لديك لا يستجيب.</Verdict_LocalDown>
+		<Verdict_InternetDown>لا يمكن الوصول إلى الإنترنت.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>الإنترنت يعمل، لكن لا يمكن الوصول إلى خدمات Microsoft المخصصة لإدارة هذا الجهاز.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>الإنترنت يعمل، لكن لا يمكن الوصول إلى شبكة الشركة: تحقق من VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>الإنترنت يعمل، لكن لا يمكن الوصول إلى شبكة الشركة: تحقق من اتصال الشبكة في موقعك.</Verdict_CompanyIntranet>
+		<Verdict_Partial>معظم الاتصالات تعمل، لكن لا يمكن الوصول إلى بعض الوجهات.</Verdict_Partial>
+		<Verdict_AllOk>يمكن الوصول إلى كل شيء.</Verdict_AllOk>
+		<Verdict_NoData>تعذّر قياس أي شيء.</Verdict_NoData>
 		<Collected_At>تم جمعها في</Collected_At>
 		<Error>خطأ</Error>
 		<Yes>نعم</Yes>

@@ -283,6 +283,23 @@
 		<Latency_Value>{0} 毫秒（最小 {1}，最大 {2}，{4} 次中丢失 {3} 次）</Latency_Value>
 		<Latency_Failed>无法访问（{1} 次中失败 {0} 次）</Latency_Failed>
 		<Latency_Skipped>未测量（已达时间限制）</Latency_Skipped>
+		<Check_Local>本地网络（Wi-Fi、路由器）</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Microsoft 服务（Intune、Entra ID）</Check_Microsoft>
+		<Check_Company>公司网络</Check_Company>
+		<Check_Result>连接结果</Check_Result>
+		<Check_State_Ok>可访问（{0}/{1}）</Check_State_Ok>
+		<Check_State_Partial>部分可访问（{0}/{1}）</Check_State_Partial>
+		<Check_State_Fail>无法访问（{0}/{1}）</Check_State_Fail>
+		<Check_State_None>未测量</Check_State_None>
+		<Verdict_LocalDown>您的 Wi-Fi 或路由器没有响应。</Verdict_LocalDown>
+		<Verdict_InternetDown>无法访问 Internet。</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Internet 正常，但无法访问用于管理此设备的 Microsoft 服务。</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Internet 正常，但无法访问公司网络：请检查 VPN。</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Internet 正常，但无法访问公司网络：请检查您所在位置的网络连接。</Verdict_CompanyIntranet>
+		<Verdict_Partial>大多数连接正常，但部分目标无法访问。</Verdict_Partial>
+		<Verdict_AllOk>全部可以访问。</Verdict_AllOk>
+		<Verdict_NoData>没有可测量的内容。</Verdict_NoData>
 		<Collected_At>收集时间</Collected_At>
 		<Error>错误</Error>
 		<Yes>是</Yes>

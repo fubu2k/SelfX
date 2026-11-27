@@ -283,6 +283,23 @@ Descrizione del problema:</Report_Mail_Body>
 		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} di {4} persi)</Latency_Value>
 		<Latency_Failed>non raggiungibile ({0} di {1} non riusciti)</Latency_Failed>
 		<Latency_Skipped>non misurato (limite di tempo raggiunto)</Latency_Skipped>
+		<Check_Local>Rete locale (Wi-Fi, router)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Servizi Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Rete aziendale</Check_Company>
+		<Check_Result>Risultato della connessione</Check_Result>
+		<Check_State_Ok>raggiungibile ({0} su {1})</Check_State_Ok>
+		<Check_State_Partial>parzialmente raggiungibile ({0} su {1})</Check_State_Partial>
+		<Check_State_Fail>non raggiungibile ({0} su {1})</Check_State_Fail>
+		<Check_State_None>non misurato</Check_State_None>
+		<Verdict_LocalDown>Il Wi-Fi o il router non risponde.</Verdict_LocalDown>
+		<Verdict_InternetDown>Internet non è raggiungibile.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Internet funziona, ma i servizi Microsoft per la gestione di questo dispositivo non sono raggiungibili.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Internet funziona, ma la rete aziendale non è raggiungibile: controlli la VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Internet funziona, ma la rete aziendale non è raggiungibile: controlli la connessione di rete nella sua sede.</Verdict_CompanyIntranet>
+		<Verdict_Partial>La maggior parte delle connessioni funziona, ma alcune destinazioni non sono raggiungibili.</Verdict_Partial>
+		<Verdict_AllOk>Tutto è raggiungibile.</Verdict_AllOk>
+		<Verdict_NoData>Non è stato possibile misurare nulla.</Verdict_NoData>
 		<Collected_At>Raccolto il</Collected_At>
 		<Error>Errore</Error>
 		<Yes>Sì</Yes>

@@ -283,6 +283,23 @@ Opis problemu:</Report_Mail_Body>
 		<Latency_Value>{0} ms (min. {1}, maks. {2}, utracono {3} z {4})</Latency_Value>
 		<Latency_Failed>niedostępny (niepowodzeń: {0} z {1})</Latency_Failed>
 		<Latency_Skipped>nie zmierzono (osiągnięto limit czasu)</Latency_Skipped>
+		<Check_Local>Sieć lokalna (Wi-Fi, router)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Usługi Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Sieć firmowa</Check_Company>
+		<Check_Result>Wynik połączenia</Check_Result>
+		<Check_State_Ok>osiągalny ({0} z {1})</Check_State_Ok>
+		<Check_State_Partial>częściowo osiągalny ({0} z {1})</Check_State_Partial>
+		<Check_State_Fail>nieosiągalny ({0} z {1})</Check_State_Fail>
+		<Check_State_None>nie zmierzono</Check_State_None>
+		<Verdict_LocalDown>Twoje Wi-Fi lub router nie odpowiada.</Verdict_LocalDown>
+		<Verdict_InternetDown>Internet jest niedostępny.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Internet działa, ale usługi Microsoft do zarządzania tym urządzeniem są niedostępne.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Internet działa, ale sieć firmowa jest niedostępna: sprawdź połączenie VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Internet działa, ale sieć firmowa jest niedostępna: sprawdź połączenie sieciowe w swojej lokalizacji.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Większość połączeń działa, ale niektóre cele są niedostępne.</Verdict_Partial>
+		<Verdict_AllOk>Wszystko jest osiągalne.</Verdict_AllOk>
+		<Verdict_NoData>Nie udało się nic zmierzyć.</Verdict_NoData>
 		<Collected_At>Zebrano</Collected_At>
 		<Error>Błąd</Error>
 		<Yes>Tak</Yes>

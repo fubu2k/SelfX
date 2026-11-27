@@ -200,7 +200,7 @@ try {
             Assert ($unnamed.Count -eq 0) 'every input has a name for screen readers'
             $noHelp = @($context.Fields.Values | Where-Object { -not [System.Windows.Automation.AutomationProperties]::GetHelpText($_.Control) })
             Assert ($noHelp.Count -eq 0) 'every input has the recommendation as help text'
-            $buttons = @('BackButton', 'NextButton', 'LoadButton', 'SaveButton', 'AddUnitButton', 'RemoveUnitButton', 'BuildButton', 'CancelBuildButton', 'OpenFolderButton', 'CopyGuideButton',
+            $buttons = @('BackButton', 'NextButton', 'LoadButton', 'SaveButton', 'AddUnitButton', 'RemoveUnitButton', 'AddTargetButton', 'RemoveTargetButton', 'BuildButton', 'CancelBuildButton', 'OpenFolderButton', 'CopyGuideButton',
                 'SignNone', 'SignStore', 'SignFile', 'RefreshCertsButton', 'PfxBrowseButton', 'PfxOpenButton', 'CertList', 'PfxPathBox', 'PfxPasswordBox')
             Assert (@($buttons | Where-Object { -not [System.Windows.Automation.AutomationProperties]::GetName($context.Ui[$_]) }).Count -eq 0) 'every button has a name for screen readers'
             Assert ($context.Ui.NextButton.Content -is [System.Windows.Controls.AccessText] -and $context.Ui.NextButton.Content.Text.Contains('_')) 'buttons have an access key'
@@ -273,6 +273,56 @@ try {
     Assert ($context.Page -eq 5) 'with one valid organisation the next page opens'
     $context.Window.Close()
 
+    # ---------------------------------------------------------- network targets
+    Write-Host 'Network targets'
+    $context = New-WizardGuiWindow -Culture 'de' -Theme 'Light'
+    $networkPage = Get-WizardGuiPageIndex 'network'
+    Assert ($networkPage -eq 5 -and (Get-WizardGuiPageIndex 'ticket') -eq 4 -and (Get-WizardGuiPageIndex 'more') -eq 6) 'the page Network targets is between the ticket and the further settings'
+    Set-WizardGuiPage -Index $networkPage -NoFocus
+    Assert ($context.Ui.TargetsPanel.Visibility -eq 'Collapsed' -and $context.Fields['NetworkMicrosoft'].Row.Visibility -eq 'Collapsed' -and $context.Fields['NetworkEnabled'].Row.Visibility -eq 'Visible') 'while the measurement is off only its switch is shown'
+    Click $context.Ui.NextButton
+    Assert ($context.Page -eq 6) 'the page can be left with the measurement off (nothing is required)'
+    Set-WizardGuiPage -Index $networkPage -NoFocus
+    Set-Field 'NetworkEnabled' $true
+    Assert ($context.Ui.TargetsPanel.Visibility -eq 'Visible' -and $context.Fields['NetworkMicrosoft'].Row.Visibility -eq 'Visible' -and $context.Fields['NetworkHostNames'].Row.Visibility -eq 'Visible') 'with the measurement on the switches and the list of targets appear'
+    Click $context.Ui.NextButton
+    Assert ($context.Page -eq 6) 'the page can be left with the measurement on and no own target (the delivered Microsoft targets are enough)'
+    Set-WizardGuiPage -Index $networkPage -NoFocus
+    Click $context.Ui.AddTargetButton
+    Assert ($context.State.Targets.Count -eq 1 -and $context.Ui.TargetEditor.Visibility -eq 'Visible' -and $context.Fields['TargetKind'].Row.Visibility -eq 'Visible') 'a target is added, group Company shows the kind'
+    Set-Field 'TargetLabel' 'VPN gateway'; Set-Field 'TargetHost' 'https://vpn.contoso.example'
+    Assert ($context.Fields['TargetHost'].Error.Visibility -eq 'Visible') 'a host with a scheme is refused at the field'
+    Set-Field 'TargetHost' 'vpn.contoso.example/x'
+    Assert ($context.Fields['TargetHost'].Error.Visibility -eq 'Visible') 'a host with a path is refused at the field'
+    Set-Field 'TargetHost' 'vpn.contoso.example'
+    Assert ($context.Fields['TargetHost'].Error.Visibility -eq 'Collapsed') 'a valid host removes the error at once'
+    Set-Field 'TargetPort' '65536'
+    Assert ($context.Fields['TargetPort'].Error.Visibility -eq 'Visible') 'port 65536 is refused at the field'
+    Set-Field 'TargetPort' 'abc'
+    Assert ($context.Fields['TargetPort'].Error.Visibility -eq 'Visible') 'a port that is no number is refused at the field'
+    Set-Field 'TargetPort' '443'
+    Set-Field 'TargetGroup' 'Internet'
+    Assert ($context.Fields['TargetKind'].Row.Visibility -eq 'Collapsed') 'the kind is hidden outside the group Company'
+    Assert ((Get-WizardGuiEvaluation -State $context.State).TargetErrors[0].Count -eq 0) 'a hidden kind never causes an error'
+    Set-Field 'TargetGroup' 'Company'
+    Click $context.Ui.AddTargetButton
+    Set-Field 'TargetLabel' 'vpn gateway'; Set-Field 'TargetHost' 'other.contoso.example'
+    Assert ($context.Fields['TargetLabel'].Error.Text -eq (Get-WText 'gui.targets.duplicate')) 'the same target name twice is refused (upper and lower case count as equal)'
+    Set-Field 'TargetLabel' 'Intranet'; Set-Field 'TargetKind' 'Intranet'
+    Assert ((Get-WizardGuiPageErrors -State $context.State -PageId 'network').Count -eq 0) 'two valid targets: the page has no error'
+    Click $context.Ui.RemoveTargetButton
+    Assert ($context.State.Targets.Count -eq 1) 'a target can be removed'
+    while ($context.State.Targets.Count -lt $script:NetMaxOwnTargets) { Click $context.Ui.AddTargetButton; Set-Field 'TargetLabel' ("T" + $context.State.Targets.Count); Set-Field 'TargetHost' ("h" + $context.State.Targets.Count + '.contoso.example') }
+    Assert ($context.State.Targets.Count -eq 8 -and -not $context.Ui.AddTargetButton.IsEnabled) 'at most 8 own targets (12 in the file, 4 of them delivered): the add button is switched off'
+    Click $context.Ui.AddTargetButton
+    Assert ($context.State.Targets.Count -eq 8) 'the limit holds against a click'
+    $context.State.Targets.Add((New-WizardGuiTarget))
+    Assert ((Get-WizardGuiEvaluation -State $context.State).TargetsError -and (Get-WizardGuiPageErrors -State $context.State -PageId 'network') -contains 'Targets') 'a ninth target is reported as an error of the list'
+    $context.State.Targets.RemoveAt(8)
+    Set-Field 'NetworkEnabled' $false
+    Assert (-not (Get-WizardGuiSource -State $context.State).ContainsKey('NetworkTargets') -and (Get-WizardGuiPageErrors -State $context.State -PageId 'network').Count -eq 0) 'the measurement off: the targets are not in the answers and cause no error'
+    $context.Window.Close()
+
     # ---------------------------------------------------------- signature
     Write-Host 'Signature'
     $unique = [guid]::NewGuid().ToString('N').Substring(0, 10)
@@ -288,7 +338,7 @@ try {
     try {
         $context = New-WizardGuiWindow -Culture 'de' -Theme 'Light'
         $signingPage = Get-WizardGuiPageIndex 'signing'
-        Assert ($signingPage -eq 6 -and (Get-WizardGuiPageIndex 'summary') -eq 7 -and (Get-WizardGuiPageIndex 'result') -eq 9) 'the page Signature comes after the further settings and before the summary'
+        Assert ($signingPage -eq 7 -and (Get-WizardGuiPageIndex 'summary') -eq 8 -and (Get-WizardGuiPageIndex 'result') -eq 10) 'the page Signature comes after the further settings and before the summary'
         Set-WizardGuiPage -Index $signingPage -NoFocus
         Assert ($context.Ui.SignNone.IsChecked -and (Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and $context.Ui.SignNoneInfo.Visibility -eq 'Visible') 'default: no certificate, the consequences are explained, nothing is required'
         Assert ($null -eq (Get-WizardGuiSigning -State $context.State).Certificate) 'without a certificate nothing is signed'
@@ -416,14 +466,19 @@ try {
         WikiEnabled = $true; WikiUrl = 'https://wiki.contoso.example/start'; WikiName = 'Contoso <Wiki>'
         TrayIcon = $true; ShortcutDesktop = $false; ShortcutStartMenu = $true; Expert = $true; LogRetention = '30'; FileCheck = 'Audit'; Privileges = 'Restricted'
         AppLockerRules = $false; WdacBasePolicyId = ''
+        NetworkEnabled = $true; NetworkMicrosoft = $true; NetworkHostNames = $false
     }
+    $netTargets = @(
+        [ordered]@{ TargetLabel = 'VPN gateway'; TargetHost = 'vpn.contoso.example'; TargetPort = '443'; TargetGroup = 'Company'; TargetKind = 'Vpn' },
+        [ordered]@{ TargetLabel = 'Router printer'; TargetHost = '192.168.1.20'; TargetPort = '9100'; TargetGroup = 'Local'; TargetKind = 'None' }
+    )
     $units = @(
         [ordered]@{ UnitId = 'IT-Berlin'; UnitMail = 'it-berlin@contoso.example'; UnitCc = ''; UnitGroupTags = 'DE-IT1-BER, DE-IT2-BER'; UnitOUs = 'OU=Berlin'; UnitCategories = '' },
         [ordered]@{ UnitId = 'IT-Mobile'; UnitMail = 'it-mobile@contoso.example'; UnitCc = 'service@contoso.example'; UnitGroupTags = ''; UnitOUs = ''; UnitCategories = 'Tablet' }
     )
     $cases = @(
-        @{ Name = 'all answers'; Input = $inputValues; Units = $units },
-        @{ Name = 'only the required answer (defaults)'; Input = [ordered]@{ OrgName = 'Contoso' }; Units = @() }
+        @{ Name = 'all answers'; Input = $inputValues; Units = $units; Targets = $netTargets },
+        @{ Name = 'only the required answer (defaults)'; Input = [ordered]@{ OrgName = 'Contoso' }; Units = @(); Targets = @() }
     )
     for ($caseIndex = 0; $caseIndex -lt $cases.Count; $caseIndex++) {
         $case = $cases[$caseIndex]
@@ -433,17 +488,22 @@ try {
             Click $context.Ui.AddUnitButton
             foreach ($key in $unit.Keys) { Set-Field $key $unit[$key] }
         }
+        foreach ($target in $case.Targets) {
+            Click $context.Ui.AddTargetButton
+            foreach ($key in 'TargetLabel', 'TargetHost', 'TargetPort', 'TargetGroup', 'TargetKind') { Set-Field $key $target[$key] }
+        }
         $context.State.Build.Payload = $payload
         $context.State.Build.ConfigureOnly = $true
         $context.State.Build.Output = Join-Path $work ("gui-" + $caseIndex)
         $evaluation = Get-WizardGuiEvaluation -State $context.State
-        Assert ($evaluation.Errors.Count -eq 0 -and @($evaluation.UnitErrors | Where-Object { $_.Count }).Count -eq 0 -and $evaluation.BuildErrors.Count -eq 0) "$($case.Name): the window reports no error"
+        Assert ($evaluation.Errors.Count -eq 0 -and @($evaluation.UnitErrors | Where-Object { $_.Count }).Count -eq 0 -and @($evaluation.TargetErrors | Where-Object { $_.Count }).Count -eq 0 -and $evaluation.BuildErrors.Count -eq 0) "$($case.Name): the window reports no error"
         $guiAnswers = Get-WizardGuiAnswers -State $context.State
 
         # Console: the same input as an answer file (lists as arrays, as a saved file has them).
         $file = [ordered]@{ WizardLanguage = 'de' }
         foreach ($key in $case.Input.Keys) { $file[$key] = $case.Input[$key] }
         $file['Units'] = @($case.Units | ForEach-Object { [ordered]@{ UnitId = $_.UnitId; UnitMail = $_.UnitMail; UnitCc = $_.UnitCc; UnitGroupTags = @($_.UnitGroupTags.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }); UnitOUs = @($_.UnitOUs.Split(',') | Where-Object { $_ }); UnitCategories = @($_.UnitCategories.Split(',') | Where-Object { $_ }) } })
+        if ($case.Targets.Count) { $file['NetworkTargets'] = @($case.Targets | ForEach-Object { [ordered]@{ Label = $_.TargetLabel; Host = $_.TargetHost; Port = [int]$_.TargetPort; Group = $_.TargetGroup; Kind = $(if ($_.TargetKind -eq 'None') { '' } else { $_.TargetKind }) } }) }
         $answerFile = Join-Path $work ("answers-" + $caseIndex + '.json')
         [IO.File]::WriteAllText($answerFile, ($file | ConvertTo-Json -Depth 6), (New-Object Text.UTF8Encoding($false)))
         $source = @{}; foreach ($property in (Get-Content -LiteralPath $answerFile -Raw | ConvertFrom-Json).PSObject.Properties) { $source[$property.Name] = $property.Value }
@@ -462,7 +522,7 @@ try {
         Wait-GuiBuild -Build $build
         Assert ($null -ne $build.Sync.Result -and -not $build.Sync.Error) ("$($case.Name): build of the window in the background runspace succeeded" + $(if ($build.Sync.Error) { ': ' + $build.Sync.Error }))
         Assert ((@($build.Steps) -join ',') -eq 'check,copy,config,guide,finish') "$($case.Name): the window received every step of the progress"
-        foreach ($name in 'selfx-answers.json', 'package\Config\Tool_Config.xml', 'package\Config\Ticket_Config.xml', 'SelfX-Intune-Guide.de.txt') {
+        foreach ($name in 'selfx-answers.json', 'package\Config\Tool_Config.xml', 'package\Config\Ticket_Config.xml', 'package\Config\Network_Test_Config.xml', 'SelfX-Intune-Guide.de.txt') {
             $a = Join-Path $consoleOut $name; $b = Join-Path $context.State.Build.Output $name
             Assert ((Test-Path -LiteralPath $a) -and (Test-Path -LiteralPath $b) -and (Get-FileHash $a).Hash -eq (Get-FileHash $b).Hash) "$($case.Name): $name of the window is identical to the console"
         }
@@ -481,6 +541,7 @@ try {
     $state = New-WizardGuiState -ToolsFolder $ScriptFolder
     $language = Import-WizardGuiAnswers -State $state -Path (Join-Path $work 'answers-0.json')
     Assert ($language -eq 'de' -and $state.Raw['OrgName'] -eq 'Contoso <&> Test' -and $state.Units.Count -eq 2 -and $state.Units[0].UnitGroupTags -eq 'DE-IT1-BER, DE-IT2-BER') 'an answer file is loaded with its units and language'
+    Assert ($state.Targets.Count -eq 2 -and $state.Targets[0].TargetHost -eq 'vpn.contoso.example' -and $state.Targets[1].TargetKind -eq 'None' -and $state.Targets[1].TargetPort -eq '9100') 'an answer file is loaded with its network targets'
     Assert ((Get-FileHash $guiSaved).Hash -ne '' -and @((Get-WizardGuiEvaluation -State $state).Errors.Keys).Count -eq 0) 'the loaded answers are valid'
     $bad = Join-Path $work 'bad.json'
     [IO.File]::WriteAllText($bad, '{ "OrgName": "x", "PfxPassword": "secret" }')

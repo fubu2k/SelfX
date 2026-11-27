@@ -134,6 +134,9 @@ menu opens SelfX, checks the status or sends the logs.
 - **System information page**
   - Device, Windows, user and Intune/Entra ID management, and network details
     (LAN, Wi-Fi, VPN, internet, IP, DNS, MAC).
+  - Optional connection check: four rows (local network, internet, Microsoft
+    services, company network) and one sentence that says what is probably wrong,
+    for example "check the VPN". The administrator sets the targets.
   - Double-click a line to copy it. Copy all, or export as TXT, HTML, CSV or JSON.
   - Shown immediately from the last collection and refreshed in the background.
 - **Send logs to support**

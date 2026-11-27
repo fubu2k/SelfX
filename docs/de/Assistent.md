@@ -28,6 +28,7 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 | Support | E-Mail-Adresse, Telefon, Servicezeiten, Webseite und Teams-Kontakt des Supports |
 | Branding | Logo (Dateiauswahl, Vorschau) und Firmenfarbe; das Fenster zeigt die Farbe sofort |
 | Ticket | Ticket-E-Mail und, bei mehreren Organisationen, ein Postfach je Organisation, zugeordnet über Gruppentag, OU oder Geräteklasse |
+| Verbindungstest | Verbindungstest einschalten, die mitgelieferten Microsoft-Ziele ein oder aus, Hostnamen im Bericht ein oder aus und eigene Ziele (Name, Host, Port, Gruppe, Art; bis zu 8 eigene Ziele). Siehe [Netzwerk-Messungen](Configuration.md#netzwerk-messungen) |
 | Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
 | Signatur | Kein Zertifikat (Vertrauensmodus Hash), Zertifikat aus dem Speicher (nur geeignete, gültige) oder PFX-Datei mit Kennwort; Zeitstempeldienst; weitere Signierer für einen Zertifikatswechsel. Zeigt Antragsteller, Aussteller, Ablauf, Fingerabdruck und die Sperrlisten-Adressen mit Warnungen. Siehe [Codesignatur-Zertifikat](Zertifikat.md) |
 | Zusammenfassung | Ihre Antworten, Paketordner, Ausgabeordner, `IntuneWinAppUtil.exe`, „Nur die Konfiguration schreiben“ |
@@ -47,7 +48,7 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 - Das Fenster folgt dem hellen oder dunklen Modus von Windows und verwendet Farben und Stile von SelfX.
 - Das Kennwort einer PFX-Datei wird einmal zum Öffnen verwendet, danach wird das Feld geleert; es wird nie angezeigt, gespeichert oder
   in `selfx-answers.json` geschrieben. Das Zertifikat wird nicht in einen Speicher importiert.
-- Noch nicht im Fenster: die Netzwerkziele des Verbindungstests.
+- Netzwerkziele: Die Liste funktioniert wie die Organisationen auf der Seite *Ticket*: **Ziel hinzufügen**, **Entfernen**, der Fehler steht am Feld. Ein Host mit `https://`, Pfad oder Port, ein Port außerhalb von 1 bis 65535, eine unbekannte Gruppe, eine Art außerhalb der Gruppe *Company* und ein doppelter Name werden abgelehnt. Höchstens 12 Ziele sind in der Datei möglich; vier werden mitgeliefert, Sie können also 8 hinzufügen.
 
 ![Fenster des Paketassistenten: Seite Signatur mit PFX-Datei (Beispielzertifikat)](../images/selfx-wizard-signing-de.png)
 
@@ -105,16 +106,17 @@ Wichtige Parameter:
    SelfX läuft nur unter Windows 11. **Smartphones (iOS, Android) kann SelfX nicht abdecken.**
    Die Regeln stehen in dieser Reihenfolge in `Ticket_Config.xml`: zuerst Group Tags, dann OUs,
    dann Geräteklassen; die erste passende Regel gewinnt.
-5. **Copilot Chat und Firmen-Wiki:** Copilot nur anbieten, wenn Sie es lizenziert haben; Zielgruppe der
+5. **Verbindungstest:** ein oder aus (Standard aus), die mitgelieferten Microsoft-Ziele, Hostnamen im Bericht und eigene Ziele (eine Fragenschleife: Name, Host, Port, Gruppe, Art). Die Antworten heißen `NetworkEnabled`, `NetworkMicrosoft`, `NetworkHostNames` und `NetworkTargets`; ein Ziel ohne `NetworkEnabled` wird abgelehnt, nicht ignoriert. Der Assistent schreibt sie in `Network_Test_Config.xml` und lässt die Kommentare und die vier Microsoft-Ziele stehen.
+6. **Copilot Chat und Firmen-Wiki:** Copilot nur anbieten, wenn Sie es lizenziert haben; Zielgruppe der
    Antwort, Zwischenablage leeren. Optional eine Wiki-Schaltfläche mit `https://`-Adresse und Namen.
-6. **Verhalten auf dem Gerät:** Statussymbol, Verknüpfungen. Im Expertenmodus: Protokoll-Aufbewahrung,
+7. **Verhalten auf dem Gerät:** Statussymbol, Verknüpfungen. Im Expertenmodus: Protokoll-Aufbewahrung,
    Dateiprüfung (`Enforce` oder `Audit`) und Rechte des Dienstes. Ohne Expertenmodus bleiben die sicheren Standardwerte.
-7. **AppLocker und App Control:** ob AppLocker-Regeln erzeugt werden (Standard ja) und, wenn Sie App Control for Business (WDAC)
+8. **AppLocker und App Control:** ob AppLocker-Regeln erzeugt werden (Standard ja) und, wenn Sie App Control for Business (WDAC)
    einsetzen, die ID Ihrer Basisrichtlinie. Ohne ID entsteht keine App-Control-Datei. Die Regelskripte brauchen Windows PowerShell 5.1;
    AppLocker zusätzlich die AppLocker-Cmdlets, App Control das Modul ConfigCI. Fehlen sie, endet der Lauf mit einem klaren Text:
    Antworten Sie *nein* oder erzeugen Sie die Dateien auf einem anderen PC (`tools\New-SelfXAppLockerRules.ps1`,
    `tools\New-SelfXWdacPolicy.ps1`).
-8. **Bau:** Ausgabeordner und Pfad von `IntuneWinAppUtil.exe`.
+9. **Bau:** Ausgabeordner und Pfad von `IntuneWinAppUtil.exe`.
 
 Jede Eingabe wird geprüft (Adressen, https-Links, Farben, Längen, Zeichen). Eine ungültige Eingabe
 wird sofort abgelehnt. Die Werte werden als Text in die XML-Dateien geschrieben und dabei maskiert. Das Logo muss eine `png`-, `jpg`- oder

@@ -283,6 +283,23 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Latency_Value>{0} ms (en az {1}, en çok {2}, {4} içinde {3} kayıp)</Latency_Value>
 		<Latency_Failed>erişilemiyor ({1} içinde {0} başarısız)</Latency_Failed>
 		<Latency_Skipped>ölçülmedi (zaman sınırına ulaşıldı)</Latency_Skipped>
+		<Check_Local>Yerel ağ (Wi-Fi, yönlendirici)</Check_Local>
+		<Check_Internet>İnternet</Check_Internet>
+		<Check_Microsoft>Microsoft hizmetleri (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Şirket ağı</Check_Company>
+		<Check_Result>Bağlantı sonucu</Check_Result>
+		<Check_State_Ok>erişilebilir ({1} içinde {0})</Check_State_Ok>
+		<Check_State_Partial>kısmen erişilebilir ({1} içinde {0})</Check_State_Partial>
+		<Check_State_Fail>erişilemiyor ({1} içinde {0})</Check_State_Fail>
+		<Check_State_None>ölçülmedi</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi veya yönlendiriciniz yanıt vermiyor.</Verdict_LocalDown>
+		<Verdict_InternetDown>İnternete erişilemiyor.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>İnternet çalışıyor, ancak bu cihazın yönetimi için gereken Microsoft hizmetlerine erişilemiyor.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>İnternet çalışıyor, ancak şirket ağına erişilemiyor: VPN bağlantısını kontrol edin.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>İnternet çalışıyor, ancak şirket ağına erişilemiyor: bulunduğunuz yerdeki ağ bağlantısını kontrol edin.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Bağlantıların çoğu çalışıyor, ancak bazı hedeflere erişilemiyor.</Verdict_Partial>
+		<Verdict_AllOk>Her şeye erişilebiliyor.</Verdict_AllOk>
+		<Verdict_NoData>Hiçbir şey ölçülemedi.</Verdict_NoData>
 		<Collected_At>Toplanma zamanı</Collected_At>
 		<Error>Hata</Error>
 		<Yes>Evet</Yes>

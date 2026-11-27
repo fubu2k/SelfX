@@ -283,6 +283,23 @@ Description du problème :</Report_Mail_Body>
 		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} sur {4} perdus)</Latency_Value>
 		<Latency_Failed>inaccessible ({0} sur {1} en échec)</Latency_Failed>
 		<Latency_Skipped>non mesuré (délai atteint)</Latency_Skipped>
+		<Check_Local>Réseau local (Wi-Fi, routeur)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Services Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Réseau d'entreprise</Check_Company>
+		<Check_Result>Résultat de la connexion</Check_Result>
+		<Check_State_Ok>accessible ({0} sur {1})</Check_State_Ok>
+		<Check_State_Partial>partiellement accessible ({0} sur {1})</Check_State_Partial>
+		<Check_State_Fail>inaccessible ({0} sur {1})</Check_State_Fail>
+		<Check_State_None>non mesuré</Check_State_None>
+		<Verdict_LocalDown>Votre Wi-Fi ou votre routeur ne répond pas.</Verdict_LocalDown>
+		<Verdict_InternetDown>Internet est inaccessible.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Internet fonctionne, mais les services Microsoft pour la gestion de cet appareil sont inaccessibles.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Internet fonctionne, mais le réseau d'entreprise est inaccessible : vérifiez le VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Internet fonctionne, mais le réseau d'entreprise est inaccessible : vérifiez la connexion réseau sur votre site.</Verdict_CompanyIntranet>
+		<Verdict_Partial>La plupart des connexions fonctionnent, mais certaines cibles sont inaccessibles.</Verdict_Partial>
+		<Verdict_AllOk>Tout est accessible.</Verdict_AllOk>
+		<Verdict_NoData>Rien n'a pu être mesuré.</Verdict_NoData>
 		<Collected_At>Collecté le</Collected_At>
 		<Error>Erreur</Error>
 		<Yes>Oui</Yes>

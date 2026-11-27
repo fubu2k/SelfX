@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.3
+    Version : 3.1.5
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -33,6 +33,8 @@
     3.1.4    2026-11-27  fubu2k               -PackageKind (Full, FullSeparateConfig, ConfigOnly): the configuration package (Install.ps1, Detection.ps1, Config; MinCodeVersion;
                                               SelfX-Config-<version> names), the detection kind of the full package of a setup with a configuration
                                               package, and the instructions for both (Supersedence explained)
+    3.1.5    2026-11-27  fubu2k               Network targets: answers NetworkEnabled, NetworkMicrosoft, NetworkHostNames and NetworkTargets (kind netTarget), Set-SelfXNetworkTestConfig
+                                              writes Network_Test_Config.xml (settings and own targets next to the delivered Microsoft targets)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -111,6 +113,15 @@ function Get-WText {
 $script:WizardMaxLogoBytes = 2MB
 $script:MailPattern = '^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,}\z'
 $script:TagPattern = '^[A-Za-z0-9._ -]{1,64}\z'
+# Network targets (Network_Test_Config.xml): the same rules as Read-SelfXNetworkTestConfig in Sources\SystemInfo.ps1.
+$script:NetLabelPattern = '^[A-Za-z0-9._ -]{1,40}\z'
+$script:NetHostPattern = '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\z'
+$script:NetGroups = @('Local', 'Internet', 'Microsoft', 'Company')
+$script:NetKinds = @('Vpn', 'Intranet')
+$script:NetMaxTargets = 12
+# The Microsoft targets that Network_Test_Config.xml is delivered with (Test-SelfXPackageWizard.ps1 compares this with the file). Own targets: at most the rest.
+$script:NetDeliveredTargets = 4
+$script:NetMaxOwnTargets = $script:NetMaxTargets - $script:NetDeliveredTargets
 
 function Test-WizardText {
     param([string]$Value, [int]$MaxLength)
@@ -164,6 +175,31 @@ function ConvertTo-WizardValue {
         'choice' {
             foreach ($choice in $Choices) { if ($choice -ieq $text) { return $choice } }
             throw ('one of: ' + ($Choices -join ', '))
+        }
+        'netTarget' {
+            # One network target (object or hashtable with Label, Host, Port, Group, Kind). Port 0 or empty = name lookup only.
+            if ($null -eq $Value -or $Value -is [string]) { throw 'a target with Label, Host, Port, Group and Kind' }
+            $field = { param([string]$n) if ($Value -is [System.Collections.IDictionary]) { if ($Value.Contains($n)) { return "$($Value[$n])".Trim() } } elseif ($null -ne $Value.PSObject.Properties[$n]) { return "$($Value.$n)".Trim() }; return '' }
+            $label = & $field 'Label'; $hostName = & $field 'Host'; $portText = & $field 'Port'; $groupText = & $field 'Group'; $kindText = & $field 'Kind'
+            if ($label -notmatch $script:NetLabelPattern) { throw 'label: letters, digits . _ - and space, up to 40 characters' }
+            if ($hostName.Length -gt 253 -or $hostName -notmatch $script:NetHostPattern) { throw 'host: a DNS name or an IPv4 address, without https:// and without a port' }
+            $port = 0
+            if ($portText -ne '' -and -not ([int]::TryParse($portText, [ref]$port) -and $port -ge 0 -and $port -le 65535)) { throw 'port: a whole number from 1 to 65535 (0 or empty = name lookup only)' }
+            if ($hostName -match '^\d{1,3}(\.\d{1,3}){3}\z') {
+                $address = $null
+                if (-not [Net.IPAddress]::TryParse($hostName, [ref]$address)) { throw 'host: not a valid IPv4 address' }
+                if ($port -eq 0) { throw 'an IPv4 address needs a port (no name lookup is measured for it)' }
+            }
+            $group = $null
+            foreach ($candidate in $script:NetGroups) { if ($candidate -ieq $groupText) { $group = $candidate } }
+            if (-not $group) { throw ('group: one of ' + ($script:NetGroups -join ', ')) }
+            $kind = ''
+            if ($kindText -ne '' -and $kindText -ine 'None') {
+                foreach ($candidate in $script:NetKinds) { if ($candidate -ieq $kindText) { $kind = $candidate } }
+                if (-not $kind) { throw ('kind: one of ' + ($script:NetKinds -join ', ') + ' (or none)') }
+                if ($group -ne 'Company') { throw 'kind: only for the group Company' }
+            }
+            return [pscustomobject]@{ Label = $label; Host = $hostName; Port = $port; Group = $group; Kind = $kind }
         }
         'list' {
             # Comma separated list (or an array from an answer file) of group tags, OU names or device classes.
@@ -250,6 +286,62 @@ function Set-SelfXTicketConfig {
         $body = if (@($part[1]).Count) { $newline + (@($part[1]) -join $newline) + $newline + "`t" } else { $newline + "`t" }
         $replacement = "<$($part[0])>$body</$($part[0])>"
         $text = $text.Substring(0, $last.Index) + $replacement + $text.Substring($last.Index + $last.Length)
+    }
+    $check = New-Object System.Xml.XmlDocument
+    $check.XmlResolver = $null
+    $check.LoadXml($text)
+    Write-WizardFileText -Path $Path -Text $text -Bom $file.Bom
+}
+
+# At most NetMaxTargets targets in the file in total (Existing = targets already in the file) and no label twice (upper and lower case count as equal,
+# like in Read-SelfXNetworkTestConfig).
+function Test-WizardNetworkTargets {
+    param([object[]]$Targets = @(), [int]$Existing = 0, [string[]]$ExistingLabels = @())
+    if (@($Targets).Count + $Existing -gt $script:NetMaxTargets) { throw "At most $($script:NetMaxTargets) network targets are possible in total: $($script:NetMaxOwnTargets) own targets plus the delivered Microsoft targets." }
+    $labels = @{}
+    foreach ($label in $ExistingLabels) { $labels["$label".ToLowerInvariant()] = $true }
+    foreach ($target in @($Targets)) {
+        $key = "$($target.Label)".ToLowerInvariant()
+        if ($labels.ContainsKey($key)) { throw "The label '$($target.Label)' is used twice." }
+        $labels[$key] = $true
+    }
+}
+
+# Writes the settings Enabled, Microsoft and HostNames into Network_Test_Config.xml and adds the own targets after the delivered ones, without
+# touching the comments. The file keeps its delivered Microsoft targets (switch them off with -Microsoft $false).
+function Set-SelfXNetworkTestConfig {
+    param([Parameter(Mandatory = $true)][string]$Path, [bool]$Enabled = $true, [bool]$Microsoft = $true, [bool]$HostNames = $true, [object[]]$Targets = @())
+    $file = Read-WizardFileText -Path $Path
+    $text = $file.Text
+    $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $current = New-Object System.Xml.XmlDocument
+    $current.XmlResolver = $null
+    $current.LoadXml($text)
+    $existing = @($current.SelectNodes('/Network_Test_Config/Targets/Target'))
+    $checked = @($Targets | ForEach-Object { ConvertTo-WizardValue -Kind 'netTarget' -Value $_ })
+    Test-WizardNetworkTargets -Targets $checked -Existing $existing.Count -ExistingLabels @($existing | ForEach-Object { $_.GetAttribute('Label') })
+    $found = [regex]::Matches($text, '<Settings\s[^>]*/>')
+    if ($found.Count -lt 1) { throw 'The element Settings is missing in Network_Test_Config.xml.' }
+    $last = $found[$found.Count - 1]
+    $settings = $last.Value
+    foreach ($pair in @(@('Enabled', $Enabled), @('Microsoft', $Microsoft), @('HostNames', $HostNames))) {
+        $value = if ($pair[1]) { 'True' } else { 'False' }
+        $attribute = "\b$($pair[0])=`"[^`"]*`""
+        if ([regex]::IsMatch($settings, $attribute)) { $settings = [regex]::Replace($settings, $attribute, "$($pair[0])=`"$value`"") }
+        else { $settings = $settings -replace '\s*/>\z', " $($pair[0])=`"$value`" />" }
+    }
+    $text = $text.Substring(0, $last.Index) + $settings + $text.Substring($last.Index + $last.Length)
+    if ($checked.Count) {
+        $esc = { param($s) [System.Security.SecurityElement]::Escape($s) }
+        $lines = foreach ($target in $checked) {
+            $port = if ($target.Port -gt 0) { " Port=`"$($target.Port)`"" } else { '' }
+            $kind = if ($target.Kind) { " Kind=`"$($target.Kind)`"" } else { '' }
+            "    <Target Label=`"$(& $esc $target.Label)`" Host=`"$(& $esc $target.Host)`"$port Group=`"$($target.Group)`"$kind />"
+        }
+        $end = $text.LastIndexOf('</Targets>')
+        if ($end -lt 0) { throw 'The element Targets is missing in Network_Test_Config.xml.' }
+        $lineStart = $text.LastIndexOf("`n", $end) + 1
+        $text = $text.Substring(0, $lineStart) + ($lines -join $newline) + $newline + $text.Substring($lineStart)
     }
     $check = New-Object System.Xml.XmlDocument
     $check.XmlResolver = $null
@@ -447,6 +539,10 @@ function Get-WizardQuestions {
     & $add @{ Id = 'UseGroupTags'; Kind = 'bool'; When = { param($a) $a.TicketEnabled -and $a.MultiOrg }; Default = $true }
     & $add @{ Id = 'UseDeviceClass'; Kind = 'bool'; When = { param($a) $a.TicketEnabled -and $a.MultiOrg }; Default = $false }
     # The units are asked in a loop (see Read-WizardUnits).
+    & $add @{ Section = 'network'; Id = 'NetworkEnabled'; Kind = 'bool'; Default = $false }
+    & $add @{ Id = 'NetworkMicrosoft'; Kind = 'bool'; When = { param($a) $a.NetworkEnabled }; Default = $true }
+    & $add @{ Id = 'NetworkHostNames'; Kind = 'bool'; When = { param($a) $a.NetworkEnabled }; Default = $true }
+    # The own targets are asked in a loop (see Read-WizardNetworkTargets).
     & $add @{ Section = 'copilot'; Id = 'CopilotEnabled'; Kind = 'bool'; Default = $false }
     & $add @{ Id = 'CopilotAudience'; Kind = 'choice'; Choices = @('User', 'Admin'); When = { param($a) $a.CopilotEnabled }; Default = 'User' }
     & $add @{ Id = 'CopilotClearClipboard'; Kind = 'bool'; When = { param($a) $a.CopilotEnabled }; Default = $true }
@@ -474,6 +570,17 @@ function Get-WizardUnitQuestions {
     if ($Answers.UseGroupTags) { $q.Add(@{ Id = 'UnitGroupTags'; Kind = 'list'; Default = '' }) }
     if ($Answers.HybridJoin) { $q.Add(@{ Id = 'UnitOUs'; Kind = 'list'; Default = '' }) }
     if ($Answers.UseDeviceClass) { $q.Add(@{ Id = 'UnitCategories'; Kind = 'list'; Default = '' }) }
+    return , $q.ToArray()
+}
+
+# The questions of one own network target (asked in a loop, see Read-WizardNetworkTargets; the window shows the same fields).
+function Get-WizardTargetQuestions {
+    $q = New-Object System.Collections.Generic.List[hashtable]
+    $q.Add(@{ Id = 'TargetLabel'; Kind = 'text'; Max = 40; Required = $true; Default = '' })
+    $q.Add(@{ Id = 'TargetHost'; Kind = 'text'; Max = 253; Required = $true; Default = '' })
+    $q.Add(@{ Id = 'TargetPort'; Kind = 'int'; Min = 0; Max = 65535; Default = 443 })
+    $q.Add(@{ Id = 'TargetGroup'; Kind = 'choice'; Choices = @('Local', 'Internet', 'Microsoft', 'Company'); Default = 'Company' })
+    $q.Add(@{ Id = 'TargetKind'; Kind = 'choice'; Choices = @('None', 'Vpn', 'Intranet'); When = { param($a) $a.TargetGroup -eq 'Company' }; Default = 'Vpn' })
     return , $q.ToArray()
 }
 
@@ -569,6 +676,46 @@ function New-WizardUnit {
     }
 }
 
+# Own network targets: a loop of "target" questions. In an answer file they are the array "NetworkTargets" (absent = none).
+function Read-WizardNetworkTargets {
+    param([hashtable]$Answers, [hashtable]$Source)
+    $targets = New-Object System.Collections.Generic.List[object]
+    if (-not $script:WizardInteractive) {
+        $index = 0
+        foreach ($entry in @($Source.NetworkTargets)) {
+            if ($null -eq $entry) { continue }
+            $index++
+            try { $targets.Add((ConvertTo-WizardValue -Kind 'netTarget' -Value $entry)) }
+            catch { throw "Answer 'NetworkTargets' entry $index is not valid: $($_.Exception.Message)" }
+        }
+    } else {
+        $more = Get-WizardAnswer -Question @{ Id = 'TargetAdd'; Kind = 'bool'; Default = $false } -Answers $Answers -Source @{}
+        $index = 1
+        while ($more) {
+            Write-Host ''
+            Write-Host (Get-WText 'Target.header' @($index)) -ForegroundColor Cyan
+            while ($true) {
+                $target = @{}
+                foreach ($question in (Get-WizardTargetQuestions)) {
+                    if ($question.When -and -not (& $question.When $target)) { continue }
+                    $target[$question.Id] = (Get-WizardAnswer -Question $question -Answers $target -Source @{})
+                }
+                try {
+                    $candidate = ConvertTo-WizardValue -Kind 'netTarget' -Value ([pscustomobject]@{ Label = $target.TargetLabel; Host = $target.TargetHost; Port = $target.TargetPort; Group = $target.TargetGroup; Kind = $target.TargetKind })
+                    Test-WizardNetworkTargets -Targets (@($targets.ToArray()) + @($candidate)) -Existing $script:NetDeliveredTargets
+                    break
+                } catch { Write-Host (Get-WText 'invalid' @($_.Exception.Message)) -ForegroundColor Yellow }
+            }
+            $targets.Add($candidate)
+            $index++
+            if ($targets.Count -ge $script:NetMaxOwnTargets) { break }
+            $more = Get-WizardAnswer -Question @{ Id = 'TargetMore'; Kind = 'bool'; Default = $false } -Answers $Answers -Source @{}
+        }
+    }
+    Test-WizardNetworkTargets -Targets $targets.ToArray() -Existing $script:NetDeliveredTargets
+    return , $targets.ToArray()
+}
+
 # Collects all answers. Source = hashtable from an answer file (non-interactive) or $null (interactive).
 function Read-WizardAnswers {
     param([hashtable]$Source, [scriptblock]$SectionStart)
@@ -580,6 +727,13 @@ function Read-WizardAnswers {
         $answers[$question.Id] = Get-WizardAnswer -Question $question -Answers $answers -Source $Source
         # The units follow the last ticket question.
         if ($question.Id -eq 'UseDeviceClass') { $answers.Units = Read-WizardUnits -Answers $answers -Source $Source }
+        # The own network targets follow the last network question.
+        if ($question.Id -eq 'NetworkHostNames') { $answers.NetworkTargets = Read-WizardNetworkTargets -Answers $answers -Source $Source }
+    }
+    if (-not $answers.ContainsKey('NetworkTargets')) {
+        # Targets without the measurement switched on would be ignored silently: refuse them.
+        if ($Source -and @(@($Source.NetworkTargets) | Where-Object { $null -ne $_ }).Count) { throw "Answer 'NetworkTargets' needs 'NetworkEnabled' = true." }
+        $answers.NetworkTargets = @()
     }
     if ($answers.TicketEnabled -and -not $answers.MultiOrg) { $answers.Units = @() }
     if (-not $answers.ContainsKey('Units')) { $answers.Units = @() }
@@ -688,12 +842,19 @@ function Set-WizardPackageConfiguration {
     }
     Set-SelfXToolConfigValues -Path (Join-Path $sources 'Tool_Config.xml') -Values $values
     Set-SelfXTicketConfig -Path (Join-Path $sources 'Ticket_Config.xml') -Units @($Answers.Units)
+    # Without NetworkEnabled the delivered Network_Test_Config.xml stays as it is (measurements off).
+    if ($Answers.NetworkEnabled) {
+        Set-SelfXNetworkTestConfig -Path (Join-Path $sources 'Network_Test_Config.xml') -Enabled $true -Microsoft ([bool]$Answers.NetworkMicrosoft) -HostNames ([bool]$Answers.NetworkHostNames) -Targets @($Answers.NetworkTargets)
+    }
 }
 
 function Get-WizardSummary {
     param([hashtable]$A)
     $lines = New-Object System.Collections.Generic.List[string]
-    foreach ($key in ($A.Keys | Where-Object { $_ -ne 'Units' } | Sort-Object)) { $lines.Add(('  {0,-22} {1}' -f $key, (Format-WizardValue $A[$key]))) }
+    foreach ($key in ($A.Keys | Where-Object { $_ -ne 'Units' -and $_ -ne 'NetworkTargets' } | Sort-Object)) { $lines.Add(('  {0,-22} {1}' -f $key, (Format-WizardValue $A[$key]))) }
+    foreach ($target in @($A.NetworkTargets)) {
+        $lines.Add(('  Network target {0}: {1}{2}; group {3}{4}' -f $target.Label, $target.Host, $(if ($target.Port) { ':' + $target.Port } else { '' }), $target.Group, $(if ($target.Kind) { ' (' + $target.Kind + ')' } else { '' })))
+    }
     foreach ($unit in @($A.Units)) {
         $lines.Add(('  Unit {0}: {1} (Cc {2}); GroupTags: {3}; OUs: {4}; Classes: {5}' -f $unit.Id, $unit.Mail, $unit.Cc, (@($unit.GroupTags) -join ', '), (@($unit.OUs) -join ', '), (@($unit.Categories) -join ', ')))
     }
@@ -732,7 +893,7 @@ function ConvertTo-WizardAnswerSource {
 function Test-WizardAnswerSet {
     param([Parameter(Mandatory = $true)]$Answers)
     $source = ConvertTo-WizardAnswerSource -Answers $Answers
-    $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'WizardLanguage')
+    $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'NetworkTargets', 'WizardLanguage')
     foreach ($key in $source.Keys) { if ($known -notcontains $key) { throw "Unknown answer '$key'. The answers contain no password and no key." } }
     $previous = $script:WizardInteractive
     $script:WizardInteractive = $false
@@ -744,7 +905,8 @@ function Test-WizardAnswerSet {
 function Save-WizardAnswers {
     param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][hashtable]$Answers, [string]$Language = 'en')
     $saved = [ordered]@{ WizardLanguage = $Language }
-    foreach ($key in ($Answers.Keys | Where-Object { $_ -ne 'Units' } | Sort-Object)) { $saved[$key] = $Answers[$key] }
+    foreach ($key in ($Answers.Keys | Where-Object { $_ -ne 'Units' -and $_ -ne 'NetworkTargets' } | Sort-Object)) { $saved[$key] = $Answers[$key] }
+    $saved['NetworkTargets'] = @($Answers.NetworkTargets | ForEach-Object { [ordered]@{ Label = $_.Label; Host = $_.Host; Port = $_.Port; Group = $_.Group; Kind = $_.Kind } })
     $saved['Units'] = @($Answers.Units | ForEach-Object { [ordered]@{ UnitId = $_.Id; UnitMail = $_.Mail; UnitCc = $_.Cc; UnitGroupTags = @($_.GroupTags); UnitOUs = @($_.OUs); UnitCategories = @($_.Categories) } })
     [IO.File]::WriteAllText($Path, ($saved | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
 }

@@ -283,6 +283,23 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Latency_Value>{0} md (min. {1}, maks. {2}, {3} dari {4} hilang)</Latency_Value>
 		<Latency_Failed>tidak dapat dijangkau ({0} dari {1} gagal)</Latency_Failed>
 		<Latency_Skipped>tidak diukur (batas waktu tercapai)</Latency_Skipped>
+		<Check_Local>Jaringan lokal (Wi-Fi, router)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Layanan Microsoft (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Jaringan perusahaan</Check_Company>
+		<Check_Result>Hasil koneksi</Check_Result>
+		<Check_State_Ok>dapat dijangkau ({0} dari {1})</Check_State_Ok>
+		<Check_State_Partial>sebagian dapat dijangkau ({0} dari {1})</Check_State_Partial>
+		<Check_State_Fail>tidak dapat dijangkau ({0} dari {1})</Check_State_Fail>
+		<Check_State_None>tidak diukur</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi atau router Anda tidak merespons.</Verdict_LocalDown>
+		<Verdict_InternetDown>Internet tidak dapat dijangkau.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Internet berfungsi, tetapi layanan Microsoft untuk pengelolaan perangkat ini tidak dapat dijangkau.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Internet berfungsi, tetapi jaringan perusahaan tidak dapat dijangkau: periksa VPN.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Internet berfungsi, tetapi jaringan perusahaan tidak dapat dijangkau: periksa koneksi jaringan di lokasi Anda.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Sebagian besar koneksi berfungsi, tetapi beberapa target tidak dapat dijangkau.</Verdict_Partial>
+		<Verdict_AllOk>Semuanya dapat dijangkau.</Verdict_AllOk>
+		<Verdict_NoData>Tidak ada yang dapat diukur.</Verdict_NoData>
 		<Collected_At>Dikumpulkan pada</Collected_At>
 		<Error>Kesalahan</Error>
 		<Yes>Ya</Yes>

@@ -281,6 +281,26 @@
               </StackPanel>
             </StackPanel>
 
+            <StackPanel Name="Page_network" Visibility="Collapsed">
+              <StackPanel Name="Fields_network"/>
+              <StackPanel Name="TargetsPanel" Visibility="Collapsed" Margin="0,6,0,0">
+                <TextBlock Name="TargetsTitle" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Name="TargetsHint" Style="{StaticResource FieldHint}"/>
+                <ListBox Name="TargetList" Style="{StaticResource UnitList}"/>
+                <TextBlock Name="TargetsError" Style="{StaticResource FieldError}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,14">
+                  <Button Name="AddTargetButton" Style="{StaticResource BaseButton}"/>
+                  <Button Name="RemoveTargetButton" Style="{StaticResource BaseButton}" Margin="8,0,0,0"/>
+                </StackPanel>
+                <Border Name="TargetEditor" Style="{StaticResource Card}" Padding="18,16" Visibility="Collapsed">
+                  <StackPanel>
+                    <TextBlock Name="TargetEditorTitle" Style="{StaticResource SectionTitle}"/>
+                    <StackPanel Name="Fields_target"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </StackPanel>
+
             <StackPanel Name="Page_more" Visibility="Collapsed">
               <StackPanel Name="Fields_more"/>
             </StackPanel>

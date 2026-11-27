@@ -283,6 +283,23 @@
 		<Latency_Value>{0} میلی‌ثانیه (کمینه {1}، بیشینه {2}، {3} از {4} از دست رفت)</Latency_Value>
 		<Latency_Failed>در دسترس نیست ({0} از {1} ناموفق)</Latency_Failed>
 		<Latency_Skipped>اندازه‌گیری نشد (به محدودیت زمانی رسید)</Latency_Skipped>
+		<Check_Local>شبکه محلی (Wi-Fi، مسیریاب)</Check_Local>
+		<Check_Internet>اینترنت</Check_Internet>
+		<Check_Microsoft>سرویس‌های Microsoft (Intune، Entra ID)</Check_Microsoft>
+		<Check_Company>شبکه شرکت</Check_Company>
+		<Check_Result>نتیجه اتصال</Check_Result>
+		<Check_State_Ok>در دسترس ({0} از {1})</Check_State_Ok>
+		<Check_State_Partial>تا حدی در دسترس ({0} از {1})</Check_State_Partial>
+		<Check_State_Fail>در دسترس نیست ({0} از {1})</Check_State_Fail>
+		<Check_State_None>اندازه‌گیری نشد</Check_State_None>
+		<Verdict_LocalDown>Wi-Fi یا مسیریاب شما پاسخ نمی‌دهد.</Verdict_LocalDown>
+		<Verdict_InternetDown>دسترسی به اینترنت ممکن نیست.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>اینترنت کار می‌کند، اما سرویس‌های Microsoft برای مدیریت این دستگاه در دسترس نیستند.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>اینترنت کار می‌کند، اما شبکه شرکت در دسترس نیست: VPN را بررسی کنید.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>اینترنت کار می‌کند، اما شبکه شرکت در دسترس نیست: اتصال شبکه را در محل خود بررسی کنید.</Verdict_CompanyIntranet>
+		<Verdict_Partial>بیشتر اتصال‌ها کار می‌کنند، اما برخی مقصدها در دسترس نیستند.</Verdict_Partial>
+		<Verdict_AllOk>همه‌چیز در دسترس است.</Verdict_AllOk>
+		<Verdict_NoData>هیچ چیزی اندازه‌گیری نشد.</Verdict_NoData>
 		<Collected_At>جمع آوری شده در</Collected_At>
 		<Error>خطا</Error>
 		<Yes>بله</Yes>

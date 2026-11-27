@@ -47,7 +47,7 @@ SelfX wird über XML-Dateien im Ordner `SelfX Service\Sources` eingestellt.
 | `Tool_Config.xml` | Allgemeine Einstellungen, Kontakte, Branding, Funktionen ein oder aus |
 | `Issues_List.xml` | Aktionen für die Fehlerbehebung |
 | `Health_Config.xml` | Gerätestatus: Prüfungen, Reparaturen, Hintergrundprüfung |
-| `Network_Test_Config.xml` | Netzwerk-Messungen (optional, standardmäßig aus) |
+| `Network_Test_Config.xml` | Verbindungstest und Netzwerk-Messungen (optional, standardmäßig aus) |
 | `Ticket_Config.xml` | Zuordnung von Tickets zu Ihren IT-Einheiten (optional) |
 | `Languages\<Sprache>.xml` | Alle Texte, je Sprache |
 | `Texts\<Sprache>.xml` | Optional: ersetzt einzelne Texte einer mitgelieferten Sprache ([Text-Überschreibungen](#einzelne-texte-ändern-text-überschreibungen)) |
@@ -442,19 +442,27 @@ unbekannt.
 
 ## Netzwerk-Messungen
 
-Optional und standardmäßig aus. Die Datei `Network_Test_Config.xml` zeigt auf der Seite
-*Systeminformationen* zusätzliche Zeilen im Bereich Netzwerk:
+Optional und standardmäßig aus. Die Datei `Network_Test_Config.xml` fügt auf der Seite *Systeminformationen*
+im Bereich Netzwerk den **Verbindungstest** hinzu. Er beantwortet die Frage jedes Support-Anrufs: Liegt es am
+WLAN oder Router, am Internet, an den Microsoft-Diensten für die Geräteverwaltung oder am Firmennetz (VPN)?
 
-- Antwortzeit zum Standardgateway,
-- Dauer einer Namensauflösung (DNS),
-- Dauer eines Verbindungsaufbaus (TCP).
+- **Vier Zeilen** mit Ampelsymbol: *Lokales Netzwerk (WLAN, Router)*, *Internet*, *Microsoft-Dienste (Intune,
+  Entra ID)*, *Firmennetz*. Jede zeigt *erreichbar*, *teilweise erreichbar*, *nicht erreichbar* oder
+  *nicht gemessen*.
+- **Ein Satz**, der sagt, was vermutlich nicht stimmt, zum Beispiel „Das Internet ist nicht erreichbar.“, „Das
+  Internet funktioniert, das Firmennetz ist nicht erreichbar: VPN prüfen.“ oder „Alles ist erreichbar.“.
+- **Einzelwerte** je Ziel: Dauer der Namensauflösung und Zeit bis zum Aufbau einer TCP-Verbindung. Das
+  Standardgateway wird mit einem Ping gemessen.
+
+Die Zeilen und der Satz gehören zu *Kopieren*, *Exportieren*, dem Support-Bericht und dem Ticket.
 
 ```xml
 <Network_Test_Config>
-  <Settings Enabled="True" Gateway="True" Samples="3" TimeoutMs="2000" />
+  <Settings Enabled="True" Gateway="True" Microsoft="True" HostNames="True" Samples="3" TimeoutMs="2000" />
   <Targets>
-    <Target Label="Intranet" Host="intranet.example.org" Port="443" />
-    <Target Label="Internet" Host="www.example.org" Port="443" />
+    <Target Label="Intune-Dienst" Host="manage.microsoft.com" Port="443" Group="Microsoft" />
+    <Target Label="VPN-Gateway" Host="vpn.example.org" Port="443" Group="Company" Kind="Vpn" />
+    <Target Label="Dateiserver" Host="files.example.org" Port="445" Group="Company" Kind="Intranet" />
   </Targets>
 </Network_Test_Config>
 ```
@@ -462,22 +470,48 @@ Optional und standardmäßig aus. Die Datei `Network_Test_Config.xml` zeigt auf 
 | Einstellung | Bedeutung |
 |---|---|
 | `Enabled` | `True` schaltet die Messungen ein. Standard: `False`. |
-| `Gateway` | `True`: Antwortzeit zum Gateway messen. |
+| `Gateway` | `True`: Antwortzeit zum Standardgateway messen (Gruppe *Local*). |
+| `Microsoft` | `True` (Standard): die Ziele der Gruppe *Microsoft* messen. `False` lässt die Gruppe weg. |
+| `HostNames` | `True` (Standard): die Zeilen zeigen Hostname und Port. `False`: nur das Ergebnis wird gezeigt, damit interne Hostnamen nicht in *Kopieren*, *Exportieren* und im Ticket stehen. |
 | `Samples` | Messungen je Wert (1 bis 5, Standard 3). |
 | `TimeoutMs` | Wartezeit je Messung (200 bis 5000 ms, Standard 2000). |
-| `Target` | Bis zu 5 Ziele. `Label` ist der Anzeigename. `Host` ist ein Name oder eine IPv4-Adresse. `Port` ist optional. |
 
-**Ziele wählen:** Legen Sie fest, was gemessen wird. Ein **interner Name** zeigt die Qualität
-im Firmennetz. Ein **Name aus dem Internet** zeigt, wie ein mobiles Gerät ohne VPN arbeitet.
-Nehmen Sie dafür eine Adresse, die Ihre Organisation betreibt.
+| Attribut eines Ziels | Bedeutung |
+|---|---|
+| `Label` | Anzeigename (Buchstaben, Ziffern, `.`, `_`, `-`, Leerzeichen; bis 40 Zeichen; keine Bezeichnung doppelt). |
+| `Host` | Ein DNS-Name oder eine IPv4-Adresse, ohne `https://`, ohne Pfad, ohne Port. |
+| `Port` | Optional (1 bis 65535). Mit Port wird auch die Zeit bis zum Aufbau einer TCP-Verbindung gemessen. Eine IPv4-Adresse braucht einen Port. |
+| `Group` | Zu welcher Zeile das Ziel gehört: `Local` (Drucker, lokales Gerät), `Internet` (öffentliche Adresse), `Microsoft` (Microsoft-Dienst) oder `Company` (Firmennetz). Ohne Gruppe wird das Ziel gemessen und angezeigt, zählt aber nicht für das Ergebnis. |
+| `Kind` | Nur mit `Group="Company"`: `Vpn` (über VPN erreichbar: der Hinweis lautet „VPN prüfen“) oder `Intranet` (am Standort erreichbar: der Hinweis bittet, die Netzwerkverbindung am Standort zu prüfen). |
 
-**Sicherheit:** Ziele kommen nur aus der Datei, die nur Administratoren ändern können. `Host`
-wird streng geprüft: nur Buchstaben, Ziffern, Bindestrich und Punkte. Das Gerät sendet nur
-eine Namensabfrage, Ping-Pakete zum Gateway und den Verbindungsaufbau zu den Zielen. Es werden
-keine Daten übertragen und kein Durchsatz gemessen.
+Es werden höchstens **12 Ziele** gelesen. Die Datei wird mit vier Zielen der Gruppe *Microsoft* (TCP 443)
+ausgeliefert: `manage.microsoft.com` (Intune), `login.microsoftonline.com` und `graph.windows.net` (Entra-ID-
+Anmeldung und -Verzeichnis) sowie `enterpriseregistration.windows.net` (Geräteregistrierung). Quelle ist der
+Microsoft-Learn-Artikel *Network endpoints for Microsoft Intune* (geprüft am 27.11.2026); Microsoft ändert die
+Liste von Zeit zu Zeit, vergleichen Sie sie, bevor Sie sich darauf verlassen. Die Gruppe schalten Sie mit
+`Microsoft="False"` ab.
 
-**Vor der Verteilung prüfen:** `tools\Test-SelfXNetworkMeasure.ps1` zeigt die Einstellungen und
-ungültige Einträge. Mit `-Run` führt es die Messungen einmal auf dem aktuellen Gerät aus.
+**Wie der Satz gewählt wird:** Der Router antwortet nicht und das Internet ist nicht erreichbar: *WLAN oder
+Router*. Das Internet ist nicht erreichbar: *Internet*. Das Internet funktioniert, die Microsoft-Dienste sind nicht
+erreichbar: *Microsoft-Dienste* (Firewall oder Proxy prüfen). Das Internet funktioniert, das Firmennetz ist nicht
+erreichbar: *VPN prüfen* (`Kind="Vpn"`) oder *Netzwerkverbindung am Standort prüfen* (`Kind="Intranet"`). Manche
+Firewalls verwerfen Ping: Ein Gateway, das nicht antwortet, während das Internet funktioniert, wird **nicht** als
+„Router ausgefallen“ gemeldet. Der Test *Internet erreichbar* der Systeminformationen zählt als ein Internet-Ziel.
+
+**Ziele wählen:** Sie bestimmen, was gemessen wird. Ein **Firmenname** zeigt, ob VPN oder Standort funktionieren.
+Nehmen Sie nur Adressen, die Ihre Organisation betreibt oder die Microsoft dokumentiert. Benutzer können Ziele
+weder hinzufügen noch ändern.
+
+**Sicherheit:** Die Ziele stammen nur aus der Datei, die nur Administratoren ändern können. `Host`, `Port`,
+`Group` und `Kind` werden streng geprüft. Das Gerät sendet nur eine Namensabfrage, Ping-Pakete an das Gateway und
+Verbindungsversuche zu den Zielen (sofort wieder geschlossen). Es werden keine Daten übertragen und kein Durchsatz
+gemessen. Der gesamte Lauf endet nach **15 Sekunden**; Ziele, die bis dahin nicht erreicht wurden, erscheinen als
+*nicht gemessen*. Die Datei kann jeder Benutzer auf dem Gerät lesen: keine geheimen Namen eintragen. Der
+Assistent schreibt sie von der Seite *Verbindungstest* (siehe [Paketassistent](Assistent.md)).
+
+**Vor dem Verteilen prüfen:** `tools\Test-SelfXNetworkMeasure.ps1` zeigt Einstellungen, Ziele mit Gruppe und Art
+und ungültige Einträge. Mit `-Run` führt es die Messungen einmal auf dem aktuellen Gerät aus und gibt die vier
+Zeilen und den Satz aus.
 
 ## Ticket per E-Mail
 

@@ -324,6 +324,23 @@ Die Daten stammen vom Diagnose-Werkzeug SelfX. Namen und Adressen sind absichtli
 		<Latency_Value>{0} ms (min. {1}, max. {2}, {3} von {4} verloren)</Latency_Value>
 		<Latency_Failed>nicht erreichbar ({0} von {1} fehlgeschlagen)</Latency_Failed>
 		<Latency_Skipped>nicht gemessen (Zeitlimit erreicht)</Latency_Skipped>
+		<Check_Local>Lokales Netzwerk (WLAN, Router)</Check_Local>
+		<Check_Internet>Internet</Check_Internet>
+		<Check_Microsoft>Microsoft-Dienste (Intune, Entra ID)</Check_Microsoft>
+		<Check_Company>Firmennetz</Check_Company>
+		<Check_Result>Ergebnis der Verbindungsprüfung</Check_Result>
+		<Check_State_Ok>erreichbar ({0} von {1})</Check_State_Ok>
+		<Check_State_Partial>teilweise erreichbar ({0} von {1})</Check_State_Partial>
+		<Check_State_Fail>nicht erreichbar ({0} von {1})</Check_State_Fail>
+		<Check_State_None>nicht gemessen</Check_State_None>
+		<Verdict_LocalDown>Ihr WLAN oder Router antwortet nicht.</Verdict_LocalDown>
+		<Verdict_InternetDown>Das Internet ist nicht erreichbar.</Verdict_InternetDown>
+		<Verdict_MicrosoftDown>Das Internet funktioniert, aber die Microsoft-Dienste zur Verwaltung dieses Geräts sind nicht erreichbar.</Verdict_MicrosoftDown>
+		<Verdict_CompanyVpn>Das Internet funktioniert, aber das Firmennetz ist nicht erreichbar: Prüfen Sie die VPN-Verbindung.</Verdict_CompanyVpn>
+		<Verdict_CompanyIntranet>Das Internet funktioniert, aber das Firmennetz ist nicht erreichbar: Prüfen Sie die Netzwerkverbindung an Ihrem Standort.</Verdict_CompanyIntranet>
+		<Verdict_Partial>Die meisten Verbindungen funktionieren, einige Ziele sind aber nicht erreichbar.</Verdict_Partial>
+		<Verdict_AllOk>Alles ist erreichbar.</Verdict_AllOk>
+		<Verdict_NoData>Es konnte nichts gemessen werden.</Verdict_NoData>
 		<Collected_At>Erfasst am</Collected_At>
 		<Error>Fehler</Error>
 		<Yes>Ja</Yes>

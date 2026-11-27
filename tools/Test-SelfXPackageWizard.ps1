@@ -91,6 +91,16 @@ function New-FakePayload {
     return $payload
 }
 
+# Reads Network_Test_Config.xml without DTD (SystemInfo.ps1 is PowerShell 7 only; this test also runs in Windows PowerShell 5.1).
+function Read-NetTestFile {
+    param([string]$Path)
+    $xml = New-Object Xml.XmlDocument; $xml.XmlResolver = $null; $xml.Load($Path)
+    $settings = $xml.SelectSingleNode('/Network_Test_Config/Settings')
+    return [pscustomobject]@{
+        Enabled = ($settings.GetAttribute('Enabled') -eq 'True'); Microsoft = ($settings.GetAttribute('Microsoft') -eq 'True'); HostNames = ($settings.GetAttribute('HostNames') -eq 'True')
+        Targets = @($xml.SelectNodes('/Network_Test_Config/Targets/Target') | ForEach-Object { [pscustomobject]@{ Label = $_.GetAttribute('Label'); Host = $_.GetAttribute('Host'); Group = $_.GetAttribute('Group'); Kind = $_.GetAttribute('Kind') } })
+    }
+}
 function Get-TreeDigest {
     param([string]$Folder)
     $root = (Get-Item -LiteralPath $Folder).FullName.TrimEnd('\')
@@ -140,6 +150,37 @@ try {
     Assert-Throws { ConvertTo-WizardValue -Kind 'unitid' -Value '..\x' } 'unit id rejects path characters'
     Assert-Throws { ConvertTo-WizardValue -Kind 'int' -Value '0' -Min 1 -Max 3650 } 'int below minimum'
     Assert-Throws { ConvertTo-WizardValue -Kind 'int' -Value '99999' -Min 1 -Max 3650 } 'int above maximum'
+# Network targets (kind netTarget)
+$shippedNet = New-Object Xml.XmlDocument; $shippedNet.XmlResolver = $null; $shippedNet.Load((Join-Path $RepositoryRoot 'SelfX Service\Sources\Network_Test_Config.xml'))
+Assert (@($shippedNet.SelectNodes('/Network_Test_Config/Targets/Target')).Count -eq $script:NetDeliveredTargets) 'the number of delivered network targets in the wizard matches Network_Test_Config.xml'
+$netOk = ConvertTo-WizardValue -Kind 'netTarget' -Value ([pscustomobject]@{ Label = 'VPN gateway'; Host = 'vpn.contoso.example'; Port = '443'; Group = 'company'; Kind = 'vpn' })
+Assert ($netOk.Label -eq 'VPN gateway' -and $netOk.Host -eq 'vpn.contoso.example' -and $netOk.Port -eq 443 -and $netOk.Group -eq 'Company' -and $netOk.Kind -eq 'Vpn') 'netTarget: values are normalized (group and kind spelling)'
+$netBase = @{ Label = 'T'; Host = 'host.contoso.example'; Port = 443; Group = 'Company'; Kind = '' }
+function New-NetTarget { param([hashtable]$Change) $copy = @{} + $netBase; foreach ($k in $Change.Keys) { $copy[$k] = $Change[$k] }; return $copy }
+Assert ((ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Port = 0 })).Port -eq 0) 'netTarget: port 0 means name lookup only'
+Assert ((ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = '192.168.1.20'; Port = 9100; Group = 'Local' })).Host -eq '192.168.1.20') 'netTarget: IPv4 address with a port'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = 'https://host.contoso.example' }) } 'netTarget rejects a scheme in the host'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = 'host.contoso.example/path' }) } 'netTarget rejects a path in the host'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = 'host.contoso.example:443' }) } 'netTarget rejects a port in the host'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = '\\server\share' }) } 'netTarget rejects a UNC path'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = '' }) } 'netTarget rejects an empty host'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = '300.1.1.1'; Port = 443 }) } 'netTarget rejects an invalid IPv4 address'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Host = '192.168.1.20'; Port = 0 }) } 'netTarget: an IPv4 address without a port is refused'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Port = 65536 }) } 'netTarget rejects port 65536'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Port = -1 }) } 'netTarget rejects a negative port'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Port = 'abc' }) } 'netTarget rejects a port that is no number'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Group = 'Everyone' }) } 'netTarget rejects an unknown group'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Group = '' }) } 'netTarget rejects an empty group'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Kind = 'Wifi' }) } 'netTarget rejects an unknown kind'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Group = 'Internet'; Kind = 'Vpn' }) } 'netTarget: a kind needs the group Company'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Label = '' }) } 'netTarget rejects an empty label'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Label = '<script>' }) } 'netTarget rejects markup in the label'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value (New-NetTarget @{ Label = ('x' * 41) }) } 'netTarget rejects a label of 41 characters'
+Assert-Throws { ConvertTo-WizardValue -Kind 'netTarget' -Value 'vpn.contoso.example' } 'netTarget rejects a plain text'
+Assert-Throws { Test-WizardNetworkTargets -Targets @(1..13 | ForEach-Object { [pscustomobject]@{ Label = "t$_" } }) } 'network targets: 13 targets are refused'
+Assert-Throws { Test-WizardNetworkTargets -Targets @(1..9 | ForEach-Object { [pscustomobject]@{ Label = "t$_" } }) -Existing 4 } 'network targets: the delivered targets count too (9 + 4)'
+Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 'VPN' }, [pscustomobject]@{ Label = 'vpn' }) } 'network targets: a label twice (upper and lower case count as equal) is refused'
+Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 'Intune service' }) -ExistingLabels @('intune service') } 'network targets: a label of the delivered targets is refused'
     Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Everything' -Choices @('Enforce', 'Audit') } 'choice rejects unknown'
     Assert ((ConvertTo-WizardValue -Kind 'choice' -Value 'audit' -Choices @('Enforce', 'Audit')) -eq 'Audit') 'choice case insensitive'
     Assert-Throws { ConvertTo-WizardValue -Kind 'text' -Value "a`r`nb" -Max 40 } 'text rejects line breaks'
@@ -179,6 +220,11 @@ try {
         CopilotEnabled = $true; CopilotAudience = 'User'; CopilotClearClipboard = $true
         WikiEnabled = $true; WikiUrl = 'https://wiki.contoso.example/start'; WikiName = 'Contoso <Wiki>'
         TrayIcon = $true; ShortcutDesktop = $false; ShortcutStartMenu = $true; Expert = $false
+        NetworkEnabled = $true; NetworkMicrosoft = $true; NetworkHostNames = $false
+        NetworkTargets = @(
+            [ordered]@{ Label = 'VPN gateway'; Host = 'vpn.contoso.example'; Port = 443; Group = 'Company'; Kind = 'Vpn' },
+            [ordered]@{ Label = 'File server'; Host = 'files.contoso.example'; Port = 445; Group = 'Company'; Kind = 'Intranet' }
+        )
     }
     function Invoke-Wizard {
         param([hashtable]$Answers, [string]$Folder, [switch]$AsJson)
@@ -207,6 +253,11 @@ try {
 
     $ticket = Read-SelfXTicketConfig -Path (Join-Path $out 'package\Config\Ticket_Config.xml')
     Assert ($ticket.Errors.Count -eq 0 -and @($ticket.Units.Keys).Count -eq 2 -and @($ticket.Rules).Count -eq 3) 'Ticket_Config: no errors, 2 units, 3 rules'
+    $netFile = Join-Path $out 'package\Config\Network_Test_Config.xml'
+    $net = Read-NetTestFile -Path $netFile
+    Assert ($net.Enabled -and $net.Microsoft -and -not $net.HostNames) 'Network_Test_Config: measurement on, Microsoft targets on, host names off'
+    Assert (@($net.Targets | Where-Object { $_.Group -eq 'Microsoft' }).Count -eq 4 -and @($net.Targets | Where-Object { $_.Group -eq 'Company' -and $_.Kind -eq 'Vpn' -and $_.Host -eq 'vpn.contoso.example' }).Count -eq 1 -and $net.Targets.Count -eq 6) 'Network_Test_Config: the four delivered Microsoft targets and the two own targets'
+    Assert ((Get-Content -LiteralPath $netFile -Raw) -match '(?s)<!--.*Network endpoints for Microsoft Intune') 'Network_Test_Config: the comments of the delivered file stay'
     $r1 = Resolve-SelfXTicketUnit -Config $ticket -GroupTag 'DE-IT1-BER' -Category '' -OU ''
     $r2 = Resolve-SelfXTicketUnit -Config $ticket -GroupTag '' -Category '' -OU 'OU=Berlin,DC=contoso,DC=example'
     $r3 = Resolve-SelfXTicketUnit -Config $ticket -GroupTag '' -Category 'Tablet' -OU ''
@@ -273,6 +324,39 @@ try {
     $bad = [ordered]@{} ; foreach ($key in $answers.Keys) { $bad[$key] = $answers[$key] }
     $bad.Units = @($answers.Units[0], $answers.Units[0])
     Assert ((Invoke-Wizard -Answers $bad -Folder (Join-Path $work 'bad4')).Exit -eq 1) 'duplicate unit fails'
+    $netCases = [ordered]@{
+        'a scheme in the host'  = @{ Label = 'X'; Host = 'https://x.contoso.example'; Port = 443; Group = 'Company'; Kind = 'Vpn' }
+        'a path in the host'    = @{ Label = 'X'; Host = 'x.contoso.example/a'; Port = 443; Group = 'Company'; Kind = 'Vpn' }
+        'port 0 for an address' = @{ Label = 'X'; Host = '10.0.0.1'; Port = 0; Group = 'Company'; Kind = 'Vpn' }
+        'port 65536'            = @{ Label = 'X'; Host = 'x.contoso.example'; Port = 65536; Group = 'Company'; Kind = 'Vpn' }
+        'an unknown group'      = @{ Label = 'X'; Host = 'x.contoso.example'; Port = 443; Group = 'Everyone'; Kind = '' }
+        'a kind outside Company' = @{ Label = 'X'; Host = 'x.contoso.example'; Port = 443; Group = 'Internet'; Kind = 'Vpn' }
+    }
+    $netIndex = 0
+    foreach ($case in $netCases.Keys) {
+        $netIndex++
+        $bad = [ordered]@{} ; foreach ($key in $answers.Keys) { $bad[$key] = $answers[$key] }
+        $bad.NetworkTargets = @($netCases[$case])
+        Assert ((Invoke-Wizard -Answers $bad -Folder (Join-Path $work "badnet$netIndex")).Exit -eq 1) "network target with $case fails"
+    }
+    $bad = [ordered]@{} ; foreach ($key in $answers.Keys) { $bad[$key] = $answers[$key] }
+    $bad.NetworkTargets = @(1..13 | ForEach-Object { @{ Label = "T$_"; Host = "h$_.contoso.example"; Port = 443; Group = 'Company'; Kind = 'Vpn' } })
+    Assert ((Invoke-Wizard -Answers $bad -Folder (Join-Path $work 'badnet13')).Exit -eq 1) 'network targets: 13 own targets fail'
+    $bad = [ordered]@{} ; foreach ($key in $answers.Keys) { $bad[$key] = $answers[$key] }
+    $bad.NetworkTargets = @(1..9 | ForEach-Object { @{ Label = "T$_"; Host = "h$_.contoso.example"; Port = 443; Group = 'Company'; Kind = 'Vpn' } })
+    Assert ((Invoke-Wizard -Answers $bad -Folder (Join-Path $work 'badnet9')).Exit -eq 1) 'network targets: 9 own targets plus the 4 delivered ones fail (limit 12 in the file)'
+    $bad = [ordered]@{} ; foreach ($key in $answers.Keys) { $bad[$key] = $answers[$key] }
+    $bad.NetworkEnabled = $false
+    $bad.Remove('NetworkMicrosoft'); $bad.Remove('NetworkHostNames')
+    Assert ((Invoke-Wizard -Answers $bad -Folder (Join-Path $work 'badnetoff')).Exit -eq 1) 'network targets without the switched-on measurement are refused (not ignored)'
+    $bad = [ordered]@{} ; foreach ($key in $answers.Keys) { $bad[$key] = $answers[$key] }
+    $bad.NetworkTargets = @(@{ Label = 'Same'; Host = 'a.contoso.example'; Port = 443; Group = 'Company'; Kind = 'Vpn' }, @{ Label = 'same'; Host = 'b.contoso.example'; Port = 443; Group = 'Company'; Kind = 'Vpn' })
+    Assert ((Invoke-Wizard -Answers $bad -Folder (Join-Path $work 'badnetdup')).Exit -eq 1) 'network targets: a label twice fails'
+    $off = [ordered]@{} ; foreach ($key in $answers.Keys) { $off[$key] = $answers[$key] }
+    $off.NetworkEnabled = $false; $off.Remove('NetworkMicrosoft'); $off.Remove('NetworkHostNames'); $off.Remove('NetworkTargets')
+    $offRun = Invoke-Wizard -Answers $off -Folder (Join-Path $work 'netoff')
+    $offNet = Read-NetTestFile -Path (Join-Path $work 'netoff\package\Config\Network_Test_Config.xml')
+    Assert ($offRun.Exit -eq 0 -and -not $offNet.Enabled -and $offNet.Targets.Count -eq 4) 'measurement off: the delivered Network_Test_Config.xml stays as it is'
     $bad = [ordered]@{} ; foreach ($key in $answers.Keys) { $bad[$key] = $answers[$key] }
     $bad.LogoPath = (Join-Path $work 'logo.exe'); [IO.File]::WriteAllText($bad.LogoPath, 'x')
     Assert ((Invoke-Wizard -Answers $bad -Folder (Join-Path $work 'bad5')).Exit -eq 1) 'logo with another extension fails'
@@ -372,7 +456,7 @@ try {
     $answersJson = Get-Content -LiteralPath (Join-Path $finalOut 'selfx-answers.json') -Raw
     Assert ($answersJson -notmatch '(?i)password|pfx|secret|privatekey|thumbprint') 'selfx-answers.json has no password, key or certificate'
     $savedKeys = @((ConvertFrom-Json $answersJson).PSObject.Properties.Name)
-    $allowedKeys = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'WizardLanguage')
+    $allowedKeys = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'NetworkTargets', 'WizardLanguage')
     Assert (@($savedKeys | Where-Object { $allowedKeys -notcontains $_ }).Count -eq 0) 'selfx-answers.json has only known answers'
 
     # Second run, same input, same output folder: SelfX.Code.json unchanged, the earlier result is replaced.
