@@ -273,7 +273,8 @@ the [changelog](../CHANGELOG.en.md).
 
 ## Uninstall
 
-`Uninstall.ps1` removes the service, `%ProgramFiles%\SelfX`, the shortcuts, the entry under Apps
+`Uninstall.ps1` removes the service, `%ProgramFiles%\SelfX` (with `App` and `Config`, and also an
+installation in the old layout of 3.0.x), the shortcuts, the entry under Apps
 & features, the autostart of the status icon, the status cache and the reports. Open SelfX
 windows and status icons are closed first. If another program keeps a file open, the uninstaller
 tries again for up to 90 seconds.
@@ -386,12 +387,15 @@ in `Bin` (SHA256 manifest) and the file list. If something does not match, it en
 code 1 and the existing installation stays unchanged. Then:
 
 1. It stops and removes an existing `SelfXService`.
-2. It empties `%ProgramFiles%\SelfX` (the folder itself stays) and copies `Sources` and
-   `Uninstall.ps1` into it. Users may only read and run there; SYSTEM and administrators have
-   full control.
+2. It empties `%ProgramFiles%\SelfX` (the folder itself stays) and creates two folders in it:
+   `App` (code: programs, libraries, scripts and language files of the project, `Uninstall.ps1`,
+   `SelfX.Code.json`) and `Config` (configuration: the settings files, `Branding`, your own
+   scripts and language files, `SelfX.Config.json`). Users may only read and run there; SYSTEM
+   and administrators have full control (the same rights as before).
 3. It installs `SelfXService.exe` (the service) and `SelfX.exe` (a small starter without a
-   console window that starts SelfX or the status icon with a hidden PowerShell 7). It checks
-   the installed files against the list once more.
+   console window that starts SelfX or the status icon with a hidden PowerShell 7) into `App`.
+   It checks the installed files against both lists once more; besides `App` and `Config`
+   nothing may be left in `%ProgramFiles%\SelfX`.
 4. It registers and starts the service `SelfXService` (LocalSystem, automatic start, restart
    after a failure) and limits its rights.
 5. It creates shortcuts on the public desktop and in the Start menu and an entry under Apps &
@@ -402,6 +406,15 @@ code 1 and the existing installation stays unchanged. Then:
 
 An update does not fail when a user has SelfX open: the installer empties the folder instead of
 deleting it and retries locked files for 20 seconds.
+
+**Update from version 3.0.x (old layout).** Up to 3.0.x all files were directly in
+`%ProgramFiles%\SelfX`. From 3.1.0 on the installer first removes that content completely and
+then installs `App` and `Config`; there is no mixed state. An empty old folder that a running
+program still uses as working folder may remain until the next sign-out; a file of the old
+layout next to `App` and `Config` stops the installation (exit code 1). `Detection.ps1` of 3.1.0
+does not detect the old layout, so Intune installs the update. The package itself has the
+folders `App` and `Config` instead of `Sources`; build it with `tools\New-SelfXIntuneWin.ps1`
+(the repository keeps the folder `Sources`).
 
 ### Logs
 

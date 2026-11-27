@@ -35,8 +35,10 @@ selbst steht in der [Installationsanleitung](Installation.md).
 SelfX wird über XML-Dateien im Ordner `SelfX Service\Sources` eingestellt.
 
 - Sie ändern die Dateien **im Paket, vor der Installation**.
-- Nach der Installation liegen sie in `%ProgramFiles%\SelfX`. Nur Administratoren können
-  sie dort ändern.
+- Nach der Installation liegen sie in `%ProgramFiles%\SelfX\Config` (der Code liegt in
+  `%ProgramFiles%\SelfX\App`). Nur Administratoren können sie dort ändern. Der Paketbau
+  sortiert jede Datei aus `Sources` nach ihrer Dateiklasse in `App` oder `Config`
+  ([Architektur](Architecture.md)); eine Datei ohne Klasse bricht den Bau ab.
 - SelfX lädt keine Einstellungen aus dem Netzwerk nach. Neue Einstellungen kommen mit einer
   neuen Paketversion.
 
@@ -175,6 +177,32 @@ Mitgelieferte Skripte für `System`-Aktionen:
 | `SelfX_OneDrive_CHKDSK.ps1` | Festplattenprüfung für das Systemlaufwerk beim nächsten Neustart planen |
 | `SelfX_Device_CollectLogs.ps1` | Geräteprotokolle sammeln und eine E-Mail mit dem Bericht öffnen |
 
+### Eigene Skripte der Firma
+
+Eigene Skripte für Aktionen (`Scripts_to_run`) und eigene Prüfskripte (`HealthChecks`) sind
+Konfiguration Ihrer Firma. Sie legen sie im Paket in `Sources\Scripts_to_run` oder
+`Sources\HealthChecks` ab; der Paketbau trägt sie in `SelfX.Config.json` ein und installiert sie
+nach `%ProgramFiles%\SelfX\Config\Scripts_to_run` bzw. `Config\HealthChecks`.
+
+- Ein eigenes Skript läuft nur, wenn der Katalog (`Issues_List.xml`) oder `Health_Config.xml` es
+  nennt **und** `SelfX.Config.json` es mit dem SHA256 auflistet, den die Datei jetzt hat. Das gilt
+  auch mit `Service_FileCheck` = `Audit`. Ein Skript ohne Eintrag, ein geändertes Skript und ein
+  Skript hinter einer Verknüpfung werden nicht gestartet.
+- Ein Skript des Projekts mit demselben Namen hat immer Vorrang (`App\Scripts_to_run`); ein
+  eigenes Skript kann es nicht ersetzen. Geben Sie Ihren Skripten eigene Namen (zum Beispiel mit
+  dem Kürzel Ihrer Firma).
+- Ein eigenes Skript liegt in einem anderen Ordner als die Hilfsdateien von SelfX. Laden Sie sie
+  aus dem Code-Ordner:
+
+  ```powershell
+  $SelfXApp = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'App'
+  $SelfXLogScript = Join-Path $SelfXApp 'SelfXLog.ps1'
+  if (Test-Path -LiteralPath $SelfXLogScript) { . $SelfXLogScript; Initialize-SelfXLog -Component ([IO.Path]::GetFileNameWithoutExtension($PSCommandPath)) }
+  ```
+
+  Skripte für 3.0.x, die `SelfXLog.ps1` oder `SelfXOffice.ps1` über `Split-Path -Parent $PSScriptRoot`
+  suchen, finden sie nicht mehr und müssen angepasst werden.
+
 ## Benutzeroberfläche
 
 Das Fenster ist für Nutzer ohne Fachwissen gebaut. Es lässt sich in der Größe ändern
@@ -311,7 +339,8 @@ können diese Datei lesen. Einstellungen im Element `Background` von `Health_Con
 | `MaxCpuPercent` | `75` | Ist die Last höher, wird die Prüfung um 2 Minuten verschoben (10 bis 100; 100 = kein Limit). |
 | `StartDelaySeconds` | `120` | Wartezeit nach dem Start des Dienstes, damit die Anmeldung nicht langsamer wird (0 bis 3600). |
 
-**Eigene Prüfskripte:** Legen Sie sie in `Sources\HealthChecks` ab. Erlaubt sind nur einfache
+**Eigene Prüfskripte:** Legen Sie sie in `Sources\HealthChecks` ab (installiert nach
+`Config\HealthChecks`, siehe [Eigene Skripte](#eigene-skripte-der-firma)). Erlaubt sind nur einfache
 Dateinamen, keine Unterordner und keine Pfade. Prüfskripte dürfen **nur lesen**. Sie dürfen nie
 neu starten, abmelden, Einstellungen ändern, Eingaben abfragen oder Prozesse im Hintergrund
 starten. Prüfen und signieren Sie sie vor der Verteilung. Schreiben Sie keine Zugangsdaten
@@ -324,7 +353,9 @@ funktioniert. Für wichtige Apps sollten Sie eigene Prüfungen anlegen.
 ## Reparaturen
 
 Die Prüfungen lesen nur. Damit eine Zeile die Schaltfläche *Beheben* zeigt, legen Sie ein
-Reparaturskript in `Sources\Scripts_to_run` ab und tragen es in `Health_Config.xml` ein:
+Reparaturskript in `Sources\Scripts_to_run` ab (ein eigenes Skript wird nach
+`Config\Scripts_to_run` installiert, siehe [Eigene Skripte](#eigene-skripte-der-firma)) und tragen
+es in `Health_Config.xml` ein:
 
 ```xml
 <Remediations>
@@ -609,8 +640,12 @@ gelöscht:
 ## Branding
 
 Firmenlogo, Symbol und Farben stehen im Bereich `Branding` von `Tool_Config.xml`. Kopieren Sie die
-Bilder vor dem Paketieren nach `SelfX Service\Sources` oder in einen Unterordner wie
-`Sources\Branding`. Pfade sind relativ zum Installationsordner. Alle Schlüssel sind optional.
+Bilder vor dem Paketieren nach `SelfX Service\Sources\Branding` (installiert nach
+`%ProgramFiles%\SelfX\Config\Branding`). Ein Wert, der mit `Branding\` beginnt, wird in
+`Config\Branding` gesucht; ein anderer relativer Wert ist ein Standardbild von SelfX in `App`
+(zum Beispiel `Repair.ico`, `logo.png`); ein vollständiger Pfad wird unverändert verwendet. Ein
+relativer Wert mit `..` wird ignoriert. Ein Bild direkt in `Sources` (außerhalb von `Branding`)
+hat keine Dateiklasse und bricht den Paketbau ab. Alle Schlüssel sind optional.
 
 Die mitgelieferte `Tool_Config.xml` enthält **Platzhalter**: das Logo „YOUR LOGO“, die Farbe
 `#0072BC` und die Kontakte `support@example.com` und `+1 555 0100`. Ersetzen Sie sie vor dem
@@ -680,6 +715,11 @@ also nie leer.
    ```
 
    Die Prüfung meldet fehlende Schlüssel, defekte Platzhalter und unbekannte Katalogeinträge.
+
+Eine eigene Sprachdatei (eine Kultur, die SelfX nicht mitbringt) ist Konfiguration: Sie wird nach
+`%ProgramFiles%\SelfX\Config\Languages` installiert. SelfX bietet sie neben den mitgelieferten
+Sprachen (`App\Languages`) an. Eine eigene Datei mit dem Namen einer mitgelieferten Sprache wird
+ignoriert; die mitgelieferte Datei gilt.
 
 Um einen Text für Ihr Unternehmen zu ändern, zum Beispiel den Haupttitel, bearbeiten Sie nur
 die Sprachdatei. Dafür ist keine Programmierung nötig.
