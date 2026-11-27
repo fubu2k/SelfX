@@ -47,9 +47,11 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
   `selfx-answers.json`. The certificate is not imported into a store.
 - Not yet in the window: the network targets of the connection test.
 
+![Package wizard window: page Signature with a PFX file (sample certificate)](images/selfx-wizard-signing-en.png)
+
 ![Package wizard window: build with the progress list](images/selfx-wizard-build-en.png)
 
-![Package wizard window: result with the instructions for Intune](images/selfx-wizard-result-en.png)
+![Package wizard window: result with the steps for Intune and copy buttons](images/selfx-wizard-result-en.png)
 
 The console version below stays for automation (answer file).
 
@@ -113,6 +115,8 @@ wizard checks the **first bytes of the file**, not only the extension, and store
 password or a key: a name that is no question is refused.
 
 ## Sign the package (trust mode Signature)
+
+How to get a suitable certificate, how the devices trust it and how to change it: [Code signing certificate](Certificate-Guide.md).
 
 Without a certificate the package is built in the trust mode **Hash** (no signature; `SelfX.Code.json` is the one of the release). With
 `-CertificateThumbprint` or `-PfxPath` the wizard builds a **signed** package in the order that the file lists need: it signs every

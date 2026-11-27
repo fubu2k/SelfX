@@ -49,9 +49,11 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
   in `selfx-answers.json` geschrieben. Das Zertifikat wird nicht in einen Speicher importiert.
 - Noch nicht im Fenster: die Netzwerkziele des Verbindungstests.
 
+![Fenster des Paketassistenten: Seite Signatur mit PFX-Datei (Beispielzertifikat)](../images/selfx-wizard-signing-de.png)
+
 ![Fenster des Paketassistenten: Bau mit Fortschrittsliste](../images/selfx-wizard-build-de.png)
 
-![Fenster des Paketassistenten: Ergebnis mit der Anleitung für Intune](../images/selfx-wizard-result-de.png)
+![Fenster des Paketassistenten: Ergebnis mit den Schritten für Intune und Kopieren-Schaltflächen](../images/selfx-wizard-result-de.png)
 
 Die Konsolenfassung unten bleibt für die Automatisierung (Antwortdatei).
 
@@ -120,6 +122,8 @@ wird sofort abgelehnt. Die Werte werden als Text in die XML-Dateien geschrieben 
 `logo.<Typ>`. Die Antworten enthalten nie ein Kennwort oder einen Schlüssel: Ein Name, der keine Frage ist, wird abgelehnt.
 
 ## Paket signieren (Vertrauensmodus Signatur)
+
+Wie Sie ein geeignetes Zertifikat bekommen, wie die Geräte ihm vertrauen und wie Sie es wechseln: [Codesignatur-Zertifikat](Zertifikat.md).
 
 Ohne Zertifikat entsteht das Paket im Vertrauensmodus **Hash** (keine Signatur; `SelfX.Code.json` ist die Datei des Release). Mit
 `-CertificateThumbprint` oder `-PfxPath` baut der Assistent ein **signiertes** Paket in der Reihenfolge, die die Dateilisten verlangen: Er
