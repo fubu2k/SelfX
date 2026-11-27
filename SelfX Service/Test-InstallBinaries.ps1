@@ -877,8 +877,15 @@ else {
 			Write-Output "Real signatures: the check of the small test package took $($watch.ElapsedMilliseconds) ms."
 			Assert-Equal (Test-SelfXSignedCatalog -CatalogFilePath (Join-Path $real 'Config\SelfX.Config.cat') -Path (Join-Path $real 'Config') -AllowedThumbprint $certA.Thumbprint).Reason 'Ok' 'real signatures: the signing library accepts the same configuration catalog'
 			Assert-Equal ((Test-Real @($certB.Thumbprint)) -match 'SignerNotAllowed') $true 'real signatures: another allowed signer than the one that signed is refused'
-			Add-Content -LiteralPath (Join-Path $real 'App\Self_X.ps1') -Value '# changed'
-			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'App\\Self_X\.ps1 \(HashMismatch\)') $true 'real signatures: a script changed after signing is refused'
+			Add-Content -LiteralPath (Join-Path $real 'App\Self_X.ps1') -Value '# added after the signature block'
+			$answer = Test-Real @($certA.Thumbprint)
+			Assert-Equal ($answer -ne 'accepted') $true "real signatures: a script with text added after the signature block is refused ($answer)"
+			Write-Output "Real signatures: text added after the signature block is refused with: $answer"
+			New-RealPackage $certA
+			$changedScript = Join-Path $real 'App\Self_X.ps1'
+			[IO.File]::WriteAllText($changedScript, "Write-Output 'changed'`r`n" + [IO.File]::ReadAllText($changedScript), (New-Object System.Text.UTF8Encoding($false)))
+			$answer = Test-Real @($certA.Thumbprint)
+			Assert-Equal ($answer -match 'App\\Self_X\.ps1 \(HashMismatch\)') $true "real signatures: a script changed before the signature block is refused ($answer)"
 			New-RealPackage $certA
 			[IO.File]::WriteAllText((Join-Path $real 'App\Scripts_to_run\Added.ps1'), "Write-Output 'unsigned'`r`n")
 			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'Added\.ps1 \(NotSigned\)') $true 'real signatures: an added unsigned script is refused'
