@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	SelfX package wizard - window (tools\Wizard\SelfXWizardGui.ps1)
+
+	Version 1.0.0 (2026-11-27): Initial version.
+
+	Layout only. The shared styles of the SelfX window (cards, buttons, switches, scroll bars, page title) are taken from
+	Sources\Self_X.ps1 when the window is created and put in place of the marker SELFX-SHARED-STYLES below; the colors are the
+	theme brushes of Sources\Branding.ps1 (DynamicResource). The styles here are only the ones the SelfX window does not have
+	(text field, list box, combo box, field texts). No text is written here: every text comes from Wizard.<culture>.xml.
+	The input fields of the pages are created from the questions of SelfXWizard.ps1 into the panels named Fields_<page>.
+-->
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="1080" Height="780" MinWidth="880" MinHeight="600" WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBg}" Foreground="{DynamicResource TextPrimary}"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display">
+  <Window.Resources>
+    <ResourceDictionary>
+<!--SELFX-SHARED-STYLES-->
+      <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="Margin" Value="0,0,0,3"/>
+      </Style>
+      <Style x:Key="FieldHint" TargetType="TextBlock" BasedOn="{StaticResource SubText}">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,0,0,7"/>
+      </Style>
+      <Style x:Key="FieldError" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource ErrFg}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,5,0,0"/>
+        <Setter Property="Visibility" Value="Collapsed"/>
+      </Style>
+      <Style x:Key="FieldBox" TargetType="TextBox">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="Background" Value="{DynamicResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="TextBox">
+              <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
+                <ScrollViewer Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" Focusable="False"/>
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/><Setter TargetName="Bd" Property="BorderThickness" Value="2"/></Trigger>
+                <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Bd" Property="Opacity" Value="0.5"/></Trigger>
+                <Trigger Property="Tag" Value="Error"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ErrSolid}"/></Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <Style x:Key="ReadOnlyBox" TargetType="TextBox" BasedOn="{StaticResource FieldBox}">
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceAlt}"/>
+      </Style>
+      <Style x:Key="FieldCombo" TargetType="ComboBox">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="MinWidth" Value="220"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="ComboBox">
+              <Grid>
+                <ToggleButton Name="Toggle" Focusable="False" ClickMode="Press" IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                  <ToggleButton.Template>
+                    <ControlTemplate TargetType="ToggleButton">
+                      <Border Name="Bd" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="10">
+                        <TextBlock Text="&#xE70D;" Style="{StaticResource Glyph}" FontSize="11" HorizontalAlignment="Right" Margin="0,0,12,0" Foreground="{DynamicResource TextSecondary}"/>
+                      </Border>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBg}"/></Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </ToggleButton.Template>
+                </ToggleButton>
+                <Border Name="FocusRing" BorderBrush="{DynamicResource Accent}" BorderThickness="2" CornerRadius="10" Visibility="Collapsed" IsHitTestVisible="False"/>
+                <ContentPresenter Margin="12,0,36,0" VerticalAlignment="Center" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}"/>
+                <Popup Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" Focusable="False" IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
+                  <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="10" Padding="4" Margin="0,4,0,0"
+                          MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="280">
+                    <ScrollViewer><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
+                  </Border>
+                </Popup>
+              </Grid>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <Style TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="ComboBoxItem">
+              <Border Name="Bd" Padding="10,7" CornerRadius="7" Background="Transparent"><ContentPresenter/></Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBg}"/></Trigger>
+                <Trigger Property="IsSelected" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedBg}"/></Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <Style x:Key="UnitList" TargetType="ListBox">
+        <Setter Property="Background" Value="{DynamicResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="MinHeight" Value="80"/>
+        <Setter Property="MaxHeight" Value="180"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="ListBox">
+              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                <ScrollViewer Focusable="False"><ItemsPresenter/></ScrollViewer>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <Style TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="ListBoxItem">
+              <Border Name="Bd" Padding="10,7" CornerRadius="7" Background="Transparent"><ContentPresenter/></Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBg}"/></Trigger>
+                <Trigger Property="IsSelected" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSoft}"/></Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/><Setter TargetName="Bd" Property="BorderThickness" Value="1"/></Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <Style x:Key="SectionTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,4,0,8"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+      </Style>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <Grid Margin="12">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="250"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- steps -->
+    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="16,18">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,0,18">
+          <Border Width="40" Height="40" CornerRadius="12" Background="{DynamicResource AccentSoft}">
+            <TextBlock Text="&#xE7B8;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{DynamicResource AccentText}"/>
+          </Border>
+          <TextBlock Name="AppTitle" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="160"/>
+        </StackPanel>
+        <StackPanel Name="StepList" AutomationProperties.AutomationId="StepList"/>
+      </DockPanel>
+    </Border>
+
+    <!-- page -->
+    <Border Grid.Column="1" Margin="12,0,0,0" Background="{DynamicResource ContentBg}" CornerRadius="18" BorderBrush="{DynamicResource Stroke}" BorderThickness="1">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="32,26,32,10">
+          <TextBlock Name="PageTitle" Style="{StaticResource PageTitle}"/>
+          <TextBlock Name="PageIntro" Style="{StaticResource SubText}" Margin="0,6,0,0" FontSize="14"/>
+          <Border Name="PageMessage" CornerRadius="10" Background="{DynamicResource ErrBg}" Padding="12,9" Margin="0,12,0,0" Visibility="Collapsed">
+            <TextBlock Name="PageMessageText" Foreground="{DynamicResource ErrFg}" TextWrapping="Wrap"/>
+          </Border>
+        </StackPanel>
+        <ScrollViewer Name="PageScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
+          <Grid Margin="32,6,32,26" MaxWidth="760" HorizontalAlignment="Left">
+
+            <StackPanel Name="Page_language" Visibility="Collapsed">
+              <StackPanel Margin="0,0,0,18">
+                <TextBlock Name="WizardLanguageLabel" Style="{StaticResource FieldLabel}"/>
+                <TextBlock Name="WizardLanguageHint" Style="{StaticResource FieldHint}"/>
+                <ComboBox Name="WizardLanguageBox" Style="{StaticResource FieldCombo}"/>
+              </StackPanel>
+              <StackPanel Name="Fields_language"/>
+            </StackPanel>
+
+            <StackPanel Name="Page_basics" Visibility="Collapsed">
+              <StackPanel Name="Fields_basics"/>
+            </StackPanel>
+
+            <StackPanel Name="Page_support" Visibility="Collapsed">
+              <StackPanel Name="Fields_support"/>
+            </StackPanel>
+
+            <StackPanel Name="Page_branding" Visibility="Collapsed">
+              <StackPanel Name="Fields_branding"/>
+              <TextBlock Name="PreviewTitle" Style="{StaticResource SectionTitle}"/>
+              <Border Style="{StaticResource Card}" Padding="18">
+                <StackPanel>
+                  <Border Background="{DynamicResource SurfaceAlt}" CornerRadius="12" Padding="14" MinHeight="96">
+                    <Grid>
+                      <Image Name="LogoPreview" MaxHeight="120" MaxWidth="420" Stretch="Uniform" HorizontalAlignment="Left" RenderOptions.BitmapScalingMode="HighQuality"/>
+                      <TextBlock Name="LogoPreviewText" Style="{StaticResource SubText}" VerticalAlignment="Center"/>
+                    </Grid>
+                  </Border>
+                  <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <Border Name="AccentSwatch" Width="38" Height="38" CornerRadius="10" Background="{DynamicResource Accent}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1"/>
+                    <Button Name="AccentSample" Style="{StaticResource PrimaryButton}" Margin="12,0,0,0" Focusable="False" IsHitTestVisible="False"/>
+                    <TextBlock Name="AccentSampleLink" Margin="14,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AccentText}" FontWeight="SemiBold"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <StackPanel Name="Page_ticket" Visibility="Collapsed">
+              <StackPanel Name="Fields_ticket"/>
+              <StackPanel Name="UnitsPanel" Visibility="Collapsed" Margin="0,6,0,0">
+                <TextBlock Name="UnitsTitle" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Name="UnitsHint" Style="{StaticResource FieldHint}"/>
+                <ListBox Name="UnitList" Style="{StaticResource UnitList}"/>
+                <TextBlock Name="UnitsError" Style="{StaticResource FieldError}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,14">
+                  <Button Name="AddUnitButton" Style="{StaticResource BaseButton}"/>
+                  <Button Name="RemoveUnitButton" Style="{StaticResource BaseButton}" Margin="8,0,0,0"/>
+                </StackPanel>
+                <Border Name="UnitEditor" Style="{StaticResource Card}" Padding="18,16" Visibility="Collapsed">
+                  <StackPanel>
+                    <TextBlock Name="UnitEditorTitle" Style="{StaticResource SectionTitle}"/>
+                    <StackPanel Name="Fields_unit"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </StackPanel>
+
+            <StackPanel Name="Page_more" Visibility="Collapsed">
+              <StackPanel Name="Fields_more"/>
+            </StackPanel>
+
+            <StackPanel Name="Page_summary" Visibility="Collapsed">
+              <TextBlock Name="SummaryTitle" Style="{StaticResource SectionTitle}"/>
+              <TextBox Name="SummaryBox" Style="{StaticResource ReadOnlyBox}" MaxHeight="260" Margin="0,0,0,20"/>
+              <TextBlock Name="BuildSettingsTitle" Style="{StaticResource SectionTitle}"/>
+              <StackPanel Name="Fields_summary"/>
+            </StackPanel>
+
+            <StackPanel Name="Page_build" Visibility="Collapsed">
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                <Button Name="BuildButton" Style="{StaticResource PrimaryButton}"/>
+                <Button Name="CancelBuildButton" Style="{StaticResource BaseButton}" Margin="10,0,0,0" IsEnabled="False"/>
+              </StackPanel>
+              <Border Style="{StaticResource Card}" Padding="18,14">
+                <StackPanel Name="ProgressList" AutomationProperties.AutomationId="ProgressList"/>
+              </Border>
+              <TextBlock Name="BuildStatus" Margin="0,14,0,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+              <TextBlock Name="BuildError" Style="{StaticResource FieldError}"/>
+            </StackPanel>
+
+            <StackPanel Name="Page_result" Visibility="Collapsed">
+              <Border CornerRadius="12" Background="{DynamicResource OkBg}" Padding="14,12" Margin="0,0,0,16">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xE73E;" Style="{StaticResource Glyph}" Foreground="{DynamicResource OkFg}" FontSize="16"/>
+                  <TextBlock Name="ResultText" Margin="10,0,0,0" Foreground="{DynamicResource OkFg}" TextWrapping="Wrap" VerticalAlignment="Center" MaxWidth="640"/>
+                </StackPanel>
+              </Border>
+              <TextBlock Name="ResultFilesTitle" Style="{StaticResource SectionTitle}"/>
+              <TextBox Name="ResultFilesBox" Style="{StaticResource ReadOnlyBox}" MaxHeight="140" Margin="0,0,0,12"/>
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                <Button Name="OpenFolderButton" Style="{StaticResource PrimaryButton}"/>
+                <Button Name="CopyGuideButton" Style="{StaticResource BaseButton}" Margin="10,0,0,0"/>
+              </StackPanel>
+              <TextBlock Name="GuideTitle" Style="{StaticResource SectionTitle}"/>
+              <TextBox Name="GuideBox" Style="{StaticResource ReadOnlyBox}" MaxHeight="420"/>
+            </StackPanel>
+
+          </Grid>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <!-- navigation -->
+    <DockPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0" LastChildFill="True">
+      <Button Name="LoadButton" DockPanel.Dock="Left" Style="{StaticResource BaseButton}"/>
+      <Button Name="SaveButton" DockPanel.Dock="Left" Style="{StaticResource BaseButton}" Margin="8,0,0,0"/>
+      <Button Name="NextButton" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" MinWidth="120" Margin="8,0,0,0" IsDefault="True"/>
+      <Button Name="BackButton" DockPanel.Dock="Right" Style="{StaticResource BaseButton}" MinWidth="120"/>
+      <TextBlock Name="StatusText" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+    </DockPanel>
+  </Grid>
+</Window>
