@@ -100,9 +100,9 @@ function Invoke-Config($Anchor = $hashAnchor) {
 }
 function Get-InstalledText([string]$Name) { [IO.File]::ReadAllText((Join-Path $install ('Config\' + $Name))) }
 function Test-NothingChanged([string]$Message) {
-	Assert-Equal (Get-InstalledText 'Issues_List.xml') '<Issues version="old" />' "$Message: Config is unchanged"
-	Assert-Equal (Test-Path -LiteralPath ($install + '.ConfigStage')) $false "$Message: no stage folder is left"
-	Assert-Equal (Test-Path -LiteralPath ($install + '.ConfigOld')) $false "$Message: no old folder is left"
+	Assert-Equal (Get-InstalledText 'Issues_List.xml') '<Issues version="old" />' "${Message}: Config is unchanged"
+	Assert-Equal (Test-Path -LiteralPath ($install + '.ConfigStage')) $false "${Message}: no stage folder is left"
+	Assert-Equal (Test-Path -LiteralPath ($install + '.ConfigOld')) $false "${Message}: no old folder is left"
 }
 
 try {
