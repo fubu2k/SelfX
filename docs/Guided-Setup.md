@@ -28,9 +28,10 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 | Branding | Logo (file dialog, preview) and company color; the window shows the color at once |
 | Ticket | Ticket e-mail and, for several organisations, one mailbox per organisation, chosen by group tag, OU or device class |
 | Further settings | Copilot Chat, company wiki, status icon, shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
+| Signature | No certificate (trust mode Hash), a certificate from the store (only suitable, valid ones) or a PFX file with its password; time stamp service; additional signers for a change of the certificate. Shows subject, issuer, end of validity, thumbprint and the revocation list addresses with warnings. See [Code signing certificate](Certificate-Guide.md) |
 | Summary | Your answers, the package folder, the output folder, `IntuneWinAppUtil.exe`, "only write the configuration" |
 | Build the Intune package | One click; a list shows every step; **Cancel** stops the build, the output folder stays unchanged |
-| Result | Files, **Open folder**, **Copy instructions** and the instructions for Intune |
+| Result | Files, **Open folder**, **Copy instructions** and the steps for Intune as cards with copy buttons (app name, install and uninstall command with `-TrustedSigner`, requirement script, detection script, thumbprints, ASR file list) |
 
 ![Package wizard window: Branding page with logo preview and company color](images/selfx-wizard-branding-en.png)
 
@@ -42,14 +43,17 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 - Keyboard: Tab moves through the fields, Enter is **Next**, the underlined letters work with Alt. Screen readers read the name of every
   field, its recommendation and its error.
 - The window follows the light or dark mode of Windows and uses the colors and styles of SelfX.
-- Not yet in the window: signing (trust mode Signature; use the console with `-CertificateThumbprint` or `-PfxPath`) and the network
-  targets of the connection test.
+- The password of a PFX file is used once to open the file and the field is emptied; it is never shown, saved or written to
+  `selfx-answers.json`. The certificate is not imported into a store.
+- Not yet in the window: the network targets of the connection test.
+
+![Package wizard window: page Signature with a PFX file (sample certificate)](images/selfx-wizard-signing-en.png)
 
 ![Package wizard window: build with the progress list](images/selfx-wizard-build-en.png)
 
-![Package wizard window: result with the instructions for Intune](images/selfx-wizard-result-en.png)
+![Package wizard window: result with the steps for Intune and copy buttons](images/selfx-wizard-result-en.png)
 
-The console version below stays for automation (answer file) and for signing.
+The console version below stays for automation (answer file).
 
 ## Run it
 
@@ -79,6 +83,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 | `-CertificateThumbprint <thumbprint>` | Trust mode Signature: signs with this code signing certificate from the certificate store. |
 | `-PfxPath <file>` | Trust mode Signature: signs with a PFX file. The wizard asks for the password (hidden, never stored). |
 | `-TimestampServer <address>` | Time stamp service (`http` or `https`) for the signatures. Recommended. |
+| `-AdditionalSigner <thumbprint>` | Change of the certificate: further thumbprints for `-TrustedSigner` of the install command (nothing is signed with them; at most 9). |
 
 ## The questions
 
@@ -110,6 +115,8 @@ wizard checks the **first bytes of the file**, not only the extension, and store
 password or a key: a name that is no question is refused.
 
 ## Sign the package (trust mode Signature)
+
+How to get a suitable certificate, how the devices trust it and how to change it: [Code signing certificate](Certificate-Guide.md).
 
 Without a certificate the package is built in the trust mode **Hash** (no signature; `SelfX.Code.json` is the one of the release). With
 `-CertificateThumbprint` or `-PfxPath` the wizard builds a **signed** package in the order that the file lists need: it signs every

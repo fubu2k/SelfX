@@ -51,6 +51,10 @@
 .PARAMETER TimestampServer
     Time stamp service (http or https address) for the signatures. Recommended, so the signatures stay valid after the certificate expires.
 
+.PARAMETER AdditionalSigner
+    Trust mode Signature, change of the certificate: SHA1 thumbprints (40 hexadecimal characters) of further signers that the devices
+    shall accept. They go into -TrustedSigner of the install command in the instructions; nothing is signed with them. At most 9.
+
 .PARAMETER ConfigureOnly
     Write the configured package folder, the scripts and the instructions only. No programs are built, nothing is packaged.
 
@@ -64,7 +68,7 @@
     Name    : New-SelfXPackage.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 1.1.1
+    Version : 1.2.0
     Exit code: 0 = done, 1 = error or aborted
     Works in Windows PowerShell 5.1 and PowerShell 7. The wizard sends nothing; only -PfxPath makes it ask for the password of the PFX file (hidden, not stored).
 
@@ -77,6 +81,7 @@
                                               archive; -CertificateThumbprint, -PfxPath, -TimestampServer for the trust mode Signature
     1.1.1    2026-11-27  fubu2k               Default paths and the build of the repository package through Get-WizardBuildDefaults and
                                               Invoke-SelfXWizardBuild (shared with the window tools\Wizard\SelfXWizardGui.ps1); same behavior
+    1.2.0    2026-11-27  fubu2k               -AdditionalSigner (further thumbprints for -TrustedSigner, change of the certificate)
 #>
 [CmdletBinding()]
 param(
@@ -89,7 +94,8 @@ param(
     [string]$PayloadFolder,
     [string]$CertificateThumbprint,
     [string]$PfxPath,
-    [string]$TimestampServer
+    [string]$TimestampServer,
+    [string[]]$AdditionalSigner = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -105,6 +111,7 @@ try {
     if ($CertificateThumbprint -and $PfxPath) { throw 'Use either -CertificateThumbprint or -PfxPath, not both.' }
     if ($TimestampServer -and -not ($CertificateThumbprint -or $PfxPath)) { throw '-TimestampServer needs -CertificateThumbprint or -PfxPath.' }
     if ($ConfigureOnly -and ($CertificateThumbprint -or $PfxPath)) { throw '-ConfigureOnly does not sign: do not combine it with a certificate.' }
+    if (@($AdditionalSigner | Where-Object { $_ }).Count -and -not ($CertificateThumbprint -or $PfxPath)) { throw '-AdditionalSigner needs -CertificateThumbprint or -PfxPath.' }
 
     # ---- language of the wizard
     $languages = @(Get-WizardLanguages -Folder $WizardFolder)
@@ -196,7 +203,7 @@ try {
 
     # ---- build (the package folder of the repository is brought into the layout of the payload in a temporary folder first)
     $result = Invoke-SelfXWizardBuild -Answers $answers -PayloadFolder $packageSource -FromRepository:$fromRepository -OutputFolder $OutputFolder -ToolPath $ToolPath `
-        -Certificate $certificate -TimestampServer $TimestampServer -Language $Language -ConfigureOnly:$ConfigureOnly `
+        -Certificate $certificate -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -Language $Language -ConfigureOnly:$ConfigureOnly `
         -OnProgress { param($id, $text) Write-Host $text -ForegroundColor Cyan }
 
     Write-Host ''

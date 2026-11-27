@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.3.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.4.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -242,4 +242,61 @@
 	<T Id="gui.kind.int">Eine ganze Zahl von {0} bis {1}.</T>
 	<T Id="gui.kind.choice">Wählen Sie eins von: {0}.</T>
 	<T Id="gui.kind.list">Trennen Sie die Einträge mit Kommas: höchstens 100 Einträge mit je bis zu 150 Zeichen.</T>
+	<!-- Signature page and steps of the instructions (step 15) -->
+	<T Id="guide.trust3">   Wird die Signatur auf einem Gerät nicht anerkannt, startet der Dienst nichts: Ereignis 4006 (Vertrauensanker fehlt oder ist unsicher) oder 4007 (ein Skript, eine Bibliothek oder ein Katalog hat keine gültige Signatur eines erlaubten Signierers) im Anwendungsprotokoll; SelfXService.log nennt Datei und Grund (docs\Installation.md, Fehlerbehebung).</T>
+	<T Id="guide.trust4">   Lehnt Install.ps1 die Signaturen des Pakets ab, endet es mit Exitcode 1, bevor es Install.log schreibt, und verändert nichts. Den Grund sehen Sie, wenn Sie den Installationsbefehl einmal in einer Windows PowerShell mit Administratorrechten auf einem Pilotgerät ausführen.</T>
+	<T Id="guide.certchange">{0}. Wechsel des Signaturzertifikats (Verlängerung oder neues Zertifikat): 1) Paket noch mit dem alten Zertifikat neu bauen und den Fingerabdruck des neuen als zusätzlichen Signierer angeben, verteilen; 2) wenn alle Geräte es haben, mit dem neuen Zertifikat bauen (der alte Fingerabdruck darf eine Weile als zusätzlicher Signierer bleiben); 3) später ohne den alten Fingerabdruck bauen.</T>
+	<T Id="guide.certchange1">   Geräte akzeptieren nur Signierer, die in -TrustedSigner ihrer letzten Installation stehen. Ein Paket, das mit einem den Geräten noch unbekannten Zertifikat signiert ist, wird abgelehnt.</T>
+	<T Id="guide.certchange2">   Verwenden Sie einen Zeitstempeldienst: Ohne Zeitstempel werden die Signaturen ungültig, wenn das Zertifikat abläuft, und der Dienst startet nichts mehr (ein abgelaufenes oder gesperrtes Zertifikat bemerkt er spätestens nach 60 Minuten).</T>
+	<T Id="guide.certchange3">   AppLocker und App Control: Ein verlängertes Zertifikat mit gleichem Antragsteller braucht keine neuen Regeln; bei anderem Antragsteller die Herausgeberregeln vor dem ersten Paket mit dem neuen Zertifikat neu erstellen. Einzelheiten: docs\de\Zertifikat.md.</T>
+	<T Id="gui.page.signing">Signatur</T>
+	<T Id="gui.page.signing.intro">Signieren Sie das Paket mit dem Codesignatur-Zertifikat Ihrer Organisation oder bauen Sie es ohne Signatur.</T>
+	<T Id="gui.sign.none">_Kein Zertifikat</T>
+	<T Id="gui.sign.store">Zertifikat aus dem _Speicher</T>
+	<T Id="gui.sign.file">Zertifikats_datei (PFX)</T>
+	<T Id="gui.sign.none.info">Ohne Zertifikat wird das Paket über Hashes geprüft (Vertrauensmodus Hash). Das funktioniert, aber jede neue Version braucht neue AppLocker- und App-Control-Regeln, und die Geräte prüfen nur, ob die Dateien zu den Listen passen. Empfohlen: mit dem Zertifikat Ihrer Organisation signieren (docs\de\Zertifikat.md).</T>
+	<T Id="gui.sign.store.rec">Angezeigt werden nur Zertifikate mit privatem Schlüssel, Verwendungszweck Codesignatur und gültigem Zeitraum (Zertifikatspeicher Ihres Benutzers und des Computers). Abgelaufene Zertifikate werden nicht angeboten.</T>
+	<T Id="gui.sign.store.empty">Es wurde kein geeignetes Codesignatur-Zertifikat gefunden. Fordern Sie eines bei Ihrer PKI an (docs\de\Zertifikat.md) oder verwenden Sie eine PFX-Datei.</T>
+	<T Id="gui.sign.store.none">Wählen Sie ein Zertifikat.</T>
+	<T Id="gui.sign.refresh">Liste _aktualisieren</T>
+	<T Id="gui.sign.file.ask">PFX-Datei</T>
+	<T Id="gui.sign.file.rec">Die Datei wird nur im Arbeitsspeicher geöffnet und nicht in einen Zertifikatspeicher importiert.</T>
+	<T Id="gui.sign.password.ask">Kennwort der PFX-Datei</T>
+	<T Id="gui.sign.password.rec">Das Kennwort wird einmal zum Öffnen der Datei verwendet. Es wird nie angezeigt, gespeichert oder in eine Datei geschrieben.</T>
+	<T Id="gui.sign.open">Zertifikat _öffnen</T>
+	<T Id="gui.sign.file.failed">Das Zertifikat konnte nicht geöffnet werden: {0}</T>
+	<T Id="gui.sign.file.notloaded">Öffnen Sie zuerst die PFX-Datei mit ihrem Kennwort.</T>
+	<T Id="gui.sign.file.loaded">Das Zertifikat ist geöffnet. Das Kennwortfeld wurde geleert.</T>
+	<T Id="gui.sign.pfx.filter">PFX-Datei (*.pfx;*.p12)|*.pfx;*.p12</T>
+	<T Id="gui.sign.details">Gewähltes Zertifikat</T>
+	<T Id="gui.sign.subject">Antragsteller: {0}</T>
+	<T Id="gui.sign.issuer">Aussteller: {0}</T>
+	<T Id="gui.sign.valid">Gültig bis: {0}</T>
+	<T Id="gui.sign.thumbprint">Fingerabdruck: {0}</T>
+	<T Id="gui.sign.crl">Sperrlisten: {0}</T>
+	<T Id="gui.crl.none">Das Zertifikat nennt keine Sperrliste. Windows kann nicht prüfen, ob es gesperrt wurde.</T>
+	<T Id="gui.crl.nohttp">Keine Sperrliste hat eine http-Adresse. Geräte außerhalb des Firmennetzes erreichen ldap- oder Datei-Adressen nicht; bitten Sie Ihr PKI-Team um eine öffentliche http-Adresse an erster Stelle.</T>
+	<T Id="gui.crl.internal">Die Sperrlisten haben nur interne Namen. Geräte außerhalb des Firmennetzes erreichen sie nicht; Windows behandelt die Signatur dann als gültig.</T>
+	<T Id="Timestamp.ask">Zeitstempeldienst (http:// oder https://)</T>
+	<T Id="Timestamp.rec">Erforderlich. Ein Zeitstempel hält die Signaturen gültig, wenn das Zertifikat abläuft. Verwenden Sie den Zeitstempeldienst des Anbieters Ihres Zertifikats oder den internen Ihrer PKI.</T>
+	<T Id="NoTimestamp.ask">Ohne Zeitstempel signieren (nicht empfohlen)</T>
+	<T Id="NoTimestamp.rec">Nur für Tests. Ohne Zeitstempel werden die Signaturen ungültig, wenn das Zertifikat abläuft, und SelfX startet dann auf den Geräten nichts mehr.</T>
+	<T Id="gui.kind.timestamp">Geben Sie eine http://- oder https://-Adresse ohne Benutzernamen ein oder schalten Sie das Signieren ohne Zeitstempel ein.</T>
+	<T Id="Additional.ask">Weitere erlaubte Signierer (Fingerabdrücke, mit Kommas getrennt, optional)</T>
+	<T Id="Additional.rec">Nur für einen Zertifikatswechsel: der Fingerabdruck des nächsten Zertifikats, damit Geräte damit signierte Pakete annehmen. Damit wird nichts signiert.</T>
+	<T Id="gui.sign.additional.invalid">Jeder Eintrag muss ein Fingerabdruck aus 40 Hexadezimalzeichen sein; höchstens 9 Einträge.</T>
+	<T Id="gui.sign.configureonly">Ein Paket, das nur konfiguriert wird, wird nicht signiert: Schalten Sie das aus oder wählen Sie auf der Seite Signatur Kein Zertifikat.</T>
+	<T Id="gui.summary.sign.none">Signatur: kein Zertifikat (Vertrauensmodus Hash)</T>
+	<T Id="gui.summary.sign">Signatur: {0} (Fingerabdruck {1}), Zeitstempel: {2}</T>
+	<T Id="gui.summary.sign.notimestamp">keiner</T>
+	<T Id="gui.copy.name">App-Namen kopieren</T>
+	<T Id="gui.copy.package">Paketpfad kopieren</T>
+	<T Id="gui.copy.install">Installationsbefehl kopieren</T>
+	<T Id="gui.copy.uninstall">Deinstallationsbefehl kopieren</T>
+	<T Id="gui.copy.requirement">Anforderungsskript kopieren</T>
+	<T Id="gui.copy.detection">Pfad des Erkennungsskripts kopieren</T>
+	<T Id="gui.copy.folder">Ausgabeordner kopieren</T>
+	<T Id="gui.copy.thumbprints">Fingerabdrücke kopieren</T>
+	<T Id="gui.copy.asr">Dateiliste kopieren</T>
+	<T Id="gui.result.copied.value">In der Zwischenablage: {0}</T>
 </Wizard_Language>

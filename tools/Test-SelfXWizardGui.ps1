@@ -13,15 +13,21 @@
       - checks at the field: wrong e-mail address, required value, wrong logo, units (empty, twice, wrong group tag), next page blocked;
       - answers: the answers of the window are identical to the answers of the console with the same input (selfx-answers.json, Tool_Config.xml
         and Ticket_Config.xml of a build with -ConfigureOnly, the window's build running in the background runspace);
-      - answer files: load, unknown answer, too large, not JSON; cancel of a running build leaves no half-finished output.
+      - answer files: load, unknown answer, too large, not JSON; cancel of a running build leaves no half-finished output;
+      - signature: an expired certificate is not offered, a valid test certificate is; the PFX password (a test value) appears nowhere: not
+        in a text of the window, its title, a help text, the state, the answers or an error; the box is emptied; time stamp and additional
+        signers are checked; the instructions as steps with copy values. Test certificates are created in Cert:\CurrentUser\My and
+        removed at the end (no trusted root is added; a signed build is tested by Test-SelfXPackageWizard.ps1).
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows. Restarts itself with -STA when the thread is not single-threaded (WPF).
 
 .NOTES
     Name    : Test-SelfXWizardGui.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.0.0
+    Version : 1.1.0
     History : 1.0.0 (2026-11-27, fubu2k) Initial version
+              1.1.0 (2026-11-27, fubu2k) Page Signature (store list without expired certificates, PFX file, password never in a text, the
+                                         state, the answers or the window title; time stamp; additional signers), instructions as steps
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -34,6 +40,7 @@ $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptFolder
 $WizardFolder = Join-Path $ScriptFolder 'Wizard'
 . (Join-Path $WizardFolder 'SelfXWizardGui.ps1')
+. (Join-Path $ScriptFolder 'SelfXTestCertificate.ps1')
 
 $script:Failed = 0
 function Assert {
@@ -87,6 +94,30 @@ function Wait-GuiBuild {
     while (-not $Build.Handle.IsCompleted -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100 }
     $null = Receive-WizardGuiBuildProgress -Build $Build
     Close-WizardGuiBuild -Build $Build
+}
+
+function Get-AllWindowText {
+    # Every text the window holds: texts of text blocks, boxes, access texts, string contents and tool tips, names and help texts for screen
+    # readers, and the window title.
+    param($Root)
+    $texts = New-Object System.Collections.Generic.List[string]
+    $texts.Add([string]$script:Gui.Window.Title)
+    $queue = New-Object System.Collections.Generic.Queue[object]
+    $queue.Enqueue($Root)
+    while ($queue.Count) {
+        $node = $queue.Dequeue()
+        if ($node -is [System.Windows.DependencyObject]) {
+            $texts.Add([string][System.Windows.Automation.AutomationProperties]::GetName($node))
+            $texts.Add([string][System.Windows.Automation.AutomationProperties]::GetHelpText($node))
+            foreach ($child in [System.Windows.LogicalTreeHelper]::GetChildren($node)) { $queue.Enqueue($child) }
+        }
+        if ($node -is [string]) { $texts.Add($node) }
+        if ($node -is [System.Windows.Controls.TextBlock]) { $texts.Add($node.Text) }
+        if ($node -is [System.Windows.Controls.TextBox]) { $texts.Add($node.Text) }
+        if ($node -is [System.Windows.Controls.AccessText]) { $texts.Add($node.Text) }
+        if ($node -is [System.Windows.FrameworkElement] -and $node.ToolTip -is [string]) { $texts.Add($node.ToolTip) }
+    }
+    return ($texts -join "`n")
 }
 
 function Click {
@@ -164,7 +195,8 @@ try {
             Assert ($unnamed.Count -eq 0) 'every input has a name for screen readers'
             $noHelp = @($context.Fields.Values | Where-Object { -not [System.Windows.Automation.AutomationProperties]::GetHelpText($_.Control) })
             Assert ($noHelp.Count -eq 0) 'every input has the recommendation as help text'
-            $buttons = @('BackButton', 'NextButton', 'LoadButton', 'SaveButton', 'AddUnitButton', 'RemoveUnitButton', 'BuildButton', 'CancelBuildButton', 'OpenFolderButton', 'CopyGuideButton')
+            $buttons = @('BackButton', 'NextButton', 'LoadButton', 'SaveButton', 'AddUnitButton', 'RemoveUnitButton', 'BuildButton', 'CancelBuildButton', 'OpenFolderButton', 'CopyGuideButton',
+                'SignNone', 'SignStore', 'SignFile', 'RefreshCertsButton', 'PfxBrowseButton', 'PfxOpenButton', 'CertList', 'PfxPathBox', 'PfxPasswordBox')
             Assert (@($buttons | Where-Object { -not [System.Windows.Automation.AutomationProperties]::GetName($context.Ui[$_]) }).Count -eq 0) 'every button has a name for screen readers'
             Assert ($context.Ui.NextButton.Content -is [System.Windows.Controls.AccessText] -and $context.Ui.NextButton.Content.Text.Contains('_')) 'buttons have an access key'
             $missingText = @($context.Fields.Values | Where-Object { $_.Label.Text -match '^\[' -or $_.Hint.Text -match '\[' })
@@ -235,6 +267,136 @@ try {
     Click $context.Ui.NextButton
     Assert ($context.Page -eq 5) 'with one valid organisation the next page opens'
     $context.Window.Close()
+
+    # ---------------------------------------------------------- signature
+    Write-Host 'Signature'
+    $unique = [guid]::NewGuid().ToString('N').Substring(0, 10)
+    $valid = New-SelfXTestCertificate -Name 'Gui'
+    $expired = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=SelfX Gui Expired $unique" -CertStoreLocation 'Cert:\CurrentUser\My' `
+        -NotBefore (Get-Date).AddDays(-30) -NotAfter (Get-Date).AddDays(-1) -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -KeyExportPolicy Exportable -KeyUsage DigitalSignature
+    $testSecret = 'SxPw-' + [guid]::NewGuid().ToString('N')
+    $secure = New-Object System.Security.SecureString
+    foreach ($character in $testSecret.ToCharArray()) { $secure.AppendChar($character) }
+    $pfx = Join-Path $work 'test-signing.pfx'
+    [IO.File]::WriteAllBytes($pfx, $valid.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, $secure))
+    $secure.Dispose()
+    try {
+        $context = New-WizardGuiWindow -Culture 'de' -Theme 'Light'
+        $signingPage = Get-WizardGuiPageIndex 'signing'
+        Assert ($signingPage -eq 6 -and (Get-WizardGuiPageIndex 'summary') -eq 7 -and (Get-WizardGuiPageIndex 'result') -eq 9) 'the page Signature comes after the further settings and before the summary'
+        Set-WizardGuiPage -Index $signingPage -NoFocus
+        Assert ($context.Ui.SignNone.IsChecked -and (Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and $context.Ui.SignNoneInfo.Visibility -eq 'Visible') 'default: no certificate, the consequences are explained, nothing is required'
+        Assert ($null -eq (Get-WizardGuiSigning -State $context.State).Certificate) 'without a certificate nothing is signed'
+        $context.Ui.SignStore.IsChecked = $true
+        $tags = @($context.Ui.CertList.Items | ForEach-Object { $_.Tag })
+        Assert ($tags -contains $valid.Thumbprint) 'a valid code signing certificate of the store is offered'
+        Assert ($tags -notcontains $expired.Thumbprint) 'an expired certificate is not offered (not selectable)'
+        Click $context.Ui.NextButton
+        Assert ($context.Page -eq $signingPage -and $context.Ui.CertListError.Visibility -eq 'Visible') 'store without a selection: the next page is blocked, the error is shown at the list'
+        $context.Ui.CertList.SelectedItem = @($context.Ui.CertList.Items | Where-Object { $_.Tag -eq $valid.Thumbprint })[0]
+        Assert ($context.State.StoreCertificate.Thumbprint -eq $valid.Thumbprint -and $context.Ui.CertThumbprint.Text -match $valid.Thumbprint) 'the selected certificate is shown with its thumbprint'
+        Assert ($context.Ui.CertCrlWarningBox.Visibility -eq 'Visible' -and $context.Ui.CertCrlWarning.Text -match [regex]::Escape((Get-WText 'gui.crl.none'))) 'a certificate without revocation list is warned about'
+        Click $context.Ui.NextButton
+        Assert ($context.Page -eq $signingPage -and $context.Fields['Timestamp'].Error.Text -eq (Get-WText 'gui.kind.timestamp')) 'without a time stamp service the next page is blocked'
+        foreach ($badUrl in 'file://server/ts', 'https://user:pw@ts.example.com', 'ftp://ts.example.com', 'http://ts .example.com') {
+            Set-Field 'Timestamp' $badUrl
+            Assert ($context.Fields['Timestamp'].Error.Visibility -eq 'Visible') "time stamp service '$badUrl' is refused"
+        }
+        Set-Field 'Timestamp' 'http://timestamp.example.com'
+        Assert ($context.Fields['Timestamp'].Error.Visibility -eq 'Collapsed') 'an http time stamp service is accepted'
+        foreach ($badSigner in 'abc', ('AB' * 20 + ';calc'), (@(1..10 | ForEach-Object { 'AB' * 20 }) -join ',')) {
+            Set-Field 'Additional' $badSigner
+            Assert ($context.Fields['Additional'].Error.Visibility -eq 'Visible') 'an additional signer that is not a thumbprint (or more than 9) is refused'
+        }
+        Set-Field 'Additional' (('ab' * 20) + ', ' + ('CD' * 20))
+        $signing = Get-WizardGuiSigning -State $context.State
+        Assert ($signing.Certificate.Thumbprint -eq $valid.Thumbprint -and $signing.TimestampServer -eq 'http://timestamp.example.com' -and @($signing.AdditionalSigner).Count -eq 2) 'the build gets the certificate, the time stamp service and the additional signers'
+        Set-Field 'Timestamp' ''
+        Set-Field 'NoTimestamp' $true
+        Assert ((Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and -not $context.Fields['Timestamp'].Control.IsEnabled) 'signing without a time stamp must be switched on explicitly'
+        Set-Field 'NoTimestamp' $false
+        Set-Field 'Timestamp' 'http://timestamp.example.com'
+        $context.State.Raw['OrgName'] = 'Contoso'
+        Click $context.Ui.NextButton
+        Assert ($context.Page -eq (Get-WizardGuiPageIndex 'summary') -and $context.Ui.SummaryBox.Text -match $valid.Thumbprint) 'with a certificate and a time stamp the summary names the certificate'
+        Set-Field 'ConfigureOnly' $true
+        Assert ($context.Fields['ConfigureOnly'].Error.Text -eq (Get-WText 'gui.sign.configureonly')) 'only configure and sign at the same time is refused at the field'
+        Set-Field 'ConfigureOnly' $false
+        Set-WizardGuiProgress
+        Assert ((@($context.ProgressRows.Keys) -contains 'sign') -and (@($context.ProgressRows.Keys) -contains 'catalog')) 'the progress list shows signing and the catalog'
+        # The certificate reaches the background build: with a missing IntuneWinAppUtil.exe the build stops after the check of the certificate.
+        $context.State.Build.Payload = Join-Path $work 'no-payload'
+        New-Item -ItemType Directory -Path $context.State.Build.Payload -Force | Out-Null
+        $context.State.Build.Tool = Join-Path $work 'missing\IntuneWinAppUtil.exe'
+        $context.State.Build.Output = Join-Path $work 'signed-out'
+        $build = Start-WizardGuiBuild -State $context.State
+        Wait-GuiBuild -Build $build -Seconds 60
+        Assert ("$($build.Sync.Error)" -match 'IntuneWinAppUtil' -and -not (Test-Path -LiteralPath $context.State.Build.Output)) 'the background build receives the signing values and stops before anything is written'
+        $context.Window.Close()
+
+        # PFX file: wrong password, right password. The password is a test value; it must not appear anywhere.
+        $context = New-WizardGuiWindow -Culture 'de' -Theme 'Light'
+        Set-WizardGuiPage -Index $signingPage -NoFocus
+        $context.Ui.SignFile.IsChecked = $true
+        $context.Ui.PfxPathBox.Text = $pfx
+        $context.Ui.PfxPasswordBox.Password = 'wrong-' + $testSecret
+        Click $context.Ui.PfxOpenButton
+        Assert ($null -eq $context.State.PfxCertificate -and $context.Ui.PfxError.Visibility -eq 'Visible' -and $context.Ui.PfxPasswordBox.SecurePassword.Length -eq 0) 'a wrong password is refused; the box is emptied'
+        $wrongText = Get-AllWindowText -Root $context.Window
+        Assert ($wrongText -notmatch [regex]::Escape($testSecret)) 'the password is not in any text after a wrong password (error, help texts, title)'
+        $context.Ui.PfxPasswordBox.Password = $testSecret
+        $keySource = New-Object System.Windows.Interop.HwndSource(0, 0, 0, 0, 0, 'SelfXTestKeys', [IntPtr]::Zero)
+        try {
+            $enter = New-Object System.Windows.Input.KeyEventArgs([System.Windows.Input.Keyboard]::PrimaryDevice, $keySource, 0, [System.Windows.Input.Key]::Return)
+            $enter.RoutedEvent = [System.Windows.Input.Keyboard]::KeyDownEvent
+            $context.Ui.PfxPasswordBox.RaiseEvent($enter)
+        }
+        finally { $keySource.Dispose() }
+        Assert ($null -ne $context.State.PfxCertificate -and $context.State.PfxCertificate.Thumbprint -eq $valid.Thumbprint -and $context.State.PfxCertificate.HasPrivateKey) 'Enter in the password box opens the PFX file (with the private key)'
+        Assert ($context.Ui.PfxPasswordBox.SecurePassword.Length -eq 0 -and $context.Ui.PfxStatus.Visibility -eq 'Visible') 'after opening the password box is empty'
+        $context.State.Raw['OrgName'] = 'Contoso'
+        Set-Field 'Timestamp' 'http://timestamp.example.com'
+        Set-WizardGuiPage -Index (Get-WizardGuiPageIndex 'summary') -NoFocus
+        $allText = Get-AllWindowText -Root $context.Window
+        $stateText = (@($context.State.Raw, $context.State.Signing, $context.State.Build) | ConvertTo-Json -Depth 4)
+        $answerPath = Join-Path $work 'signed-answers.json'
+        Save-WizardAnswers -Path $answerPath -Answers (Get-WizardGuiAnswers -State $context.State) -Language 'de'
+        $answerText = [IO.File]::ReadAllText($answerPath)
+        Assert ($allText -notmatch [regex]::Escape($testSecret)) 'the password is in no text of the window, no help text and not in the window title'
+        Assert ($stateText -notmatch [regex]::Escape($testSecret) -and $answerText -notmatch [regex]::Escape($testSecret)) 'the password is not in the state and not in the answer file'
+        Assert ($answerText -notmatch '(?i)pfx|password|kennwort|thumbprint|' + $valid.Thumbprint) 'the answer file has no certificate data'
+        $context.Window.Close()
+        Clear-WizardGuiCertificates -State $context.State
+        Assert ($null -eq $context.State.PfxCertificate) 'the certificates are released when the window closes'
+
+        # Details of a certificate and the revocation list addresses.
+        $info = Get-WizardCertificateInfo -Certificate $valid
+        Assert ($info.Thumbprint -eq $valid.Thumbprint -and @($info.Warnings) -contains 'gui.crl.none') 'certificate details: no revocation list is a warning'
+        foreach ($hostName in 'ca01', 'pki.contoso.local', '10.1.2.3', '192.168.0.10', 'pki.corp', '') { Assert (Test-WizardInternalHost $hostName) "'$hostName' counts as internal" }
+        foreach ($hostName in 'crl.contoso.example', 'pki.example.com') { Assert (-not (Test-WizardInternalHost $hostName)) "'$hostName' counts as public" }
+    }
+    finally {
+        Remove-SelfXTestCertificate -Thumbprint $valid.Thumbprint
+        Remove-SelfXTestCertificate -Thumbprint $expired.Thumbprint
+    }
+
+    # ---------------------------------------------------------- instructions as steps
+    Write-Host 'Instructions as steps'
+    Initialize-WizardTexts -Folder $WizardFolder -Culture 'en'
+    $signers = @(('AB' * 20), ('cd' * 20))
+    $guideArgs = @{ Answers = @{ OrgName = 'Contoso'; Units = @() }; Version = '3.1.0'; PackageFile = 'p.intunewin'; DetectionFile = 'd.ps1'; TrustedSigner = $signers; RuleFiles = @('SelfX.AppLocker.xml') }
+    $guide = Get-SelfXIntuneGuideSteps @guideArgs -OutputFolder 'C:\Out'
+    $text = New-SelfXIntuneGuide @guideArgs
+    $joined = (@($guide.Header) + @('') + @($guide.Steps | ForEach-Object { @($_.Lines) + @('') }) + @($guide.Footer)) -join "`r`n"
+    Assert ($text -eq ($joined + "`r`n")) 'the text file of the instructions is the lines of the steps'
+    $install = @($guide.Steps | ForEach-Object { $_.Copies } | Where-Object { $_.Label -eq 'gui.copy.install' })[0].Value
+    Assert ($install -match ('-TrustedSigner ' + ('AB' * 20) + ',' + ('CD' * 20) + '$')) 'copy value: install command with both signers, comma without a space'
+    Assert (@($guide.Steps | ForEach-Object { $_.Copies } | Where-Object { $_.Label -eq 'gui.copy.detection' })[0].Value -eq 'C:\Out\d.ps1') 'copy value: full path of the detection script'
+    Assert ((@($guide.Steps | ForEach-Object { $_.Id }) -join ',') -eq 'app,program,requirements,detection,dependency,assignment,trust,certchange,rules,asr,test') 'steps in the mode Signature: trust and change of the certificate before the rules'
+    Assert ($text -match '4006' -and $text -match '4007' -and $text -match 'Install\.log' -and $text -match '60 minutes') 'instructions: events 4006/4007, refused signature without Install.log, 60 minutes'
+    Assert-Throws { Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; Units = @() } -Version '1' -TrustedSigner @(1..11 | ForEach-Object { '{0:X40}' -f $_ }) } 'more than 10 signers are refused'
+    $hashGuide = Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; Units = @() } -Version '1' -PackageFile 'p' -DetectionFile 'd'
+    Assert (@($hashGuide.Steps | Where-Object { $_.Id -in 'trust', 'certchange' }).Count -eq 0) 'mode Hash: no trust and no certificate steps'
 
     # ---------------------------------------------------------- answers of the window = answers of the console
     Write-Host 'Answers of the window and the console'
@@ -349,6 +511,8 @@ try {
     Assert ($guiText -notmatch '(?i)ConvertTo-WizardValue\s+-Kind\s+''(mail|url)''.*-replace') 'the window does not change the checks'
     $addScript = @([regex]::Matches($guiText, '\.AddScript\((.+?)\)\.AddParameters\('))
     Assert ($addScript.Count -eq 1 -and $addScript[0].Groups[1].Value -eq '$script:WizardGuiBuildScript.ToString()' -and ([regex]::Matches($guiText, 'AddScript\(')).Count -eq 1) 'the runspace runs only the constant build script (values are parameters)'
+    Assert ($guiText -cnotmatch '\.Password\b' -and $guiText -match '\.SecurePassword') 'the window reads the password box only as SecureString (never the property Password)'
+    Assert ($guiText -notmatch '(?i)ConvertFrom-SecureString|PtrToString|SecureStringToBSTR|SecureStringToGlobalAlloc|NetworkCredential') 'the window never turns the password into text'
     $tokens = $null; $errors = $null
     $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $WizardFolder 'SelfXWizardGui.ps1'), [ref]$tokens, [ref]$errors)
     Assert (@($errors).Count -eq 0) 'SelfXWizardGui.ps1 parses'
