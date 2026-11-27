@@ -78,8 +78,10 @@ Auf dem Build-Rechner wird nichts aus dem Internet geladen. Alles Nötige kommt 
 
 ## Schritt 2: Paket bauen
 
-> **Einfacher mit dem Assistenten:** `tools\New-SelfXPackage.ps1` stellt Fragen mit Empfehlungen, baut das Paket
-> und erklärt die Schritte in Intune. Siehe [Paketassistent](Assistent.md). Die folgenden Schritte zeigen den manuellen Weg.
+> **Einfacher mit dem Assistenten:** `tools\New-SelfXPackage.ps1` stellt Fragen mit Empfehlungen, baut das Paket danach
+> in einem Lauf (Einstellungen, Logo, optional Signatur, Verpacken, Erkennungsskript, AppLocker- und App-Control-Dateien) und erklärt die
+> Schritte in Intune. Er arbeitet mit dem entpackten **Nutzlast-Archiv** eines Release, das .NET SDK ist also nicht nötig. Siehe
+> [Paketassistent](Assistent.md). Die folgenden Schritte zeigen den manuellen Weg.
 
 Wiederholen Sie diesen Schritt bei jeder neuen Version. Öffnen Sie PowerShell im Ordner
 des Repositorys.
@@ -439,7 +441,9 @@ gibt es eine Signer-Regel ([Einmal einrichten statt je Version](#einmal-einricht
 
    Das Skript legt in `build\wdac` die XML- und die `.cip`-Datei ab. Sie enthält
    Hashregeln für alle Programme, Bibliotheken und Skripte des Pakets. Es ändert nichts auf
-   dem PC.
+   dem PC. Der Assistent (`New-SelfXPackage.ps1`) ruft dieses Skript für Sie auf, wenn Sie die ID der Basisrichtlinie angeben; das Skript
+   liest dann den Ordner `package` des Ergebnisses (Ordner `App`, `Config` und `Bin`) und das erzeugte Erkennungsskript
+   (`-DetectionFile`), so wie Intune es ausführt.
 4. **Verteilen** mit Intune (Richtlinie für App Control for Business) an dieselben Geräte
    wie das SelfX-Paket. Die Richtlinie muss vor dem Paket auf dem Gerät sein.
 5. **Erst im Überwachungsmodus.** Ob überwacht oder erzwungen wird, bestimmt die

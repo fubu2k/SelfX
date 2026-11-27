@@ -26,6 +26,7 @@
     2.8.3    2026-11-23  fubu2k               Initial version.
     2.8.4    2026-11-27  fubu2k               The policy version comes from Version.txt: the test package gets Version.txt.
     2.9.0    2026-11-27  fubu2k               Level Publisher: checks of the policy, refusal without a signed file, run with a signed test script
+    2.9.1    2026-11-27  fubu2k               Package layout of the assistant (App, Config, version from SelfX.Code.json) and -DetectionFile: refusal checks
 #>
 $ErrorActionPreference = 'Stop'
 $stopwatch = [Diagnostics.Stopwatch]::StartNew()
@@ -47,6 +48,8 @@ Assert-True ($toolText -match 'Level Hash') 'the policy uses hash rules'
 Assert-True ($toolText -notmatch '(?m)^[^#\r\n]*-NoScript') 'scripts are included in the scan'
 Assert-True ($toolText -match '1377A178-96F8-49DD-B277-80F0F10BB383') 'the policy ID is fixed'
 Assert-True ($toolText -match 'Version\.txt' -and $toolText -notmatch 'Tool_Version') 'the policy version comes from Version.txt, not from Tool_Config.xml'
+Assert-True ($toolText -match 'App\\SelfX\.Code\.json' -and $toolText -match '\$DetectionFile') 'the package layout of the assistant (version from SelfX.Code.json) and -DetectionFile are supported'
+Assert-True ($toolText -match "Filter '\*\.cat'") 'catalog files are not part of the scan'
 
 Assert-True ($toolText -match [regex]::Escape("[ValidateSet('Hash', 'Publisher')][string]`$Level = 'Hash'")) 'the level is Hash or Publisher and Hash is the default'
 Assert-True ($toolText -match '-Level Publisher -Fallback Hash') 'the level Publisher uses signer rules with a hash fallback for unsigned files'
@@ -124,6 +127,19 @@ else {
 		Assert-True (-not (Test-Path -LiteralPath $refusedOut)) 'no output folder after the refusal (nothing is written before the checks)'
 		$refusedText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tool -BasePolicyId $base.ToString() -PackageFolder $unsignedPackage -OutputFolder $refusedOut -AllowMultipleSigners 2>&1 | Out-String
 		Assert-True ($LASTEXITCODE -ne 0 -and $refusedText -match 'only valid with -Level Publisher') '-AllowMultipleSigners without the level Publisher is refused'
+
+		# Package layout of the assistant (App and Config, version in App\SelfX.Code.json, no Version.txt): checks that end before the scan.
+		$layoutPackage = Join-Path $root 'layout-package'
+		New-Item -ItemType Directory -Path (Join-Path $layoutPackage 'Bin'), (Join-Path $layoutPackage 'App'), (Join-Path $layoutPackage 'Config') -Force | Out-Null
+		foreach ($name in 'Install.ps1', 'Detection.ps1', 'Uninstall.ps1') { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $layoutPackage }
+		Set-Content -LiteralPath (Join-Path $layoutPackage 'Bin\SelfX.Binaries.json') -Value '{}'
+		$layoutOut = Join-Path $root 'layout-out'
+		$layoutText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tool -BasePolicyId $base.ToString() -PackageFolder $layoutPackage -OutputFolder $layoutOut 2>&1 | Out-String
+		Assert-True ($LASTEXITCODE -ne 0 -and $layoutText -match 'Neither Version\.txt nor App\\SelfX\.Code\.json') 'a package folder without Version.txt and without App\SelfX.Code.json is refused'
+		[IO.File]::WriteAllText((Join-Path $layoutPackage 'App\SelfX.Code.json'), '{ "ManifestVersion": 1, "ToolVersion": "3.1.0", "Files": {} }')
+		$layoutText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tool -BasePolicyId $base.ToString() -PackageFolder $layoutPackage -OutputFolder $layoutOut -DetectionFile (Join-Path $root 'missing-detection.ps1') 2>&1 | Out-String
+		Assert-True ($LASTEXITCODE -ne 0 -and $layoutText -match 'detection script .* does not exist') 'the version is read from App\SelfX.Code.json; a missing -DetectionFile is refused before the scan'
+		Assert-True (-not (Test-Path -LiteralPath $layoutOut)) 'no output folder after these refusals'
 
 		# Level Publisher with a signed test script (a trusted test certificate is needed; skipped otherwise).
 		. (Join-Path $repository 'tools\SelfXSigning.ps1')
