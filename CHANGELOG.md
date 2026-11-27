@@ -14,6 +14,17 @@ Beispiel `v3.0.0`); der Release-Workflow prüft, dass Tag und `Version.txt` übe
 
 ## Unveröffentlicht (SelfX Service)
 
+- **Signaturbibliothek (`tools\SelfXSigning.ps1`, nur Werkzeuge, nicht Teil des Pakets):** Funktionen für den Vertrauensmodus „Signatur“
+  (docs/de/Architecture.md), lauffähig in Windows PowerShell 5.1 und PowerShell 7: `Get-SelfXSigningCertificate` (Zertifikate aus
+  `Cert:\CurrentUser\My` und `Cert:\LocalMachine\My` mit privatem Schlüssel, Schlüsselverwendung Codesignatur und gültigem Zeitraum, oder
+  eine PFX-Datei mit `SecureString`-Kennwort, die nicht in einen Speicher importiert wird), `Set-SelfXCodeSignature` (SHA256, Kette ohne
+  Stamm, optionaler http/https-Zeitstempeldienst; die gesamte Eingabe wird vor der ersten Signatur geprüft, jede Datei wird zurückgelesen),
+  `New-SelfXSignedCatalog` (`New-FileCatalog` Version 2 und Signatur; bei einem Fehler beim Signieren bleibt kein unsignierter Katalog
+  zurück), `Test-SelfXSignature` (Status `Valid` und Signierer in der Liste erlaubter Fingerabdrücke; nennt den Grund) und
+  `Test-SelfXSignedCatalog` (Signierer und Ordnerinhalt; nennt geänderte, fehlende und zusätzliche Dateien). Das Kennwort wird nie in
+  Klartext umgewandelt und erscheint in keiner Ausgabe, keinem Protokoll und keiner Meldung. Die Bibliothek wird noch von nichts verwendet.
+  Tests: neu `tools\Test-SelfXSigning.ps1` (Teil 1 auf jedem System, Teil 2 mit selbstsignierten Testzertifikaten in `Cert:\CurrentUser`),
+  neuer CI-Job „Signing library“ (Windows PowerShell 5.1 und PowerShell 7).
 - **Text-Überschreibungen (`Config\Texts\<Kultur>.xml`, Version 3.1.0):** Ein Unternehmen kann einzelne Texte ersetzen, ohne
   eine mitgelieferte Sprachdatei zu ändern. Die optionale Datei hat das Format der Sprachdateien und enthält nur die zu
   ändernden Texte (`UI`, `SystemInfo`, `Catalog`); sie ist Konfiguration (Klasse Config, in `SelfX.Config.json` gelistet) und

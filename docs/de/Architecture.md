@@ -21,10 +21,11 @@ dieses Vertrauens liegen. Es ist für Administratoren und Prüfer geschrieben.
 4. [Die zwei Listen](#die-zwei-listen)
 5. [Vertrauensmodi: Hash und Signatur](#vertrauensmodi-hash-und-signatur)
 6. [Der Vertrauensanker](#der-vertrauensanker)
-7. [Die Grenze: lokaler Administrator](#die-grenze-lokaler-administrator)
-8. [Wer prüft was](#wer-prüft-was)
-9. [Dateien mit offener Klasse](#dateien-mit-offener-klasse)
-10. [Ordneraufbau](#ordneraufbau)
+7. [Die Signaturbibliothek](#die-signaturbibliothek)
+8. [Die Grenze: lokaler Administrator](#die-grenze-lokaler-administrator)
+9. [Wer prüft was](#wer-prüft-was)
+10. [Dateien mit offener Klasse](#dateien-mit-offener-klasse)
+11. [Ordneraufbau](#ordneraufbau)
 
 ## Überblick
 
@@ -232,6 +233,51 @@ Der Anker legt fest, welche Signierer ein Gerät akzeptiert (**Ziel**, Modus Sig
   fragt nach einem Zeitstempeldienst; abgeschottete Netze können einen internen verwenden.
 - Eine ungültige Signatur oder ein Signierer, der nicht in der Liste steht, ist ein harter Abbruch
   **vor** jeder Änderung am Gerät. Das gilt auch bei Autopilot.
+
+## Die Signaturbibliothek
+
+`tools\SelfXSigning.ps1` enthält die Funktionen, mit denen die Dateien eines Pakets signiert und Signaturen geprüft werden. Sie
+läuft in Windows PowerShell 5.1 und in PowerShell 7, definiert nur Funktionen und gehört nicht zum Paket (auf einem Gerät wird
+nichts davon installiert). `Install.ps1` und der Dienst verwenden sie noch nicht.
+
+| Funktion | Zweck |
+|---|---|
+| `Get-SelfXSigningCertificate` | findet ein Zertifikat in `Cert:\CurrentUser\My` und `Cert:\LocalMachine\My` (auch per Fingerabdruck) oder öffnet eine PFX-Datei |
+| `Set-SelfXCodeSignature` | signiert Dateien (SHA256, Kette ohne Stamm, optionaler Zeitstempeldienst) und liest jede Datei zurück |
+| `New-SelfXSignedCatalog` | schreibt einen Katalog (`New-FileCatalog`, Version 2) über einen Ordner und signiert ihn |
+| `Test-SelfXSignature` | eine Signatur zählt nur, wenn ihr Status `Valid` ist **und** der Signierer in der Liste erlaubter Fingerabdrücke steht |
+| `Test-SelfXSignedCatalog` | der Katalog stammt von einem erlaubten Signierer **und** der Ordner passt dazu; nennt geänderte, fehlende und zusätzliche Dateien |
+
+Regeln der Funktionen:
+
+- **Zertifikat:** privater Schlüssel, Schlüsselverwendung *Codesignatur* (und *Digitale Signatur*, wenn die Verwendung
+  eingeschränkt ist) und ein gültiger Zeitraum. Andere Zertifikate werden nicht zurückgegeben. Eine PFX-Datei braucht ein
+  Kennwort (`SecureString`); ein ungeeignetes Zertifikat darin beendet die Funktion mit einem Fehler.
+- **Signieren:** Vor der ersten Signatur wird die gesamte Eingabe geprüft (Zertifikat, Adresse, jeder Pfad). Dateien müssen
+  existieren, dürfen keine Links sein und müssen vom Typ `.exe`, `.dll`, `.ps1`, `.psm1`, `.psd1` oder `.cat` sein; andere Dateien
+  (XML, PNG) gehören in einen Katalog. Ein Skript mit Zeichen außerhalb von ASCII braucht eine Byte-Order-Mark, weil Windows
+  PowerShell 5.1 und PowerShell 7 eine Datei ohne sie unterschiedlich lesen. Der Zeitstempeldienst ist eine absolute
+  `http`- oder `https`-Adresse (keine Benutzerangaben, kein anderes Schema). Ein Dienst, der nicht erreichbar ist, ist ein Fehler;
+  keine Datei wird stillschweigend ohne Zeitstempel signiert. Nach dem Signieren wird jede Datei zurückgelesen: Status `Valid`,
+  Signierer ist das angegebene Zertifikat, Zeitstempel vorhanden, wenn einer verlangt war.
+- **Katalog:** Die Katalogdatei muss außerhalb des Ordners liegen (sie wird danach in den Ordner kopiert;
+  `Test-SelfXSignedCatalog` akzeptiert beide Orte). Ein Ordner mit einem Link oder ohne Datei wird abgelehnt. Schlägt das
+  Signieren fehl, wird der unsignierte Katalog gelöscht.
+- **Prüfung:** Eine leere Liste erlaubter Signierer oder ein Fingerabdruck, der nicht aus 40 Hexadezimalzeichen besteht, ist ein
+  Fehler, nie „alles erlaubt“. `Test-SelfXSignature` nennt den Grund: `Ok`, `FileMissing`, `NotSigned`, `HashMismatch`,
+  `NotSupported`, `NotTrusted`, `SignerNotAllowed` oder `Error`. Jeder unerwartete Zustand ergibt `IsValid = $false`.
+- **Kennwort:** ein `SecureString` vom Parameter bis zum Zertifikat; es wird nie in eine Klartext-Zeichenfolge umgewandelt und nie
+  in ein Protokoll, die Ausgabe, eine Antwortdatei oder eine Fehlermeldung geschrieben. Eine PFX-Datei wird nicht in einen
+  Zertifikatspeicher importiert; das Zertifikat liegt im Arbeitsspeicher mit einem temporären Schlüssel, der entfernt wird, wenn der
+  Aufrufer das Objekt freigibt (`.Dispose()`).
+
+Nicht von der Bibliothek abgedeckt: das Verhalten der Sperrprüfung ohne Netz (wird mit `Install.ps1` geprüft, Planschritt 7), welche
+Art Zeitstempel die jeweilige PowerShell-Edition schreibt und die Prüfung eines Katalogs durch den Dienst mit `WinVerifyTrust`.
+
+Tests: `tools\Test-SelfXSigning.ps1`. Teil 1 läuft überall. Teil 2 (Windows) erzeugt selbstsignierte Zertifikate in
+`Cert:\CurrentUser\My`, vertraut ihren öffentlichen Teil in `Cert:\CurrentUser\Root` und entfernt beides am Ende; er läuft auf
+GitHub Actions (Job *Signing library*, beide PowerShell-Editionen) oder mit `SELFX_TEST_ALLOW_ROOT_IMPORT=1`. `SELFX_TEST_SLOW=1`
+ergänzt die Tests mit einem Zertifikat, das während des Tests abläuft, `SELFX_TEST_TIMESTAMP_URL` den Test mit Zeitstempel.
 
 ## Die Grenze: lokaler Administrator
 
