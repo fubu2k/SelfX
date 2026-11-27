@@ -14,6 +14,8 @@ The package version is the one line of `SelfX Service\Version.txt`; the build wr
 
 ## Unreleased (SelfX Service)
 
+- **Repository front page (`README.md`, `README.de.md`):** short description of SelfX, badges (CI, release, license), a step-by-step download and hash check, and the version 3.1.0. Documentation only; no change to the programs, scripts or the package. Not tried on a device.
+
 - **Release workflow: payload archive, release notes, automatic publishing (`.github\workflows\release.yml`, `tools\SelfXRelease.Common.ps1`
   3.1.0):** A version tag now builds, besides the Intune package (`.intunewin`), its detection script, the SBOM and `SHA256SUMS.txt`, the
   **payload archive** `SelfX-Service-<version>-payload.zip`: the package folder as it is packed (`Install.ps1`, `Uninstall.ps1`,
