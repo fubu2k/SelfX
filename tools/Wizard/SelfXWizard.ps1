@@ -300,7 +300,7 @@ function New-SelfXIntuneGuide {
     )
     $ps = '%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
     # Trust mode Signature: the install command names the signer (SHA1 thumbprints, 40 hex characters, separated by commas without a space).
-    $signers = @($TrustedSigner | ForEach-Object { "$_".ToUpperInvariant() })
+    $signers = @($TrustedSigner | Where-Object { $_ } | ForEach-Object { "$_".ToUpperInvariant() })
     foreach ($signer in $signers) { if ($signer -notmatch '^[0-9A-F]{40}\z') { throw 'A thumbprint for -TrustedSigner is not valid.' } }
     $installArguments = $(if ($signers.Count) { ' -TrustedSigner ' + ($signers -join ',') } else { '' })
     $org = $Answers.OrgName
