@@ -1183,7 +1183,8 @@ foreach ($case in @(
 	@("a`r`nb`tc", 256, 'abc', 'CR, LF and tab'), @("x$([char]0x2028)y$([char]0x2029)z$([char]0x85)", 256, 'xyz', 'Unicode line and paragraph separators'),
 	@("$([char]0)n$([char]0x1b)[31m", 256, 'n[31m', 'NUL and escape'), @('%%1234 and %1', 256, '__1234 and _1', 'parameter references'),
 	@(('A' * 300), 256, ('A' * 256), 'longer than the limit'), @('Disk C:', 256, 'Disk C:', 'a normal value'))) {
-	$result = [string]$cleanField.Invoke($null, [object[]]@($case[0], [int]$case[1]))
+	$value = if ($null -eq $case[0]) { $null } else { [string]$case[0] }
+	$result = [string]$cleanField.Invoke($null, [object[]]@($value, [int]$case[1]))
 	Assert-True ($result -ceq $case[2]) "Event log: cleaning of $($case[3]) gives '$($case[2])' (got '$result')"
 }
 
@@ -1204,9 +1205,9 @@ New-Item -ItemType Directory -Path $evScripts -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Ok.ps1') -Value 'exit 0'
 Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Fail.ps1') -Value 'exit 3'
 Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Slow.ps1') -Value 'Start-Sleep -Seconds 30'
-$pwshPath = (Get-Process -Id $PID).Path
+$pwshPath = [string](Get-Process -Id $PID).Path
 function Invoke-EventScript([string]$Name, [int]$Timeout = 60, [string]$Sid = 'S-1-5-21-1-2-3-1001', [bool]$Admin = $false) {
-	return [string]$startScript.Invoke($evService, [object[]]@($pwshPath, (Join-Path $evScripts $Name), $Name, $Timeout, 'TEST\user', $false, '', $Sid, $false, $Admin))
+	return [string]$startScript.Invoke($evService, [object[]]@($pwshPath, [string](Join-Path $evScripts $Name), $Name, [int]$Timeout, 'TEST\user', $false, '', $Sid, $false, $Admin))
 }
 Set-EventConfig '<GUI_Config />'
 Clear-TestEvents
@@ -1230,7 +1231,7 @@ $failed = @(Get-TestEvents 4012)
 Assert-True ($answer -ceq 'TIMEOUT' -and $failed.Count -eq 1 -and "$($failed[0][1])" -eq 'Error' -and [string]$failed[0][2][2] -ceq 'Timeout' -and [string]$failed[0][2][3] -ceq '-') 'Event log: 4012 for a timeout = Error, result Timeout, no exit code'
 Clear-TestEvents
 $startError = $null
-try { [void]$startScript.Invoke($evService, [object[]]@((Join-Path $evScripts 'missing-pwsh.exe'), (Join-Path $evScripts 'Ev_Ok.ps1'), 'Ev_Ok.ps1', 60, 'TEST\user', $false, '', 'S-1-5-21-1-2-3-1001', $false, $false)) } catch { $startError = $_ }
+try { [void]$startScript.Invoke($evService, [object[]]@([string](Join-Path $evScripts 'missing-pwsh.exe'), [string](Join-Path $evScripts 'Ev_Ok.ps1'), 'Ev_Ok.ps1', 60, 'TEST\user', $false, '', 'S-1-5-21-1-2-3-1001', $false, $false)) } catch { $startError = $_ }
 $failed = @(Get-TestEvents 4012)
 Assert-True ($null -ne $startError -and $failed.Count -eq 1 -and [string]$failed[0][2][2] -ceq 'StartError') 'Event log: 4012 with StartError when PowerShell cannot be started (the error is passed on)'
 

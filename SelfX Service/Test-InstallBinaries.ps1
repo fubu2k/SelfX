@@ -113,7 +113,7 @@ if ($eventDefinition) {
 	Remove-Item -Path Function:\Remove-EventLog, Function:\New-EventLog, Function:\Limit-EventLog, Function:\Get-SelfXEventSourceLog
 }
 $installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
-$eventAt = $installText.IndexOf('(Initialize-SelfXEventLog)')
+$eventAt = $installText.IndexOf('"Windows event log: " + (Initialize-SelfXEventLog)')
 Assert-Equal ($eventAt -gt $installText.IndexOf('& sc.exe delete $ServiceName') -and $eventAt -lt $installText.IndexOf('New-Service -Name $ServiceName')) $true 'Event log: Install.ps1 prepares the log after the old service is removed and before the new one is registered'
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('SelfXInstallBinariesTest_' + [guid]::NewGuid().ToString('N'))
