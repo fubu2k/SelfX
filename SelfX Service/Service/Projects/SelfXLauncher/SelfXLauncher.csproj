@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- SelfX.exe: starts the SelfX window or the status icon without a console window. .NET 10, self-contained, one file.
+       The assemblies in the file are not compressed (faster start, see SelfXService.csproj).
        The source is ..\..\SelfXLauncher.cs. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -10,7 +11,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
     <DebugType>none</DebugType>
     <Nullable>disable</Nullable>
