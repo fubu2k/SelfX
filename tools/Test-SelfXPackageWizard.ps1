@@ -30,6 +30,7 @@
               1.9.1 (2026-11-28, fubu2k) the configuration package of the wizard passes the layout rule of Install.ps1 -ConfigOnly
               1.9.0 (2026-11-28, fubu2k) time stamp: kind timestamp, TimestampServer in the answer file (console, saved, refused when invalid, in no
                                          file of the package), -NoTimestamp needed without a service, test signature first, unreachable service
+              1.11.0 (2026-11-28, fubu2k) question GreetingName: FirstName or Off, default FirstName, writes Greeting_Name
               1.10.0 (2026-11-28, fubu2k) monitoring: questions HealthRemediation and HealthInventory, Set-SelfXHealthInventory, files of
                                          tools\Intune in the output folder, guide step (Windows 11 and Windows Server)
     Exit code: 0 = all tests passed, 1 = at least one failed
@@ -210,6 +211,11 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ($disturbQuestion.Count -eq 1 -and $disturbQuestion[0].Kind -eq 'bool' -and $disturbQuestion[0].Default -eq $true -and $null -eq $disturbQuestion[0].When) 'DisturbWarning: one yes/no question, default yes, always asked'
     Assert ((Get-WizardToolConfigValues -A @{ DisturbWarning = $false }).Disturb_Warning -eq $false -and (Get-WizardToolConfigValues -A @{ DisturbWarning = $true }).Disturb_Warning -eq $true) 'DisturbWarning: the answer is written as Disturb_Warning'
     Assert ((Get-WizardToolConfigValues -A @{}).Disturb_Warning -eq $true) 'DisturbWarning: an answer file without it keeps the hint on'
+$greetingQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'GreetingName' })
+Assert ($greetingQuestion.Count -eq 1 -and $greetingQuestion[0].Kind -eq 'choice' -and $greetingQuestion[0].Default -eq 'FirstName' -and (($greetingQuestion[0].Choices) -join ',') -eq 'FirstName,Off' -and $null -eq $greetingQuestion[0].When) 'GreetingName: one choice FirstName or Off, default FirstName, asked for both systems'
+Assert ((Get-WizardToolConfigValues -A @{ GreetingName = 'Off' }).Greeting_Name -eq 'Off' -and (Get-WizardToolConfigValues -A @{ GreetingName = 'FirstName' }).Greeting_Name -eq 'FirstName') 'GreetingName: the answer is written as Greeting_Name'
+Assert ((Get-WizardToolConfigValues -A @{}).Greeting_Name -eq 'FirstName') 'GreetingName: an answer file without it keeps FirstName'
+Assert-Throws { $script:WizardInteractive = $false; try { Get-WizardAnswer -Question $greetingQuestion[0] -Answers @{} -Source @{ GreetingName = 'DisplayName' } } finally { $script:WizardInteractive = $true } } 'GreetingName: another value (DisplayName) is refused'
     $tsMailQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'TerminalServerSupportMail' })
     Assert ($tsMailQuestion.Count -eq 1 -and $tsMailQuestion[0].Kind -eq 'mail' -and $tsMailQuestion[0].Required -and ((& $tsMailQuestion[0].When @{ TargetOS = 'WindowsServer' }) -eq $true) -and ((& $tsMailQuestion[0].When @{ TargetOS = 'Windows11' }) -eq $false) -and ((& $tsMailQuestion[0].Default @{ SupportMail = 's@contoso.example' }) -eq 's@contoso.example')) 'TerminalServerSupportMail: one required mail question, only for WindowsServer, default the support mail'
     Assert-Throws { ConvertTo-WizardValue -Kind 'mail' -Value 'a@contoso.example;b@contoso.example' } 'TerminalServerSupportMail: a list of addresses is refused'
