@@ -726,10 +726,26 @@ Files older than `Log_Retention_Days` (default 90) are deleted automatically (se
 
 ### Windows event log
 
-The service writes security-relevant events to the *Application* log (source `SelfXService`) so
-that Defender for Endpoint, Intune or a SIEM can evaluate them. The texts are fixed and contain
-no request texts and no user names. For each event ID at most 10 entries in 10 minutes apply;
-after that 4099 reports the number of skipped ones.
+The service writes its events to its own log **SelfX** (Event Viewer: *Applications and Services
+Logs* > *SelfX*, source `SelfXService`), so that Defender for Endpoint, Intune or a SIEM can
+evaluate them. `Install.ps1` creates the log (at most 20 MB, the oldest entries are overwritten
+when it is full); `Uninstall.ps1` removes it. Versions before 3.1.0 wrote with the same source to
+the *Application* log: the update moves the source to the log SelfX, older entries stay in the
+Application log. When the log cannot be created, the installation continues with a warning in
+`Install.log`; the service then writes only `SelfXService.log`.
+
+Like the Application log, the log can be read by every signed-in user. Therefore the entries
+contain no request texts, no user names, no paths from user profiles and no detail texts of the
+health checks. The SID of the user who started an action is written only when
+`EventLog_CallerSid` = `True` in `Tool_Config.xml` (default `False`, see
+[Configuration](Configuration.md#logs-and-retention)). Every field is cleaned (control characters
+removed, `%` becomes `_`) and shortened (field 1 to 800, the other fields to 256 characters); an
+empty field is `-`.
+
+Rate limit per event ID: security events (4001-4008) at most 10 entries in 10 minutes,
+operational events (4010-4013) at most 20 entries per minute. After that, 4099 reports the
+number of entries that were left out. The same events are written on Windows 11 and on a terminal
+server.
 
 | ID | Level | Meaning |
 |---|---|---|
@@ -741,8 +757,35 @@ after that 4099 reports the number of skipped ones.
 | 4006 | Error | The trust anchor `HKLM\SOFTWARE\SelfX\Trust` is missing, invalid or can be changed by an identity other than SYSTEM and Administrators; the service starts nothing. Install SelfX again. |
 | 4007 | Error | Trust mode signature: an installed script or library has no valid signature of an allowed signer, or a signed catalog (`SelfX.Code.cat`, `SelfX.Config.cat`) is missing or does not match; the service starts nothing, also with `Service_FileCheck` = `Audit`. The SelfX log names the file and the reason. |
 | 4008 | Warning | Terminal server (Windows Server, mode `TerminalServer`): a request for an action that is not classified `TerminalServer` = `Show` was refused. The SelfX log names the action. |
-| 4009 | - | Not written any more: the mode comes from Windows and cannot differ from it. |
-| 4099 | Warning | Further events of the same ID were not written (limit). |
+| 4009 | - | Not used (formerly a warning about the mode; the mode comes from Windows). The ID stays free. |
+| 4010 | Information | An action was started as SYSTEM (also a repair of a health check). |
+| 4011 | Information | An action as SYSTEM ended with exit code 0. |
+| 4012 | Warning / Error | An action as SYSTEM failed: Warning for an exit code other than 0, Error for a timeout or when PowerShell 7 could not be started. |
+| 4013 | Warning | A row of the health checks changed to the status *Error*. Also written for a row that is in *Error* at the first check after the service has started. |
+| 4099 | Warning | Further events of one ID were not written (rate limit). |
+
+#### Fields for a SIEM
+
+Every entry carries its values as separate strings (insertion strings; in the XML view of Event
+Viewer `EventData`, in PowerShell `(Get-WinEvent -LogName SelfX).Properties`). Field 1 is always
+a fixed English text; the order of the fields does not change. Event Viewer shows field 1 as the
+description.
+
+| ID | Field 1 | Field 2 | Field 3 | Field 4 | Field 5 | Field 6 |
+|---|---|---|---|---|---|---|
+| 4001-4008 | fixed text | - | - | - | - | - |
+| 4010 | fixed text | script (file name from the catalog) | SID of the caller or `-` | caller is an elevated administrator: `True` / `False` | - | - |
+| 4011 | fixed text | script | result: `ExitCode` | exit code: `0` | duration in seconds | SID of the caller or `-` |
+| 4012 | fixed text | script | result: `ExitCode`, `Timeout` or `StartError` | exit code, `-` without one | duration in seconds | SID of the caller or `-` |
+| 4013 | fixed text | type of the check (`Id` in `Health_Config.xml`, for example `Disk`, `Services`) | name of the row (for example the drive or the service, can be empty = `-`) | previous status (`OK`, `Pending`, `Unknown` or `-` at the first check) | - | - |
+| 4099 | fixed text | event ID that was limited | number of entries left out | - | - | - |
+
+Example (PowerShell, as administrator or user):
+`Get-WinEvent -FilterHashtable @{ LogName = 'SelfX'; Id = 4012 } | ForEach-Object { $_.Properties[1].Value }`
+lists the scripts of the failed actions.
+
+A failed installation of a company app does not get an event of its own: it shows up as event
+4013 for the row `Applications`.
 
 ### The file lists `SelfX.Code.json` and `SelfX.Config.json`
 

@@ -86,6 +86,7 @@ and changing the settings does not change the version.
 | `Ticket_Subject_Tag` | `SelfX` | Marker at the start of the subject of a ticket e-mail. Letters, digits, `.`, `_`, `-` and at most 20 characters, otherwise `SelfX`. |
 | `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Shortcuts that the installation creates for all users. |
 | `Log_Retention_Days` | `90` | How long logs are kept (1 to 3650 days). |
+| `EventLog_CallerSid` | `False` | `True`: the Windows event log SelfX names the SID of the user who started an action as SYSTEM (events 4010 to 4012). Any other value: no SID. See [Logs and retention](#logs-and-retention). |
 | `Service_FileCheck` | `Enforce` | `Enforce`: the service starts nothing if files do not match. `Audit`: the service only reports it. See the [installation guide](Installation.md#the-file-lists-selfxcodejson-and-selfxconfigjson). |
 | `Service_Privileges` | `Restricted` | Limits the rights of the service. `Default` only for troubleshooting. See the [installation guide](Installation.md#service-privileges). |
 | `Show_Tray_Icon` | `True` | Show the status icon next to the clock. See [Status icon](#status-icon). |
@@ -768,6 +769,13 @@ changes are logged too. The logs contain no passwords and no secrets.
   because a deletion as SYSTEM must not follow a link that a user created.
 
 `Uninstall.ps1` keeps the logs. With `-RemoveLogs` they are deleted.
+
+**Windows event log:** The service also writes events to its own log *SelfX* (Event Viewer: *Applications and
+Services Logs*): security events, actions as SYSTEM (started, succeeded, failed) and health rows that change to
+*Error*. Every signed-in user can read this log, so it contains no user names and no detail texts. The SID of
+the user who started an action is written only with `EventLog_CallerSid` = `True`; switch it on only when your
+SIEM needs it and your rules for personal data allow it. `Uninstall.ps1` removes the log. IDs and fields:
+[installation guide](Installation.md#windows-event-log).
 
 ## Branding
 

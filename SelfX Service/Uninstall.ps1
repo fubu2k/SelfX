@@ -17,7 +17,8 @@
     and status icons of all signed-in users (powershell.exe or pwsh.exe running Self_X.ps1 or
     SelfX_Tray.ps1 from InstallFolder or InstallFolder\App) are closed first, because they keep the install
     folder in use. Per-user settings and caches (HKCU\Software\SelfX,
-    LOCALAPPDATA\SelfX) are not removed.
+    LOCALAPPDATA\SelfX) are not removed. The Windows event log SelfX (with its entries) and the source SelfXService are removed;
+    a registration of the source in the Application log (older versions) is removed too, its old entries stay there.
     Install files locked by other programs are retried for up to 90 seconds;
     an empty install folder that is still in use is left behind and
     does not count as failure. A service that is only marked for deletion (still opened by
@@ -49,6 +50,8 @@
                                               is kept
     3.1.0    2026-11-27  fubu2k               Removes the work folders InstallFolder.ConfigStage, .ConfigOld and .ConfigStage.Failed that an interrupted
                                               Install.ps1 -ConfigOnly can leave next to the install folder (delete helper, no link is followed)
+    3.1.0    2026-11-28  fubu2k               Removes the Windows event log SelfX and the source SelfXService (also a registration of an older version in
+                                              the Application log; its old entries stay there)
 #>
 
 [CmdletBinding()]
@@ -95,6 +98,37 @@ function Remove-SelfXTreeSafe
 	return $false
 }
 
+# Name of the log in which an event source is registered, '' when it is not registered (same as in Install.ps1).
+function Get-SelfXEventSourceLog
+{
+	param([Parameter(Mandatory = $true)][string]$Source)
+	If(-not [Diagnostics.EventLog]::SourceExists($Source)) { return '' }
+	return "$([Diagnostics.EventLog]::LogNameFromSourceName($Source, '.'))"
+}
+
+function Test-SelfXEventLogExists
+{
+	param([Parameter(Mandatory = $true)][string]$LogName)
+	return [Diagnostics.EventLog]::Exists($LogName)
+}
+
+# Removes the Windows event log SelfX with its entries and the source SelfXService; a source that an older version registered in
+# another log (Application) is removed there too (only the registration: the old entries of that log stay). Returns a line for the log.
+function Remove-SelfXEventLog
+{
+	param([string]$LogName = 'SelfX', [string]$Source = 'SelfXService')
+	$done = New-Object System.Collections.Generic.List[string]
+	Try
+	{
+		$SourceLog = Get-SelfXEventSourceLog -Source $Source
+		If($SourceLog -and ($SourceLog -ne $LogName)) { Remove-EventLog -Source $Source -ErrorAction Stop; $done.Add("source $Source removed from '$SourceLog'") }
+		If(Test-SelfXEventLogExists -LogName $LogName) { Remove-EventLog -LogName $LogName -ErrorAction Stop; $done.Add("log $LogName removed") }
+	}
+	Catch { return "The event log $LogName could not be removed completely: $($_.Exception.Message)" }
+	If(-not $done.Count) { return "No event log $LogName to remove." }
+	return "Windows event log: $($done -join '; ')."
+}
+
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 If(-not $IsAdmin) { Write-Output 'Uninstall.ps1 must run with administrator rights.'; exit 1 }
 
@@ -136,6 +170,8 @@ If($Service)
 	& sc.exe delete $ServiceName | Out-Null
 	For($i = 0; ($i -lt 30) -and (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }
 }
+# The event log of the service (after the service has stopped, so it writes nothing any more). A failure does not fail the uninstallation.
+Write-Output (Remove-SelfXEventLog)
 
 # Check both shared shortcut locations even if installation created only one shortcut.
 ForEach($Folder in @((Join-Path $env:PUBLIC 'Desktop'), (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs')))
