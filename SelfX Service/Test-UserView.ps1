@@ -25,6 +25,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.20   2026-11-23  fubu2k               Initial version (finding M3: user view of the device logs).
     2.8.22   2026-11-23  fubu2k               Tests for the trusted Teams installer logs (finding N9).
+    3.1.0    2026-11-28  fubu2k               Collect-DeviceLogs.ps1 1.3.7 (no compiled OOBEComplete call).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -159,7 +160,7 @@ Test-Pattern 'Write-Host "  \$\(Hide-OtherUsers \$finding\)"' 'console output of
 Test-Pattern 'function Add-Line \{ param\(\[string\]\$Text\) \$writer\.WriteLine\(\(Hide-OtherUsers \$Text\)\) \}' 'every report line passes through Hide-OtherUsers'
 Test-Pattern 'function Add-FileTail \{\s*param[^\r\n]*\s*Add-Line ''''\s*#[^\r\n]*\s*if \(\$UserView\) \{[^}]*return \}' 'file tails (IME, CBS, DISM, setup, Windows Update) are omitted'
 Test-Pattern 'function Add-FilteredLines \{\s*param[^\r\n]*\s*if \(\$UserView\) \{[^}]*return \}' 'filtered log lines are omitted'
-Test-Pattern "\`$ScriptVersion = '1\.3\.6'" 'script version 1.3.6'
+Test-Pattern "\`$ScriptVersion = '1\.3\.7'" 'script version 1.3.7'
 Test-Pattern "(?s)Invoke-Safe 'Teams bootstrapper logs'.*?Test-TrustedLogFile -File \`$candidate -Root \`$folder -TrustedOwnerSids \`$trustedOwners" 'Teams installer logs: only trusted files (owner, links) are listed and read'
 
 if ($script:errors.Count) {

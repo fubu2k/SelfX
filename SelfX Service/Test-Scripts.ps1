@@ -23,6 +23,7 @@
     3.1.0  2026-11-28  fubu2k          GPUpdate on Windows Server: only "/target:user /force" (mode from the mocked product type of Windows).
     3.1.0  2026-11-28  fubu2k          App retry of one app (SELFX_APP_ID): only the entries of this app while it failed or its download
                                        stalled; nothing for an app that changed or disappeared; no IME restart then; OtherSessions Block.
+    3.1.0  2026-11-28  fubu2k          No Add-Type with source text in installed files (static check; three files of the window still allowed).
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -36,6 +37,17 @@ function Assert-Equal($Actual, $Expected, $Message) {
 	$script:assertions++
 	if ($Actual -ne $Expected) { throw "$Message : expected '$Expected', got '$Actual'." }
 }
+
+# Nothing is compiled on a device (CLAUDE.md 3.4): no installed script uses Add-Type with source text. Three files of the window
+# (user context) still do, until their native calls move into a built library; the list may only get shorter.
+$compileAllowed = @('Self_X.ps1', 'SelfX_Tray.ps1', 'SelfXServiceClient.ps1')
+$installed = @(Get-ChildItem -LiteralPath $sources -Recurse -File -Filter '*.ps1') + @(Get-Item -LiteralPath (Join-Path $PSScriptRoot 'Install.ps1'), (Join-Path $PSScriptRoot 'Uninstall.ps1'), (Join-Path $PSScriptRoot 'Detection.ps1'))
+foreach ($file in $installed) {
+	$compiles = [regex]::IsMatch([IO.File]::ReadAllText($file.FullName), '(?im)^[^#\r\n]*\bAdd-Type\b[^\r\n]*-(TypeDefinition|MemberDefinition)\b')
+	if ($compileAllowed -contains $file.Name) { continue }
+	Assert-Equal $compiles $false "No Add-Type with source text in the installed file $($file.Name)"
+}
+Assert-Equal ([regex]::IsMatch([IO.File]::ReadAllText((Join-Path $scripts 'Collect-DeviceLogs.ps1')), 'OOBEComplete\(')) $false 'Collect-DeviceLogs.ps1 (SYSTEM) no longer declares the OOBEComplete API'
 
 #----------------------------------------------------------------------------------------------------
 # Mocks: everything that could change this device. Functions take precedence over cmdlets; module
