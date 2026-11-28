@@ -25,6 +25,7 @@
     3.1.0    2026-11-27  fubu2k               Both layouts: Tool_Config.xml in Config and in the install folder, delete helper in App, pattern of the
                                               open windows for App and the old layout, Tool_Config.xml without DTD.
     3.1.0    2026-11-28  fubu2k               Event log SelfX: log and source removed, a source in the Application log (older version) too, failure reported.
+    3.1.0    2026-11-28  fubu2k               Uninstall.ps1 starts sc.exe and icacls.exe with their full path (static check).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -67,7 +68,9 @@ if ($removeDefinition) {
 	Remove-Item -Path Function:\Remove-EventLog, Function:\Get-SelfXEventSourceLog, Function:\Test-SelfXEventLogExists
 }
 $uninstallSource = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Uninstall.ps1'))
-Assert-Equal ($uninstallSource.IndexOf('Write-Output (Remove-SelfXEventLog)') -gt $uninstallSource.IndexOf('& sc.exe delete $ServiceName')) $true 'Event log: removed after the service is stopped and deleted'
+Assert-Equal ($uninstallSource.IndexOf('Write-Output (Remove-SelfXEventLog)') -gt $uninstallSource.IndexOf("& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') delete `$ServiceName")) $true 'Event log: removed after the service is stopped and deleted'
+# SYSTEM starts the tools of Windows by their full path, never through a search of PATH.
+Assert-Equal ([regex]::IsMatch($uninstallSource, '(?m)^[^#\r\n]*&\s*(sc|icacls)\.exe\b')) $false 'Uninstall.ps1 starts sc.exe and icacls.exe with their full path'
 
 # Both layouts (3.1.0): App\ and Config\ and, for an installation of an older version, everything directly in the install folder.
 $uninstallText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Uninstall.ps1'))

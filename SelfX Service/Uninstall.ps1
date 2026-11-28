@@ -53,6 +53,7 @@
     3.1.0    2026-11-28  fubu2k               Removes the Windows event log SelfX and the source SelfXService (also a registration of an older version in
                                               the Application log; its old entries stay there)
     3.1.0    2026-11-28  fubu2k               Also deletes ProgramData\SelfX\Inventory (inventory file of the service) with the delete helper
+    3.1.0    2026-11-28  fubu2k               sc.exe with the full path of System32 (no search through PATH as SYSTEM)
 #>
 
 [CmdletBinding()]
@@ -168,7 +169,7 @@ $Service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 If($Service)
 {
 	If($Service.Status -ne 'Stopped') { Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue }
-	& sc.exe delete $ServiceName | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') delete $ServiceName | Out-Null
 	For($i = 0; ($i -lt 30) -and (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }
 }
 # The event log of the service (after the service has stopped, so it writes nothing any more). A failure does not fail the uninstallation.
@@ -240,7 +241,7 @@ If((Test-Path -LiteralPath $InstallFolder) -and ($RemainingFiles.Count -eq 0))
 $ServiceLeft = $false
 If(Get-Service -Name $ServiceName -ErrorAction SilentlyContinue)
 {
-	& sc.exe delete $ServiceName | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') delete $ServiceName | Out-Null
 	If($LASTEXITCODE -eq 1072) { Write-Output "Service '$ServiceName' is marked for deletion and disappears when the last program closes it." }
 	ElseIf(@(0, 1060) -notcontains $LASTEXITCODE) { $ServiceLeft = $true; Write-Output "Service '$ServiceName' could not be deleted (sc.exe exit code $LASTEXITCODE)." }
 }
