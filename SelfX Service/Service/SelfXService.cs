@@ -143,6 +143,10 @@ Notes:
                                               one JSON line with schema version 1 in ProgramData\SelfX\Inventory\SelfX.Inventory.json (status per
                                               check type, failed apps with code, no names or detail texts), rotation at MaxSizeKB (64-10240, default
                                               1024) to SelfX.Inventory.json.old, no link followed; nothing while TerminalServer_Health is Off
+    3.1.0    2026-11-28  fubu2k               SafeTree (/removetree:, /cleandata:, /cleanold:): every entry below the root is used only when the
+                                              final path of its handle is exactly the expected path. A user could turn an empty folder into a
+                                              junction in place while it was open, so that the entries listed and opened through it lay outside
+                                              the root (delete as SYSTEM outside Windows\Temp). Such entries are kept and counted.
 */
 
 using System;
@@ -3788,6 +3792,8 @@ namespace SelfX
         const int ERROR_FILE_NOT_FOUND = 2;
         const int ERROR_PATH_NOT_FOUND = 3;
         const int ERROR_DIR_NOT_EMPTY = 145;
+        // Reported for an entry whose handle names another path than expected (a parent folder became a link after it was opened).
+        const int ERROR_CANT_RESOLVE_FILENAME = 1921;
 
         [StructLayout(LayoutKind.Sequential)]
         struct FILE_ATTRIBUTE_TAG_INFO { public uint FileAttributes; public uint ReparseTag; }
@@ -3874,6 +3880,20 @@ namespace SelfX
             return string.Equals(builder.ToString().TrimEnd('\\'), Extended(fullPath).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
         }
 
+        // Opens an entry below an open folder by its path and keeps the handle only when it names exactly that path. The owner of
+        // an empty folder can turn it into a junction in place while the folder is open here (the open handle blocks renaming and
+        // deleting, not FSCTL_SET_REPARSE_POINT), and FILE_FLAG_OPEN_REPARSE_POINT only covers the last part of a path: the
+        // entries listed or opened through that folder then lie elsewhere. Such an entry is never deleted and never entered.
+        static SafeFileHandle OpenExact(string path, uint access, out bool redirected)
+        {
+            redirected = false;
+            SafeFileHandle handle = Open(path, access);
+            if (handle.IsInvalid || PathMatches(handle, path)) return handle;
+            redirected = true;
+            handle.Dispose();
+            return new SafeFileHandle(IntPtr.Zero, false);
+        }
+
         static bool DeleteByHandle(SafeFileHandle handle, out int error)
         {
             FILE_DISPOSITION_INFO_EX info = new FILE_DISPOSITION_INFO_EX();
@@ -3920,8 +3940,10 @@ namespace SelfX
 
         static void RemoveEntry(string path, Result result)
         {
-            using (SafeFileHandle handle = Open(path, DELETE | FILE_READ_ATTRIBUTES))
+            bool redirected;
+            using (SafeFileHandle handle = OpenExact(path, DELETE | FILE_READ_ATTRIBUTES, out redirected))
             {
+                if (redirected) { result.Fail(path, ERROR_CANT_RESOLVE_FILENAME); return; }
                 if (handle.IsInvalid)
                 {
                     int error = Marshal.GetLastWin32Error();
@@ -3940,8 +3962,10 @@ namespace SelfX
             catch (Exception) { result.Fail(folder, 0); return; }
             foreach (string child in children)
             {
-                using (SafeFileHandle handle = Open(child, DELETE | READ_CONTROL | FILE_READ_ATTRIBUTES))
+                bool redirected;
+                using (SafeFileHandle handle = OpenExact(child, DELETE | READ_CONTROL | FILE_READ_ATTRIBUTES, out redirected))
                 {
+                    if (redirected) { result.Fail(child, ERROR_CANT_RESOLVE_FILENAME); continue; }
                     if (handle.IsInvalid)
                     {
                         int error = Marshal.GetLastWin32Error();
@@ -4001,8 +4025,10 @@ namespace SelfX
             catch (Exception) { result.Kept++; return; }
             foreach (string child in children)
             {
-                using (SafeFileHandle handle = Open(child, DELETE | FILE_READ_ATTRIBUTES))
+                bool redirected;
+                using (SafeFileHandle handle = OpenExact(child, DELETE | FILE_READ_ATTRIBUTES, out redirected))
                 {
+                    if (redirected) { result.Kept++; continue; }
                     if (handle.IsInvalid)
                     {
                         int error = Marshal.GetLastWin32Error();
