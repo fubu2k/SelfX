@@ -93,7 +93,7 @@ Wichtige Parameter:
 ## Die Fragen
 
 1. **Grundlagen:** Standardsprache, Sprachwahl durch Nutzer, Name der Organisation, Name des Werkzeugs, für welches Windows das Paket ist (`Windows11` für PCs und Notebooks, `WindowsServer` für einen Terminalserver mit Windows Server 2022 oder 2025; SelfX erkennt den Modus selbst an Windows, siehe [Konfiguration](Configuration.md#terminalserver-windows-server)) und bei Windows Server, wer den Gerätestatus sieht (`TerminalServer_Health`).
-2. **Support-Kontakte:** Funktionspostfach, Telefon, Servicezeiten, Webseite, Teams.
+2. **Support-Kontakte:** Funktionspostfach, Telefon, Servicezeiten, Webseite, Teams; bei Windows Server zusätzlich die feste Support-Adresse des Terminalservers (`TerminalServer_Support_Mail`, Pflicht).
 3. **Branding:** Logo (wird kopiert) und Firmenfarbe.
 4. **Ticket per E-Mail:** Ticket-Funktion an oder aus, Standard-Empfänger, Betreff-Kennzeichen.
    Müssen **andere Organisationen oder Standorte** an andere Postfächer gehen, legen Sie je Postfach

@@ -18,6 +18,7 @@
     3.1.0  2026-11-28  fubu2k          TerminalServer_Health and the view of the user: device status page, status icon, system information,
                                        ticket.
     3.1.0  2026-11-28  fubu2k          The window and the status icon take the mode from Windows, not from Environment_Mode.
+    3.1.0  2026-11-28  fubu2k          Terminal server: fixed support address (Get-SelfXSupportContact), no ticket routing.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -481,6 +482,10 @@ try {
     # The mode comes from Windows (19d): the window and the status icon do not read Environment_Mode of Tool_Config.xml.
     Assert-Equal ($guiText.Contains('$Global:SelfX_Environment = Get-SelfXEnvironmentMode') -and $trayText.Contains('$Tray_Environment = (Get-SelfXEnvironmentMode).Mode') -and $trayText.Contains('$Tray_Mode = $Tray_Environment')) $true 'Mode: the window and the status icon take the mode from Windows'
     Assert-Equal ($guiText -notmatch "Get-SelfXText 'Environment_Mode'" -and $trayText -notmatch "Get-TrayConfig 'Environment_Mode'") $true 'Mode: no setting Environment_Mode is read'
+    # Terminal server (19e): TerminalServer_Support_Mail replaces Support_Mail and Ticket_Mail, and the ticket routing is not used.
+    Assert-Equal ($guiText.Contains('$Global:SelfX_Support = Get-SelfXSupportContact -Mode $Global:SelfX_Environment.Mode') -and $guiText.Contains('$Support_Mail = $Global:SelfX_Support.SupportMail') -and $guiText.Contains('$Ticket_Mail = $Global:SelfX_Support.TicketMail')) $true 'Terminal server: support e-mail and ticket recipient come from Get-SelfXSupportContact'
+    Assert-Equal ($guiText.Contains('If($Ticket_Available -and $Global:SelfX_Support.UseRouting)') -and $guiText.Contains("Get-SelfXTicketTarget -DefaultMail `$Ticket_Mail -Config `$null -DeviceValues")) $true 'Terminal server: Ticket_Config.xml and the device values are not used for the ticket'
+    Assert-Equal ([regex]::Matches($guiText, 'Get-SelfXText "(Support_Mail|Ticket_Mail)"').Count) 2 'Terminal server: Support_Mail and Ticket_Mail are read only once, for Get-SelfXSupportContact'
     # --- TerminalServer_Health and the view of the user (19c) ------------------------------------------------------------------
     Assert-Equal ($guiText.Contains('If(-not $Global:SelfX_View.Health) { return $False }') -and $guiText.IndexOf('If(-not $Global:SelfX_View.Health) { return $False }') -lt $guiText.IndexOf('$Global:Health_PS = [PowerShell]::Create()')) $true 'View: the window asks the service for no device status the user may not see'
     Assert-Equal ($guiText.Contains("-or -not `$Global:SelfX_View.Health) { `$Nav_Status.Visibility = 'Collapsed' }")) $true 'View: the page Device status is hidden'

@@ -100,6 +100,7 @@ and changing the settings does not change the version.
 | `Support_Hours` | `Mon–Fri 08:00–17:00` |
 | `Support_Phone_number` | `+49 000 0000` |
 | `Support_Mail` | `it-support@your-company.example` |
+| `TerminalServer_Support_Mail` | `ts-support@your-company.example`. Only on Windows Server: replaces `Support_Mail` and `Ticket_Mail` (see [Terminal server](#terminal-server-windows-server)). |
 | `Support_Teams` | Teams address or `https://` link |
 | `Support_Website` | `https://support.your-company.example` (`https://` only) |
 
@@ -179,6 +180,15 @@ On a terminal server the service also refuses every `System` action and repair t
 window is not a security boundary. An action without a classification counts as `Hide`.
 
 The check of other active sessions (`OtherSessions`) works the same in both modes.
+
+**Support address on a terminal server.** `TerminalServer_Support_Mail` in `Tool_Config.xml` is one
+fixed e-mail address of the team that supports the terminal server. On Windows Server it is the support
+e-mail, the recipient of the ticket and the address in the help window. The ticket routing
+(`Ticket_Config.xml` and the address set for a device in the registry) is not used there: support units,
+group tags and device classes describe the device of one person. The computer name of the server stays
+in the ticket. If `TerminalServer_Support_Mail` is empty or not one plain address, `Support_Mail` and
+`Ticket_Mail` are used, still without routing, and SelfX writes a warning to its log. The package wizard
+asks for the address for a package for Windows Server; on Windows 11 the setting is ignored.
 
 **Device status and system information on a terminal server.** The device status describes the server,
 not the place of work of the user. `TerminalServer_Health` decides who gets it:

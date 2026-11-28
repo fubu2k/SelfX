@@ -89,7 +89,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 ## The questions
 
 1. **Basics:** default language, language choice by users, organisation name, tool name, for which Windows the package is (`Windows11` for PCs and notebooks, `WindowsServer` for a terminal server with Windows Server 2022 or 2025; SelfX takes the mode from Windows itself, see [Configuration](Configuration.md#terminal-server-windows-server)) and, for Windows Server, who sees the device status (`TerminalServer_Health`).
-2. **Support contacts:** shared mailbox, phone, hours, website, Teams.
+2. **Support contacts:** shared mailbox, phone, hours, website, Teams; for Windows Server also the fixed support address of the terminal server (`TerminalServer_Support_Mail`, required).
 3. **Branding:** logo (copied) and company color.
 4. **Ticket by e-mail:** on or off, default recipient, subject marker. If **other organisations or
    locations** need other mailboxes, you define one **unit** per mailbox. The wizard asks about
