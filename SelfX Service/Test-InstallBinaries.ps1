@@ -43,6 +43,7 @@
                                               SelfX.Code.cat); a Detection.ps1 elsewhere and files with similar names are refused
     3.1.0    2026-11-28  fubu2k               Event log SelfX: new installation, move of the source out of the Application log, existing log, failures
                                               (warning only), order in Install.ps1; the registration commands are replaced by functions of the test.
+    3.1.0    2026-11-28  fubu2k               Install.ps1 starts sc.exe and icacls.exe with their full path (static check).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -116,7 +117,9 @@ if ($eventDefinition) {
 }
 $installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
 $eventAt = $installText.IndexOf('"Windows event log: " + (Initialize-SelfXEventLog)')
-Assert-Equal ($eventAt -gt $installText.IndexOf('& sc.exe delete $ServiceName') -and $eventAt -lt $installText.IndexOf('New-Service -Name $ServiceName')) $true 'Event log: Install.ps1 prepares the log after the old service is removed and before the new one is registered'
+Assert-Equal ($eventAt -gt $installText.IndexOf("& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') delete `$ServiceName") -and $eventAt -lt $installText.IndexOf('New-Service -Name $ServiceName')) $true 'Event log: Install.ps1 prepares the log after the old service is removed and before the new one is registered'
+# SYSTEM starts the tools of Windows by their full path, never through a search of PATH.
+Assert-Equal ([regex]::IsMatch($installText, '(?m)^[^#\r\n]*&\s*(sc|icacls)\.exe\b')) $false 'Install.ps1 starts sc.exe and icacls.exe with their full path'
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('SelfXInstallBinariesTest_' + [guid]::NewGuid().ToString('N'))
 $package = Join-Path $root 'package'
