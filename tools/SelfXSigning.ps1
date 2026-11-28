@@ -12,6 +12,8 @@
                                     "Code Signing" and a valid period are returned.
       Set-SelfXCodeSignature        Signs files (SHA256, chain without the root, optional time stamp server) and checks the result
                                     of every file.
+      Assert-SelfXTimestampService  Signs one test script with the time stamp service before a package is signed; a service without
+                                    a time stamp stops the run with a plain text.
       New-SelfXSignedCatalog        Writes a file catalog (version 2, SHA256) of a folder and signs it. For files that cannot carry
                                     an embedded signature (XML, PNG).
       Test-SelfXSignature           A signature counts when its status is Valid AND the thumbprint of the signer is in the list of
@@ -41,7 +43,7 @@
     Name    : SelfXSigning.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.0
+    Version : 3.1.1
     Works in Windows PowerShell 5.1 and PowerShell 7.
 
     History:
@@ -49,6 +51,8 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version: Get-SelfXSigningCertificate, Set-SelfXCodeSignature, New-SelfXSignedCatalog,
                                               Test-SelfXSignature, Test-SelfXSignedCatalog
+    3.1.1    2026-11-28  fubu2k               Time stamp address at most 300 characters; Assert-SelfXTimestampService (one test signature before
+                                              the package is signed)
 #>
 
 # OID of the key usage "Code Signing".
@@ -62,6 +66,9 @@ $script:SelfXScriptExtensions = @('.ps1', '.psm1', '.psd1')
 
 # A PFX file larger than this is not a signing certificate.
 $script:SelfXMaxPfxBytes = 1048576
+
+# Longest accepted address of a time stamp service (characters).
+$script:SelfXTimestampUrlMaxLength = 300
 
 function ConvertTo-SelfXThumbprint {
     # Normalizes a SHA1 thumbprint: 40 hexadecimal characters, upper case. Anything else is an error. The text is not repeated in
@@ -120,10 +127,11 @@ function ConvertTo-SelfXSafeText {
 }
 
 function Test-SelfXTimestampUrl {
-    # A time stamp server is an absolute http or https address without user information, without spaces and control characters.
-    # No file:, ftp:, UNC or other scheme.
+    # A time stamp server is an absolute http or https address without user information, without spaces and control characters,
+    # of at most $script:SelfXTimestampUrlMaxLength characters. No file:, ftp:, UNC or other scheme.
     param([string]$Url)
     if ([string]::IsNullOrWhiteSpace($Url)) { return $false }
+    if ($Url.Length -gt $script:SelfXTimestampUrlMaxLength) { return $false }
     if ($Url -match '[\x00-\x20\x7F]') { return $false }
     $uri = $null
     if (-not [Uri]::TryCreate($Url, [UriKind]::Absolute, [ref]$uri)) { return $false }
@@ -302,6 +310,47 @@ function Set-SelfXCodeSignature {
         throw "$($failures.Count) of $($files.Count) file(s) could not be signed: $($failures -join '; ')"
     }
     return $results.ToArray()
+}
+
+function Assert-SelfXTimestampService {
+    <#
+    .SYNOPSIS
+        Signs one small test script with the time stamp service before the package is signed. Throws a plain text when the service
+        gives no time stamp.
+
+    .DESCRIPTION
+        A package has many files; without this check an unreachable service would fail every file after its own wait. The test script
+        is written into -Folder (a work folder of the caller), signed with Set-SelfXCodeSignature and removed again in every case. The
+        message names the host of the address only (the address has no user information, Test-SelfXTimestampUrl) and not the text of
+        the exception of the operating system.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+        [Parameter(Mandatory = $true)][string]$TimestampServer,
+        [Parameter(Mandatory = $true)][string]$Folder
+    )
+    if (-not (Test-SelfXTimestampUrl $TimestampServer)) {
+        throw "The time stamp server must be an absolute http or https address without user information, of at most $($script:SelfXTimestampUrlMaxLength) characters."
+    }
+    if (-not (Test-Path -LiteralPath $Folder -PathType Container)) { throw 'The work folder for the time stamp check does not exist.' }
+    $hostName = ConvertTo-SelfXSafeText ([Uri]$TimestampServer).Host
+    $probe = Join-Path $Folder ('SelfX-TimestampCheck-' + [guid]::NewGuid().ToString('N').Substring(0, 12) + '.ps1')
+    try {
+        [IO.File]::WriteAllText($probe, "# SelfX time stamp check`r`n", (New-Object System.Text.UTF8Encoding($false)))
+        $ok = $false
+        try {
+            $result = @(Set-SelfXCodeSignature -Path @($probe) -Certificate $Certificate -TimestampServer $TimestampServer)
+            $ok = ($result.Count -eq 1 -and $result[0].TimeStamped)
+        }
+        catch { $ok = $false }
+        if (-not $ok) {
+            throw "The time stamp service ($hostName) gave no time stamp. Check the address and the network connection of this computer, or switch on signing without a time stamp. Nothing was signed."
+        }
+    }
+    finally {
+        if (Test-Path -LiteralPath $probe) { Remove-Item -LiteralPath $probe -Force }
+    }
 }
 
 function New-SelfXSignedCatalog {

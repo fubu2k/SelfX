@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.9.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.10.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -349,10 +349,10 @@
 	<T Id="gui.crl.nohttp">Keine Sperrliste hat eine http-Adresse. Geräte außerhalb des Firmennetzes erreichen ldap- oder Datei-Adressen nicht; bitten Sie Ihr PKI-Team um eine öffentliche http-Adresse an erster Stelle.</T>
 	<T Id="gui.crl.internal">Die Sperrlisten haben nur interne Namen. Geräte außerhalb des Firmennetzes erreichen sie nicht; Windows behandelt die Signatur dann als gültig.</T>
 	<T Id="Timestamp.ask">Zeitstempeldienst (http:// oder https://)</T>
-	<T Id="Timestamp.rec">Erforderlich. Ein Zeitstempel hält die Signaturen gültig, wenn das Zertifikat abläuft. Verwenden Sie den Zeitstempeldienst des Anbieters Ihres Zertifikats oder den internen Ihrer PKI.</T>
+	<T Id="Timestamp.rec">Nur beim Bauen des Pakets nötig, auf den Geräten nicht. Ein Zeitstempel hält die Signaturen gültig, wenn das Zertifikat abläuft. Vorschlag: der Zeitstempeldienst des Anbieters Ihres Zertifikats oder Ihrer PKI. Ein interner Zeitserver (NTP) ist kein Zeitstempeldienst. Lassen Sie das Feld nur zusammen mit dem Schalter darunter leer.</T>
 	<T Id="NoTimestamp.ask">Ohne Zeitstempel signieren (nicht empfohlen)</T>
 	<T Id="NoTimestamp.rec">Nur für Tests. Ohne Zeitstempel werden die Signaturen ungültig, wenn das Zertifikat abläuft, und SelfX startet dann auf den Geräten nichts mehr.</T>
-	<T Id="gui.kind.timestamp">Geben Sie eine http://- oder https://-Adresse ohne Benutzernamen ein oder schalten Sie das Signieren ohne Zeitstempel ein.</T>
+	<T Id="gui.kind.timestamp">Geben Sie eine http://- oder https://-Adresse ohne Benutzernamen ein (höchstens 300 Zeichen) oder schalten Sie das Signieren ohne Zeitstempel ein.</T>
 	<T Id="Additional.ask">Weitere erlaubte Signierer (Fingerabdrücke, mit Kommas getrennt, optional)</T>
 	<T Id="Additional.rec">Nur für einen Zertifikatswechsel: der Fingerabdruck des nächsten Zertifikats, damit Geräte damit signierte Pakete annehmen. Damit wird nichts signiert.</T>
 	<T Id="gui.sign.additional.invalid">Jeder Eintrag muss ein Fingerabdruck aus 40 Hexadezimalzeichen sein; höchstens 9 Einträge.</T>

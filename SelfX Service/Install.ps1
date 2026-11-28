@@ -107,6 +107,8 @@
                                               installation before anything is changed (Test-SelfXWindowsSupport)
     3.1.0    2026-11-28  fubu2k               New library Disturb\SelfXDisturb.dll (state of the notification area): expected, checked and installed like
                                               Audio\SelfXAudio.dll
+    3.1.0    2026-11-28  fubu2k               Trust mode Signature: Detection.ps1 at the top of the package needs no embedded signature (exactly this one
+                                              path, Test-SelfXUnsignedPackageFile); a full package still covers it with SelfX.Code.cat
 #>
 
 # Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
@@ -736,11 +738,25 @@ function Test-SelfXPackageCatalog {
 	Catch { return 'Error' }
 }
 
+function Test-SelfXUnsignedPackageFile {
+	# Trust mode Signature: true for the only file of the package that needs no embedded signature, given as the path relative to the
+	# package folder: Detection.ps1 at the top of the package. Intune gets the detection script as a separate upload (the package wizard
+	# signs that copy with the certificate of the company), Install.ps1 never runs the copy in the package and does not install it, and
+	# the service does not know it. In a full package it stays covered by the signed catalog SelfX.Code.cat. Exactly this one fixed path:
+	# no extension rule, no name pattern; a Detection.ps1 in another folder or a file with a similar name must be signed like every other
+	# script. Windows compares file names without regard to case; so does this check (the same file has no second spelling).
+	param([Parameter(Mandatory = $true)][string]$RelativePath)
+	$Unsigned = @('Detection.ps1')
+	ForEach($Name in $Unsigned) { If([string]::Equals($RelativePath, $Name, [StringComparison]::OrdinalIgnoreCase)) { return $true } }
+	return $false
+}
+
 function Test-SelfXPackageSignatures {
 	# Trust mode Signature: checks the whole package before anything on the device is changed. Throws at the first failed part.
 	#  1. No link (junction, symbolic link) in the package.
 	#  2. Every .exe, .dll, .ps1, .psm1 and .psd1 of the package (Install.ps1 and the libraries of other publishers in Bin included)
-	#     has a signature with the status Valid of an allowed signer.
+	#     has a signature with the status Valid of an allowed signer. Only exception: Detection.ps1 at the top of the package
+	#     (Test-SelfXUnsignedPackageFile); it is covered by SelfX.Code.cat in step 4.
 	#  3. Config\SelfX.Config.cat is signed by an allowed signer and matches the folder Config.
 	#  4. SelfX.Code.cat at the top of the package is signed by an allowed signer and matches everything else in the package (all
 	#     files outside Config: App with SelfX.Code.json, the language files and the images, Bin with SelfX.Binaries.json, the
@@ -765,6 +781,7 @@ function Test-SelfXPackageSignatures {
 	ForEach($Item in $Items)
 	{
 		If($Item.PSIsContainer -or ($SignedTypes -notcontains $Item.Extension.ToLowerInvariant())) { continue }
+		If(Test-SelfXUnsignedPackageFile -RelativePath $Item.FullName.Substring($Root.Length + 1)) { continue }
 		$Count++
 		$Reason = Test-SelfXFileSignature -Path $Item.FullName -AllowedThumbprint $Allowed
 		If($Reason -ne 'Ok') { $Problems.Add("$($Item.FullName.Substring($Root.Length + 1)) ($Reason)") }
@@ -997,7 +1014,8 @@ function Test-SelfXConfigFolder {
 
 function Test-SelfXConfigPackageSignatures {
 	# Trust mode Signature of -ConfigOnly: Install.ps1 and every script of the package carry a signature with the status Valid of an
-	# allowed signer (the signers of the anchor on the device, never a list from the package or the command line), and
+	# allowed signer (the signers of the anchor on the device, never a list from the package or the command line; Detection.ps1 at the
+	# top is the exception of Test-SelfXUnsignedPackageFile: it is neither run nor installed), and
 	# Config\SelfX.Config.cat is signed by one of them and matches the folder Config. Throws at the first failed part. Returns the number
 	# of checked files and the SHA256 of the list and of the catalog as they were checked (the copy is compared with them).
 	param(
@@ -1017,6 +1035,7 @@ function Test-SelfXConfigPackageSignatures {
 	ForEach($Item in $Items)
 	{
 		If($Item.PSIsContainer -or ($SignedTypes -notcontains $Item.Extension.ToLowerInvariant())) { continue }
+		If(Test-SelfXUnsignedPackageFile -RelativePath $Item.FullName.Substring($Root.Length + 1)) { continue }
 		$Count++
 		$Reason = Test-SelfXFileSignature -Path $Item.FullName -AllowedThumbprint $Allowed
 		If($Reason -ne 'Ok') { $Problems.Add("$($Item.FullName.Substring($Root.Length + 1)) ($Reason)") }

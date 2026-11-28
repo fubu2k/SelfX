@@ -24,6 +24,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version (Install.ps1 -ConfigOnly).
+    3.1.0    2026-11-28  fubu2k               Signature check of -ConfigOnly: Detection.ps1 at the top is not checked, a Detection.ps1 below Config is
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -39,7 +40,7 @@ $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Install.ps1'), [ref]$tokens, [ref]$parseErrors)
 Assert-Equal @($parseErrors).Count 0 'Install.ps1 parses'
 $names = 'Test-SelfXListPlacement', 'Read-SelfXFileList', 'Get-SelfXPackageToolVersion', 'ConvertTo-SelfXTrustedSignerList', 'Test-SelfXFileSignature', 'Test-SelfXPackageCatalog',
-	'ConvertTo-SelfXCodeVersion', 'Get-SelfXConfigMinCodeVersion', 'Test-SelfXConfigPackageLayout', 'Test-SelfXConfigFolder', 'Test-SelfXConfigPackageSignatures',
+	'ConvertTo-SelfXCodeVersion', 'Get-SelfXConfigMinCodeVersion', 'Test-SelfXConfigPackageLayout', 'Test-SelfXConfigFolder', 'Test-SelfXUnsignedPackageFile', 'Test-SelfXConfigPackageSignatures',
 	'Test-SelfXConfigListsMatch', 'Read-SelfXXmlFile', 'Get-SelfXInstallTimeSettings', 'Compare-SelfXInstallTimeSettings', 'Get-SelfXInstalledDeleteHelper',
 	'Move-SelfXFolderWithRetry', 'Restore-SelfXInterruptedConfig', 'Install-SelfXConfigFolder', 'Invoke-SelfXConfigOnly'
 foreach ($name in $names) {
@@ -201,6 +202,14 @@ try {
 	$signatureAnchor = [pscustomobject]@{ Mode = 'Signature'; Signers = @('A' * 40) }
 	Assert-Equal ((Invoke-Config $signatureAnchor) -like 'refused: Trust mode Signature: * of * scripts of the package have no valid signature*') $true 'Unsigned package on a device in the mode Signature: refused'
 	Test-NothingChanged 'Unsigned package in mode Signature'
+	# Detection.ps1 at the top needs no embedded signature (it is neither run nor installed): only Install.ps1 is counted and named.
+	[IO.File]::WriteAllText((Join-Path $package 'Detection.ps1'), '# detection')
+	try { $null = Test-SelfXConfigPackageSignatures -PackageFolder $package -AllowedThumbprint @('A' * 40); $answer = 'accepted' } catch { $answer = "refused: $($_.Exception.Message)" }
+	Assert-Equal ($answer -like 'refused: Trust mode Signature: 1 of 1 scripts*Install.ps1 (NotSigned)*' -and $answer -notlike '*Detection.ps1*') $true "Signature check of -ConfigOnly: Detection.ps1 at the top is not checked, Install.ps1 is ($answer)"
+	New-Item -ItemType Directory -Path (Join-Path $package 'Config\Sub') -Force | Out-Null
+	[IO.File]::WriteAllText((Join-Path $package 'Config\Sub\Detection.ps1'), '# not at the top')
+	try { $null = Test-SelfXConfigPackageSignatures -PackageFolder $package -AllowedThumbprint @('A' * 40); $answer = 'accepted' } catch { $answer = "refused: $($_.Exception.Message)" }
+	Assert-Equal ($answer -like 'refused: Trust mode Signature: 2 of 2 scripts*Config\Sub\Detection.ps1 (NotSigned)*') $true "Signature check of -ConfigOnly: a Detection.ps1 below Config is checked ($answer)"
 	Assert-Equal ((Invoke-Config ([pscustomobject]@{ Mode = 'Signature'; Signers = @() })) -like 'refused: -TrustedSigner is empty*') $true 'Mode Signature with an empty signer list: refused (never "allow all")'
 	Assert-Equal ((Invoke-Config $null) -like 'refused: -ConfigOnly needs an installed SelfX with a trust anchor*') $true 'No trust anchor: refused'
 	Assert-Equal ((Invoke-Config ([pscustomobject]@{ Mode = 'Other'; Signers = @() })) -like 'refused: The trust anchor of the device has no valid mode*') $true 'Unknown mode in the anchor: refused'
