@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.8.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.9.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -115,6 +115,8 @@
 	<T Id="CopilotClearClipboard.rec">Ja, wenn der Text nicht in der Zwischenablage bleiben soll. Der Text enthält ohnehin keine Namen oder Adressen.</T>
 	<T Id="TrayIcon.ask">Statussymbol neben der Uhr für alle Nutzer anzeigen?</T>
 	<T Id="TrayIcon.rec">Ja. Nutzer sehen Probleme früh und öffnen SelfX mit einem Klick.</T>
+	<T Id="DisturbWarning.ask">Vor einer Aktion, die eine Besprechung unterbrechen kann (Teams oder Office schließen, Netzwerk oder Gerät neu starten): Hinweis anzeigen, wenn der Nutzer anscheinend präsentiert oder im Vollbild arbeitet?</T>
+	<T Id="DisturbWarning.rec">Ja. Es ist nur ein Satz in der Bestätigung; nichts wird blockiert oder umgeschaltet. Windows meldet SelfX nur Präsentationsmodus, Vollbild und Ruhezeit, deshalb wird nicht jede Besprechung erkannt.</T>
 	<T Id="ShortcutDesktop.ask">Verknüpfung auf dem öffentlichen Desktop anlegen?</T>
 	<T Id="ShortcutDesktop.rec">Ja zum Start, damit Nutzer SelfX finden. Später abschalten, wenn der Desktop leer bleiben soll.</T>
 	<T Id="ShortcutStartMenu.ask">Verknüpfung im Startmenü anlegen?</T>
