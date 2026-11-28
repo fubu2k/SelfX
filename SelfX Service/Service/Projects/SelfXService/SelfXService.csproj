@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- SelfX Service: the Windows service (runs as LocalSystem). .NET 10 (LTS), self-contained, one file.
+       The assemblies in the file are not compressed: the runtime maps them from the file instead of unpacking them into private
+       memory at every start (less private memory of the running service, faster start; the file is larger, the .intunewin hardly).
        The source is ..\..\SelfXService.cs. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,7 +12,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
     <DebugType>none</DebugType>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
