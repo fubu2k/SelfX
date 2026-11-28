@@ -51,6 +51,9 @@
                                               Tool_Config.xml), the check of other sessions in both modes, session host detection; nothing is started.
     3.1.0    2026-11-28  fubu2k               TerminalServer_Health: access table, HEALTH and STATUS as user and as administrator with Off,
                                               AdminOnly, an invalid value, Client and an unreadable Tool_Config.xml; background loop.
+    3.1.0    2026-11-28  fubu2k               The mode comes from Windows: test instances set it through the field terminalServerForTest; an old
+                                              Environment_Mode in Tool_Config.xml (Client or TerminalServer) and an unreadable file do not change it;
+                                              no check of the setting and no event 4009 any more.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -961,22 +964,20 @@ if ($countMethod) {
 	Assert-True ($result -ge -1) "N5: the check for the own session returns a number (got $result)"
 }
 
-# --- Environment_Mode (Tool_Config.xml): TerminalServer refuses actions that are not classified Show, for every caller -----------
-# A test instance gets its code, configuration and catalogue folders set to a test folder; ProcessRequest is called directly. Every
+# --- Mode (from Windows): TerminalServer refuses actions that are not classified Show, for every caller ---------------------------
+# A test instance gets its code, configuration and catalogue folders set to a test folder; ProcessRequest is called directly. The mode
+# of a test instance is set through the field terminalServerForTest (the CI runs on Windows Server, a developer PC on Windows 11). Every
 # case ends before a script could start: a refusal, "Script not found" (the script file does not exist: the request passed the
 # TerminalServer check) or "OtherSessions" (unknown caller session, fail closed).
 $sourceText = [IO.File]::ReadAllText($source)
 $instanceFlags = [Reflection.BindingFlags]'NonPublic,Instance'
 $staticFlags = [Reflection.BindingFlags]'NonPublic,Static'
-$modeMethod = [SelfX.SelfXService].GetMethod('IsTerminalServerMode', $staticFlags)
 $productMethod = [SelfX.SelfXService].GetMethod('IsSessionHostProduct', $staticFlags)
 $hostMethod = [SelfX.SelfXService].GetMethod('IsSessionHost', $staticFlags)
-Assert-True ($null -ne $modeMethod -and $null -ne $productMethod -and $null -ne $hostMethod) 'Environment_Mode: the service has the mode and session host checks'
-foreach ($case in @(@('TerminalServer', $true, $true), @(' terminalserver ', $true, $true), @('Client', $false, $true), @('', $false, $true), @($null, $false, $true), @('Foo', $false, $false), @('TerminalServer2', $false, $false))) {
-	$arguments = [object[]]@($case[0], $null)
-	$result = $modeMethod.Invoke($null, $arguments)
-	Assert-True (($result -eq $case[1]) -and ($arguments[1] -eq $case[2])) "Environment_Mode '$($case[0])' = $(if ($case[1]) { 'TerminalServer' } else { 'Client' }), valid $($case[2]) (got $result, $($arguments[1]))"
-}
+$terminalMethod = [SelfX.SelfXService].GetMethod('IsTerminalServer', $instanceFlags)
+$terminalField = [SelfX.SelfXService].GetField('terminalServerForTest', $instanceFlags)
+Assert-True ($null -ne $productMethod -and $null -ne $hostMethod -and $null -ne $terminalMethod -and $null -ne $terminalField) 'Mode: the service has the product type check, the mode and the test field'
+Assert-True ($null -eq [SelfX.SelfXService].GetMethod('IsTerminalServerMode', $staticFlags)) 'Mode: there is no check of a setting Environment_Mode any more'
 # wProductType 1 = workstation, 2 = domain controller, 3 = server (Windows Enterprise multi-session reports 3); suite 0x10 = terminal
 # services, 0x100 = single user (not set in application server mode).
 foreach ($case in @(@(1, 0x0110, $false), @(1, 0x0010, $true), @(3, 0x0110, $true), @(3, 0x0010, $true), @(2, 0x0000, $true), @(1, 0x0000, $false))) {
@@ -985,9 +986,15 @@ foreach ($case in @(@(1, 0x0110, $false), @(1, 0x0010, $true), @(3, 0x0110, $tru
 }
 $hostNow = $hostMethod.Invoke($null, @())
 Assert-True ($hostNow -is [bool]) "Session host: the version data of this Windows can be read (got '$hostNow')"
-Assert-True ($sourceText.IndexOf('return "ERROR TerminalServer"') -gt 0 -and $sourceText.IndexOf('return "ERROR TerminalServer"') -lt $sourceText.IndexOf('ResolveScriptPath(installRoot, configRoot, "Scripts_to_run", scriptName)')) 'Environment_Mode: the refusal comes before the script is resolved or started'
-Assert-True ($sourceText.Contains('if (blockOtherSessions && !callerIsAdmin)') -and $sourceText -notmatch 'blockOtherSessions\s*&&\s*[^;]*TerminalServer') 'Environment_Mode: the check of other sessions does not depend on the mode'
-Assert-True ($sourceText -match 'EventTerminalServerRefused\s*=\s*4008' -and $sourceText -match 'EventSessionHostClient\s*=\s*4009') 'Environment_Mode: events 4008 and 4009 are defined'
+$modeService = New-Object SelfX.SelfXService(('SelfX.ModeTest.' + [guid]::NewGuid().ToString('N')), $logDirectory)
+Assert-True ($null -eq $terminalField.GetValue($modeService)) 'Mode: a new service instance has no test value (the mode comes from Windows)'
+Assert-True (($terminalMethod.Invoke($modeService, @())) -eq $hostNow) "Mode: without a test value the mode is the session host check of this Windows ($hostNow)"
+Assert-True ($sourceText -match 'return !host\.HasValue \|\| host\.Value;') 'Mode: version data that cannot be read count as TerminalServer (fail closed)'
+Assert-True ($sourceText -match 'if \(hideOnTerminalServer && IsTerminalServer\(\)\)' -and $sourceText -match 'GetHealthAccess\(IsTerminalServer\(\), ReadToolConfigValue\("TerminalServer_Health"\)\)') 'Mode: RUN and the device status ask Windows, not Tool_Config.xml'
+Assert-True ([regex]::Matches($sourceText, 'ReadToolConfigValue\("Environment_Mode"\)').Count -eq 1 -and $sourceText -match 'Environment_Mode in Tool_Config.xml is not used any more and is ignored') 'Mode: Environment_Mode is read only for a note in the log'
+Assert-True ($sourceText.IndexOf('return "ERROR TerminalServer"') -gt 0 -and $sourceText.IndexOf('return "ERROR TerminalServer"') -lt $sourceText.IndexOf('ResolveScriptPath(installRoot, configRoot, "Scripts_to_run", scriptName)')) 'Mode: the refusal comes before the script is resolved or started'
+Assert-True ($sourceText.Contains('if (blockOtherSessions && !callerIsAdmin)') -and $sourceText -notmatch 'blockOtherSessions\s*&&\s*[^;]*TerminalServer') 'Mode: the check of other sessions does not depend on the mode'
+Assert-True ($sourceText -match 'EventTerminalServerRefused\s*=\s*4008' -and $sourceText -notmatch 'EventSessionHostClient') 'Mode: event 4008 is defined; event 4009 (session host but Client) is gone'
 
 $envRoot = Join-Path $dataRoot 'EnvironmentMode'
 $envApp = Join-Path $envRoot 'App'
@@ -1022,9 +1029,12 @@ $processMethod = [SelfX.SelfXService].GetMethod('ProcessRequest', $instanceFlags
 function Invoke-EnvRequest([string]$Script, [bool]$Admin = $false, [long]$Session = -1) {
 	return [string]$processMethod.Invoke($envService, [object[]]@("RUN $Script", 'TEST\user', 'S-1-5-21-1-2-3-1001', $Admin, $Session))
 }
-function Set-EnvMode([string]$Text) { Set-Content -LiteralPath (Join-Path $envConfig 'Tool_Config.xml') -Value $Text }
+function Set-EnvConfig([string]$Text) { Set-Content -LiteralPath (Join-Path $envConfig 'Tool_Config.xml') -Value $Text }
+function Set-EnvTerminalServer([bool]$Value) { $terminalField.SetValue($envService, [Nullable[bool]]$Value) }
 
-Set-EnvMode '<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>'
+# Mode TerminalServer; an Environment_Mode Client in Tool_Config.xml (earlier build) cannot switch it.
+Set-EnvTerminalServer $true
+Set-EnvConfig '<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>'
 foreach ($case in @(
 	@('Ts_Hide.ps1', $false, 'ERROR TerminalServer', 'an action classified Hide is refused'),
 	@('Ts_Hide.ps1', $true, 'ERROR TerminalServer', 'an action classified Hide is refused for an elevated administrator too'),
@@ -1040,44 +1050,52 @@ foreach ($case in @(
 	@('Unknown.ps1', $false, 'ERROR Action is not allowed', 'an unknown script is still refused by the whitelist'),
 	@('Ts_Block.ps1', $false, 'ERROR OtherSessions', 'the check of other sessions still applies (unknown session = fail closed)'))) {
 	$answer = Invoke-EnvRequest $case[0] $case[1]
-	Assert-True ($answer -ceq $case[2]) "Environment_Mode TerminalServer: $($case[3]) ($($case[0]): '$answer')"
+	Assert-True ($answer -ceq $case[2]) "Mode TerminalServer: $($case[3]) ($($case[0]): '$answer')"
 }
-foreach ($mode in @(@('<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>', 'Client'), @('<GUI_Config><Environment_Mode>Foo</Environment_Mode></GUI_Config>', 'an invalid value (= Client)'), @('<GUI_Config />', 'a missing element (= Client)'))) {
-	Set-EnvMode $mode[0]
+# Mode Client (Windows 11); the content of Tool_Config.xml does not matter for the mode.
+Set-EnvTerminalServer $false
+foreach ($config in @(@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>', 'an old Environment_Mode TerminalServer'), @('<GUI_Config />', 'no Environment_Mode'), @('<GUI_Config><Environment_Mode>Client', 'an unreadable Tool_Config.xml'))) {
+	Set-EnvConfig $config[0]
 	foreach ($case in @(@('Ts_Hide.ps1', 'ERROR Script not found'), @('Ts_None.ps1', 'ERROR Script not found'), @('Ts_RemHide.ps1', 'ERROR Script not found'), @('Ts_Block.ps1', 'ERROR OtherSessions'), @('Ts_User.ps1', 'ERROR Action is not allowed'))) {
 		$answer = Invoke-EnvRequest $case[0]
-		Assert-True ($answer -ceq $case[1]) "Environment_Mode $($mode[1]): $($case[0]) gives '$($case[1])' (got '$answer')"
+		Assert-True ($answer -ceq $case[1]) "Mode Client with $($config[1]): $($case[0]) gives '$($case[1])' (got '$answer')"
 	}
 }
-Set-EnvMode '<GUI_Config><Environment_Mode>Client'
-Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Environment_Mode: an unreadable Tool_Config.xml counts as TerminalServer (fail closed)'
-Assert-True ((Invoke-EnvRequest 'Ts_Show.ps1') -ceq 'ERROR Script not found') 'Environment_Mode: with an unreadable Tool_Config.xml an action classified Show still passes the check'
+# Mode TerminalServer with an unreadable or missing Tool_Config.xml: still TerminalServer.
+Set-EnvTerminalServer $true
+Set-EnvConfig '<GUI_Config><Environment_Mode>Client'
+Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Mode TerminalServer: an unreadable Tool_Config.xml does not change the mode'
+Assert-True ((Invoke-EnvRequest 'Ts_Show.ps1') -ceq 'ERROR Script not found') 'Mode TerminalServer: with an unreadable Tool_Config.xml an action classified Show still passes the check'
 Remove-Item -LiteralPath (Join-Path $envConfig 'Tool_Config.xml')
-Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Environment_Mode: a missing Tool_Config.xml counts as TerminalServer (fail closed)'
+Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Mode TerminalServer: a missing Tool_Config.xml does not change the mode'
 $envLog = Join-Path $logDirectory 'SelfXService.log'
-Assert-True ((Test-Path -LiteralPath $envLog) -and ([IO.File]::ReadAllText($envLog) -match 'not available in Environment_Mode TerminalServer')) 'Environment_Mode: a refusal is logged'
+Assert-True ((Test-Path -LiteralPath $envLog) -and ([IO.File]::ReadAllText($envLog) -match 'not available on a terminal server')) 'Mode TerminalServer: a refusal is logged'
 
-# --- TerminalServer_Health: HEALTH and STATUS in Environment_Mode TerminalServer (Off = nobody, AdminOnly = elevated administrators) ---
+# --- TerminalServer_Health: HEALTH and STATUS in the mode TerminalServer (Off = nobody, AdminOnly = elevated administrators) ---------
 $accessMethod = [SelfX.SelfXService].GetMethod('GetHealthAccess', $staticFlags)
 Assert-True ($null -ne $accessMethod) 'TerminalServer_Health: the service has the access check'
 foreach ($case in @(
-	@('Client', 'Off', 'Everyone'), @('Client', 'AdminOnly', 'Everyone'), @('', $null, 'Everyone'),
-	@('TerminalServer', '', 'Off'), @('TerminalServer', 'Off', 'Off'), @('TerminalServer', 'AdminOnly', 'AdminOnly'), @('TerminalServer', ' adminonly ', 'AdminOnly'),
-	@('TerminalServer', 'Everyone', 'Off'), @('TerminalServer', $null, 'Off'), @($null, 'AdminOnly', 'AdminOnly'), @($null, $null, 'Off'))) {
-	$result = "$($accessMethod.Invoke($null, [object[]]@($case[0], $case[1])))"
-	Assert-True ($result -ceq $case[2]) "TerminalServer_Health: mode '$($case[0])', value '$($case[1])' = $($case[2]) (got $result)"
+	@($false, 'Off', 'Everyone'), @($false, 'AdminOnly', 'Everyone'), @($false, $null, 'Everyone'),
+	@($true, '', 'Off'), @($true, 'Off', 'Off'), @($true, 'AdminOnly', 'AdminOnly'), @($true, ' adminonly ', 'AdminOnly'),
+	@($true, 'Everyone', 'Off'), @($true, $null, 'Off'))) {
+	$result = "$($accessMethod.Invoke($null, [object[]]@([bool]$case[0], $case[1])))"
+	Assert-True ($result -ceq $case[2]) "TerminalServer_Health: terminal server $($case[0]), value '$($case[1])' = $($case[2]) (got $result)"
 }
 function Invoke-EnvRaw([string]$Request, [bool]$Admin) {
 	return [string]$processMethod.Invoke($envService, [object[]]@($Request, 'TEST\user', 'S-1-5-21-1-2-3-1001', $Admin, [long]-1))
 }
 foreach ($mode in @(
-	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>', 'TerminalServer without TerminalServer_Health (= Off)', $false, $false),
-	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>', 'TerminalServer, Off', $false, $false),
-	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode><TerminalServer_Health>Everyone</TerminalServer_Health></GUI_Config>', 'TerminalServer, invalid value (= Off)', $false, $false),
-	@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode><TerminalServer_Health>AdminOnly</TerminalServer_Health></GUI_Config>', 'TerminalServer, AdminOnly', $false, $true),
-	@('<GUI_Config><Environment_Mode>Client</Environment_Mode><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>', 'Client (TerminalServer_Health does not apply)', $true, $true),
-	@('<GUI_Config><Environment_Mode>Client', 'unreadable Tool_Config.xml (= TerminalServer, Off)', $false, $false))) {
-	Set-EnvMode $mode[0]
+	@($true, '<GUI_Config />', 'TerminalServer without TerminalServer_Health (= Off)', $false, $false),
+	@($true, '<GUI_Config><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>', 'TerminalServer, Off', $false, $false),
+	@($true, '<GUI_Config><TerminalServer_Health>Everyone</TerminalServer_Health></GUI_Config>', 'TerminalServer, invalid value (= Off)', $false, $false),
+	@($true, '<GUI_Config><TerminalServer_Health>AdminOnly</TerminalServer_Health></GUI_Config>', 'TerminalServer, AdminOnly', $false, $true),
+	@($true, '<GUI_Config><Environment_Mode>Client</Environment_Mode><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>', 'TerminalServer with an old Environment_Mode Client (= TerminalServer, Off)', $false, $false),
+	@($false, '<GUI_Config><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>', 'Client (TerminalServer_Health does not apply)', $true, $true),
+	@($false, '<GUI_Config><TerminalServer_Health>Off', 'Client with an unreadable Tool_Config.xml', $true, $true),
+	@($true, '<GUI_Config><TerminalServer_Health>AdminOnly', 'TerminalServer with an unreadable Tool_Config.xml (= Off)', $false, $false))) {
+	Set-EnvTerminalServer $mode[0]
+	Set-EnvConfig $mode[1]
+	$mode = @($mode[1], $mode[2], $mode[3], $mode[4])
 	foreach ($admin in $false, $true) {
 		$allowed = if ($admin) { $mode[3] } else { $mode[2] }
 		$who = if ($admin) { 'an elevated administrator' } else { 'a user' }

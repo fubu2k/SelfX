@@ -17,6 +17,7 @@
                                        catalogue), status cards, tray item and the message for a refusal of the service.
     3.1.0  2026-11-28  fubu2k          TerminalServer_Health and the view of the user: device status page, status icon, system information,
                                        ticket.
+    3.1.0  2026-11-28  fubu2k          The window and the status icon take the mode from Windows, not from Environment_Mode.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -477,6 +478,9 @@ try {
     $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
     Assert-Equal ($clientText.Contains("'^ERROR TerminalServer`$' { return [pscustomobject]@{ Status = 'TerminalServer'") -and $guiText.Contains("'TerminalServer' { `$msgbar.SetWarningAlert((Get-SelfXString 'Service_TerminalServer_Text')) }")) $true 'Environment_Mode: the refusal of the service has its own message'
     Assert-Equal ([bool](Get-SelfXString 'Service_TerminalServer_Text')) $true 'Environment_Mode: the message exists in en.xml'
+    # The mode comes from Windows (19d): the window and the status icon do not read Environment_Mode of Tool_Config.xml.
+    Assert-Equal ($guiText.Contains('$Global:SelfX_Environment = Get-SelfXEnvironmentMode') -and $trayText.Contains('$Tray_Environment = (Get-SelfXEnvironmentMode).Mode') -and $trayText.Contains('$Tray_Mode = $Tray_Environment')) $true 'Mode: the window and the status icon take the mode from Windows'
+    Assert-Equal ($guiText -notmatch "Get-SelfXText 'Environment_Mode'" -and $trayText -notmatch "Get-TrayConfig 'Environment_Mode'") $true 'Mode: no setting Environment_Mode is read'
     # --- TerminalServer_Health and the view of the user (19c) ------------------------------------------------------------------
     Assert-Equal ($guiText.Contains('If(-not $Global:SelfX_View.Health) { return $False }') -and $guiText.IndexOf('If(-not $Global:SelfX_View.Health) { return $False }') -lt $guiText.IndexOf('$Global:Health_PS = [PowerShell]::Create()')) $true 'View: the window asks the service for no device status the user may not see'
     Assert-Equal ($guiText.Contains("-or -not `$Global:SelfX_View.Health) { `$Nav_Status.Visibility = 'Collapsed' }")) $true 'View: the page Device status is hidden'

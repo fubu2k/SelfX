@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.7
+    Version : 3.1.8
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -37,6 +37,10 @@
                                               writes Network_Test_Config.xml (settings and own targets next to the delivered Microsoft targets)
     3.1.6    2026-11-27  fubu2k               Question EnvironmentMode (Where does SelfX run? Client or TerminalServer) writes Environment_Mode
     3.1.7    2026-11-28  fubu2k               Question TerminalServerHealth (Off or AdminOnly, only with TerminalServer) writes TerminalServer_Health
+    3.1.8    2026-11-28  fubu2k               Question TargetOS (Windows11 or WindowsServer) instead of EnvironmentMode: SelfX takes the mode from Windows, so
+                                              Environment_Mode is no longer written; TerminalServerHealth only for WindowsServer; for WindowsServer the
+                                              instructions describe the installation without Intune (by hand or Configuration Manager), file
+                                              SelfX-Server-Guide.<language>.txt
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -426,6 +430,53 @@ function Get-SelfXIntuneGuideSteps {
         $steps.Add([pscustomobject]@{ Id = $Id; Lines = @($Lines); Copies = @($Copies | Where-Object { $null -ne $_ -and $_.Value }) })
     }
     $copy = { param([string]$Label, [string]$Value) [pscustomobject]@{ Label = $Label; Value = $Value } }
+    # Signature, AppLocker / App Control and Defender ASR: the same steps in both instructions. Takes the number of the first of these
+    # steps and returns the number of the last one (the ASR step).
+    $addSecurity = {
+        param([int]$Step)
+        if ($signers.Count) {
+            & $add 'trust' @((Get-WText 'guide.trust' @($Step)), (Get-WText 'guide.trust2'), (Get-WText 'guide.trust3'), (Get-WText 'guide.trust4')) @((& $copy 'gui.copy.thumbprints' ($signers -join ',')))
+            $Step++
+            & $add 'certchange' @((Get-WText 'guide.certchange' @($Step)), (Get-WText 'guide.certchange1'), (Get-WText 'guide.certchange2'), (Get-WText 'guide.certchange3'))
+            $Step++
+        }
+        if ($RuleFiles.Count -gt 0) {
+            $ruleLines = @((Get-WText $(if ($signers.Count) { 'guide.rules.signed' } else { 'guide.rules' }) @($Step))) + @($RuleFiles | ForEach-Object { "   - $_" })
+            & $add 'rules' $ruleLines @((& $copy 'gui.copy.folder' $OutputFolder))
+            $Step++
+        }
+        $asrLines = @((Get-WText 'guide.asr' @($Step)), (Get-WText 'guide.asr1'), (Get-WText 'guide.asr2')) + @($script:SelfXAsrExclusionFiles | ForEach-Object { "   - $_" }) + @((Get-WText 'guide.asr3'))
+        & $add 'asr' $asrLines @((& $copy 'gui.copy.asr' ($script:SelfXAsrExclusionFiles -join "`r`n")))
+        return $Step
+    }
+
+    if ($Answers.TargetOS -eq 'WindowsServer') {
+        # Windows Server: Intune cannot install apps there (only Windows Server Insider Preview builds can be enrolled in Intune), so the
+        # instructions describe the installation of the folder package by hand or with Configuration Manager. The commands run in a
+        # 64-bit process there (no 32-bit agent): System32 instead of sysnative. The .intunewin file is not used.
+        $serverPs = '%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
+        $serverInstall = $(if ($PackageKind -eq 'ConfigOnly') { "$serverPs .\Install.ps1 -ConfigOnly" } else { "$serverPs .\Install.ps1$installArguments" })
+        $serverUninstall = "$serverPs .\Uninstall.ps1"
+        & $add 'requirements' @((Get-WText 'guide.srv1'), (Get-WText 'guide.srv1b'))
+        & $add 'files' @((Get-WText 'guide.srv2' @('package', $PackageFile))) @((& $copy 'gui.copy.packagefolder' (& $inOutput 'package')))
+        if ($PackageKind -eq 'ConfigOnly') {
+            & $add 'program' @((Get-WText 'guide.srv3c' @($serverInstall, $Version))) @((& $copy 'gui.copy.install' $serverInstall))
+        } else {
+            & $add 'program' @((Get-WText 'guide.srv3' @($serverInstall)), (Get-WText 'guide.srv3b' @($serverUninstall))) @((& $copy 'gui.copy.install' $serverInstall), (& $copy 'gui.copy.uninstall' $serverUninstall))
+        }
+        & $add 'configmgr' @((Get-WText 'guide.srv4'), (Get-WText 'guide.srv4b' @($DetectionFile))) @((& $copy 'gui.copy.detection' (& $inOutput $DetectionFile)))
+        $step = 5
+        if ($PackageKind -ne 'ConfigOnly') { $step = (& $addSecurity $step) + 1 }
+        & $add 'test' @((Get-WText 'guide.srv5' @($step)))
+        if ($PackageKind -eq 'FullSeparateConfig') { & $add 'separate' @((Get-WText 'guide.sep' @($step + 1)), (Get-WText 'guide.sep1')) }
+        $serverFooter = @()
+        if ($AnswersFile) { $serverFooter = @((Get-WText 'guide.srv.update' @($AnswersFile)), (Get-WText 'guide.answers' @($AnswersFile))) }
+        return [pscustomobject]@{
+            Header = @((Get-WText 'guide.srv.title' @($org, $Version)), ('=' * 72), (Get-WText $(if ($PackageKind -eq 'ConfigOnly') { 'guide.srv.c.intro' } else { 'guide.srv.intro' })))
+            Steps  = $steps.ToArray()
+            Footer = $serverFooter
+        }
+    }
 
     if ($PackageKind -eq 'ConfigOnly') {
         # The configuration package: Install.ps1 -ConfigOnly needs no trust parameters (the mode is the one of the device); the uninstall
@@ -468,19 +519,7 @@ function Get-SelfXIntuneGuideSteps {
         & $add 'routing' $lines.ToArray() @((& $copy 'gui.copy.folder' $OutputFolder))
     }
     $step = if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }
-    if ($signers.Count) {
-        & $add 'trust' @((Get-WText 'guide.trust' @($step)), (Get-WText 'guide.trust2'), (Get-WText 'guide.trust3'), (Get-WText 'guide.trust4')) @((& $copy 'gui.copy.thumbprints' ($signers -join ',')))
-        $step++
-        & $add 'certchange' @((Get-WText 'guide.certchange' @($step)), (Get-WText 'guide.certchange1'), (Get-WText 'guide.certchange2'), (Get-WText 'guide.certchange3'))
-        $step++
-    }
-    if ($RuleFiles.Count -gt 0) {
-        $lines = @((Get-WText $(if ($signers.Count) { 'guide.rules.signed' } else { 'guide.rules' }) @($step))) + @($RuleFiles | ForEach-Object { "   - $_" })
-        & $add 'rules' $lines @((& $copy 'gui.copy.folder' $OutputFolder))
-        $step++
-    }
-    $lines = @((Get-WText 'guide.asr' @($step)), (Get-WText 'guide.asr1'), (Get-WText 'guide.asr2')) + @($script:SelfXAsrExclusionFiles | ForEach-Object { "   - $_" }) + @((Get-WText 'guide.asr3'))
-    & $add 'asr' $lines @((& $copy 'gui.copy.asr' ($script:SelfXAsrExclusionFiles -join "`r`n")))
+    $step = & $addSecurity $step
     & $add 'test' @((Get-WText 'guide.s8' @($step + 1)))
     if ($PackageKind -eq 'FullSeparateConfig') { & $add 'separate' @((Get-WText 'guide.sep' @($step + 2)), (Get-WText 'guide.sep1')) }
     $footer = @()
@@ -526,8 +565,8 @@ function Get-WizardQuestions {
     & $add @{ Id = 'ShowLanguageSetting'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'OrgName'; Kind = 'text'; Max = 60; Required = $true; Default = '' }
     & $add @{ Id = 'ToolName'; Kind = 'text'; Max = 40; Required = $true; Default = 'SelfX' }
-    & $add @{ Id = 'EnvironmentMode'; Kind = 'choice'; Choices = @('Client', 'TerminalServer'); Default = 'Client' }
-    & $add @{ Id = 'TerminalServerHealth'; Kind = 'choice'; Choices = @('Off', 'AdminOnly'); When = { param($a) $a.EnvironmentMode -eq 'TerminalServer' }; Default = 'Off' }
+    & $add @{ Id = 'TargetOS'; Kind = 'choice'; Choices = @('Windows11', 'WindowsServer'); Default = 'Windows11' }
+    & $add @{ Id = 'TerminalServerHealth'; Kind = 'choice'; Choices = @('Off', 'AdminOnly'); When = { param($a) $a.TargetOS -eq 'WindowsServer' }; Default = 'Off' }
     & $add @{ Section = 'support'; Id = 'SupportMail'; Kind = 'mail'; Default = '' }
     & $add @{ Id = 'SupportPhone'; Kind = 'phone'; Default = '' }
     & $add @{ Id = 'SupportHours'; Kind = 'text'; Max = 60; Default = '' }
@@ -755,7 +794,6 @@ function Get-WizardToolConfigValues {
         Shortcut_Desktop            = $A.ShortcutDesktop
         Shortcut_StartMenu          = $A.ShortcutStartMenu
         Show_Tray_Icon              = $A.TrayIcon
-        Environment_Mode            = $(if ($A.EnvironmentMode) { $A.EnvironmentMode } else { 'Client' })
         Support_Mail                = $A.SupportMail
         Support_Phone_number        = $A.SupportPhone
         Support_Hours               = $A.SupportHours
@@ -764,7 +802,8 @@ function Get-WizardToolConfigValues {
         Ticket_Enabled              = [bool]$A.TicketEnabled
         Copilot_Enabled             = [bool]$A.CopilotEnabled
     }
-    if ($A.EnvironmentMode -eq 'TerminalServer') { $values['TerminalServer_Health'] = $(if ($A.TerminalServerHealth -eq 'AdminOnly') { 'AdminOnly' } else { 'Off' }) }
+    # The mode comes from Windows (no setting); the package for Windows Server decides who gets the device status there.
+    if ($A.TargetOS -eq 'WindowsServer') { $values['TerminalServer_Health'] = $(if ($A.TerminalServerHealth -eq 'AdminOnly') { 'AdminOnly' } else { 'Off' }) }
     if ($A.TicketEnabled) { $values['Ticket_Mail'] = $A.TicketMail; $values['Ticket_Subject_Tag'] = $A.TicketSubjectTag }
     if ($A.CopilotEnabled) { $values['Copilot_Audience'] = $A.CopilotAudience; $values['Copilot_Clear_Clipboard'] = [bool]$A.CopilotClearClipboard }
     $values['Wiki_Enabled'] = [bool]$A.WikiEnabled
@@ -1184,7 +1223,7 @@ function Invoke-SelfXPackageBuild {
             AnswersFile = 'selfx-answers.json'; TrustedSigner = $trustedSigners; RuleFiles = @($ruleFiles); PackageKind = $PackageKind }
         $guideText = New-SelfXIntuneGuide @guideArguments
         $guideSteps = Get-SelfXIntuneGuideSteps @guideArguments -OutputFolder $final
-        $guideFile = "SelfX-Intune-Guide.$guideLanguage.txt"
+        $guideFile = $(if ($a.TargetOS -eq 'WindowsServer') { "SelfX-Server-Guide.$guideLanguage.txt" } else { "SelfX-Intune-Guide.$guideLanguage.txt" })
         [IO.File]::WriteAllText((Join-Path $out $guideFile), $guideText, (New-Object System.Text.UTF8Encoding($true)))
 
         # ---- the result replaces the output folder in one move
@@ -1208,6 +1247,7 @@ function Invoke-SelfXPackageBuild {
             RuleFiles     = @($ruleFiles)
             ScriptFiles   = $scriptFiles
             GuideFile     = $guideFile
+            TargetOS      = $(if ($a.TargetOS -eq 'WindowsServer') { 'WindowsServer' } else { 'Windows11' })
             GuideText     = $guideText
             TrustedSigner = $trustedSigners
             GuideSteps    = $guideSteps

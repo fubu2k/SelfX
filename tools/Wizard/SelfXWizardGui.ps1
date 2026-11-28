@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.5.0
+    Version : 1.6.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -46,6 +46,8 @@
                                               Microsoft targets and host names in the report, list of own targets (label, host, port, group, kind)
     1.4.0    2026-11-27  fubu2k               Page Basics: question EnvironmentMode (Where does SelfX run?)
     1.5.0    2026-11-28  fubu2k               Page Basics: question TerminalServerHealth (device status on a terminal server)
+    1.6.0    2026-11-28  fubu2k               Page Basics: question TargetOS (Windows 11 or Windows Server) instead of EnvironmentMode; result page:
+                                              title of the instructions for a server package (installation without Intune)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -110,7 +112,7 @@ $script:GuiCodeFolder = Get-WizardGuiCodeFolder -ToolsFolder $script:GuiToolsFol
 # (Test-SelfXWizardGui.ps1 checks this). The page 'summary' has the build settings, which are not answers (same as the console).
 $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'language'; Questions = @('ToolLanguage', 'ShowLanguageSetting') },
-    [pscustomobject]@{ Id = 'basics'; Questions = @('OrgName', 'ToolName', 'EnvironmentMode', 'TerminalServerHealth') },
+    [pscustomobject]@{ Id = 'basics'; Questions = @('OrgName', 'ToolName', 'TargetOS', 'TerminalServerHealth') },
     [pscustomobject]@{ Id = 'support'; Questions = @('SupportMail', 'SupportPhone', 'SupportHours', 'SupportWebsite', 'SupportTeams') },
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },
@@ -163,14 +165,14 @@ function Get-WizardGuiTextIds {
         'gui.units.empty', 'gui.units.duplicate', 'gui.unit.title', 'gui.unit.new', 'gui.unit.invalid', 'gui.targets.title', 'gui.targets.rec', 'gui.targets.add', 'gui.targets.remove', 'gui.targets.duplicate', 'gui.targets.max', 'gui.target.title', 'gui.target.new', 'gui.target.invalid', 'gui.summary.title', 'gui.summary.build', 'Payload.ask', 'Payload.rec', 'Payload.missing',
         'ConfigureOnly.ask', 'ConfigureOnly.rec', 'PackageKind.ask', 'PackageKind.rec', 'Output.ask', 'Output.rec', 'Tool.ask', 'Tool.rec', 'gui.build.start', 'gui.build.cancel', 'gui.build.running', 'gui.build.cancelling',
         'gui.build.cancelled', 'gui.build.failed', 'gui.build.done', 'gui.state.pending', 'gui.state.running', 'gui.state.done', 'gui.state.failed', 'gui.state.cancelled',
-        'gui.result.text', 'gui.result.configured', 'gui.result.files', 'gui.result.open', 'gui.result.copy', 'gui.result.copied', 'gui.result.guide', 'gui.page.errors', 'gui.answers.loaded',
+        'gui.result.text', 'gui.result.configured', 'gui.result.files', 'gui.result.open', 'gui.result.copy', 'gui.result.copied', 'gui.result.guide', 'gui.result.guide.server', 'gui.page.errors', 'gui.answers.loaded',
         'gui.answers.saved', 'gui.answers.invalid', 'gui.answers.unreadable', 'gui.answers.filter', 'gui.logo.filter', 'gui.tool.filter', 'gui.close.build', 'gui.finish',
         'gui.sign.none', 'gui.sign.store', 'gui.sign.file', 'gui.sign.none.info', 'gui.sign.store.rec', 'gui.sign.store.empty', 'gui.sign.store.none', 'gui.sign.refresh',
         'gui.sign.file.ask', 'gui.sign.file.rec', 'gui.sign.password.ask', 'gui.sign.password.rec', 'gui.sign.open', 'gui.sign.file.failed', 'gui.sign.file.notloaded',
         'gui.sign.file.loaded', 'gui.sign.pfx.filter', 'gui.sign.details', 'gui.sign.subject', 'gui.sign.issuer', 'gui.sign.valid', 'gui.sign.thumbprint', 'gui.sign.crl',
         'gui.crl.none', 'gui.crl.nohttp', 'gui.crl.internal', 'gui.kind.timestamp', 'gui.sign.additional.invalid', 'gui.sign.configureonly', 'gui.summary.sign.none',
         'gui.summary.sign', 'gui.summary.sign.notimestamp', 'gui.copy.name', 'gui.copy.package', 'gui.copy.install', 'gui.copy.uninstall', 'gui.copy.requirement',
-        'gui.copy.detection', 'gui.copy.folder', 'gui.copy.thumbprints', 'gui.copy.asr', 'gui.result.copied.value') {
+        'gui.copy.detection', 'gui.copy.folder', 'gui.copy.thumbprints', 'gui.copy.asr', 'gui.copy.packagefolder', 'gui.result.copied.value') {
         $ids.Add($id)
     }
     foreach ($page in $script:WizardGuiPages) { $ids.Add("gui.page.$($page.Id)"); $ids.Add("gui.page.$($page.Id).intro") }
@@ -1167,6 +1169,8 @@ function Show-WizardGuiResult {
     foreach ($name in @($result.PackageFile, $result.DetectionFile, $result.GuideFile, 'selfx-answers.json') + @($result.RuleFiles) + @($result.ScriptFiles)) { if ($name) { $files.Add($name) } }
     $files.Add('package\')
     $ui.ResultFilesBox.Text = ($files -join [Environment]::NewLine)
+    # A package for Windows Server is installed without Intune (SelfX-Server-Guide): the title of the instructions says so.
+    $ui.GuideTitle.Text = (Get-WText $(if ($result.TargetOS -eq 'WindowsServer') { 'gui.result.guide.server' } else { 'gui.result.guide' }))
     Set-WizardGuiGuideSteps -Guide $result.GuideSteps
     Set-WizardGuiPage -Index (Get-WizardGuiPageIndex 'result')
 }

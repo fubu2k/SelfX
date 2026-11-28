@@ -92,7 +92,7 @@ Wichtige Parameter:
 
 ## Die Fragen
 
-1. **Grundlagen:** Standardsprache, Sprachwahl durch Nutzer, Name der Organisation, Name des Werkzeugs, wo SelfX läuft (`Client` für einen PC oder ein Notebook, `TerminalServer` für einen Terminalserver oder Sitzungshost mit mehreren Nutzern; siehe [Konfiguration](Configuration.md#terminalserver-und-sitzungshost-environment_mode)) und auf einem Terminalserver, wer den Gerätestatus sieht (`TerminalServer_Health`).
+1. **Grundlagen:** Standardsprache, Sprachwahl durch Nutzer, Name der Organisation, Name des Werkzeugs, für welches Windows das Paket ist (`Windows11` für PCs und Notebooks, `WindowsServer` für einen Terminalserver mit Windows Server 2022 oder 2025; SelfX erkennt den Modus selbst an Windows, siehe [Konfiguration](Configuration.md#terminalserver-windows-server)) und bei Windows Server, wer den Gerätestatus sieht (`TerminalServer_Health`).
 2. **Support-Kontakte:** Funktionspostfach, Telefon, Servicezeiten, Webseite, Teams.
 3. **Branding:** Logo (wird kopiert) und Firmenfarbe.
 4. **Ticket per E-Mail:** Ticket-Funktion an oder aus, Standard-Empfänger, Betreff-Kennzeichen.
@@ -150,7 +150,7 @@ Im Ausgabeordner:
 | `SelfX-Service-<Version>.Detection.ps1` | Das Erkennungsskript. Laden Sie **diese** Datei hoch. |
 | `SelfX-Config-<Version>.intunewin`, `SelfX-Config-<Version>.Detection.ps1` | Statt der beiden Dateien darüber, wenn Sie das Konfigurationspaket bauen (Zusammenfassung: *Konfigurationspaket*, Konsole: `-ConfigPackage`). Es enthält nur `Install.ps1`, `Detection.ps1` und `Config` und wird mit `Install.ps1 -ConfigOnly` installiert: [zweites Paket für die Konfiguration](Installation.md#zweites-intune-paket-nur-die-konfiguration). |
 | `Set-SelfXSupportUnit-*.ps1` | Plattformskripte für die Ticket-Zuordnung (je Einheit, Group Tag und Geräteklasse). Einheiten, die nur nach OU zugeordnet werden, brauchen keins. |
-| `SelfX-Intune-Guide.<Sprache>.txt` | Kurzanleitung für Intune. |
+| `SelfX-Intune-Guide.<Sprache>.txt` | Kurzanleitung für Intune. Bei einem Paket für Windows Server: `SelfX-Server-Guide.<Sprache>.txt` (Installation von Hand oder mit Configuration Manager; Intune kann auf Windows Server keine Apps installieren). |
 | `selfx-answers.json` | Ihre Antworten für den nächsten Lauf. **Enthält Postfachadressen: nicht in Git einchecken.** |
 | `SelfX.AppLocker.xml` | AppLocker-Regeln (Hash-Regeln, bei einem signierten Paket eine Herausgeberregel). Nur bei der Antwort *ja*. |
 | `AppControl\` | Die ergänzende App-Control-Richtlinie (WDAC) als `.xml` und `.cip`. Nur mit einer ID der Basisrichtlinie. |

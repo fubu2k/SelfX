@@ -31,7 +31,8 @@ Windows setting.*
 - SelfX Service is installed **once per device** and works without internet.
 - You build the package **on a build machine**. Nothing is compiled on the devices.
 - The devices need **Windows 11 25H2** (build 26200 or newer) and **PowerShell 7.6 or
-  newer**.
+  newer**. Terminal servers with **Windows Server 2022 or 2025** are supported too; they are
+  installed without Intune (see [Windows Server](#windows-server-terminal-server)).
 - Always deploy the **whole package**, never single files.
 - The version number in `SelfX Service\Version.txt` and the value `$ExpectedVersion` in
   `Detection.ps1` must be **the same**. Otherwise Intune does not detect the update. The version
@@ -45,7 +46,7 @@ Windows setting.*
 
 | Requirement | Details |
 |---|---|
-| Windows 11 25H2 (build 26200) or newer, 64-bit | On older versions the installer stops before it changes anything. |
+| Windows 11 25H2 (build 26200) or newer, 64-bit, or Windows Server 2022 or 2025 with Desktop Experience (build 20348 or newer) | On older versions, on Server Core, on a domain controller and on Windows Enterprise multi-session the installer stops before it changes anything. On Windows Server SelfX works as on a terminal server. |
 | PowerShell 7.6 or newer | Installed for all users (MSI from Microsoft), path `%ProgramFiles%\PowerShell\7\pwsh.exe`. The Store version (MSIX) does not work. |
 | Windows PowerShell 5.1 | Part of Windows. SelfX uses it only for `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` and `Collect-DeviceLogs.ps1`. |
 | .NET | **Not needed.** The service and the starter bring everything with them. |
@@ -346,6 +347,36 @@ tries again for up to 90 seconds.
 - The result is in `%ProgramData%\SelfX\Logs\Uninstall.log`.
 
 ## Optional building blocks
+
+### Windows Server (terminal server)
+
+SelfX runs on Windows Server 2022 and 2025 with Desktop Experience. There it takes the mode
+`TerminalServer` from Windows: only actions for the own session are offered, and the service refuses
+the others ([Configuration, Terminal server](Configuration.md#terminal-server-windows-server)).
+
+**Intune cannot install apps on Windows Server.** Only Windows Server Insider Preview builds can be
+enrolled in Intune; production servers cannot. Install SelfX by hand or with Configuration Manager:
+
+1. Build the package with the assistant and answer *For which Windows is this package?* with
+   `WindowsServer`. The assistant then asks who gets the device status (`TerminalServer_Health`) and
+   writes the instructions `SelfX-Server-Guide.<language>.txt` instead of the Intune guide. The
+   `.intunewin` file is built too but is not used.
+2. Install PowerShell 7.6 or newer (MSI, machine-wide) on the server.
+3. Copy the folder `package` of the output folder unchanged to the server or to a share that only
+   administrators can change. Users may only read it: `Install.ps1` checks every file against the file
+   lists, but whoever can change the share can also change the lists.
+4. In an elevated 64-bit Windows PowerShell in that folder:
+   `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1`
+   (with `-TrustedSigner <thumbprint>` for a signed package). Uninstall: the same with `Uninstall.ps1`.
+5. Configuration Manager: an application with the deployment type *Script Installer*, content = the
+   copied folder, the commands above, installation behavior *Install for system*, not as a 32-bit
+   process. Detection method: a custom PowerShell script with the content of
+   `SelfX-Service-<version>.Detection.ps1`. It writes a line and exits with 0 when SelfX is installed and
+   writes nothing otherwise, as Configuration Manager expects.
+
+`Install.ps1` stops without a change on Server Core (no desktop for the window and the status icon), on a
+domain controller and on Windows Enterprise multi-session. A Group Policy startup script is not a good
+fit: `Install.ps1` installs again at every start (the service is stopped and the files are replaced).
 
 ### Second Intune package: the configuration only
 
@@ -708,8 +739,8 @@ after that 4099 reports the number of skipped ones.
 | 4005 | Error | Installed scripts or configurations do not match `SelfX.Code.json` and `SelfX.Config.json`; the service starts nothing. With `Service_FileCheck` = `Audit` only a warning. |
 | 4006 | Error | The trust anchor `HKLM\SOFTWARE\SelfX\Trust` is missing, invalid or can be changed by an identity other than SYSTEM and Administrators; the service starts nothing. Install SelfX again. |
 | 4007 | Error | Trust mode signature: an installed script or library has no valid signature of an allowed signer, or a signed catalog (`SelfX.Code.cat`, `SelfX.Config.cat`) is missing or does not match; the service starts nothing, also with `Service_FileCheck` = `Audit`. The SelfX log names the file and the reason. |
-| 4008 | Warning | `Environment_Mode` = `TerminalServer`: a request for an action that is not classified `TerminalServer` = `Show` was refused. The SelfX log names the action. |
-| 4009 | Warning | Windows is a session host for several users, but `Environment_Mode` is `Client`. Set `Environment_Mode` to `TerminalServer`; the service does not change it. |
+| 4008 | Warning | Terminal server (Windows Server, mode `TerminalServer`): a request for an action that is not classified `TerminalServer` = `Show` was refused. The SelfX log names the action. |
+| 4009 | - | Not written any more: the mode comes from Windows and cannot differ from it. |
 | 4099 | Warning | Further events of the same ID were not written (limit). |
 
 ### The file lists `SelfX.Code.json` and `SelfX.Config.json`

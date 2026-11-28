@@ -19,6 +19,7 @@
     3.1.0  2026-11-27  fubu2k          Free up space: part of the user (recycle bin, TEMP, Teams cache only while Teams is closed) and SYSTEM
                                        part (fixed DISM arguments, Delivery Optimization cache, fixed folders of the delete helper,
                                        Intune check, thresholds); header versions 2.x.y or 3.x.y; UserScript of Health_Config.xml.
+    3.1.0  2026-11-28  fubu2k          Detection.ps1: "not detected" is exit code 0 without output.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -926,7 +927,8 @@ try {
 	Assert-Equal ((Get-SandboxLog 'Check-Compliance') -match '(Not met|criteria met)') $true 'Check-Compliance: result logged'
 
 	$output = @(& $powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Detection.ps1') 2>&1)
-	Assert-Equal "$LASTEXITCODE|$(@($output).Count)" '1|0' 'Detection: not installed here, exit 1 without output'
+	# "Not detected" is exit code 0 without output (Intune and Configuration Manager read that as "not installed").
+	Assert-Equal "$LASTEXITCODE|$(@($output).Count)" '0|0' 'Detection: not installed here, exit 0 without output'
 	Assert-Equal ((Get-SandboxLog 'Detection') -match 'SelfX \d+\.\d+\.\d+: not detected') $true 'Detection: result logged'
 
 	$cache = Join-Path $sandbox 'Health.json'

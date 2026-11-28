@@ -23,8 +23,9 @@
     Signature. The mode itself is not a problem (both are valid and it is only written to the log); a missing key or another
     value is "not detected", so an installation of a version without the anchor is installed again.
     Does not start the service, contact the pipe, verify that it is running or execute
-    remediation scripts. Writes an installed message and exits 0 when checks pass; exits
-    1 for a missing prerequisite or version mismatch. XML read/parse errors are not caught.
+    remediation scripts. Writes an installed message and exits 0 when checks pass; for a missing prerequisite or a version
+    mismatch it writes nothing and exits 0 as well (no output = not installed for Intune and for Configuration Manager; Configuration
+    Manager would read an exit code other than 0 as "unknown" and not install). XML read/parse errors are not caught (an error).
     Logs the result to ProgramData\SelfX\Logs\Detection_<date>.log when that folder exists.
 
 .NOTES
@@ -52,6 +53,8 @@
                                               Test-SelfXTrustAnchor); the mode is logged, not judged
     3.1.0    2026-11-27  fubu2k               $PackageKind: Full (as before), FullWithoutConfig (configuration digest not compared) and ConfigOnly (only the
                                               configuration digest) for the two Intune packages of a setup with a configuration package
+    3.1.0    2026-11-28  fubu2k               "Not detected" ends with exit code 0 and no output (was 1), so the script also works as the detection
+                                              method of Configuration Manager (Windows Server); for Intune the result is the same
 #>
 
 $ExpectedVersion = '3.1.0'
@@ -201,7 +204,9 @@ function Exit-Detection {
 	param([int]$Code, [string]$Reason)
 	Write-DetectionLog ("SelfX {0}: {1}" -f $ExpectedVersion, $Reason)
 	if ($Code -eq 0) { Write-Output $(if ($PackageKind -eq 'ConfigOnly') { 'The SelfX configuration is installed' } else { "SelfX $ExpectedVersion is installed" }) }
-	exit $Code
+	# Not detected ($Code 1) is no error: no output and exit code 0. Intune and Configuration Manager both read that as "not installed";
+	# Configuration Manager reads any other exit code as "unknown" and would not install SelfX.
+	exit 0
 }
 
 If(-not (Test-Path -LiteralPath (Join-Path $AppFolder 'SelfXService.exe'))) { Exit-Detection 1 'not detected (App\SelfXService.exe missing)' }

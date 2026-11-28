@@ -68,8 +68,7 @@ and changing the settings does not change the version.
 | `Tool_Language` | `de` | Default language. `Auto` takes the display language of Windows. You can also write `en`, `fr-CH` or `zh-Hans`. |
 | `Show_Language_Setting` | `True` | Users can choose the language. `False`: always `Tool_Language`. |
 | `Tool_Name` | SelfX | Name in the title bar. |
-| `Environment_Mode` | `Client` | Where SelfX runs. `Client`: PC or notebook of one person. `TerminalServer`: terminal server or session host with several users at the same time. See [Terminal server and session host](#terminal-server-and-session-host-environment_mode). Any other value counts as `Client`. |
-| `TerminalServer_Health` | `Off` | Only with `Environment_Mode` = `TerminalServer`: who gets the device status. `Off`: nobody. `AdminOnly`: only administrators who started SelfX with elevated rights. Any other value counts as `Off`. |
+| `TerminalServer_Health` | `Off` | Only on Windows Server (mode `TerminalServer`, see [Terminal server](#terminal-server-windows-server)): who gets the device status. `Off`: nobody. `AdminOnly`: only administrators who started SelfX with elevated rights. Any other value counts as `Off`. |
 | `Tool_Theme` | `Auto` | Default color scheme: `Auto` (follows Windows), `Dark` or `Light`. |
 | `Show_Theme_Button` | `True` | Users can choose the design themselves. |
 | `Default_Solution_Mode` | `Simplified` | Start view of troubleshooting: `Simplified` (easy) or `Detailed`. |
@@ -122,7 +121,7 @@ has a unique `Id`. The translations are linked through this `Id`.
 | `Link` | Only for `Link`: name of the setting (`Link_<Name>`) in `Tool_Config.xml`. |
 | `TimeoutSeconds` | Only for `System`: time limit from 1 to 7200 seconds, default 900. |
 | `OtherSessions` | Only for `System`: `Block` prevents the action for normal users while another user is signed in. Administrators are not affected. |
-| `TerminalServer` | Required. `Show`: the action only affects the own session or profile and is offered with `Environment_Mode` = `TerminalServer`. `Hide`: it affects the whole device or all users and is hidden there. Use the same value on every entry of the same script. |
+| `TerminalServer` | Required. `Show`: the action only affects the own session or profile and is offered on a terminal server (Windows Server). `Hide`: it affects the whole device or all users and is hidden there. Use the same value on every entry of the same script. |
 | `Post_Action` | Only for `System`: `MailReport` opens an e-mail to support with the report after a successful run. |
 
 Example:
@@ -158,22 +157,26 @@ Do you want to continue?</Alerte_MSG>
 translation, the English text appears. Classify it with `TerminalServer`; `Test-Catalog.ps1` fails
 without it.
 
-### Terminal server and session host (`Environment_Mode`)
+### Terminal server (Windows Server)
 
-One package works on PCs and on session hosts. The setting `Environment_Mode` in `Tool_Config.xml`
-says where SelfX runs. The package wizard asks for it ("Where does SelfX run?"). Build one package per
-kind of device.
+One package works on PCs and on terminal servers. SelfX takes the mode from Windows; there is no setting
+for it, and nobody on the device can change it:
 
-- `Client` (default): a PC or notebook of one person. All actions are shown.
-- `TerminalServer`: a terminal server or session host where several people work at the same time, for
-  example Windows Enterprise multi-session. Only actions and repairs with `TerminalServer` = `Show`
-  are shown. They affect only the own session or profile. Actions with `Hide` affect the whole device
-  or all users, such as a restart, Windows updates or the network adapters.
+- Windows 11 (mode `Client`): a PC or notebook of one person. All actions are shown.
+- Windows Server 2022 or 2025 with Desktop Experience (mode `TerminalServer`): a terminal server where
+  several people work at the same time. Only actions and repairs with `TerminalServer` = `Show` are
+  shown. They affect only the own session or profile. Actions with `Hide` affect the whole server or all
+  users, such as a restart, Windows updates or the network adapters.
 
-With `TerminalServer` the service also refuses every `System` action and repair that is not classified
+Windows Enterprise multi-session, Server Core and domain controllers are not supported: `Install.ps1`
+stops there before it changes anything. If the product type of Windows cannot be read, SelfX works as on
+a terminal server. An `Environment_Mode` element from an earlier build in `Tool_Config.xml` is ignored
+(the service writes a note in its log). Intune cannot install apps on Windows Server; see
+[Installation, Windows Server](Installation.md#windows-server-terminal-server).
+
+On a terminal server the service also refuses every `System` action and repair that is not classified
 `Show`, also for administrators (event 4008). Hiding them in the window is not enough, because the
-window is not a security boundary. An action without a classification counts as `Hide`. If the service
-cannot read `Tool_Config.xml`, it handles requests as with `TerminalServer`.
+window is not a security boundary. An action without a classification counts as `Hide`.
 
 The check of other active sessions (`OtherSessions`) works the same in both modes.
 
@@ -191,9 +194,6 @@ collection. Rows about the server (name, hardware, Windows, management, addresse
 shown to elevated administrators only. LAN, Wi-Fi, mobile and VPN are not shown on a terminal server.
 SelfX reads these values with the rights of the user, so hiding them keeps the view clear; it is not a
 security boundary.
-
-When Windows is a session host but `Environment_Mode` is `Client`, the service writes a warning at the
-start (event 4009). It does not change the setting itself.
 
 Classification of the bundled actions:
 

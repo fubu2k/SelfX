@@ -41,6 +41,7 @@
     3.1.0    2026-11-28  fubu2k               TerminalServer_Health: without the device status for this user no status request, no status entries and no
                                               notifications; the icon stays a launcher of SelfX. System information without the rows of the
                                               class Server for normal users and without the kinds of connection
+    3.1.0    2026-11-28  fubu2k               The mode comes from Windows (Get-SelfXEnvironmentMode), not from Environment_Mode of Tool_Config.xml
 #>
 
 $Global:Tray_Folder = Split-Path $MyInvocation.MyCommand.Path
@@ -121,9 +122,9 @@ $Global:Tray_Texts = Get-SelfXSystemInfoTexts
 $Global:Tray_Job_Script = (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXServiceClient.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SelfXNetwork.ps1') -Raw) + "`r`n" + (Get-Content -LiteralPath (Join-Path $Global:Tray_Folder 'SystemInfo.ps1') -Raw)
 $Global:Tray_Tool_Name = Get-TrayConfig 'Tool_Name' 'SelfX'
 $Global:Tray_Notify = (Get-TrayConfig 'Tray_Notifications' 'True') -eq 'True'
-# Environment_Mode TerminalServer: device status only as TerminalServer_Health allows (the service checks it again); normal users see
+# Mode TerminalServer (from Windows): device status only as TerminalServer_Health allows (the service checks it again); normal users see
 # no rows of the class Server (SelfXEnvironment.ps1, the same rule as SelfX).
-$Tray_Environment = (ConvertTo-SelfXEnvironmentMode (Get-TrayConfig 'Environment_Mode' '')).Mode
+$Tray_Environment = (Get-SelfXEnvironmentMode).Mode
 $Global:Tray_View = Get-SelfXViewScope -Mode $Tray_Environment -HealthAccess (ConvertTo-SelfXHealthAccess $Tray_Environment (Get-TrayConfig 'TerminalServer_Health' '')) -IsAdmin (Test-SelfXElevatedAdministrator)
 # Windows notifications about new problems: allowed by the administrator (Tray_Notifications) and switched on by
 # the user (HKCU TrayNotifications, SelfX > Settings or the menu of the icon). Read at every use, so a change in
@@ -354,7 +355,7 @@ $Tray_Status_Check = $Menu.Items.Add((Get-SelfXString 'Tray_Menu_Check'), $null,
 	$Global:Tray.ShowBalloonTip(3000, $Global:Tray_Tool_Name, (Get-SelfXString 'Tray_Checking_Text'), [System.Windows.Forms.ToolTipIcon]::Info)
 	Start-TrayStatusJob Full
 })
-# Environment_Mode TerminalServer without the device status for this user (TerminalServer_Health): no status entries in the menu.
+# Terminal server without the device status for this user (TerminalServer_Health): no status entries in the menu.
 If(-not $Global:Tray_View.Health) { foreach($Item in @($Global:Tray_Status_Item, $Tray_Status_Separator, $Tray_Status_Open, $Tray_Status_Check)) { $Item.Visible = $false } }
 $Catalog = New-Object System.Xml.XmlDocument
 $Catalog.XmlResolver = $null
@@ -363,8 +364,8 @@ $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
 $XmlSettings.XmlResolver = $null
 $XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Issues_List.xml' -CodeRoot $Global:Tray_Folder), $XmlSettings)
 Try { $Catalog.Load($XmlReader) } Finally { $XmlReader.Dispose() }
-# Environment_Mode TerminalServer: only when the action is classified TerminalServer Show (the same rule as the window).
-$Tray_Mode = (ConvertTo-SelfXEnvironmentMode (Get-TrayConfig 'Environment_Mode' '')).Mode
+# Terminal server: only when the action is classified TerminalServer Show (the same rule as the window).
+$Tray_Mode = $Tray_Environment
 If(@($Catalog.SelectNodes("//Action[normalize-space(Post_Action)='MailReport' and normalize-space(Context)='System']") | Where-Object { Test-SelfXShownInEnvironment $Tray_Mode ([string]$_.TerminalServer) }).Count)
 	{
 		[void]$Menu.Items.Add((Get-SelfXString 'SystemInfo_SendLogs_Text'), $null, { Open-SelfX 'SendLogs' })

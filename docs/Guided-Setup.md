@@ -88,7 +88,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 
 ## The questions
 
-1. **Basics:** default language, language choice by users, organisation name, tool name, where SelfX runs (`Client` for a PC or notebook, `TerminalServer` for a terminal server or session host with several users; see [Configuration](Configuration.md#terminal-server-and-session-host-environment_mode)) and, on a terminal server, who sees the device status (`TerminalServer_Health`).
+1. **Basics:** default language, language choice by users, organisation name, tool name, for which Windows the package is (`Windows11` for PCs and notebooks, `WindowsServer` for a terminal server with Windows Server 2022 or 2025; SelfX takes the mode from Windows itself, see [Configuration](Configuration.md#terminal-server-windows-server)) and, for Windows Server, who sees the device status (`TerminalServer_Health`).
 2. **Support contacts:** shared mailbox, phone, hours, website, Teams.
 3. **Branding:** logo (copied) and company color.
 4. **Ticket by e-mail:** on or off, default recipient, subject marker. If **other organisations or
@@ -140,7 +140,7 @@ certificate protected: whoever has it can sign files that SelfX accepts.
 | `SelfX-Service-<version>.Detection.ps1` | The detection script. Upload **this** file. |
 | `SelfX-Config-<version>.intunewin`, `SelfX-Config-<version>.Detection.ps1` | Instead of the two files above, when you build the configuration package (summary page: *Configuration package*, console: `-ConfigPackage`). It holds only `Install.ps1`, `Detection.ps1` and `Config` and is installed with `Install.ps1 -ConfigOnly`: [second package for the configuration](Installation.md#second-intune-package-the-configuration-only). |
 | `Set-SelfXSupportUnit-*.ps1` | Platform scripts for the ticket routing (per unit, group tag and device class). Units routed by OU only need none. |
-| `SelfX-Intune-Guide.<language>.txt` | Short Intune instructions. |
+| `SelfX-Intune-Guide.<language>.txt` | Short Intune instructions. For a package for Windows Server: `SelfX-Server-Guide.<language>.txt` (installation by hand or with Configuration Manager; Intune cannot install apps on Windows Server). |
 | `selfx-answers.json` | Your answers for the next run. **Contains mailbox addresses: do not commit it.** |
 | `SelfX.AppLocker.xml` | AppLocker rules (hash rules, or one publisher rule for a signed package). Only with the answer *yes*. |
 | `AppControl\` | The App Control (WDAC) supplemental policy as `.xml` and `.cip`. Only with a base policy ID. |

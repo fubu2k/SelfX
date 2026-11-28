@@ -33,7 +33,9 @@ ein dunkles Design; SelfX folgt der Windows-Einstellung.*
 - Sie bauen das Paket **auf einem Build-Rechner**. Auf den Geräten wird nichts
   kompiliert.
 - Auf den Geräten müssen **Windows 11 25H2** (Build 26200 oder neuer) und
-  **PowerShell 7.6 oder neuer** vorhanden sein.
+  **PowerShell 7.6 oder neuer** vorhanden sein. Terminalserver mit **Windows Server 2022 oder 2025**
+  werden ebenfalls unterstützt; sie werden ohne Intune installiert (siehe
+  [Windows Server](#windows-server-terminalserver)).
 - Verteilt wird immer das **ganze Paket**, nie einzelne Dateien.
 - Die Versionsnummer in `SelfX Service\Version.txt` und der Wert `$ExpectedVersion` in
   `Detection.ps1` müssen **gleich** sein. Sonst erkennt Intune das Update nicht. Die Version
@@ -47,7 +49,7 @@ ein dunkles Design; SelfX folgt der Windows-Einstellung.*
 
 | Voraussetzung | Einzelheiten |
 |---|---|
-| Windows 11 25H2 (Build 26200) oder neuer, 64 Bit | Auf älteren Versionen bricht der Installer ab, bevor er etwas ändert. |
+| Windows 11 25H2 (Build 26200) oder neuer, 64 Bit, oder Windows Server 2022 oder 2025 mit Desktopdarstellung (Build 20348 oder neuer) | Auf älteren Versionen, auf Server Core, auf einem Domänencontroller und auf Windows Enterprise multi-session bricht der Installer ab, bevor er etwas ändert. Auf Windows Server arbeitet SelfX wie auf einem Terminalserver. |
 | PowerShell 7.6 oder neuer | Für alle Nutzer installiert (MSI von Microsoft), Pfad `%ProgramFiles%\PowerShell\7\pwsh.exe`. Die Store-Variante (MSIX) geht nicht. |
 | Windows PowerShell 5.1 | Ist in Windows enthalten. SelfX nutzt sie nur für `Install.ps1`, `Uninstall.ps1`, `Detection.ps1` und `Collect-DeviceLogs.ps1`. |
 | .NET | **Nicht nötig.** Dienst und Starter bringen alles selbst mit. |
@@ -361,6 +363,39 @@ Programm eine Datei offen, versucht der Deinstaller es bis zu 90 Sekunden lang e
 - Das Ergebnis steht in `%ProgramData%\SelfX\Logs\Uninstall.log`.
 
 ## Optionale Bausteine
+
+### Windows Server (Terminalserver)
+
+SelfX läuft auf Windows Server 2022 und 2025 mit Desktopdarstellung. Dort übernimmt es den Modus
+`TerminalServer` von Windows: Angeboten werden nur Aktionen für die eigene Sitzung, und der Dienst lehnt
+die anderen ab ([Konfiguration, Terminalserver](Configuration.md#terminalserver-windows-server)).
+
+**Intune kann auf Windows Server keine Apps installieren.** Nur Builds von Windows Server Insider
+Preview lassen sich in Intune registrieren, Server im Betrieb nicht. Installieren Sie SelfX von Hand oder
+mit Configuration Manager:
+
+1. Bauen Sie das Paket mit dem Assistenten und beantworten Sie *Für welches Windows ist das Paket?* mit
+   `WindowsServer`. Der Assistent fragt dann, wer den Gerätestatus bekommt (`TerminalServer_Health`),
+   und schreibt statt der Intune-Anleitung die Anleitung `SelfX-Server-Guide.<Sprache>.txt`. Die Datei
+   `.intunewin` wird ebenfalls gebaut, aber nicht gebraucht.
+2. Installieren Sie PowerShell 7.6 oder neuer (MSI, für alle Nutzer) auf dem Server.
+3. Kopieren Sie den Ordner `package` des Ausgabeordners unverändert auf den Server oder in eine Freigabe,
+   die nur Administratoren ändern können. Nutzer dürfen nur lesen: `Install.ps1` prüft jede Datei gegen
+   die Dateilisten, wer die Freigabe ändern kann, kann aber auch die Listen ändern.
+4. In einer erhöhten 64-Bit-Windows-PowerShell in diesem Ordner:
+   `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1`
+   (bei einem signierten Paket mit `-TrustedSigner <Fingerabdruck>`). Deinstallieren: dasselbe mit
+   `Uninstall.ps1`.
+5. Configuration Manager: eine Anwendung mit dem Bereitstellungstyp *Skriptinstallationsprogramm*,
+   Inhalt = der kopierte Ordner, die Befehle oben, Installationsverhalten *Für System installieren*,
+   nicht als 32-Bit-Prozess. Erkennungsmethode: ein benutzerdefiniertes PowerShell-Skript mit dem Inhalt
+   von `SelfX-Service-<Version>.Detection.ps1`. Es schreibt eine Zeile und endet mit 0, wenn SelfX
+   installiert ist, und schreibt sonst nichts, wie Configuration Manager es erwartet.
+
+`Install.ps1` bricht ohne Änderung ab auf Server Core (kein Desktop für das Fenster und das
+Statussymbol), auf einem Domänencontroller und auf Windows Enterprise multi-session. Ein
+Gruppenrichtlinien-Startskript passt nicht gut: `Install.ps1` installiert bei jedem Start neu (der Dienst
+wird angehalten und die Dateien werden ersetzt).
 
 ### Zweites Intune-Paket: nur die Konfiguration
 
@@ -742,8 +777,8 @@ höchstens 10 Einträge in 10 Minuten; danach meldet 4099 die Zahl der ausgelass
 | 4005 | Fehler | Installierte Skripte oder Konfigurationen stimmen nicht mit `SelfX.Code.json` und `SelfX.Config.json` überein; der Dienst startet nichts. Mit `Service_FileCheck` = `Audit` nur eine Warnung. |
 | 4006 | Fehler | Der Vertrauensanker `HKLM\SOFTWARE\SelfX\Trust` fehlt, ist ungültig oder kann von einer anderen Identität als SYSTEM und Administratoren geändert werden; der Dienst startet nichts. SelfX neu installieren. |
 | 4007 | Fehler | Vertrauensmodus Signatur: Ein installiertes Skript oder eine Bibliothek hat keine gültige Signatur eines erlaubten Signierers, oder ein signierter Katalog (`SelfX.Code.cat`, `SelfX.Config.cat`) fehlt oder passt nicht; der Dienst startet nichts, auch mit `Service_FileCheck` = `Audit`. Das SelfX-Protokoll nennt Datei und Grund. |
-| 4008 | Warnung | `Environment_Mode` = `TerminalServer`: Eine Anfrage für eine Aktion, die nicht als `TerminalServer` = `Show` eingestuft ist, wurde abgelehnt. Das SelfX-Protokoll nennt die Aktion. |
-| 4009 | Warnung | Windows ist ein Sitzungshost für mehrere Nutzer, `Environment_Mode` steht aber auf `Client`. Stellen Sie `Environment_Mode` auf `TerminalServer`; der Dienst ändert das nicht selbst. |
+| 4008 | Warnung | Terminalserver (Windows Server, Modus `TerminalServer`): Eine Anfrage für eine Aktion, die nicht als `TerminalServer` = `Show` eingestuft ist, wurde abgelehnt. Das SelfX-Protokoll nennt die Aktion. |
+| 4009 | - | Wird nicht mehr geschrieben: Der Modus kommt von Windows und kann davon nicht abweichen. |
 | 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
 
 ### Die Dateilisten `SelfX.Code.json` und `SelfX.Config.json`

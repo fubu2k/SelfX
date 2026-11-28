@@ -4,7 +4,9 @@
 
 .DESCRIPTION
     Runs in elevated 64-bit Windows PowerShell 5.1, normally as SYSTEM via Intune/SCCM.
-    Requires Windows 11 25H2 (build 26200) or newer; on older builds it stops before anything is changed.
+    Requires Windows 11 25H2 (build 26200) or newer, or Windows Server 2022 or 2025 with Desktop Experience (build 20348 or newer;
+    there SelfX works as on a terminal server). On older builds, on Server Core, on a domain controller and on Windows Enterprise
+    multi-session it stops before anything is changed.
     Stops and deletes an existing SelfXService, deletes the entire content of InstallFolder
     (default ProgramFiles\SelfX; the folder itself is kept because an open SelfX window or
     status icon may use it as working directory, locked files are retried for 20 seconds),
@@ -100,6 +102,9 @@
     3.1.0    2026-11-27  fubu2k               Mode -ConfigOnly: a package with only Install.ps1 and Config replaces the folder Config of an existing
                                               installation (checks like the full installation, MinCodeVersion, no change of install-time settings,
                                               exchange by rename with rollback); service, programs and trust anchor stay untouched
+    3.1.0    2026-11-28  fubu2k               Windows Server 2022 and 2025 with Desktop Experience (build 20348 or newer) are supported next to
+                                              Windows 11 25H2; Server Core, domain controllers and Windows Enterprise multi-session stop the
+                                              installation before anything is changed (Test-SelfXWindowsSupport)
 #>
 
 # Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
@@ -128,21 +133,57 @@ $LogFolder = Join-Path $DataFolder 'Logs'
 $UninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SelfX'
 $PowerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 
-function Test-SelfXWindowsBuild {
-	# SelfX Service needs Windows 11 25H2 (build 26200) or newer. Older builds are not supported any more and the
-	# installation stops before anything is changed (hard abort). The build number is read from the registry
-	# (not from [Environment]::OSVersion, which an application manifest can falsify).
+function Get-SelfXWindowsInfo {
+	# Facts of the running Windows from the registry (not from [Environment]::OSVersion, which an application manifest can falsify).
+	# A value that cannot be read stays empty (0 for the build); Test-SelfXWindowsSupport then stops the installation.
+	$CurrentVersion = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+	$Info = [ordered]@{ Build = 0; ProductType = ''; InstallationType = ''; EditionId = ''; ServerGuiShell = 0 }
+	Try { $Info.Build = [int](Get-ItemProperty -LiteralPath $CurrentVersion -Name CurrentBuildNumber -ErrorAction Stop).CurrentBuildNumber } Catch { $Info.Build = 0 }
+	Try { $Info.ProductType = [string](Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\ProductOptions' -Name ProductType -ErrorAction Stop).ProductType } Catch { $Info.ProductType = '' }
+	Try { $Info.InstallationType = [string](Get-ItemProperty -LiteralPath $CurrentVersion -Name InstallationType -ErrorAction Stop).InstallationType } Catch { $Info.InstallationType = '' }
+	Try { $Info.EditionId = [string](Get-ItemProperty -LiteralPath $CurrentVersion -Name EditionID -ErrorAction Stop).EditionID } Catch { $Info.EditionId = '' }
+	# Windows Server with Desktop Experience has ServerLevels\ServerGuiShell = 1; Server Core does not (Microsoft Learn, "Detecting Minimal
+	# Server Interface and Server Core").
+	Try { $Info.ServerGuiShell = [int](Get-ItemProperty -LiteralPath (Join-Path $CurrentVersion 'Server\ServerLevels') -Name ServerGuiShell -ErrorAction Stop).ServerGuiShell } Catch { $Info.ServerGuiShell = 0 }
+	return [pscustomobject]$Info
+}
+
+function Test-SelfXWindowsSupport {
+	# SelfX Service runs on Windows 11 25H2 (build 26200) or newer and on Windows Server 2022 or 2025 with Desktop Experience
+	# (build 20348 or newer). Everything else stops the installation before anything is changed (hard abort):
+	#  - Windows Enterprise multi-session (EditionID ServerRdsh; it reports the product type of a server),
+	#  - Server Core (no desktop: the window and the status icon cannot run),
+	#  - a domain controller (ProductType LanmanNT), an unknown product type, values that cannot be read.
+	# Returns Kind ('Client' or 'Server') and Build. The mode of SelfX follows the product type: Client on Windows 11, TerminalServer on
+	# Windows Server (SelfXEnvironment.ps1, SelfXService.cs).
 	param(
-		[int]$Build = 0,
-		[int]$MinimumBuild = 26200
+		$Info = $null,
+		[int]$MinimumClientBuild = 26200,
+		[int]$MinimumServerBuild = 20348
 	)
-	If($Build -le 0)
+	If($null -eq $Info) { $Info = Get-SelfXWindowsInfo }
+	$Need = "SelfX Service needs Windows 11 25H2 (build $MinimumClientBuild) or newer, or Windows Server 2022 or 2025 with Desktop Experience (build $MinimumServerBuild or newer)."
+	$Build = [int]$Info.Build
+	$ProductType = "$($Info.ProductType)".Trim()
+	$InstallationType = "$($Info.InstallationType)".Trim()
+	$EditionId = "$($Info.EditionId)".Trim()
+	If($Build -le 0) { throw "The Windows build number cannot be read. $Need" }
+	If($EditionId -ieq 'ServerRdsh') { throw "Windows Enterprise multi-session is not supported. $Need" }
+	If($ProductType -ieq 'WinNT')
 	{
-		Try { $Build = [int](Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name CurrentBuildNumber -ErrorAction Stop).CurrentBuildNumber }
-		Catch { throw 'The Windows build number cannot be read. SelfX Service needs Windows 11 25H2 (build 26200) or newer.' }
+		If($Build -lt $MinimumClientBuild) { throw "Windows build $Build is not supported. $Need" }
+		return [pscustomobject]@{ Kind = 'Client'; Build = $Build }
 	}
-	If($Build -lt $MinimumBuild) { throw "Windows build $Build is not supported. SelfX Service needs Windows 11 25H2 (build $MinimumBuild) or newer." }
-	return $Build
+	If($ProductType -ieq 'ServerNT')
+	{
+		If($InstallationType -ieq 'Server Core' -or ($InstallationType -ieq 'Server' -and [int]$Info.ServerGuiShell -ne 1)) { throw "Windows Server Core is not supported: SelfX needs the desktop (Desktop Experience). $Need" }
+		If($InstallationType -ine 'Server') { throw "This kind of Windows (installation type '$InstallationType') is not supported. $Need" }
+		If($Build -lt $MinimumServerBuild) { throw "Windows Server build $Build is not supported. $Need" }
+		return [pscustomobject]@{ Kind = 'Server'; Build = $Build }
+	}
+	If($ProductType -ieq 'LanmanNT') { throw "A domain controller is not supported. $Need" }
+	If(-not $ProductType) { throw "The product type of Windows cannot be read. $Need" }
+	throw "The product type '$ProductType' is not supported. $Need"
 }
 
 function Test-SelfXPowerShell7 {
@@ -1309,7 +1350,7 @@ function Initialize-SelfXDataFolder {
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 If(-not $IsAdmin) { throw 'Install.ps1 must run with administrator rights.' }
 If($PSVersionTable.PSEdition -eq 'Core') { throw 'Install.ps1 must run in Windows PowerShell 5.1 (powershell.exe), not PowerShell 7.' }
-$null = Test-SelfXWindowsBuild
+$SelfXWindows = Test-SelfXWindowsSupport
 If([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) { throw 'Run Install.ps1 in a 64-bit PowerShell (use %SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe from 32-bit agents).' }
 
 # Mode -ConfigOnly: only the folder Config of an existing installation is replaced (Invoke-SelfXConfigOnly). The trust mode is the one
@@ -1368,6 +1409,8 @@ New-Item -ItemType Directory -Path $UserLogFolder -Force | Out-Null
 & icacls.exe $UserLogFolder /setowner '*S-1-5-32-544' | Out-Null
 & icacls.exe $UserLogFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(AD,X,RA)' '*S-1-3-0:(OI)(CI)(IO)F' | Out-Null
 Start-Transcript -Path (Join-Path $LogFolder 'Install.log') -Append | Out-Null
+If($SelfXWindows.Kind -eq 'Server') { Write-Output "Windows Server build $($SelfXWindows.Build): SelfX works as on a terminal server (mode TerminalServer)." }
+Else { Write-Output "Windows 11 build $($SelfXWindows.Build): SelfX works in the mode Client." }
 
 Try
 {

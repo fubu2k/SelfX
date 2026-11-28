@@ -15,6 +15,7 @@
                                                 thresholds of the SYSTEM part in DiskCleanup; Remediation attribute UserScript.
   Version 3.1.0 | 2026-11-27 | fubu2k         | Required Remediation attribute TerminalServer (Show or Hide) for Environment_Mode TerminalServer;
                                                 all delivered repairs are Hide (they affect the whole device).
+  Version 3.1.0 | 2026-11-28 | fubu2k         | Description of TerminalServer: the mode comes from Windows (Windows Server = TerminalServer).
   -->
 <HealthConfig>
   <!-- Background checks: the service runs all checks regularly and keeps the result for SelfX and the tray icon.
@@ -73,7 +74,7 @@
          Optional When="NotOK" offers the button only while the status is not OK (default: Always).
          Optional OtherSessions="Block": a normal user cannot start the repair while another user has an active
          session (elevated administrators are not restricted).
-         Required TerminalServer="Show" or "Hide": with Environment_Mode TerminalServer (Tool_Config.xml) only Show is offered;
+         Required TerminalServer="Show" or "Hide": on a terminal server (Windows Server, mode TerminalServer) only Show is offered;
          Hide hides the button (also the UserScript part) and the service refuses the repair for every caller.
          Test-Catalog.ps1 requires the attribute.
     <Remediation Id="IME" Script="SelfX_Intune_RestartService.ps1" />
