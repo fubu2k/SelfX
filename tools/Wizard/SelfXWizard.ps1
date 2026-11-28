@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.10
+    Version : 3.1.11
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -42,7 +42,9 @@
                                               instructions describe the installation without Intune (by hand or Configuration Manager), file
                                               SelfX-Server-Guide.<language>.txt
     3.1.9    2026-11-28  fubu2k               Question TerminalServerSupportMail (required for WindowsServer) writes TerminalServer_Support_Mail
-    3.1.10   2026-11-28  fubu2k               Defender ASR exclusion: five files (SelfXDisturb.dll added, guide texts de and en)
+    3.1.10   2026-11-28  fubu2k               Package for WindowsServer: no step 'pack', no .intunewin file and no IntuneWinAppUtil.exe needed (Intune cannot install apps
+                                              on Windows Server); the instructions of the server package do not name the .intunewin file
+    3.1.11   2026-11-28  fubu2k               Defender ASR exclusion: five files (SelfXDisturb.dll added, guide texts de and en)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -456,12 +458,12 @@ function Get-SelfXIntuneGuideSteps {
     if ($Answers.TargetOS -eq 'WindowsServer') {
         # Windows Server: Intune cannot install apps there (only Windows Server Insider Preview builds can be enrolled in Intune), so the
         # instructions describe the installation of the folder package by hand or with Configuration Manager. The commands run in a
-        # 64-bit process there (no 32-bit agent): System32 instead of sysnative. The .intunewin file is not used.
+        # 64-bit process there (no 32-bit agent): System32 instead of sysnative. A server package has no .intunewin file.
         $serverPs = '%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
         $serverInstall = $(if ($PackageKind -eq 'ConfigOnly') { "$serverPs .\Install.ps1 -ConfigOnly" } else { "$serverPs .\Install.ps1$installArguments" })
         $serverUninstall = "$serverPs .\Uninstall.ps1"
         & $add 'requirements' @((Get-WText 'guide.srv1'), (Get-WText 'guide.srv1b'))
-        & $add 'files' @((Get-WText 'guide.srv2' @('package', $PackageFile))) @((& $copy 'gui.copy.packagefolder' (& $inOutput 'package')))
+        & $add 'files' @((Get-WText 'guide.srv2' @('package'))) @((& $copy 'gui.copy.packagefolder' (& $inOutput 'package')))
         if ($PackageKind -eq 'ConfigOnly') {
             & $add 'program' @((Get-WText 'guide.srv3c' @($serverInstall, $Version))) @((& $copy 'gui.copy.install' $serverInstall))
         } else {
@@ -1045,11 +1047,11 @@ function Invoke-SelfXPackageBuild {
         Builds the configured Intune package in one run, without a question.
 
     .DESCRIPTION
-        Order: check the answers, the tool and the certificate; copy the package part of the unpacked payload; check the copy against
+        Order: check the answers, the tool (not for a package for Windows Server) and the certificate; copy the package part of the unpacked payload; check the copy against
         App\SelfX.Code.json; write the settings and the logo; trust mode Signature (with -Certificate): sign every program and script,
         rewrite Bin\SelfX.Binaries.json and App\SelfX.Code.json, write SelfX.Code.cat from the package without Config; then
         Config\SelfX.Config.json (and in the mode Signature Config\SelfX.Config.cat); pack with IntuneWinAppUtil.exe (Microsoft signature
-        checked); write Detection.ps1 with the digests (signed in the mode Signature); AppLocker and App Control files for the mode;
+        checked; omitted for a package for Windows Server: TargetOS = WindowsServer builds no .intunewin file and needs no tool); write Detection.ps1 with the digests (signed in the mode Signature); AppLocker and App Control files for the mode;
         platform scripts, instructions and selfx-answers.json.
 
         -PackageKind: Full (default), FullSeparateConfig (the full package for a setup with a separate configuration package: its
@@ -1061,7 +1063,7 @@ function Invoke-SelfXPackageBuild {
         The caller disposes -Certificate; the function never reads, stores or logs a password.
 
         Progress: -OnProgress is called as & $OnProgress <step id> <text>. Step ids: check, copy, config, sign, catalog, pack,
-        detection, rules, guide, finish.
+        detection, rules, guide, finish (pack not for a package for Windows Server).
 
         -AdditionalSigner: SHA1 thumbprints of further signers that the devices shall accept besides the certificate (change of the
         certificate: the new one is announced before the first package signed with it). They only go into -TrustedSigner of the install
@@ -1070,7 +1072,7 @@ function Invoke-SelfXPackageBuild {
     .OUTPUTS
         An object with OutputFolder, Version, Mode (Hash or Signature), PackageFile, DetectionFile, RuleFiles, ScriptFiles, GuideFile, GuideText,
         TrustedSigner (the thumbprints of the install command) and GuideSteps (Get-SelfXIntuneGuideSteps: the same instructions as steps with
-        the values to copy).
+        the values to copy). PackageFile is empty for a package for Windows Server (no .intunewin file).
     #>
     [CmdletBinding()]
     param(
@@ -1096,7 +1098,9 @@ function Invoke-SelfXPackageBuild {
     $a = Test-WizardAnswerSet -Answers $Answers
     if ($ConfigureOnly -and $signed) { throw 'A package that is only configured is not signed: do not combine -ConfigureOnly with a certificate.' }
     if ($TimestampServer -and -not $signed) { throw 'A time stamp server needs a certificate.' }
-    if (-not $ConfigureOnly) { Assert-SelfXIntuneWinTool -ToolPath $ToolPath }
+    # Intune cannot install apps on Windows Server: its package folder is installed by hand, so no .intunewin file and no packing tool.
+    $serverPackage = ($a.TargetOS -eq 'WindowsServer')
+    if (-not $ConfigureOnly -and -not $serverPackage) { Assert-SelfXIntuneWinTool -ToolPath $ToolPath }
     if ($signed) {
         $problem = Get-SelfXSigningCertificateProblem $Certificate
         if ($null -ne $problem) { throw "The certificate cannot be used for code signing: $problem." }
@@ -1176,18 +1180,20 @@ function Invoke-SelfXPackageBuild {
 
         # The names are also named in the instructions of a package that is only configured.
         $namePrefix = $(if ($configPackage) { 'SelfX-Config' } else { 'SelfX-Service' })
-        $packageName = "$namePrefix-$version.intunewin"
+        $packageName = $(if ($serverPackage) { '' } else { "$namePrefix-$version.intunewin" })
         $detectionName = "$namePrefix-$version.Detection.ps1"
         $packageFile = $null
         $detectionFile = $null
         $ruleFiles = New-Object System.Collections.Generic.List[string]
         if (-not $ConfigureOnly) {
-            # ---- pack
-            & $progress 'pack'
-            $packageFile = $packageName
-            $toolOutput = Join-Path $tmp 'tool'
-            New-Item -ItemType Directory -Path $toolOutput -Force | Out-Null
-            New-SelfXIntuneWinFile -ToolPath $ToolPath -Stage $package -SetupFile 'Install.ps1' -OutputDir $toolOutput -Target (Join-Path $out $packageFile)
+            # ---- pack (not for Windows Server: the folder package is the result there)
+            if (-not $serverPackage) {
+                & $progress 'pack'
+                $packageFile = $packageName
+                $toolOutput = Join-Path $tmp 'tool'
+                New-Item -ItemType Directory -Path $toolOutput -Force | Out-Null
+                New-SelfXIntuneWinFile -ToolPath $ToolPath -Stage $package -SetupFile 'Install.ps1' -OutputDir $toolOutput -Target (Join-Path $out $packageFile)
+            }
 
             # ---- detection script with the digests
             & $progress 'detection'

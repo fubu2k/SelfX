@@ -31,7 +31,7 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 | Verbindungstest | Verbindungstest einschalten, die mitgelieferten Microsoft-Ziele ein oder aus, Hostnamen im Bericht ein oder aus und eigene Ziele (Name, Host, Port, Gruppe, Art; bis zu 8 eigene Ziele). Siehe [Netzwerk-Messungen](Configuration.md#netzwerk-messungen) |
 | Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
 | Signatur | Kein Zertifikat (Vertrauensmodus Hash), Zertifikat aus dem Speicher (nur geeignete, gültige) oder PFX-Datei mit Kennwort; Zeitstempeldienst; weitere Signierer für einen Zertifikatswechsel. Zeigt Antragsteller, Aussteller, Ablauf, Fingerabdruck und die Sperrlisten-Adressen mit Warnungen. Siehe [Codesignatur-Zertifikat](Zertifikat.md) |
-| Zusammenfassung | Ihre Antworten, Paketordner, Ausgabeordner, `IntuneWinAppUtil.exe`, „Nur die Konfiguration schreiben“ |
+| Zusammenfassung | Ihre Antworten, Paketordner, Ausgabeordner, `IntuneWinAppUtil.exe` (nicht für Windows Server), „Nur die Konfiguration schreiben“ |
 | Intune-Paket bauen | Ein Klick; eine Liste zeigt jeden Schritt; **Abbrechen** beendet den Bau, der Ausgabeordner bleibt unverändert |
 | Ergebnis | Dateien, **Ordner öffnen**, **Anleitung kopieren** und die Schritte für Intune als Karten mit Kopieren-Schaltflächen (App-Name, Installations- und Deinstallationsbefehl mit `-TrustedSigner`, Anforderungsskript, Erkennungsskript, Fingerabdrücke, ASR-Dateiliste) |
 
@@ -70,7 +70,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXPackage
 ```
 
 Im Repository arbeitet der Assistent mit dem Paketordner `SelfX Service` und braucht den Ordner `Bin` (`-BuildBinaries` baut ihn, mit
-dem .NET SDK 10). Außerdem brauchen Sie `IntuneWinAppUtil.exe`. Die Datei laden Sie von Microsoft herunter:
+dem .NET SDK 10). Außerdem brauchen Sie `IntuneWinAppUtil.exe`, außer für ein Paket für Windows Server (es hat keine `.intunewin`-Datei). Die Datei laden Sie von Microsoft herunter:
 <https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool> (Datei `IntuneWinAppUtil.exe` im Repository, am besten
 vom neuesten Release-Tag). Der Assistent fragt nach dem Pfad der Datei und prüft die Microsoft-Signatur.
 
@@ -81,7 +81,7 @@ Wichtige Parameter:
 | `-Language de` | Sprache des Assistenten (`de`, `en`). Ohne Angabe fragt der Assistent zuerst auf Englisch; Englisch ist vorgewählt, die anderen Sprachen stehen in einer Nummernliste. |
 | `-AnswerFile <Datei>` | Verwendet gespeicherte Antworten, stellt keine Fragen (für Updates und Automatisierung). |
 | `-OutputFolder <Ordner>` | Standard: `build\SelfX-Guided` im Repository, `SelfX-Guided` neben dem entpackten Nutzlast-Archiv. Der Ordner muss neu, leer oder das Ergebnis eines früheren Laufs sein. |
-| `-ToolPath <Datei>` | Pfad von `IntuneWinAppUtil.exe`. |
+| `-ToolPath <Datei>` | Pfad von `IntuneWinAppUtil.exe`. Für ein Paket für Windows Server nicht nötig und nicht gefragt. |
 | `-PayloadFolder <Ordner>` | Ein Ordner im Aufbau des entpackten Nutzlast-Archivs. Standard: das entpackte Archiv, das `tools` enthält, sonst das Repository. |
 | `-BuildBinaries` | Nur im Repository: baut den Ordner `Bin`, wenn er fehlt. |
 | `-ConfigureOnly` | Schreibt nur Konfiguration, Skripte und Anleitung; es wird nichts verpackt oder signiert. |
@@ -116,7 +116,7 @@ Wichtige Parameter:
    AppLocker zusätzlich die AppLocker-Cmdlets, App Control das Modul ConfigCI. Fehlen sie, endet der Lauf mit einem klaren Text:
    Antworten Sie *nein* oder erzeugen Sie die Dateien auf einem anderen PC (`tools\New-SelfXAppLockerRules.ps1`,
    `tools\New-SelfXWdacPolicy.ps1`).
-9. **Bau:** Ausgabeordner und Pfad von `IntuneWinAppUtil.exe`.
+9. **Bau:** Ausgabeordner und Pfad von `IntuneWinAppUtil.exe` (für ein Paket für Windows Server nicht gefragt).
 
 Jede Eingabe wird geprüft (Adressen, https-Links, Farben, Längen, Zeichen). Eine ungültige Eingabe
 wird sofort abgelehnt. Die Werte werden als Text in die XML-Dateien geschrieben und dabei maskiert. Das Logo muss eine `png`-, `jpg`- oder
@@ -146,7 +146,7 @@ Im Ausgabeordner:
 
 | Datei | Wofür |
 |---|---|
-| `SelfX-Service-<Version>.intunewin` | Das Paket für Intune. |
+| `SelfX-Service-<Version>.intunewin` | Das Paket für Intune. Für ein Paket für Windows Server wird sie nicht gebaut: Dessen Installation ist der Ordner `package`. |
 | `SelfX-Service-<Version>.Detection.ps1` | Das Erkennungsskript. Laden Sie **diese** Datei hoch. |
 | `SelfX-Config-<Version>.intunewin`, `SelfX-Config-<Version>.Detection.ps1` | Statt der beiden Dateien darüber, wenn Sie das Konfigurationspaket bauen (Zusammenfassung: *Konfigurationspaket*, Konsole: `-ConfigPackage`). Es enthält nur `Install.ps1`, `Detection.ps1` und `Config` und wird mit `Install.ps1 -ConfigOnly` installiert: [zweites Paket für die Konfiguration](Installation.md#zweites-intune-paket-nur-die-konfiguration). |
 | `Set-SelfXSupportUnit-*.ps1` | Plattformskripte für die Ticket-Zuordnung (je Einheit, Group Tag und Geräteklasse). Einheiten, die nur nach OU zugeordnet werden, brauchen keins. |

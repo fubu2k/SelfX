@@ -359,8 +359,8 @@ enrolled in Intune; production servers cannot. Install SelfX by hand or with Con
 
 1. Build the package with the assistant and answer *For which Windows is this package?* with
    `WindowsServer`. The assistant then asks who gets the device status (`TerminalServer_Health`) and
-   writes the instructions `SelfX-Server-Guide.<language>.txt` instead of the Intune guide. The
-   `.intunewin` file is built too but is not used.
+   writes the instructions `SelfX-Server-Guide.<language>.txt` instead of the Intune guide. No
+   `.intunewin` file is built for it and `IntuneWinAppUtil.exe` is not needed.
 2. Install PowerShell 7.6 or newer (MSI, machine-wide) on the server.
 3. Copy the folder `package` of the output folder unchanged to the server or to a share that only
    administrators can change. Users may only read it: `Install.ps1` checks every file against the file

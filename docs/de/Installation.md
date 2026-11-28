@@ -376,8 +376,8 @@ mit Configuration Manager:
 
 1. Bauen Sie das Paket mit dem Assistenten und beantworten Sie *Für welches Windows ist das Paket?* mit
    `WindowsServer`. Der Assistent fragt dann, wer den Gerätestatus bekommt (`TerminalServer_Health`),
-   und schreibt statt der Intune-Anleitung die Anleitung `SelfX-Server-Guide.<Sprache>.txt`. Die Datei
-   `.intunewin` wird ebenfalls gebaut, aber nicht gebraucht.
+   und schreibt statt der Intune-Anleitung die Anleitung `SelfX-Server-Guide.<Sprache>.txt`. Eine Datei
+   `.intunewin` wird dafür nicht gebaut und `IntuneWinAppUtil.exe` wird nicht gebraucht.
 2. Installieren Sie PowerShell 7.6 oder neuer (MSI, für alle Nutzer) auf dem Server.
 3. Kopieren Sie den Ordner `package` des Ausgabeordners unverändert auf den Server oder in eine Freigabe,
    die nur Administratoren ändern können. Nutzer dürfen nur lesen: `Install.ps1` prüft jede Datei gegen

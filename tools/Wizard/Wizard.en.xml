@@ -198,7 +198,7 @@
 	<T Id="guide.srv.c.intro">This is the configuration package. It replaces only the settings of a SelfX that is already installed (install the full package first). Intune cannot install apps on Windows Server: install it by hand or with Configuration Manager. Start with one pilot server.</T>
 	<T Id="guide.srv1">1. Requirements: Windows Server 2022 or 2025 with Desktop Experience (build 20348 or newer), 64-bit. Install.ps1 stops without a change on Server Core, on a domain controller and on Windows Enterprise multi-session.</T>
 	<T Id="guide.srv1b">   PowerShell 7.6 or newer (MSI of Microsoft, machine-wide) must be installed too; until it is there, SelfX is installed but starts no action. Details: docs\Installation.md, chapter 3.2.</T>
-	<T Id="guide.srv2">2. Files: the folder {0} in the output folder is the installation. Copy it unchanged to the server or to a share that only administrators can change (users may only read). Install.ps1 checks every file before it changes anything. The file {1} is only for Intune and is not needed.</T>
+	<T Id="guide.srv2">2. Files: the folder {0} in the output folder is the installation. Copy it unchanged to the server or to a share that only administrators can change (users may only read). Install.ps1 checks every file before it changes anything.</T>
 	<T Id="guide.srv3">3. Install: open an elevated 64-bit Windows PowerShell as administrator (or run as SYSTEM), change to the copied package folder and run: {0}</T>
 	<T Id="guide.srv3b">   Uninstall: {0}</T>
 	<T Id="guide.srv3c">3. Install: in an elevated 64-bit Windows PowerShell in the copied package folder: {0}. It needs an installed SelfX of version {1} or newer and changes only the settings. There is nothing to uninstall: the full package removes SelfX.</T>
