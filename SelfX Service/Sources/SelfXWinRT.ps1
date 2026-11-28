@@ -3,7 +3,7 @@
     Loads the WinRT libraries of SelfX (Windows Update orchestrator) only after their SHA256 was checked.
 
 .DESCRIPTION
-    Dot-sourced by HealthStatus.ps1 and SelfX_Updates_Install.ps1. PowerShell 7 loads SelfXWinRT.dll and the Windows SDK
+    Dot-sourced by HealthStatus.ps1, SelfX_Updates_Install.ps1 and UserName.ps1 (own short process of the window, -PrintFirstName). PowerShell 7 loads SelfXWinRT.dll and the Windows SDK
     projection DLLs from the folder WinRT of the install folder. Install.ps1 checks them against the manifest of the package
     and the service checks the file list before it starts a SYSTEM script. This helper adds the check at the moment of
     loading (defense in depth):

@@ -68,8 +68,8 @@
                                               confirmation; several: a choice). Only the ID of the chosen app goes to the service (APPRETRY), which checks it
                                               against its own reading of the IME cache. "Fix all problems" still retries all failed apps
     3.1.0    2026-11-28  fubu2k               Greeting above the title (Greeting_Name: FirstName or Off; UserName.ps1): neutral at once, the first name of the
-                                              user from Windows.System.User is added from a background runspace within 2 seconds; only TextBlock.Text,
-                                              not logged, not saved, not sent to the service
+                                              user from Windows.System.User is added from a short process of its own within 2 seconds (the window loads
+                                              no WinRT library); only TextBlock.Text, not logged, not saved, not sent to the service
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -200,9 +200,8 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 . "$Current_Folder\SelfXPaths.ps1"
 . "$Current_Folder\SelfXEnvironment.ps1"
 . "$Current_Folder\SelfXDisturb.ps1"
-# Greeting (UserName.ps1): the pure functions in the window, the lookup of the first name as text for a background runspace.
+# Greeting (UserName.ps1): the first name is read by a short process of its own, so the window loads no WinRT library.
 . "$Current_Folder\UserName.ps1"
-$Global:SelfXGreeting_Script = (Get-Content -LiteralPath "$Current_Folder\SelfXWinRT.ps1" -Raw) + "`n" + (Get-Content -LiteralPath "$Current_Folder\UserName.ps1" -Raw)
 . "$Current_Folder\SelfXServiceClient.ps1"
 . "$Current_Folder\Branding.ps1"
 . "$Current_Folder\Localization.ps1"
@@ -1218,8 +1217,8 @@ If($SelfX_UI_Language.FlowDirection -eq 'RightToLeft')
 	}
 $TitleText.Text = $Form.Title
 $Subtitle.Text = Get-SelfXString 'Subtitle_Text'
-# Greeting: neutral at once; with Greeting_Name = FirstName the first name is added from a background runspace (time limit 2 seconds).
-# The name is set only through TextBlock.Text, never placed in XAML.
+# Greeting: neutral at once; with Greeting_Name = FirstName the first name is added from a short process of its own (UserName.ps1
+# -PrintFirstName, time limit 2 seconds; then it is ended). The name is set only through TextBlock.Text, never placed in XAML.
 $Global:SelfX_GreetingTexts = @{
 	Morning = [string](Get-SelfXString 'Greeting_Morning'); Day = [string](Get-SelfXString 'Greeting_Day')
 	Evening = [string](Get-SelfXString 'Greeting_Evening'); Neutral = [string](Get-SelfXString 'Greeting_Neutral')
@@ -1228,30 +1227,19 @@ $Greeting.Text = Get-SelfXGreetingText -Name '' -Hour (Get-Date).Hour -Texts $Gl
 $Greeting_Timer = New-Object System.Windows.Threading.DispatcherTimer
 $Greeting_Timer.Interval = [TimeSpan]::FromMilliseconds(100)
 $Greeting_Timer.Add_Tick({
-	If($Global:Greeting_Handle.IsCompleted)
-		{
-			$Greeting_Timer.Stop()
-			Try { $Greeting_Name = [string](@($Global:Greeting_PS.EndInvoke($Global:Greeting_Handle)) | Select-Object -Last 1) }
-			Catch { $Greeting_Name = '' }
-			$Global:Greeting_PS.Dispose()
-			$Greeting.Text = Get-SelfXGreetingText -Name $Greeting_Name -Hour (Get-Date).Hour -Texts $Global:SelfX_GreetingTexts
-			$Greeting_Name = $null
-		}
-	ElseIf($Global:Greeting_Watch.ElapsedMilliseconds -ge 2000)
-		{
-			# Time limit: the greeting stays neutral; the runspace is stopped without waiting for it.
-			$Greeting_Timer.Stop()
-			[void]$Global:Greeting_PS.BeginStop($null, $null)
-		}
+	# Time limit 2 seconds: then the process is ended and the greeting stays neutral.
+	$Greeting_State = Get-SelfXFirstNameLookupState -Lookup $Global:Greeting_Lookup -TimeoutMs 2000
+	If(-not $Greeting_State.Done) { return }
+	$Greeting_Timer.Stop()
+	$Global:Greeting_Lookup = $null
+	$Greeting.Text = Get-SelfXGreetingText -Name $Greeting_State.Name -Hour (Get-Date).Hour -Texts $Global:SelfX_GreetingTexts
+	$Greeting_State = $null
 })
 If($Global:SelfX_GreetingMode -eq 'FirstName')
 	{
 		Try
 			{
-				$Global:Greeting_PS = [PowerShell]::Create()
-				[void]$Global:Greeting_PS.AddScript($Global:SelfXGreeting_Script).AddStatement().AddScript('param($Folder) Get-SelfXUserFirstName -InstallFolder $Folder -TimeoutMs 2000').AddArgument($Current_Folder)
-				$Global:Greeting_Watch = [Diagnostics.Stopwatch]::StartNew()
-				$Global:Greeting_Handle = $Global:Greeting_PS.BeginInvoke()
+				$Global:Greeting_Lookup = Start-SelfXFirstNameLookup -InstallFolder $Current_Folder
 				$Greeting_Timer.Start()
 			}
 		Catch { Write-SelfXLog "Greeting: the first name is not looked up ($($_.Exception.GetType().Name))." 'Warning' }
