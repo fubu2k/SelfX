@@ -5,7 +5,8 @@
 .DESCRIPTION
     Takes the function Remove-SelfXTree out of Uninstall.ps1 (the script itself is never run: it would uninstall
     SelfX) and runs it in a temporary folder. A user can create a junction in a folder that SYSTEM deletes;
-    the junction must be removed, the folder it points to must stay untouched. Static checks: Uninstall.ps1 handles the
+    the junction must be removed, the folder it points to must stay untouched. Remove-SelfXEventLog is run with replaced
+    registration commands (nothing is removed on the device). Static checks: Uninstall.ps1 handles the
     layout App/Config and the old layout (everything directly in the install folder).
     Files are created only in a temporary folder. Windows PowerShell 5.1:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-Uninstall.ps1
@@ -23,6 +24,7 @@
     2.6.10   2026-11-22  fubu2k               Initial version.
     3.1.0    2026-11-27  fubu2k               Both layouts: Tool_Config.xml in Config and in the install folder, delete helper in App, pattern of the
                                               open windows for App and the old layout, Tool_Config.xml without DTD.
+    3.1.0    2026-11-28  fubu2k               Event log SelfX: log and source removed, a source in the Application log (older version) too, failure reported.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -41,6 +43,31 @@ $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language
 Assert-Equal ($null -ne $definition) $true 'Uninstall.ps1 defines Remove-SelfXTree'
 if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
 . ([scriptblock]::Create($definition.Extent.Text))
+
+# Event log SelfX (Remove-SelfXEventLog): the registration commands are replaced by functions of this test.
+$removeDefinition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Remove-SelfXEventLog' }, $true)
+Assert-Equal ($null -ne $removeDefinition) $true 'Uninstall.ps1 defines Remove-SelfXEventLog'
+if ($removeDefinition) {
+	. ([scriptblock]::Create($removeDefinition.Extent.Text))
+	$script:sourceLog = ''; $script:logExists = $false; $script:calls = New-Object System.Collections.Generic.List[string]; $script:failRemove = $false
+	function Get-SelfXEventSourceLog { param([string]$Source) return $script:sourceLog }
+	function Test-SelfXEventLogExists { param([string]$LogName) return $script:logExists }
+	function Remove-EventLog { [CmdletBinding()] param([string]$LogName, [string]$Source) $script:calls.Add("Remove $LogName|$Source"); if ($script:failRemove) { throw 'access denied' } }
+	foreach ($case in @(
+		@('SelfX', $true, $false, 'Remove SelfX|', 'log SelfX removed', 'the log SelfX with its source is removed'),
+		@('Application', $true, $false, 'Remove |SelfXService;Remove SelfX|', "removed from 'Application'", 'a source of an older version in the Application log is removed too'),
+		@('Application', $false, $false, 'Remove |SelfXService', "removed from 'Application'", 'an installation of an older version without the log SelfX'),
+		@('', $false, $false, '', 'No event log SelfX to remove.', 'nothing to remove'),
+		@('SelfX', $true, $true, 'Remove SelfX|', 'could not be removed completely', 'a failure is reported, not thrown'))) {
+		$script:sourceLog = $case[0]; $script:logExists = $case[1]; $script:failRemove = $case[2]; $script:calls.Clear()
+		$line = "$(Remove-SelfXEventLog)"
+		Assert-Equal ($script:calls -join ';') $case[3] "Event log: $($case[5]) (calls)"
+		Assert-Equal ($line.Contains($case[4])) $true "Event log: $($case[5]) ('$line')"
+	}
+	Remove-Item -Path Function:\Remove-EventLog, Function:\Get-SelfXEventSourceLog, Function:\Test-SelfXEventLogExists
+}
+$uninstallSource = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Uninstall.ps1'))
+Assert-Equal ($uninstallSource.IndexOf('Write-Output (Remove-SelfXEventLog)') -gt $uninstallSource.IndexOf('& sc.exe delete $ServiceName')) $true 'Event log: removed after the service is stopped and deleted'
 
 # Both layouts (3.1.0): App\ and Config\ and, for an installation of an older version, everything directly in the install folder.
 $uninstallText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Uninstall.ps1'))

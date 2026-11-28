@@ -764,10 +764,26 @@ Dateien, die älter sind als `Log_Retention_Days` (Standard 90), werden automati
 
 ### Windows-Ereignisprotokoll
 
-Der Dienst schreibt sicherheitsrelevante Ereignisse in das Protokoll *Anwendung* (Quelle
-`SelfXService`), damit Defender for Endpoint, Intune oder ein SIEM sie auswerten können. Die
-Texte sind fest und enthalten keine Anfragetexte und keine Nutzernamen. Je Ereignis-ID gelten
-höchstens 10 Einträge in 10 Minuten; danach meldet 4099 die Zahl der ausgelassenen.
+Der Dienst schreibt seine Ereignisse in ein eigenes Protokoll **SelfX** (Ereignisanzeige:
+*Anwendungs- und Dienstprotokolle* > *SelfX*, Quelle `SelfXService`), damit Defender for
+Endpoint, Intune oder ein SIEM sie auswerten können. `Install.ps1` legt das Protokoll an (höchstens
+20 MB, wenn es voll ist, werden die ältesten Einträge überschrieben); `Uninstall.ps1` entfernt es.
+Versionen vor 3.1.0 schrieben mit derselben Quelle in das Protokoll *Anwendung*: Das Update hängt
+die Quelle in das Protokoll SelfX um, ältere Einträge bleiben im Protokoll Anwendung. Lässt sich
+das Protokoll nicht anlegen, läuft die Installation mit einer Warnung in `Install.log` weiter; der
+Dienst schreibt dann nur `SelfXService.log`.
+
+Wie das Protokoll Anwendung kann jeder angemeldete Nutzer das Protokoll lesen. Deshalb enthalten
+die Einträge keine Anfragetexte, keine Nutzernamen, keine Pfade aus Nutzerprofilen und keine
+Detailtexte der Gerätestatus-Prüfungen. Die SID des Nutzers, der eine Aktion gestartet hat, steht
+nur darin, wenn in `Tool_Config.xml` `EventLog_CallerSid` = `True` gesetzt ist (Standard `False`,
+siehe [Konfiguration](Configuration.md#protokolle-und-aufbewahrung)). Jedes Feld wird bereinigt
+(Steuerzeichen entfernt, `%` wird `_`) und gekürzt (Feld 1 auf 800, die übrigen Felder auf 256
+Zeichen); ein leeres Feld ist `-`.
+
+Begrenzung je Ereignis-ID: Sicherheitsereignisse (4001-4008) höchstens 10 Einträge in 10 Minuten,
+Betriebsereignisse (4010-4013) höchstens 20 Einträge je Minute. Danach meldet 4099 die Zahl der
+ausgelassenen Einträge. Auf Windows 11 und auf einem Terminalserver entstehen dieselben Ereignisse.
 
 | ID | Stufe | Bedeutung |
 |---|---|---|
@@ -779,8 +795,35 @@ höchstens 10 Einträge in 10 Minuten; danach meldet 4099 die Zahl der ausgelass
 | 4006 | Fehler | Der Vertrauensanker `HKLM\SOFTWARE\SelfX\Trust` fehlt, ist ungültig oder kann von einer anderen Identität als SYSTEM und Administratoren geändert werden; der Dienst startet nichts. SelfX neu installieren. |
 | 4007 | Fehler | Vertrauensmodus Signatur: Ein installiertes Skript oder eine Bibliothek hat keine gültige Signatur eines erlaubten Signierers, oder ein signierter Katalog (`SelfX.Code.cat`, `SelfX.Config.cat`) fehlt oder passt nicht; der Dienst startet nichts, auch mit `Service_FileCheck` = `Audit`. Das SelfX-Protokoll nennt Datei und Grund. |
 | 4008 | Warnung | Terminalserver (Windows Server, Modus `TerminalServer`): Eine Anfrage für eine Aktion, die nicht als `TerminalServer` = `Show` eingestuft ist, wurde abgelehnt. Das SelfX-Protokoll nennt die Aktion. |
-| 4009 | - | Wird nicht mehr geschrieben: Der Modus kommt von Windows und kann davon nicht abweichen. |
-| 4099 | Warnung | Weitere Ereignisse derselben ID wurden nicht geschrieben (Begrenzung). |
+| 4009 | - | Nicht belegt (früher eine Warnung zum Modus; der Modus kommt von Windows). Die ID bleibt frei. |
+| 4010 | Information | Eine Aktion wurde als SYSTEM gestartet (auch eine Reparatur einer Gerätestatus-Prüfung). |
+| 4011 | Information | Eine Aktion als SYSTEM endete mit Exitcode 0. |
+| 4012 | Warnung / Fehler | Eine Aktion als SYSTEM ist fehlgeschlagen: Warnung bei einem Exitcode ungleich 0, Fehler bei Zeitüberschreitung oder wenn PowerShell 7 nicht gestartet werden konnte. |
+| 4013 | Warnung | Eine Zeile des Gerätestatus hat auf *Fehler* gewechselt. Auch für eine Zeile, die bei der ersten Prüfung nach dem Start des Dienstes auf *Fehler* steht. |
+| 4099 | Warnung | Weitere Ereignisse einer ID wurden nicht geschrieben (Begrenzung). |
+
+#### Felder für ein SIEM
+
+Jeder Eintrag trägt seine Werte als getrennte Zeichenfolgen (Einfügezeichenfolgen; in der
+XML-Ansicht der Ereignisanzeige `EventData`, in PowerShell `(Get-WinEvent -LogName SelfX).Properties`).
+Feld 1 ist immer ein fester englischer Text; die Reihenfolge der Felder ändert sich nicht. Die
+Ereignisanzeige zeigt Feld 1 als Beschreibung.
+
+| ID | Feld 1 | Feld 2 | Feld 3 | Feld 4 | Feld 5 | Feld 6 |
+|---|---|---|---|---|---|---|
+| 4001-4008 | fester Text | - | - | - | - | - |
+| 4010 | fester Text | Skript (Dateiname aus dem Katalog) | SID des Aufrufers oder `-` | Aufrufer ist erhöhter Administrator: `True` / `False` | - | - |
+| 4011 | fester Text | Skript | Ergebnis: `ExitCode` | Exitcode: `0` | Dauer in Sekunden | SID des Aufrufers oder `-` |
+| 4012 | fester Text | Skript | Ergebnis: `ExitCode`, `Timeout` oder `StartError` | Exitcode, `-` ohne | Dauer in Sekunden | SID des Aufrufers oder `-` |
+| 4013 | fester Text | Art der Prüfung (`Id` in `Health_Config.xml`, zum Beispiel `Disk`, `Services`) | Name der Zeile (zum Beispiel Laufwerk oder Dienst, kann leer sein = `-`) | vorheriger Status (`OK`, `Pending`, `Unknown` oder `-` bei der ersten Prüfung) | - | - |
+| 4099 | fester Text | begrenzte Ereignis-ID | Zahl der ausgelassenen Einträge | - | - | - |
+
+Beispiel (PowerShell, als Administrator oder Nutzer):
+`Get-WinEvent -FilterHashtable @{ LogName = 'SelfX'; Id = 4012 } | ForEach-Object { $_.Properties[1].Value }`
+listet die Skripte der fehlgeschlagenen Aktionen.
+
+Eine fehlgeschlagene Installation einer Unternehmens-App bekommt kein eigenes Ereignis: Sie
+erscheint als Ereignis 4013 für die Zeile `Applications`.
 
 ### Die Dateilisten `SelfX.Code.json` und `SelfX.Config.json`
 

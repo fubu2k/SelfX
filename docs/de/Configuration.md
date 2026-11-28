@@ -87,6 +87,7 @@ Marke: `SelfX.Config.json` enthält `ConfigRevision`, die UTC-Zeit des Paketlauf
 | `Ticket_Subject_Tag` | `SelfX` | Kennzeichen am Anfang des Betreffs einer Ticket-Mail. Erlaubt sind Buchstaben, Ziffern, `.`, `_`, `-` und höchstens 20 Zeichen, sonst `SelfX`. |
 | `Shortcut_Desktop`, `Shortcut_StartMenu`, `Shortcut_Name` | — | Verknüpfungen, die die Installation für alle Nutzer anlegt. |
 | `Log_Retention_Days` | `90` | Wie lange Protokolle aufbewahrt werden (1 bis 3650 Tage). |
+| `EventLog_CallerSid` | `False` | `True`: Das Windows-Ereignisprotokoll SelfX nennt die SID des Nutzers, der eine Aktion als SYSTEM gestartet hat (Ereignisse 4010 bis 4012). Jeder andere Wert: keine SID. Siehe [Protokolle und Aufbewahrung](#protokolle-und-aufbewahrung). |
 | `Service_FileCheck` | `Enforce` | `Enforce`: Der Dienst startet nichts, wenn Dateien nicht stimmen. `Audit`: Der Dienst meldet das nur. Siehe [Installationsanleitung](Installation.md#die-dateilisten-selfxcodejson-und-selfxconfigjson). |
 | `Service_Privileges` | `Restricted` | Begrenzt die Rechte des Dienstes. `Default` nur zur Fehlersuche. Siehe [Installationsanleitung](Installation.md#rechte-des-dienstes). |
 | `Show_Tray_Icon` | `True` | Statussymbol neben der Uhr anzeigen. Siehe [Statussymbol](#statussymbol). |
@@ -797,6 +798,14 @@ gelöscht:
   löscht dort nie. Ein Löschen als SYSTEM dürfte keinem Link folgen, den ein Nutzer angelegt hat.
 
 `Uninstall.ps1` behält die Protokolle. Mit `-RemoveLogs` werden sie gelöscht.
+
+**Windows-Ereignisprotokoll:** Der Dienst schreibt außerdem Ereignisse in ein eigenes Protokoll *SelfX*
+(Ereignisanzeige: *Anwendungs- und Dienstprotokolle*): Sicherheitsereignisse, Aktionen als SYSTEM (gestartet,
+erfolgreich, fehlgeschlagen) und Zeilen des Gerätestatus, die auf *Fehler* wechseln. Jeder angemeldete Nutzer
+kann dieses Protokoll lesen; es enthält deshalb keine Nutzernamen und keine Detailtexte. Die SID des Nutzers,
+der eine Aktion gestartet hat, steht nur mit `EventLog_CallerSid` = `True` darin; schalten Sie das nur ein, wenn
+Ihr SIEM sie braucht und Ihre Regeln für personenbezogene Daten es erlauben. `Uninstall.ps1` entfernt das
+Protokoll. IDs und Felder: [Installationsanleitung](Installation.md#windows-ereignisprotokoll).
 
 ## Branding
 
