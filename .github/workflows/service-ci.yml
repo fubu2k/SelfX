@@ -296,6 +296,19 @@ jobs:
             "Result: $($result | Out-String)"
           } catch { "No playback device on this runner: $($_.Exception.GetType().FullName): $($_.Exception.Message)" }
 
+      - name: SelfXDisturb.dll loads in PowerShell 7 (state of the notification area)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $folder = Join-Path $env:GITHUB_WORKSPACE 'SelfX Service\Bin\Disturb'
+          Get-ChildItem -LiteralPath $folder | Format-Table Name, Length
+          if (@(Get-ChildItem -LiteralPath $folder).Count -ne 1) { throw 'Bin\Disturb must contain SelfXDisturb.dll only.' }
+          [void][Reflection.Assembly]::LoadFrom((Join-Path $folder 'SelfXDisturb.dll'))
+          # The call reads one value and never throws: a number from 0 (cannot be read) to 7.
+          $state = [SelfX.SelfXDisturb]::GetNotificationState()
+          "State: $state"
+          if ($state -isnot [int] -or $state -lt 0 -or $state -gt 7) { throw "Unexpected state '$state'." }
+
       - name: Start the service in console mode
         shell: pwsh
         run: |

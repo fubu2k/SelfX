@@ -35,7 +35,7 @@
     Name    : Build-SelfXBinaries.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 2.8.21
+    Version : 3.1.0
     Exit code: 0 = built, an exception otherwise
 
     History:
@@ -46,6 +46,7 @@
     2.8.19   2026-11-24  fubu2k               Offline build: packages only from offline-feed (checked against its manifest), own package cache
     2.8.20   2026-11-24  fubu2k               AppLocker rules: SID S-1-1-0 instead of the name Everyone (German Windows), also from PowerShell 7 (New-SelfXAppLockerRules.ps1)
     2.8.21   2026-11-27  fubu2k               ToolVersion of SelfX.Binaries.json comes from Version.txt (no longer from Tool_Config.xml)
+     3.1.0    2026-11-28  fubu2k               Also builds Bin\Disturb\SelfXDisturb.dll (Service\SelfXDisturb.cs)
 #>
 
 [CmdletBinding()]
@@ -76,6 +77,8 @@ $Programs = [ordered]@{
     'Service/SelfXWinRT.cs'          = @{ Project = 'SelfXWinRT';          Folder = 'WinRT'; Output = 'SelfXWinRT.dll' }
     # Library for PowerShell 7 (Core Audio, action "No sound"). No dependencies: Bin\Audio holds only SelfXAudio.dll.
     'Service/SelfXAudio.cs'          = @{ Project = 'SelfXAudio';          Folder = 'Audio'; Output = 'SelfXAudio.dll' }
+    # Library for PowerShell 7 (state of the notification area, hint before disruptive actions). No dependencies: Bin\Disturb holds only SelfXDisturb.dll.
+    'Service/SelfXDisturb.cs'        = @{ Project = 'SelfXDisturb';        Folder = 'Disturb'; Output = 'SelfXDisturb.dll' }
 }
 
 # The .NET SDK 10 is required: another major version would build other files than the ones that were tested.

@@ -80,7 +80,7 @@ installiert (siehe [Ordneraufbau](#ordneraufbau)).
 
 **Heute** enthalten die zwei Listen zusammen: jede Datei unter `Sources` (89 Dateien), `Uninstall.ps1`, die
 DLLs aus `Bin\WinRT` (als `WinRT/<Name>`), `Bin\Audio\SelfXAudio.dll` (als
-`Audio/SelfXAudio.dll`) und die Programme `SelfXService.exe` und `SelfX.exe` aus `Bin`. Dateien
+`Audio/SelfXAudio.dll`), `Bin\Disturb\SelfXDisturb.dll` (als `Disturb/SelfXDisturb.dll`) und die Programme `SelfXService.exe` und `SelfX.exe` aus `Bin`. Dateien
 mit dem Namen `Test-*.ps1` und der Ordner `Service\Projects` werden vor dem Verpacken aus dem
 Zwischenordner entfernt und nicht ausgeliefert.
 
@@ -92,12 +92,13 @@ Zwischenordner entfernt und nicht ausgeliefert.
 | `Bin\SelfX.exe` | `SelfX.exe` | Code |
 | `Bin\WinRT\*.dll` (`SelfXWinRT.dll` und die Windows-SDK-Projektions-DLLs des Builds) | `WinRT/<Name>` | Code |
 | `Bin\Audio\SelfXAudio.dll` | `Audio/SelfXAudio.dll` | Code |
+| `Bin\Disturb\SelfXDisturb.dll` | `Disturb/SelfXDisturb.dll` | Code |
 
 ### Ordner `Sources` (unverändert in den Installationsordner kopiert)
 
 | Paketpfad | Klasse |
 |---|---|
-| `Sources\Branding.ps1`, `CopilotClipboard.ps1`, `CopilotFacts.ps1`, `CopilotPrompt.ps1`, `HealthStatus.ps1`, `Localization.ps1`, `SelfXAudio.ps1`, `SelfXDefender.ps1`, `SelfXDeviceSecurity.ps1`, `SelfXLog.ps1`, `SelfXNetwork.ps1`, `SelfXOffice.ps1`, `SelfXServiceClient.ps1`, `SelfXWinRT.ps1`, `SelfXWindows.ps1`, `SelfX_Tray.ps1`, `Self_X.ps1`, `SupportLinks.ps1`, `SupportReport.ps1`, `SystemInfo.ps1`, `TicketMail.ps1`, `TicketSend.ps1` (22 Dateien) | Code |
+| `Sources\Branding.ps1`, `CopilotClipboard.ps1`, `CopilotFacts.ps1`, `CopilotPrompt.ps1`, `HealthStatus.ps1`, `Localization.ps1`, `SelfXAudio.ps1`, `SelfXDefender.ps1`, `SelfXDeviceSecurity.ps1`, `SelfXDisturb.ps1`, `SelfXLog.ps1`, `SelfXNetwork.ps1`, `SelfXOffice.ps1`, `SelfXServiceClient.ps1`, `SelfXWinRT.ps1`, `SelfXWindows.ps1`, `SelfX_Tray.ps1`, `Self_X.ps1`, `SupportLinks.ps1`, `SupportReport.ps1`, `SystemInfo.ps1`, `TicketMail.ps1`, `TicketSend.ps1` (22 Dateien) | Code |
 | `Sources\Tool_Config.xml` | Konfiguration |
 | `Sources\Issues_List.xml` (Aktionskatalog) | Konfiguration |
 | `Sources\Health_Config.xml` | Konfiguration |
@@ -119,7 +120,7 @@ Die 89 Dateien unter `Sources` ergeben sich aus den Zeilen oben: 22 + 5 + 1 + 24
 | `Install.ps1` | nein | Code, nicht gelistet, **offen** (Punkt 1) |
 | `Detection.ps1` | nein (wird getrennt nach Intune hochgeladen) | Code-Vorlage, nicht gelistet, **offen** (Punkt 1) |
 | `README.md`, `README.en.md` | nein | kein Code, nicht gelistet, **offen** (Punkt 1) |
-| `Service\SelfXService.cs`, `SelfXLauncher.cs`, `SelfXSessionStarter.cs`, `SelfXWinRT.cs`, `SelfXAudio.cs` | nein | Code (Quelltext der Programme), nicht gelistet, **offen** (Punkt 1) |
+| `Service\SelfXService.cs`, `SelfXLauncher.cs`, `SelfXSessionStarter.cs`, `SelfXWinRT.cs`, `SelfXAudio.cs`, `SelfXDisturb.cs` | nein | Code (Quelltext der Programme), nicht gelistet, **offen** (Punkt 1) |
 | `Bin\SelfXSessionStarter.dll` | nein (wird nur von `Install.ps1` geladen) | Code, nicht gelistet, **offen** (Punkt 1) |
 | `Bin\SelfX.Binaries.json` | nein | Bauprotokoll der Programme, nicht gelistet, **offen** (Punkt 1) |
 | `SelfX.Code.json`, `SelfX.Config.json` | ja (beim Bau geschrieben) | die zwei Listen selbst; sie listen jede andere installierte Datei, nicht sich selbst |
@@ -454,7 +455,7 @@ Paket                                     Gerät (%ProgramFiles%\SelfX)
 +- Install.ps1  Uninstall.ps1             +- App\     (nur Code)
 +- Detection.ps1                          |   +- SelfXService.exe  SelfX.exe  Uninstall.ps1
 +- Bin\       (Programme, Bau-Nachweis)   |   +- *.ps1  Scripts_to_run\  HealthChecks\  Languages\
-+- Service\*.cs (Quellen der Programme)   |   +- WinRT\  Audio\  Repair.ico  logo.png  icon_systray.ico
++- Service\*.cs (Quellen der Programme)   |   +- WinRT\  Audio\  Disturb\  Repair.ico  logo.png  icon_systray.ico
 +- App\       (Code aus Sources)          |   +- SelfX.Code.json
 |   +- SelfX.Code.json                    +- Config\  (nur Konfiguration)
 +- Config\    (Konfiguration aus Sources)     +- *.xml  Branding\  eigene Scripts_to_run\, HealthChecks\, Languages\, Texts\

@@ -75,8 +75,8 @@ folder `SelfX Service` of the repository. "Installed as" is the path in the code
 `%ProgramFiles%\SelfX\Config` with the same relative name (see [Folder layout](#folder-layout)).
 
 **Today**, the two lists together contain: every file below `Sources` (89 files), `Uninstall.ps1`, the
-DLLs of `Bin\WinRT` (as `WinRT/<name>`), `Bin\Audio\SelfXAudio.dll` (as `Audio/SelfXAudio.dll`)
-and the programs `SelfXService.exe` and `SelfX.exe` from `Bin`. Files named `Test-*.ps1` and the
+DLLs of `Bin\WinRT` (as `WinRT/<name>`), `Bin\Audio\SelfXAudio.dll` (as `Audio/SelfXAudio.dll`),
+`Bin\Disturb\SelfXDisturb.dll` (as `Disturb/SelfXDisturb.dll`) and the programs `SelfXService.exe` and `SelfX.exe` from `Bin`. Files named `Test-*.ps1` and the
 folder `Service\Projects` are removed from the staging folder before packaging and are not
 shipped.
 
@@ -88,12 +88,13 @@ shipped.
 | `Bin\SelfX.exe` | `SelfX.exe` | Code |
 | `Bin\WinRT\*.dll` (`SelfXWinRT.dll` and the Windows SDK projection DLLs of the build) | `WinRT/<name>` | Code |
 | `Bin\Audio\SelfXAudio.dll` | `Audio/SelfXAudio.dll` | Code |
+| `Bin\Disturb\SelfXDisturb.dll` | `Disturb/SelfXDisturb.dll` | Code |
 
 ### Folder `Sources` (installed unchanged into the installation folder)
 
 | Package path | Class |
 |---|---|
-| `Sources\Branding.ps1`, `CopilotClipboard.ps1`, `CopilotFacts.ps1`, `CopilotPrompt.ps1`, `HealthStatus.ps1`, `Localization.ps1`, `SelfXAudio.ps1`, `SelfXDefender.ps1`, `SelfXDeviceSecurity.ps1`, `SelfXLog.ps1`, `SelfXNetwork.ps1`, `SelfXOffice.ps1`, `SelfXServiceClient.ps1`, `SelfXWinRT.ps1`, `SelfXWindows.ps1`, `SelfX_Tray.ps1`, `Self_X.ps1`, `SupportLinks.ps1`, `SupportReport.ps1`, `SystemInfo.ps1`, `TicketMail.ps1`, `TicketSend.ps1` (22 files) | Code |
+| `Sources\Branding.ps1`, `CopilotClipboard.ps1`, `CopilotFacts.ps1`, `CopilotPrompt.ps1`, `HealthStatus.ps1`, `Localization.ps1`, `SelfXAudio.ps1`, `SelfXDefender.ps1`, `SelfXDeviceSecurity.ps1`, `SelfXDisturb.ps1`, `SelfXLog.ps1`, `SelfXNetwork.ps1`, `SelfXOffice.ps1`, `SelfXServiceClient.ps1`, `SelfXWinRT.ps1`, `SelfXWindows.ps1`, `SelfX_Tray.ps1`, `Self_X.ps1`, `SupportLinks.ps1`, `SupportReport.ps1`, `SystemInfo.ps1`, `TicketMail.ps1`, `TicketSend.ps1` (22 files) | Code |
 | `Sources\Tool_Config.xml` | Configuration |
 | `Sources\Issues_List.xml` (action catalog) | Configuration |
 | `Sources\Health_Config.xml` | Configuration |
@@ -115,7 +116,7 @@ The 89 files of `Sources` are: 22 + 5 + 1 + 24 + 1 + 3 + 33 from the rows above.
 | `Install.ps1` | no | Code, not listed, **open** (item 1) |
 | `Detection.ps1` | no (uploaded to Intune separately) | Code template, not listed, **open** (item 1) |
 | `README.md`, `README.en.md` | no | not code, not listed, **open** (item 1) |
-| `Service\SelfXService.cs`, `SelfXLauncher.cs`, `SelfXSessionStarter.cs`, `SelfXWinRT.cs`, `SelfXAudio.cs` | no | Code (sources of the programs), not listed, **open** (item 1) |
+| `Service\SelfXService.cs`, `SelfXLauncher.cs`, `SelfXSessionStarter.cs`, `SelfXWinRT.cs`, `SelfXAudio.cs`, `SelfXDisturb.cs` | no | Code (sources of the programs), not listed, **open** (item 1) |
 | `Bin\SelfXSessionStarter.dll` | no (loaded by `Install.ps1` only) | Code, not listed, **open** (item 1) |
 | `Bin\SelfX.Binaries.json` | no | build record of the programs, not listed, **open** (item 1) |
 | `SelfX.Code.json`, `SelfX.Config.json` | yes (written at build) | the two lists themselves; they list every other installed file, not themselves |
@@ -432,7 +433,7 @@ Package                                   Device (%ProgramFiles%\SelfX)
 +- Install.ps1  Uninstall.ps1             +- App\     (code only)
 +- Detection.ps1                          |   +- SelfXService.exe  SelfX.exe  Uninstall.ps1
 +- Bin\       (programs, build record)    |   +- *.ps1  Scripts_to_run\  HealthChecks\  Languages\
-+- Service\*.cs (sources of the programs) |   +- WinRT\  Audio\  Repair.ico  logo.png  icon_systray.ico
++- Service\*.cs (sources of the programs) |   +- WinRT\  Audio\  Disturb\  Repair.ico  logo.png  icon_systray.ico
 +- App\       (code of Sources)           |   +- SelfX.Code.json
 |   +- SelfX.Code.json                    +- Config\  (configuration only)
 +- Config\    (configuration of Sources)      +- *.xml  Branding\  own Scripts_to_run\, HealthChecks\, Languages\, Texts\

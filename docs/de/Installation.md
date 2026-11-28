@@ -641,7 +641,7 @@ einer Vertrauensliste; diese Kriterien können Sie nicht einstellen. Der Benutze
 erzeugt die Regel keine Warnung ([Referenz der ASR-Regeln](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference),
 [ASR-FAQ](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-faq); beide Seiten sind englisch).
 
-**Warum SelfX betroffen sein kann.** `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll` und `SelfXAudio.dll` werden auf Ihrem
+**Warum SelfX betroffen sein kann.** `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll`, `SelfXAudio.dll` und `SelfXDisturb.dll` werden auf Ihrem
 Build-Rechner gebaut (Schritt 2.3) und gibt es nur auf Ihren Geräten. Ein Programm, das Microsoft noch nie gesehen hat, erfüllt die
 Kriterien unter Umständen nicht, und laut FAQ kann eine neue Version einer App blockiert werden, solange sie Ruf aufbaut. Das ist ein
 Schluss aus dem Aufbau von SelfX, keine Aussage von Microsoft über SelfX.
@@ -675,13 +675,14 @@ brauchen, und für diese Regel, wenn Sie Apps oft aktualisieren.
 Angriffsfläche* und die Richtlinie vom Typ *Attack surface reduction rules*. Sobald die Regel auf Audit, Block oder Warn steht,
 erscheint für sie die Einstellung **ASR Only Per Rule Exclusions** (Namen der englischen Oberfläche; [ASR-Regeln und Ausschlüsse
 konfigurieren](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-configure)). Tragen Sie nur die
-Dateien ein, die die Ereignisse nennen, höchstens diese vier:
+Dateien ein, die die Ereignisse nennen, höchstens diese fünf:
 
 ```
 C:\Program Files\SelfX\App\SelfXService.exe
 C:\Program Files\SelfX\App\SelfX.exe
 C:\Program Files\SelfX\App\WinRT\SelfXWinRT.dll
 C:\Program Files\SelfX\App\Audio\SelfXAudio.dll
+C:\Program Files\SelfX\App\Disturb\SelfXDisturb.dll
 ```
 
 - Schließen Sie **nicht** den Ordner `C:\Program Files\SelfX` aus und verwenden Sie keinen Platzhalter. Verwenden Sie **nicht** die
@@ -808,8 +809,8 @@ Installation ersetzt sie.
   ([Architektur](Architecture.md#der-modus-signatur-im-dienst)).
 - Für den ersten Rollout können Sie `Service_FileCheck` auf `Audit` stellen (nur
   protokollieren).
-- Die Bibliotheken `WinRT\*.dll` (Windows-Update-Schnittstelle) und `Audio\SelfXAudio.dll`
-  (Aktion „Kein Ton an diesem PC“) werden zusätzlich **beim Laden** geprüft und dabei
+- Die Bibliotheken `WinRT\*.dll` (Windows-Update-Schnittstelle) `Audio\SelfXAudio.dll`
+  (Aktion „Kein Ton an diesem PC“) und `Disturb\SelfXDisturb.dll` (Hinweis vor störenden Aktionen) werden zusätzlich **beim Laden** geprüft und dabei
   geöffnet gehalten, damit sie nicht zwischen Prüfung und Laden ersetzt werden können.
 - Grenze: Die Prüfung erkennt Unfälle (defektes oder halbes Update) und eine ausgetauschte
   `SelfX.exe`, aber keinen Angreifer mit Administratorrechten. Dagegen helfen die
