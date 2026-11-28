@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Nu opnieuw opstarten</Button_Restart_Now>
 		<Health_Restart_Started>Windows wordt over ongeveer 30 seconden opnieuw opgestart. Sla nu uw werk op.</Health_Restart_Started>
 		<Disturb_Warning_Text>U lijkt in een vergadering of presentatie te zitten. Deze actie kan die onderbreken.</Disturb_Warning_Text>
+		<Greeting_Morning>Goedemorgen, {0}.</Greeting_Morning>
+		<Greeting_Day>Goedemiddag, {0}.</Greeting_Day>
+		<Greeting_Evening>Goedenavond, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Welkom.</Greeting_Neutral>
 		<Health_Updates_Started>Windows-updates worden gezocht, gedownload en geïnstalleerd. Dit kan enkele minuten duren; u kunt doorwerken.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update is klaar. De apparaatstatus wordt opnieuw gecontroleerd en toont of opnieuw opstarten nodig is.</Health_Updates_Done>
 		<Health_Apps_Button>Opnieuw proberen</Health_Apps_Button>
