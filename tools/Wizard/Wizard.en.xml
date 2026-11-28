@@ -7,7 +7,7 @@
 	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
 	the same placeholders.
 -->
-<Wizard_Language Culture="en" Name="English" Version="1.11.0">
+<Wizard_Language Culture="en" Name="English" Version="1.12.0">
 	<T Id="title">SelfX package wizard</T>
 	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
 	<T Id="rec">Recommendation: </T>
@@ -37,6 +37,8 @@
 	<T Id="TargetOS.rec">Windows11 for PCs and notebooks. WindowsServer for terminal servers: there SelfX hides actions and repairs that affect the whole server or all users, and the service refuses them. SelfX takes this from Windows itself; the answer chooses the instructions at the end (Intune cannot install apps on Windows Server) and the question about the device status.</T>
 	<T Id="TerminalServerHealth.ask">Device status on the terminal server: Off (nobody) or AdminOnly (only administrators who started SelfX with elevated rights)</T>
 	<T Id="TerminalServerHealth.rec">Off. On a terminal server the device status shows the server (updates, Defender, restart), not the place of work of the user, and users could not fix it. Choose AdminOnly when your administrators want to use it.</T>
+	<T Id="GreetingName.ask">Greeting in the SelfX window: FirstName ("Good morning, Anna." with the first name that Windows knows for the account) or Off (always "Welcome.")</T>
+	<T Id="GreetingName.rec">FirstName. Without a first name, or when the Windows privacy setting "Account info" does not allow it, SelfX greets without a name; it never takes the display name or the account name instead. The name is not logged, saved or sent anywhere.</T>
 	<T Id="SupportMail.ask">Support e-mail address (shared mailbox)</T>
 	<T Id="SupportMail.rec">Use a shared (functional) mailbox, never a personal one. The address is also the recipient of the device logs e-mail.</T>
 	<T Id="TerminalServerSupportMail.ask">Fixed support e-mail address for the terminal server (support e-mail, ticket and help window)</T>
