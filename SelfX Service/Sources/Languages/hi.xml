@@ -98,6 +98,7 @@
 		<Service_Busy_Text>एक अन्य कार्रवाई अभी भी चल रही है. कृपया इसके समाप्त होने तक प्रतीक्षा करें.</Service_Busy_Text>
 		<Service_OtherSessions_Text>जब तक कोई अन्य उपयोगकर्ता इस डिवाइस में साइन इन है, यह कार्रवाई संभव नहीं है। IT सहायता से संपर्क करें या जब आप अकेले उपयोगकर्ता हों तब फिर से प्रयास करें।</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>यह कार्रवाई इस कंप्यूटर पर उपलब्ध नहीं है, क्योंकि कई लोग इसे एक साथ उपयोग करते हैं। IT सहायता से संपर्क करें।</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>जाँच फिर से ठीक है, इसलिए अभी इस सुधार की ज़रूरत नहीं है। अगर समस्या बनी रहे तो फिर से जाँच करें।</Service_NotNeeded_Text>
 		<Action_Running_Text>कार्रवाई चल रही है: {0}</Action_Running_Text>
 		<Action_Running_Label>चल रहा है…</Action_Running_Label>
 		<Action_Success_Text>कार्रवाई पूरी हुई: {0}</Action_Success_Text>

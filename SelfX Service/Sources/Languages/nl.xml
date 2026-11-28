@@ -98,6 +98,7 @@ We raden de gedetailleerde weergave aan als de eenvoudige weergave uw probleem n
 		<Service_Busy_Text>Er wordt nog een andere actie uitgevoerd. Wacht tot deze is voltooid.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Deze actie is niet mogelijk zolang een andere gebruiker is aangemeld op dit apparaat. Neem contact op met de IT-support of probeer het opnieuw wanneer u de enige gebruiker bent.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Deze actie is niet beschikbaar op deze computer, omdat meerdere personen hem tegelijk gebruiken. Neem contact op met de IT-support.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>De controle is weer in orde, daarom is deze reparatie nu niet nodig. Controleer opnieuw als het probleem blijft.</Service_NotNeeded_Text>
 		<Action_Running_Text>Actie wordt uitgevoerd: {0}</Action_Running_Text>
 		<Action_Running_Label>Wordt uitgevoerd…</Action_Running_Label>
 		<Action_Success_Text>Actie voltooid: {0}</Action_Success_Text>

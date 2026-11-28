@@ -98,6 +98,7 @@ Gunakan tampilan terperinci jika tampilan sederhana tidak menyelesaikan atau men
 		<Service_Busy_Text>Tindakan lain masih berjalan. Tunggu hingga selesai.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Tindakan ini tidak dapat dilakukan saat pengguna lain masuk di perangkat ini. Hubungi dukungan TI atau coba lagi saat Anda menjadi satu-satunya pengguna.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Tindakan ini tidak tersedia di komputer ini, karena beberapa orang menggunakannya pada saat yang sama. Hubungi dukungan TI.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>Pemeriksaan sudah OK lagi, jadi perbaikan ini tidak diperlukan sekarang. Periksa lagi jika masalah masih ada.</Service_NotNeeded_Text>
 		<Action_Running_Text>Tindakan berjalan: {0}</Action_Running_Text>
 		<Action_Running_Label>Sedang berjalan…</Action_Running_Label>
 		<Action_Success_Text>Tindakan selesai: {0}</Action_Success_Text>

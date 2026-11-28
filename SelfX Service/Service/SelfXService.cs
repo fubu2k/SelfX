@@ -143,6 +143,10 @@ Notes:
                                               one JSON line with schema version 1 in ProgramData\SelfX\Inventory\SelfX.Inventory.json (status per
                                               check type, failed apps with code, no names or detail texts), rotation at MaxSizeKB (64-10240, default
                                               1024) to SelfX.Inventory.json.old, no link followed; nothing while TerminalServer_Health is Off
+    3.1.0    2026-11-28  fubu2k               When="NotOK" in the service: a normal user can start a repair that Health_Config.xml offers only while its
+                                              check is not OK (and that is no System action of the catalog) only while the status cache of the last 60
+                                              minutes lists that row as not OK (answer ERROR NotNeeded otherwise; administrators are not restricted).
+                                              HEALTH without a filter is answered from a status cache of the last 60 seconds instead of a new run
 */
 
 using System;
@@ -203,6 +207,11 @@ namespace SelfX
         const int MaxConnectionsPerUser = 8;
         const int RunCooldownSeconds = 15;
         const int HealthCooldownSeconds = 3;
+        // A HEALTH request without a filter is answered from the status cache when a full collection wrote it at most this long ago:
+        // repeated requests (several windows, a loop) do not occupy the single run slot.
+        const int HealthCacheReuseSeconds = 60;
+        // A repair with When="NotOK" starts for a normal user only while a status cache of at most this age lists its row as not OK.
+        const int RemediationCacheMaxAgeMinutes = 60;
         readonly object limitLock = new object();
         readonly Dictionary<string, int> connectionsPerUser = new Dictionary<string, int>();
         readonly Dictionary<string, DateTime> cooldowns = new Dictionary<string, DateTime>();
@@ -1014,6 +1023,12 @@ namespace SelfX
                         filter += " -OnlyName " + healthMatch.Groups[2].Value;
                     }
                 }
+                // A full check that the cache already holds from the last minute is not run again.
+                if (filter.Length == 0)
+                {
+                    string cached = ReadFreshHealthCache(TimeSpan.FromSeconds(HealthCacheReuseSeconds));
+                    if (cached != null) return "HEALTH " + Convert.ToBase64String(Encoding.UTF8.GetBytes(cached));
+                }
                 // Per user, a short pause after each check: one user cannot keep the run slot busy for everybody.
                 string healthKey = "HEALTH|" + LimitKey(user, callerSid);
                 if (InCooldown(healthKey))
@@ -1104,6 +1119,14 @@ namespace SelfX
                     LogRejected("Request from " + user + " for '" + scriptName + "' refused: " + (others < 0 ? "sessions could not be checked" : "another user is signed in") + ".");
                     return "ERROR OtherSessions";
                 }
+            }
+
+            // A repair that Health_Config.xml offers only while its check is not OK (When="NotOK"): a normal user may start it only
+            // while the status cache says so. The window hides the button otherwise, but the window is no security boundary.
+            if (!callerIsAdmin && !IsRemediationNeeded(scriptName))
+            {
+                LogRejected("Request from " + user + " for '" + scriptName + "' refused: the status cache does not list its check as not OK (When=NotOK).");
+                return "ERROR NotNeeded";
             }
 
             // The same user cannot start the same action again right after it ended (the run slot is shared by all users).
@@ -1536,6 +1559,108 @@ namespace SelfX
                 timeoutSeconds = Math.Min(configured, MaxTimeoutSeconds);
             }
             return true;
+        }
+
+        /// <summary>
+        /// False only for a script that no System action of the catalog lists and whose remediations in Health_Config.xml all say
+        /// When="NotOK", while the status cache (written by the service, at most RemediationCacheMaxAgeMinutes old) does not list one
+        /// of their rows (Id, and Name when the remediation names one) as not OK. A missing, old or unreadable cache counts as "not
+        /// needed" (fail closed): the window runs a check before it offers the repair, and that check writes the cache.
+        /// </summary>
+        bool IsRemediationNeeded(string scriptName)
+        {
+            try
+            {
+                XmlReaderSettings settings = new XmlReaderSettings();
+                settings.DtdProcessing = DtdProcessing.Prohibit;
+                settings.XmlResolver = null;
+                XmlDocument catalog = new XmlDocument();
+                catalog.XmlResolver = null;
+                using (XmlReader reader = XmlReader.Create(catalogPath, settings)) { catalog.Load(reader); }
+                // scriptName is validated by ScriptNamePattern, so it contains no quotes.
+                if (catalog.SelectSingleNode("//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "']") != null) return true;
+                string healthConfig = GetConfigFilePath("Health_Config.xml");
+                if (!File.Exists(healthConfig)) return false;
+                XmlDocument health = new XmlDocument();
+                health.XmlResolver = null;
+                using (XmlReader reader = XmlReader.Create(healthConfig, settings)) { health.Load(reader); }
+                XmlNodeList remediations = health.SelectNodes("/HealthConfig/Remediations/Remediation[@Script='" + scriptName + "']");
+                if (remediations.Count == 0) return false;
+                List<string> ids = new List<string>();
+                List<string> names = new List<string>();
+                foreach (XmlNode node in remediations)
+                {
+                    XmlElement remediation = node as XmlElement;
+                    if (remediation == null) return false;
+                    if (remediation.GetAttribute("When").Trim() != "NotOK") return true;
+                    ids.Add(remediation.GetAttribute("Id").Trim());
+                    names.Add(remediation.HasAttribute("Name") ? remediation.GetAttribute("Name") : null);
+                }
+                string cached = ReadFreshHealthCache(TimeSpan.FromMinutes(RemediationCacheMaxAgeMinutes));
+                return cached != null && AnyHealthRowNotOk(cached, ids.ToArray(), names.ToArray());
+            }
+            catch (Exception e)
+            {
+                Log("Repair condition not readable (" + e.GetType().Name + "); the repair is refused for normal users.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// True when the health JSON (array of rows with Id, Name, Status) has a row whose Id is one of ids (and whose Name is the
+        /// name at the same position, when that is not null) and whose Status is not OK. Invalid JSON = false (tested by
+        /// Test-ServicePipe.ps1).
+        /// </summary>
+        static bool AnyHealthRowNotOk(string json, string[] ids, string[] names)
+        {
+            if (string.IsNullOrEmpty(json) || ids == null || names == null || ids.Length != names.Length) return false;
+            try
+            {
+                using (JsonDocument document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 }))
+                {
+                    if (document.RootElement.ValueKind != JsonValueKind.Array) return false;
+                    foreach (JsonElement row in document.RootElement.EnumerateArray())
+                    {
+                        if (row.ValueKind != JsonValueKind.Object) continue;
+                        string status = JsonText(row, "Status");
+                        if (status.Length == 0 || status == "OK") continue;
+                        string id = JsonText(row, "Id");
+                        string name = JsonText(row, "Name");
+                        for (int i = 0; i < ids.Length; i++)
+                        {
+                            if (!string.Equals(ids[i], id, StringComparison.Ordinal)) continue;
+                            if (names[i] != null && !string.Equals(names[i], name, StringComparison.Ordinal)) continue;
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (JsonException) { return false; }
+            return false;
+        }
+
+        /// <summary>
+        /// The text of the status cache when it was written at most maxAge ago (and not in the future), null otherwise: the data folder
+        /// must have passed the safety check of the start, and the size limit of STATUS applies.
+        /// </summary>
+        string ReadFreshHealthCache(TimeSpan maxAge)
+        {
+            if (!dataFolderSafe) return null;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    if (!File.Exists(cacheFile)) return null;
+                    TimeSpan age = DateTime.UtcNow - File.GetLastWriteTimeUtc(cacheFile);
+                    if (age < TimeSpan.Zero || age > maxAge) return null;
+                    byte[] bytes = File.ReadAllBytes(cacheFile);
+                    if (bytes.Length == 0 || bytes.Length > MaxCacheLength) return null;
+                    return new UTF8Encoding(false, true).GetString(bytes);
+                }
+                catch (IOException) { Thread.Sleep(100); }
+                catch (ArgumentException) { return null; }
+            }
+            return null;
         }
 
         /// <summary>

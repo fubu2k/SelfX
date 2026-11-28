@@ -98,6 +98,7 @@ Recomendamos la vista detallada si la vista simplificada no resuelve su problema
 		<Service_Busy_Text>Hay otra acción en curso. Espere a que termine.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Esta acción no es posible mientras otro usuario tenga la sesión iniciada en este dispositivo. Consulte con el soporte de TI o inténtelo de nuevo cuando sea el único usuario.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Esta acción no está disponible en este equipo, porque varias personas lo usan al mismo tiempo. Consulte con el soporte de TI.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>La comprobación vuelve a estar correcta, por lo que esta reparación no es necesaria ahora. Vuelva a comprobar si el problema continúa.</Service_NotNeeded_Text>
 		<Action_Running_Text>Acción en curso: {0}</Action_Running_Text>
 		<Action_Running_Label>En curso…</Action_Running_Label>
 		<Action_Success_Text>Acción completada: {0}</Action_Success_Text>

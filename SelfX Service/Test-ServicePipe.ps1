@@ -65,6 +65,8 @@
                                               TerminalServer, missing remediation, other sessions, the shared pause with RUN; SELFX_APP_ID only for the app
                                               of the service (an inherited value is removed); event 4014 (fields, only on a change, invalid ID or code not
                                               written, rate limit).
+    3.1.0    2026-11-28  fubu2k               When="NotOK" in the service (status rows, cache age, broken cache, administrators, catalog actions, two
+                                              remediations of one script) and HEALTH from a status cache of the last 60 seconds.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -1081,6 +1083,86 @@ Remove-Item -LiteralPath (Join-Path $envConfig 'Tool_Config.xml')
 Assert-True ((Invoke-EnvRequest 'Ts_Hide.ps1') -ceq 'ERROR TerminalServer') 'Mode TerminalServer: a missing Tool_Config.xml does not change the mode'
 $envLog = Join-Path $logDirectory 'SelfXService.log'
 Assert-True ((Test-Path -LiteralPath $envLog) -and ([IO.File]::ReadAllText($envLog) -match 'not available on a terminal server')) 'Mode TerminalServer: a refusal is logged'
+
+# --- When="NotOK" in the service: a normal user starts such a repair only while the status cache lists its row as not OK ----------
+$whenFlags = [Reflection.BindingFlags]'NonPublic,Static'
+$rowRule = [SelfX.SelfXService].GetMethod('AnyHealthRowNotOk', $whenFlags)
+Assert-True ($null -ne $rowRule) 'When: the service has the rule for the status rows'
+if ($rowRule) {
+	$rows = '[{"Id":"Disk","Name":"C:","Status":"Error"},{"Id":"Disk","Name":"D:","Status":"OK"},{"Id":"Defender","Name":"","Status":"OK"},{"Id":"Compliance","Status":"Pending"}]'
+	foreach ($case in @(
+		@($rows, @('Disk'), @('C:'), $true, 'the row of the drive is not OK'),
+		@($rows, @('Disk'), @('D:'), $false, 'the row of another drive does not count'),
+		@($rows, @('Disk'), @($null), $true, 'without a name any row of the check counts'),
+		@($rows, @('Defender'), @($null), $false, 'an OK row does not count'),
+		@($rows, @('Defender', 'Compliance'), @($null, $null), $true, 'one of two remediations of the script is enough'),
+		@($rows, @('Updates'), @($null), $false, 'a check without a row does not count'),
+		@('{"Id":"Disk","Status":"Error"}', @('Disk'), @($null), $false, 'a cache that is no array does not count'),
+		@('[{"Id":"Disk","Status":', @('Disk'), @($null), $false, 'broken JSON does not count'),
+		@('[{"Id":"Disk","Status":""}]', @('Disk'), @($null), $false, 'an empty status does not count'),
+		@('', @('Disk'), @($null), $false, 'an empty cache does not count'))) {
+		$result = $rowRule.Invoke($null, [object[]]@([string]$case[0], [string[]]@($case[1]), [string[]]@($case[2])))
+		Assert-True ($result -eq $case[3]) "When: $($case[4]) = $($case[3]) (got $result)"
+	}
+}
+$whenRoot = Join-Path $dataRoot ('When-' + [guid]::NewGuid().ToString('N'))
+$whenApp = Join-Path $whenRoot 'App'
+$whenConfig = Join-Path $whenRoot 'Config'
+$whenLogs = Join-Path $whenRoot 'Data\Logs'
+$whenCache = Join-Path $whenRoot 'Data\Cache\Health.json'
+New-Item -ItemType Directory -Path (Join-Path $whenApp 'Scripts_to_run'), $whenConfig, $whenLogs, (Split-Path -Parent $whenCache) -Force | Out-Null
+foreach ($name in 'W_Disk.ps1', 'W_Always.ps1', 'W_Cat.ps1', 'W_Two.ps1') { Set-Content -LiteralPath (Join-Path $whenApp "Scripts_to_run\$name") -Value 'exit 0' }
+Set-Content -LiteralPath (Join-Path $whenApp 'HealthStatus.ps1') -Value 'exit 0'
+Set-Content -LiteralPath (Join-Path $whenConfig 'Issues_List.xml') -Value '<Actions><Quick_Solution><Action Id="S_Cat"><Script>W_Cat.ps1</Script><Context>System</Context><TerminalServer>Show</TerminalServer></Action></Quick_Solution></Actions>'
+Set-Content -LiteralPath (Join-Path $whenConfig 'Health_Config.xml') -Value @'
+<HealthConfig><Remediations>
+<Remediation Id="Disk" Name="C:" Script="W_Disk.ps1" When="NotOK" TerminalServer="Show" />
+<Remediation Id="Updates" Script="W_Always.ps1" TerminalServer="Show" />
+<Remediation Id="Defender" Script="W_Two.ps1" When="NotOK" TerminalServer="Show" />
+<Remediation Id="Compliance" Script="W_Two.ps1" When="NotOK" TerminalServer="Show" />
+<Remediation Id="IME" Script="W_Cat.ps1" When="NotOK" TerminalServer="Show" />
+</Remediations></HealthConfig>
+'@
+$whenService = New-Object SelfX.SelfXService(('SelfX.WhenTest.' + [guid]::NewGuid().ToString('N')), $whenLogs)
+[SelfX.SelfXService].GetField('installRoot', $instanceFlags).SetValue($whenService, $whenApp)
+[SelfX.SelfXService].GetField('configRoot', $instanceFlags).SetValue($whenService, $whenConfig)
+[SelfX.SelfXService].GetField('catalogPath', $instanceFlags).SetValue($whenService, (Join-Path $whenConfig 'Issues_List.xml'))
+$terminalField.SetValue($whenService, [Nullable[bool]]$false)
+$script:whenCaller = 2000
+# Every request comes from another caller, so the pause per user never answers BUSY; an allowed request ends at the file check.
+function Invoke-WhenRequest([string]$Request, [bool]$Admin = $false) {
+	$script:whenCaller++
+	return [string]$processMethod.Invoke($whenService, [object[]]@($Request, "TEST\w$script:whenCaller", "S-1-5-21-1-2-3-$script:whenCaller", $Admin, [long]-1))
+}
+function Set-WhenCache([string]$Json, [int]$AgeMinutes = 0) {
+	[IO.File]::WriteAllText($whenCache, $Json)
+	[IO.File]::SetLastWriteTimeUtc($whenCache, [datetime]::UtcNow.AddMinutes(-$AgeMinutes))
+}
+function Test-WhenAllowed([string]$Answer) { return ($Answer -cne 'ERROR NotNeeded' -and $Answer -notlike 'DONE*' -and $Answer -cne 'BUSY') }
+Assert-True ((Invoke-WhenRequest 'RUN W_Disk.ps1') -ceq 'ERROR NotNeeded') 'When: without a status cache a normal user cannot start a NotOK repair'
+Assert-True (Test-WhenAllowed (Invoke-WhenRequest 'RUN W_Disk.ps1' $true)) 'When: an elevated administrator is not restricted'
+Assert-True (Test-WhenAllowed (Invoke-WhenRequest 'RUN W_Always.ps1')) 'When: a repair without When="NotOK" needs no cache'
+Assert-True (Test-WhenAllowed (Invoke-WhenRequest 'RUN W_Cat.ps1')) 'When: a script that is also a System action of the catalog needs no cache'
+Set-WhenCache '[{"Id":"Disk","Name":"C:","Status":"Error"},{"Id":"Defender","Status":"OK"},{"Id":"Compliance","Status":"OK"}]'
+Assert-True (Test-WhenAllowed (Invoke-WhenRequest 'RUN W_Disk.ps1')) 'When: the row of the repair is not OK in the cache: allowed'
+Assert-True ((Invoke-WhenRequest 'RUN W_Two.ps1') -ceq 'ERROR NotNeeded') 'When: both rows of a script are OK: refused'
+Set-WhenCache '[{"Id":"Disk","Name":"C:","Status":"OK"},{"Id":"Disk","Name":"D:","Status":"Error"},{"Id":"Defender","Status":"OK"},{"Id":"Compliance","Status":"Pending"}]'
+Assert-True ((Invoke-WhenRequest 'RUN W_Disk.ps1') -ceq 'ERROR NotNeeded') 'When: only another drive is not OK: refused'
+Assert-True (Test-WhenAllowed (Invoke-WhenRequest 'RUN W_Two.ps1')) 'When: one of the two rows of a script is not OK: allowed'
+Set-WhenCache '[{"Id":"Disk","Name":"C:","Status":"Error"}]' 90
+Assert-True ((Invoke-WhenRequest 'RUN W_Disk.ps1') -ceq 'ERROR NotNeeded') 'When: a cache older than 60 minutes does not count'
+Set-WhenCache '[{"Id":"Disk","Name":"C:","Status":"Error"}' 0
+Assert-True ((Invoke-WhenRequest 'RUN W_Disk.ps1') -ceq 'ERROR NotNeeded') 'When: a broken cache does not count'
+$whenSource = [IO.File]::ReadAllText($source)
+Assert-True ($whenSource -match '!callerIsAdmin && !IsRemediationNeeded\(scriptName\)') 'When: the check applies to normal users only'
+# HEALTH without a filter: a cache of the last minute is the answer; an older one is not used.
+$cacheJson = '[{"Id":"Disk","Name":"C:","Status":"OK","Detail":"x"}]'
+Set-WhenCache $cacheJson
+$expected = 'HEALTH ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($cacheJson))
+Assert-True ((Invoke-WhenRequest 'HEALTH') -ceq $expected) 'HEALTH: a full request is answered from a status cache of the last 60 seconds'
+Assert-True ((Invoke-WhenRequest 'HEALTH Disk') -cne $expected) 'HEALTH: a request with a filter runs the check (not the cache)'
+Set-WhenCache $cacheJson 2
+Assert-True ((Invoke-WhenRequest 'HEALTH') -cne $expected) 'HEALTH: an older status cache is not used for the answer'
 
 # --- TerminalServer_Health: HEALTH and STATUS in the mode TerminalServer (Off = nobody, AdminOnly = elevated administrators) ---------
 $accessMethod = [SelfX.SelfXService].GetMethod('GetHealthAccess', $staticFlags)

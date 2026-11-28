@@ -67,6 +67,7 @@
     3.1.0    2026-11-28  fubu2k               Card "Company apps": "Try again" offers the failed apps and the apps with a stalled download one by one (one app:
                                               confirmation; several: a choice). Only the ID of the chosen app goes to the service (APPRETRY), which checks it
                                               against its own reading of the IME cache. "Fix all problems" still retries all failed apps
+    3.1.0    2026-11-28  fubu2k               Answer NotNeeded of the service (the check of a repair is OK in the status cache): information instead of an error
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -1784,6 +1785,7 @@ $SvcAction_Timer.Add_Tick({
 			'Busy'        { $msgbar.SetWarningAlert($Service_Busy_Text) }
 			'OtherSessions' { $msgbar.SetWarningAlert($Service_OtherSessions_Text) }
 			'TerminalServer' { $msgbar.SetWarningAlert((Get-SelfXString 'Service_TerminalServer_Text')) }
+			'NotNeeded'   { $msgbar.SetInformationAlert((Get-SelfXString 'Service_NotNeeded_Text')) }
 			# APPRETRY: the service does not list the app (any more) as not installed.
 			'AppGone'     { $msgbar.SetInformationAlert((Get-SelfXString 'Health_Apps_Gone' "$Global:SvcAction_AppName")) }
 			'Timeout'     { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Timeout_Text' $Global:SvcAction_Name)) }

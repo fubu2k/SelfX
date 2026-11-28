@@ -98,6 +98,7 @@ Tunapendekeza mwonekano wa kina ikiwa mwonekano rahisi hautatui au hauna tatizo 
 		<Service_Busy_Text>Kitendo kingine bado kinaendelea. Subiri hadi kikamilike.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Kitendo hiki hakiwezekani wakati mtumiaji mwingine ameingia kwenye kifaa hiki. Wasiliana na usaidizi wa TEHAMA au jaribu tena ukiwa mtumiaji pekee.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Kitendo hiki hakipatikani kwenye kompyuta hii, kwa sababu watu kadhaa wanaitumia kwa wakati mmoja. Wasiliana na usaidizi wa TEHAMA.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>Ukaguzi uko sawa tena, kwa hiyo urekebishaji huu hauhitajiki sasa. Kagua tena ikiwa tatizo bado lipo.</Service_NotNeeded_Text>
 		<Action_Running_Text>Kitendo kinaendelea: {0}</Action_Running_Text>
 		<Action_Running_Label>Inaendelea…</Action_Running_Label>
 		<Action_Success_Text>Kitendo kimekamilika: {0}</Action_Success_Text>

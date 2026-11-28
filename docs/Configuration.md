@@ -468,7 +468,7 @@ The checks only read. For a row to show the *Fix* button, store a repair script 
 | `Id` | Kind of check, for example `IME`, `Defender`, `Disk`, `Updates`, `PendingReboot`. |
 | `Name` | Optional. The exact technical name of the row. Without `Name` the repair applies to all rows of this kind. |
 | `Script` | Script in `Scripts_to_run`. |
-| `When` | `NotOK`: offer only while the row is not OK. `Always` (default): always offer. |
+| `When` | `NotOK`: offer only while the row is not OK. `Always` (default): always offer. With `NotOK` the service also refuses the repair for a normal user (answer `ERROR NotNeeded`, message in the window) unless the status cache of the last 60 minutes lists the row as not OK; elevated administrators and a script that is also a `System` action of the catalogue are not restricted. |
 | `TimeoutSeconds` | Time limit, 1 to 7200 seconds. Default 900. |
 | `OtherSessions` | `Block` as for actions. The bundled configuration sets it for `Updates` and `PendingReboot`. |
 | `TerminalServer` | Required: `Show` or `Hide` as for actions. `Hide` also hides the `UserScript` part. All bundled repairs are `Hide`. |

@@ -98,6 +98,7 @@
 		<Service_Busy_Text>การดำเนินการอื่นยังคงดำเนินอยู่ โปรดรอจนกว่าจะเสร็จสิ้น</Service_Busy_Text>
 		<Service_OtherSessions_Text>ไม่สามารถดำเนินการนี้ได้ขณะที่ผู้ใช้อื่นลงชื่อเข้าใช้อุปกรณ์นี้อยู่ โปรดติดต่อฝ่ายสนับสนุนไอที หรือลองอีกครั้งเมื่อคุณเป็นผู้ใช้เพียงคนเดียว</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>การดำเนินการนี้ใช้ไม่ได้บนคอมพิวเตอร์เครื่องนี้ เพราะมีหลายคนใช้งานพร้อมกัน โปรดติดต่อฝ่ายสนับสนุนไอที</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>การตรวจสอบกลับมาปกติแล้ว จึงยังไม่จำเป็นต้องซ่อมในตอนนี้ หากปัญหายังอยู่ ให้ตรวจสอบอีกครั้ง</Service_NotNeeded_Text>
 		<Action_Running_Text>กำลังดำเนินการ: {0}</Action_Running_Text>
 		<Action_Running_Label>กำลังดำเนินการ…</Action_Running_Label>
 		<Action_Success_Text>ดำเนินการเสร็จแล้ว: {0}</Action_Success_Text>
