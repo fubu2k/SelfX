@@ -17,7 +17,7 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.6.0
+    Version : 1.7.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
               1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
@@ -25,6 +25,7 @@
               1.5.0 (2026-11-28, fubu2k) question TargetOS instead of EnvironmentMode (no Environment_Mode written); package for Windows Server:
                                          SelfX-Server-Guide without Intune (commands with System32, Configuration Manager, no ticket routing)
               1.6.0 (2026-11-28, fubu2k) question TerminalServerSupportMail: only for WindowsServer, required, default Support mail
+              1.7.0 (2026-11-28, fubu2k) package for WindowsServer: no step pack, no .intunewin file, no tool needed; Windows11 unchanged
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -215,6 +216,7 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ($srvInstall -like '%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe *-File .\Install.ps1' -and $srvText -notmatch 'sysnative' -and $srvText -notmatch 'intune\.microsoft\.com') 'server guide: install command with System32, no sysnative, no Intune admin center'
     Assert ($srvText -match '20348' -and $srvText -match 'Server Core' -and $srvText -match 'Configuration Manager' -and $srvText -match '(?m)^6\. Test on a pilot server') 'server guide: requirements, Configuration Manager and the test step (6)'
     Assert ((@($srvGuide.Steps | Where-Object Id -eq 'files')[0].Copies[0].Value) -eq 'C:\Out\package') 'server guide: the path of the package folder can be copied'
+    Assert ($srvText -notmatch '(?i)intunewin' -and $srvText -notmatch 'p\.intunewin') 'server guide: does not name the .intunewin file'
     $srvSigned = Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; TargetOS = 'WindowsServer'; Units = @(@{ Id = 'U'; GroupTags = @('T') }) } -Version '3.1.0' -PackageFile 'p' -DetectionFile 'd' -ScriptFiles @('Set-SelfXSupportUnit-U.ps1') -TrustedSigner @(('A' * 40)) -RuleFiles @('SelfX.AppLocker.xml') -PackageKind FullSeparateConfig
     Assert ((@($srvSigned.Steps | ForEach-Object { $_.Id }) -join ',') -eq 'requirements,files,program,configmgr,trust,certchange,rules,asr,test,separate' -and ((@($srvSigned.Steps | ForEach-Object { $_.Lines }) -join "`n") -match "-TrustedSigner $('A' * 40)")) 'server guide: signature, rules and the note of a separate configuration; no Intune platform scripts for the ticket routing'
     $srvConfig = Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; TargetOS = 'WindowsServer'; Units = @() } -Version '3.1.0' -PackageFile 'p' -DetectionFile 'd' -PackageKind ConfigOnly
@@ -625,6 +627,21 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     $srvBuild = Invoke-SelfXPackageBuild -Answers $srvAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv') -ToolPath $dummyTool -Language 'en'
     $srvTool = ([xml](Get-Content -LiteralPath (Join-Path $work 'result\srv\package\Config\Tool_Config.xml') -Raw)).GUI_Config
     Assert ($srvBuild.TargetOS -eq 'WindowsServer' -and $srvBuild.GuideFile -eq 'SelfX-Server-Guide.en.txt' -and (Test-Path -LiteralPath (Join-Path $work 'result\srv\SelfX-Server-Guide.en.txt')) -and -not (Test-Path -LiteralPath (Join-Path $work 'result\srv\SelfX-Intune-Guide.en.txt'))) 'server package: the instructions are SelfX-Server-Guide.en.txt'
+    $srvFiles = @(Get-ChildItem -LiteralPath (Join-Path $work 'result\srv') -Recurse -File -Force | Where-Object { $_.Extension -eq '.intunewin' })
+    Assert ($srvBuild.PackageFile -eq $null -and $srvFiles.Count -eq 0 -and (Test-Path -LiteralPath (Join-Path $work 'result\srv\package\Install.ps1') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $work ('result\srv\' + $srvBuild.DetectionFile)) -PathType Leaf) -and $srvBuild.GuideFile -eq 'SelfX-Server-Guide.en.txt') 'server package: no .intunewin file; package folder, detection script and instructions exist'
+    Assert ((Get-Content -LiteralPath (Join-Path $work 'result\srv\SelfX-Server-Guide.en.txt') -Raw) -notmatch '(?i)intunewin' -and (Get-Content -LiteralPath (Join-Path $work 'result\srv\selfx-answers.json') -Raw) -notmatch '(?i)intunewin') 'server package: neither the instructions nor the answer file name a .intunewin file'
+    # No tool: a missing path, no path at all and a tool that would fail are all the same for a server package (the tool is never looked at or started).
+    $srvSteps = New-Object System.Collections.Generic.List[string]
+    $srvNoTool = Invoke-SelfXPackageBuild -Answers $srvAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv-notool') -Language 'en' -OnProgress { param($id, $text) $srvSteps.Add($id) }
+    Assert ((@($srvSteps) -join ',') -eq 'check,copy,config,detection,rules,guide,finish' -and $null -eq $srvNoTool.PackageFile) 'server package: builds without a tool path; the progress has no step pack'
+    $srvMissingTool = Invoke-SelfXPackageBuild -Answers $srvAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv-missingtool') -ToolPath (Join-Path $work 'nothing.exe') -Language 'en'
+    $srvFailingTool = Invoke-SelfXPackageBuild -Answers $srvAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv-failingtool') -ToolPath $failingTool -Language 'en'
+    Assert ($null -eq $srvMissingTool.PackageFile -and $null -eq $srvFailingTool.PackageFile) 'server package: a missing tool path or a tool that exits with an error does not matter (the tool is not started)'
+    $srvConfigPkg = Invoke-SelfXPackageBuild -Answers $srvAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv-config') -Language 'en' -PackageKind ConfigOnly
+    Assert ($null -eq $srvConfigPkg.PackageFile -and @(Get-ChildItem -LiteralPath (Join-Path $work 'result\srv-config') -Recurse -File -Force | Where-Object { $_.Extension -eq '.intunewin' }).Count -eq 0 -and $srvConfigPkg.TargetOS -eq 'WindowsServer') 'server configuration package: builds without a tool, no .intunewin file'
+    Assert ((Get-ChildItem -LiteralPath (Join-Path $work 'result') -Directory -Force | Where-Object { $_.Name -like '.selfx-*' }).Count -eq 0 -and $result.PackageFile -eq "SelfX-Service-$version.intunewin" -and (Test-Path -LiteralPath (Join-Path $finalOut $result.PackageFile) -PathType Leaf)) 'Windows 11 package unchanged: still has its .intunewin file; no work folder is left'
+    Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\win11-notool') -Language 'en' } 'Windows 11 package without a tool path is refused'
+    Assert (-not (Test-Path -LiteralPath (Join-Path $work 'result\win11-notool'))) 'Windows 11 package without a tool path leaves no output'
     Assert ($srvTool.TerminalServer_Health -eq 'AdminOnly' -and $null -eq $srvTool.Environment_Mode -and $srvTool.TerminalServer_Support_Mail -eq 'ts-support@contoso.example') 'server package: TerminalServer_Health AdminOnly, the fixed support address, no Environment_Mode'
     $srvMissing = [ordered]@{}; foreach ($key in $srvAnswers.Keys) { if ($key -ne 'TerminalServerSupportMail') { $srvMissing[$key] = $srvAnswers[$key] } }; $srvMissing.SupportMail = ''
     Assert-Throws { Invoke-SelfXPackageBuild -Answers $srvMissing -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv-nomail') -ToolPath $dummyTool -Language 'en' } 'server package: without a fixed support address (and without a support mail as default) the build stops'

@@ -24,11 +24,12 @@
     Name    : Test-SelfXWizardGui.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.1.0
+    Version : 1.3.0
     History : 1.0.0 (2026-11-27, fubu2k) Initial version
               1.1.0 (2026-11-27, fubu2k) Page Signature (store list without expired certificates, PFX file, password never in a text, the
                                          state, the answers or the window title; time stamp; additional signers), instructions as steps
               1.2.0 (2026-11-27, fubu2k) choice of the package kind (configuration package)
+              1.3.0 (2026-11-28, fubu2k) package for Windows Server: no tool field, no step pack, no .intunewin file in the result
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -156,6 +157,10 @@ try {
     Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false) -join ',') -eq 'check,copy,config,pack,detection,rules,guide,finish') 'progress list has the steps of Invoke-SelfXPackageBuild'
     Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind ConfigOnly) -join ',') -eq 'check,copy,config,sign,pack,detection,rules,guide,finish') 'progress list of the signed configuration package has no code catalog step'
     Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind Full) -join ',') -eq 'check,copy,config,sign,catalog,pack,detection,rules,guide,finish') 'progress list of the signed full package keeps the catalog step'
+    Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -ServerPackage $true) -join ',') -eq 'check,copy,config,detection,rules,guide,finish') 'progress list of a package for Windows Server has no step pack'
+    Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind Full -ServerPackage $true) -join ',') -eq 'check,copy,config,sign,catalog,detection,rules,guide,finish') 'progress list of the signed server package keeps signing and the catalog, no pack'
+    Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind ConfigOnly -ServerPackage $true) -join ',') -eq 'check,copy,config,sign,detection,rules,guide,finish') 'progress list of the signed server configuration package has neither catalog nor pack'
+    Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $true -ServerPackage $true) -join ',') -eq 'check,copy,config,guide,finish') 'progress list of a server package that is only configured is unchanged'
     $kindQuestion = @($script:WizardGuiBuildQuestions | Where-Object { $_.Id -eq 'PackageKind' })
     Assert ($kindQuestion.Count -eq 1 -and ($kindQuestion[0].Choices -join ',') -eq 'Full,FullSeparateConfig,ConfigOnly') 'the summary page asks for the package kind with the three kinds'
 
@@ -552,6 +557,36 @@ try {
     Assert-Throws { Import-WizardGuiAnswers -State $state -Path $bad } 'an answer file over 1 MB is refused'
     $state.Raw['SupportMail'] = 'not a mail'
     Assert-Throws { Get-WizardGuiAnswers -State $state } 'answers with an error are not given to the build'
+
+    # ---------------------------------------------------------- package for Windows Server: no packing tool
+    Write-Host 'Package for Windows Server'
+    $state = New-WizardGuiState -ToolsFolder $ScriptFolder
+    $state.Raw['OrgName'] = 'Contoso'
+    $state.Build.Payload = $payload; $state.Build.Output = Join-Path $work 'server\out'; $state.Build.Tool = ''
+    $evaluation = Get-WizardGuiEvaluation -State $state
+    Assert ($evaluation.BuildVisible['Tool'] -eq $true -and $evaluation.BuildErrors.ContainsKey('Tool')) 'Windows 11: the tool field is shown and an empty path is an error'
+    $state.Raw['TargetOS'] = 'WindowsServer'
+    $state.Raw['TerminalServerSupportMail'] = 'ts-support@contoso.example'
+    $evaluation = Get-WizardGuiEvaluation -State $state
+    Assert ($evaluation.BuildVisible['Tool'] -eq $false -and -not $evaluation.BuildErrors.ContainsKey('Tool') -and $evaluation.BuildErrors.Count -eq 0) 'Windows Server: the tool field is hidden and an empty path is no error'
+    $state.Raw['TargetOS'] = 'Windows11'
+    Assert ((Get-WizardGuiEvaluation -State $state).BuildErrors.ContainsKey('Tool')) 'back to Windows 11: the empty tool path is an error again'
+    $state.Raw['TargetOS'] = 'WindowsServer'
+    $state.Build.ConfigureOnly = $true
+    Assert ((Get-WizardGuiEvaluation -State $state).BuildVisible['Tool'] -eq $false) 'only configure: the tool field stays hidden'
+    $state.Build.ConfigureOnly = $false
+    $build = Start-WizardGuiBuild -State $state
+    Wait-GuiBuild -Build $build
+    Assert ($null -ne $build.Sync.Result -and -not $build.Sync.Error) ('server package: the background build runs without a tool' + $(if ($build.Sync.Error) { ': ' + $build.Sync.Error }))
+    Assert ((@($build.Steps) -join ',') -eq 'check,copy,config,detection,rules,guide,finish') 'server package: the window received the steps without pack'
+    $serverFiles = @(Get-ChildItem -LiteralPath $state.Build.Output -Recurse -File -Force | Where-Object { $_.Extension -eq '.intunewin' })
+    Assert ($serverFiles.Count -eq 0 -and $null -eq $build.Sync.Result.PackageFile -and (Test-Path -LiteralPath (Join-Path $state.Build.Output 'package\Install.ps1')) -and (Test-Path -LiteralPath (Join-Path $state.Build.Output $build.Sync.Result.DetectionFile)) -and (Test-Path -LiteralPath (Join-Path $state.Build.Output $build.Sync.Result.GuideFile))) 'server package: no .intunewin file; folder package, detection script and instructions exist'
+    # A Windows 11 package still needs the tool: the same state without a tool path stops before anything is written.
+    $state.Raw['TargetOS'] = 'Windows11'
+    $state.Build.Output = Join-Path $work 'server\win11-out'
+    $build = Start-WizardGuiBuild -State $state
+    Wait-GuiBuild -Build $build
+    Assert ($null -ne $build.Sync.Error -and "$($build.Sync.Error)" -ne '' -and -not (Test-Path -LiteralPath $state.Build.Output)) 'Windows 11 without a tool path: the build stops before anything is written'
 
     # ---------------------------------------------------------- cancel
     Write-Host 'Cancel'

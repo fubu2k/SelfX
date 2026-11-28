@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.7.0
+    Version : 1.8.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -49,6 +49,8 @@
     1.6.0    2026-11-28  fubu2k               Page Basics: question TargetOS (Windows 11 or Windows Server) instead of EnvironmentMode; result page:
                                               title of the instructions for a server package (installation without Intune)
     1.7.0    2026-11-28  fubu2k               Page Support: question TerminalServerSupportMail (only for Windows Server)
+    1.8.0    2026-11-28  fubu2k               Windows Server: no field for IntuneWinAppUtil.exe on the page Summary, no step 'pack' in the progress list,
+                                              no .intunewin file on the result page
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -131,7 +133,8 @@ $script:WizardGuiBuildQuestions = @(
     @{ Id = 'Output'; Kind = 'text'; Max = 260; Required = $true; Browse = 'folder' },
     @{ Id = 'ConfigureOnly'; Kind = 'bool' },
     @{ Id = 'PackageKind'; Kind = 'choice'; Choices = @('Full', 'FullSeparateConfig', 'ConfigOnly') },
-    @{ Id = 'Tool'; Kind = 'text'; Max = 260; Required = $true; Browse = 'tool'; When = { param($b) -not $b.ConfigureOnly } }
+    # No tool for a package for Windows Server (it has no .intunewin file); $a are the answers so far.
+    @{ Id = 'Tool'; Kind = 'text'; Max = 260; Required = $true; Browse = 'tool'; When = { param($b, $a) -not $b.ConfigureOnly -and -not ($a -and $a.TargetOS -eq 'WindowsServer') } }
 )
 
 # The fields of the page signing (time stamp service, without time stamp, additional signers); the texts are <Id>.ask and <Id>.rec.
@@ -150,12 +153,18 @@ function Get-WizardGuiPageIndex {
 
 # Step ids of Invoke-SelfXPackageBuild in the order of the progress list (sign and catalog only with a certificate).
 function Get-WizardGuiBuildSteps {
-    param([bool]$ConfigureOnly, [bool]$Signed, [string]$PackageKind = 'Full')
+    param([bool]$ConfigureOnly, [bool]$Signed, [string]$PackageKind = 'Full', [bool]$ServerPackage)
     if ($ConfigureOnly) { return , @('check', 'copy', 'config', 'guide', 'finish') }
-    # The configuration package has no programs and so no code catalog.
-    if ($PackageKind -eq 'ConfigOnly' -and $Signed) { return , @('check', 'copy', 'config', 'sign', 'pack', 'detection', 'rules', 'guide', 'finish') }
-    if ($Signed) { return , @('check', 'copy', 'config', 'sign', 'catalog', 'pack', 'detection', 'rules', 'guide', 'finish') }
-    return , @('check', 'copy', 'config', 'pack', 'detection', 'rules', 'guide', 'finish')
+    # A package for Windows Server is not packed (no .intunewin file).
+    $steps = New-Object System.Collections.Generic.List[string]
+    foreach ($step in @('check', 'copy', 'config', 'sign', 'catalog', 'pack', 'detection', 'rules', 'guide', 'finish')) {
+        if ($step -in @('sign', 'catalog') -and -not $Signed) { continue }
+        # The configuration package has no programs and so no code catalog.
+        if ($step -eq 'catalog' -and $PackageKind -eq 'ConfigOnly') { continue }
+        if ($step -eq 'pack' -and $ServerPackage) { continue }
+        $steps.Add($step)
+    }
+    return , $steps.ToArray()
 }
 
 # Text ids of the window (labels of questions use <Id>.ask and <Id>.rec). Test-SelfXWizardGui.ps1 checks that de and en have all of them.
@@ -373,7 +382,7 @@ function Get-WizardGuiEvaluation {
     $buildErrors = @{}
     $buildVisible = @{}
     foreach ($question in $script:WizardGuiBuildQuestions) {
-        if ($question.When -and -not (& $question.When $State.Build)) { $buildVisible[$question.Id] = $false; continue }
+        if ($question.When -and -not (& $question.When $State.Build $answers)) { $buildVisible[$question.Id] = $false; continue }
         $buildVisible[$question.Id] = $true
         $problem = Test-WizardGuiValue -Question $question -Value $State.Build[$question.Id]
         if ($null -ne $problem) { $buildErrors[$question.Id] = $problem }
@@ -1034,7 +1043,8 @@ function Set-WizardGuiProgress {
     $ui = $script:Gui.Ui
     $ui.ProgressList.Children.Clear()
     $script:Gui.ProgressRows = @{}
-    $steps = Get-WizardGuiBuildSteps -ConfigureOnly ([bool]$script:Gui.State.Build.ConfigureOnly) -Signed ($null -ne (Get-WizardGuiCertificate -State $script:Gui.State)) -PackageKind "$($script:Gui.State.Build.PackageKind)"
+    $serverPackage = ((Get-WizardGuiEvaluation -State $script:Gui.State).Answers.TargetOS -eq 'WindowsServer')
+    $steps = Get-WizardGuiBuildSteps -ConfigureOnly ([bool]$script:Gui.State.Build.ConfigureOnly) -Signed ($null -ne (Get-WizardGuiCertificate -State $script:Gui.State)) -PackageKind "$($script:Gui.State.Build.PackageKind)" -ServerPackage $serverPackage
     foreach ($step in $steps) {
         $row = New-Object System.Windows.Controls.StackPanel
         $row.Orientation = 'Horizontal'
