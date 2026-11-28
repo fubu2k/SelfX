@@ -702,7 +702,7 @@ Czy chcesz kontynuować?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Odśwież ustawienia firmowe (zasady grupy) na tym komputerze</Name>
 				<Explanation>Ustawienia Twojej firmy, takie jak dyski sieciowe, drukarki lub reguły zabezpieczeń, nie docierają lub są nieaktualne. Akcja prosi system Windows o ponowne zastosowanie zasad grupy. Działa tylko na urządzeniach dołączonych do domeny (także w trybie hybrydowym).</Explanation>
-				<Alerte_MSG>System Windows sprawdza i ponownie stosuje zasady grupy Twojej firmy. Może to potrwać kilka minut. Nie zostaniesz wylogowany, a system Windows nie uruchomi się ponownie; ustawienie wymagające ponownego uruchomienia lub ponownego logowania zadziała dopiero po nim. Jeśli urządzenie nie jest dołączone do domeny, akcja kończy się kodem 3 i niczego nie zmienia.
+				<Alerte_MSG>System Windows sprawdza i ponownie stosuje zasady grupy Twojej firmy. Może to potrwać kilka minut. Nie zostaniesz wylogowany, a system Windows nie uruchomi się ponownie; ustawienie wymagające ponownego uruchomienia lub ponownego logowania zadziała dopiero po nim. Jeśli urządzenie nie jest dołączone do domeny, akcja kończy się kodem 3 i niczego nie zmienia. Na serwerze terminali (Windows Server) aktualizowane są tylko ustawienia użytkownika, a nie ustawienia komputera.
 
 Czy chcesz kontynuować?</Alerte_MSG>
 			</Action>

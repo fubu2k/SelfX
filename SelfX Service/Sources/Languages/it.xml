@@ -702,7 +702,7 @@ Continuare?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Aggiornare le impostazioni aziendali (criteri di gruppo) di questo PC</Name>
 				<Explanation>Le impostazioni della sua azienda, come unità di rete, stampanti o regole di sicurezza, non arrivano o sono obsolete. L’azione chiede a Windows di applicare di nuovo i criteri di gruppo. Funziona solo su dispositivi aggiunti a un dominio (anche dispositivi in join ibrido).</Explanation>
-				<Alerte_MSG>Windows controlla e applica di nuovo i criteri di gruppo della sua azienda. Può richiedere alcuni minuti. Non viene disconnesso e Windows non si riavvia; un’impostazione che richiede un riavvio o un nuovo accesso diventa efficace solo dopo. Se il dispositivo non è aggiunto a un dominio, l’azione termina con il codice di uscita 3 e non modifica nulla.
+				<Alerte_MSG>Windows controlla e applica di nuovo i criteri di gruppo della sua azienda. Può richiedere alcuni minuti. Non viene disconnesso e Windows non si riavvia; un’impostazione che richiede un riavvio o un nuovo accesso diventa efficace solo dopo. Se il dispositivo non è aggiunto a un dominio, l’azione termina con il codice di uscita 3 e non modifica nulla. Su un server terminal (Windows Server) vengono aggiornate solo le impostazioni del proprio utente, non quelle del computer.
 
 Continuare?</Alerte_MSG>
 			</Action>

@@ -702,7 +702,7 @@ Je, ungependa kuendelea?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Onyesha upya mipangilio ya kampuni (Sera za Kikundi) ya PC hii</Name>
 				<Explanation>Mipangilio ya kampuni yako, kama vile hifadhi za mtandao, vichapishi au kanuni za usalama, haifiki au imepitwa na wakati. Kitendo hiki kinaomba Windows itumie tena sera za kikundi. Hufanya kazi tu kwenye vifaa vilivyojiunga na kikoa (pamoja na vifaa vilivyojiunga kwa njia mseto).</Explanation>
-				<Alerte_MSG>Windows inakagua na kutumia tena sera za kikundi za kampuni yako. Hii inaweza kuchukua dakika chache. Hutatolewa kwenye akaunti na Windows haitaanza upya; mpangilio unaohitaji kuanza upya au kuingia tena huanza kutumika baada ya hapo. Kama kifaa chako hakijajiunga na kikoa, kitendo kinaisha kwa msimbo wa kutoka 3 na hakibadilishi chochote.
+				<Alerte_MSG>Windows inakagua na kutumia tena sera za kikundi za kampuni yako. Hii inaweza kuchukua dakika chache. Hutatolewa kwenye akaunti na Windows haitaanza upya; mpangilio unaohitaji kuanza upya au kuingia tena huanza kutumika baada ya hapo. Kama kifaa chako hakijajiunga na kikoa, kitendo kinaisha kwa msimbo wa kutoka 3 na hakibadilishi chochote. Kwenye seva ya terminal (Windows Server), ni mipangilio yako ya mtumiaji tu inayosasishwa, si mipangilio ya kompyuta.
 
 Je, ungependa kuendelea?</Alerte_MSG>
 			</Action>

@@ -702,7 +702,7 @@ Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Segarkan pengaturan perusahaan (Kebijakan Grup) di PC ini</Name>
 				<Explanation>Pengaturan perusahaan Anda, seperti drive jaringan, printer, atau aturan keamanan, tidak sampai atau sudah usang. Tindakan ini meminta Windows menerapkan kembali kebijakan grup. Hanya berfungsi pada perangkat yang bergabung ke domain (termasuk perangkat dengan gabungan hibrida).</Explanation>
-				<Alerte_MSG>Windows memeriksa dan menerapkan kembali kebijakan grup perusahaan Anda. Ini bisa memakan waktu beberapa menit. Anda tidak dikeluarkan dari sesi dan Windows tidak memulai ulang; pengaturan yang memerlukan mulai ulang atau masuk kembali baru berlaku setelahnya. Jika perangkat Anda tidak bergabung ke domain, tindakan berakhir dengan kode keluar 3 dan tidak mengubah apa pun.
+				<Alerte_MSG>Windows memeriksa dan menerapkan kembali kebijakan grup perusahaan Anda. Ini bisa memakan waktu beberapa menit. Anda tidak dikeluarkan dari sesi dan Windows tidak memulai ulang; pengaturan yang memerlukan mulai ulang atau masuk kembali baru berlaku setelahnya. Jika perangkat Anda tidak bergabung ke domain, tindakan berakhir dengan kode keluar 3 dan tidak mengubah apa pun. Di terminal server (Windows Server), hanya pengaturan pengguna Anda sendiri yang diperbarui, bukan pengaturan komputer.
 
 Apakah Anda ingin melanjutkan?</Alerte_MSG>
 			</Action>

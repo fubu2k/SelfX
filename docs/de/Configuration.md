@@ -219,7 +219,8 @@ Einstufung der mitgelieferten Aktionen:
 | Teams, Word, Excel, Outlook, OneDrive (Neustart, Cache, Zurücksetzen, Add-in, AutoVervollständigen) | eigene Sitzung und eigenes Profil | `Show` |
 | Cache von Edge, Chrome und Firefox | Browser der eigenen Sitzung | `Show` |
 | Gerät langsam, Fenster zurückholen, Citrix Workspace neu starten | eigene Sitzung | `Show` |
-| Office-Lizenz zurücksetzen, Gruppenrichtlinien aktualisieren | eigenes Profil (vorher auf Ihrem Sitzungshost testen) | `Show` |
+| Office-Lizenz zurücksetzen | eigenes Profil (vorher auf Ihrem Sitzungshost testen) | `Show` |
+| Gruppenrichtlinien aktualisieren (`SelfX_Device_GpUpdate.ps1`) | nur die Richtlinien des angemeldeten Nutzers: Auf Windows Server startet das Skript `gpupdate.exe /target:user /force`, nie den Computer-Teil; auf Windows 11 `gpupdate.exe /force` | `Show` |
 | Kennwort zurücksetzen, Sicherheitsinformationen (Links) | Browser des Nutzers | `Show` |
 | Kein Ton (`SelfX_Audio_Restore.ps1`) | umgeleiteter Ton einer Remotesitzung, nicht getestet | `Hide` |
 | DNS-Cache leeren (`SelfX_Device_ClearCache.ps1`) | DNS-Cache des ganzen Geräts | `Hide` |

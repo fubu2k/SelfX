@@ -28,6 +28,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-28  fubu2k               Initial version.
     3.1.0    2026-11-28  fubu2k               The shell call is made by the built SelfXDisturb.dll: static checks of SelfXDisturb.cs and no Add-Type.
+    3.1.0    2026-11-28  fubu2k               XML_Version of the catalogue is 2.4.15.
 #>
 $ErrorActionPreference = 'Stop'
 $sources = Join-Path $PSScriptRoot 'Sources'
@@ -93,7 +94,7 @@ foreach ($action in @($catalog.SelectNodes('//Action'))) {
 }
 foreach ($scriptName in $expectedScripts) { Assert-True (@($marked | Where-Object { "$($_.Script)".Trim() -ceq $scriptName }).Count -gt 0) "The script $scriptName is used by a marked action" }
 Assert-True (@($marked | Where-Object { "$($_.Context)".Trim() -eq 'Link' }).Count -eq 0) 'No link action is marked'
-Assert-Equal "$($catalog.Actions.XML_Version)".Trim() '2.4.14' 'XML_Version of the catalogue'
+Assert-Equal "$($catalog.Actions.XML_Version)".Trim() '2.4.15' 'XML_Version of the catalogue'
 
 . (Join-Path $sources 'Localization.ps1')
 [void](Initialize-SelfXLanguage -LanguageFolder (Join-Path $sources 'Languages') -Language 'en')

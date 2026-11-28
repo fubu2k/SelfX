@@ -20,6 +20,7 @@
                                        part (fixed DISM arguments, Delivery Optimization cache, fixed folders of the delete helper,
                                        Intune check, thresholds); header versions 2.x.y or 3.x.y; UserScript of Health_Config.xml.
     3.1.0  2026-11-28  fubu2k          Detection.ps1: "not detected" is exit code 0 without output.
+    3.1.0  2026-11-28  fubu2k          GPUpdate on Windows Server: only "/target:user /force" (mode from the mocked product type of Windows).
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -593,19 +594,67 @@ try {
 	$global:DefenderActive = $null
 
 	# Group policy update (User context): only domain / hybrid devices, fixed arguments, empty input, time limit, exit codes 0 / 1 / 3.
-	$global:PartOfDomain = $null; $global:ProcExit = $null; $global:ProcHang = $false
-	$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $(Join-Path $env:SystemRoot 'System32\gpupdate.exe') /force;  stdin-empty=True" 'GPUpdate: fixed program, only /force, empty input'
-	Assert-Equal (($script:calls -join ' ') -match '(?i)/boot|/logoff|echo') $false 'GPUpdate: never /boot, /logoff or echo'
-	$global:ProcExit = 1
-	Assert-Equal (Invoke-TestScript 'SelfX_Device_GpUpdate.ps1').ExitCode 1 'GPUpdate: a failed gpupdate is exit 1'
-	$global:ProcExit = $null; $global:ProcHang = $true
-	$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
-	Assert-Equal ($run.ExitCode -eq 1 -and ($script:calls -contains 'Kill')) $true 'GPUpdate: a run that does not finish is ended (exit 1)'
-	$global:ProcHang = $false; $global:PartOfDomain = $false
-	$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
-	Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '3|0' 'GPUpdate: not domain joined = exit 3, nothing started'
-	$global:PartOfDomain = $null
+	# The mode comes from the product type of Windows (SelfXEnvironment.ps1, read from the registry). The script loads that file itself, so the
+	# test mocks the registry read below it (the CI runs on Windows Server, a developer PC on Windows 11). Client = "/force";
+	# TerminalServer (every other or unreadable product type) = "/target:user /force", never the computer part.
+	$global:TestProductType = 'WinNT'; $global:TestProductTypeFails = $false
+	function global:Get-ItemProperty {
+		param($LiteralPath, $Path, $Name, $ErrorAction)
+		if ("$LiteralPath" -like '*Control\ProductOptions') {
+			if ($global:TestProductTypeFails) { throw 'Mock registry denied' }
+			return [pscustomobject]@{ ProductType = $global:TestProductType }
+		}
+		Microsoft.PowerShell.Management\Get-ItemProperty @PSBoundParameters
+	}
+	$gpupdateExe = Join-Path $env:SystemRoot 'System32\gpupdate.exe'
+	try {
+		$global:PartOfDomain = $null; $global:ProcExit = $null; $global:ProcHang = $false
+		$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $gpupdateExe /force;  stdin-empty=True" 'GPUpdate: Windows 11 (Client): fixed program, only /force, empty input'
+		Assert-Equal (($script:calls -join ' ') -match '(?i)/boot|/logoff|echo|/target') $false 'GPUpdate: Windows 11: never /boot, /logoff, echo or /target'
+		foreach ($case in @(@('ServerNT', 'Windows Server'), @('LanmanNT', 'a domain controller'), @('', 'an unreadable product type'), @('SomethingNew', 'an unknown product type'))) {
+			$global:TestProductType = $case[0]
+			$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+			Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $gpupdateExe /target:user /force;  stdin-empty=True" "GPUpdate: $($case[1]): only the user policies (/target:user /force), no computer part"
+			Assert-Equal (($script:calls -join ' ') -match '(?i)/boot|/logoff|echo') $false "GPUpdate: $($case[1]): never /boot, /logoff or echo"
+			Assert-Equal "$($run.Output -join ' ')" 'Your group policy settings were updated.' "GPUpdate: $($case[1]): the message names only the user settings"
+		}
+		$global:TestProductType = 'WinNT'; $global:TestProductTypeFails = $true
+		$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+		Assert-Equal "$($run.ExitCode)|$($script:calls -join ';')" "0|Start-Process $gpupdateExe /target:user /force;  stdin-empty=True" 'GPUpdate: the registry cannot be read: user policies only (fail closed)'
+		$global:TestProductTypeFails = $false
+		# Without SelfXEnvironment.ps1 next to the scripts the mode is unknown: user policies only. A copy of the script in a sandbox folder
+		# whose parent has no SelfXEnvironment.ps1 proves it; nothing of the delivered files changes.
+		$noEnvRoot = Join-Path $sandbox 'NoEnv'
+		$noEnvScripts = Join-Path $noEnvRoot 'Scripts_to_run'
+		[void][IO.Directory]::CreateDirectory($noEnvScripts)
+		[IO.File]::Copy((Join-Path $scripts 'SelfX_Device_GpUpdate.ps1'), (Join-Path $noEnvScripts 'SelfX_Device_GpUpdate.ps1'), $true)
+		$script:calls.Clear(); $global:LASTEXITCODE = $null
+		& (Join-Path $noEnvScripts 'SelfX_Device_GpUpdate.ps1') 2>&1 | Out-Null
+		Assert-Equal "$global:LASTEXITCODE|$($script:calls -join ';')" "0|Start-Process $gpupdateExe /target:user /force;  stdin-empty=True" 'GPUpdate: SelfXEnvironment.ps1 missing: user policies only (fail closed)'
+		# A failed or hanging gpupdate and a device without a domain behave the same in both modes.
+		foreach ($productType in 'WinNT', 'ServerNT') {
+			$global:TestProductType = $productType
+			$global:ProcHang = $false; $global:PartOfDomain = $null; $global:ProcExit = 1
+			Assert-Equal (Invoke-TestScript 'SelfX_Device_GpUpdate.ps1').ExitCode 1 "GPUpdate ($productType): a failed gpupdate is exit 1"
+			$global:ProcExit = $null; $global:ProcHang = $true
+			$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+			Assert-Equal ($run.ExitCode -eq 1 -and ($script:calls -contains 'Kill')) $true "GPUpdate ($productType): a run that does not finish is ended (exit 1)"
+			$global:ProcHang = $false; $global:PartOfDomain = $false
+			$run = Invoke-TestScript 'SelfX_Device_GpUpdate.ps1'
+			Assert-Equal "$($run.ExitCode)|$($script:calls.Count)" '3|0' "GPUpdate ($productType): not domain joined = exit 3, nothing started"
+			$global:PartOfDomain = $null
+		}
+		# Static: no parameter, no caller input, no other switch than the two fixed argument lists.
+		$gpText = [IO.File]::ReadAllText((Join-Path $scripts 'SelfX_Device_GpUpdate.ps1'))
+		$gpCode = $gpText.Substring($gpText.IndexOf('#>') + 2)
+		Assert-Equal ($gpCode -match '(?im)^\s*param\s*\(') $false 'GPUpdate: script has no parameters'
+		Assert-Equal ($gpCode -match '(?i)\$args|\$env:(?!SystemRoot)|Invoke-Expression|iex\b|/target:computer|/logoff|/boot|/sync') $false 'GPUpdate: no caller input, no computer target, no logoff, boot or sync'
+		Assert-Equal @([regex]::Matches($gpCode, "@\('(/[a-z:]+)'(?:, '(/[a-z:]+)')?\)") | ForEach-Object { $_.Value }).Count 2 'GPUpdate: exactly two fixed argument lists'
+	} finally {
+		$global:PartOfDomain = $null; $global:ProcExit = $null; $global:ProcHang = $false
+		Remove-Item -LiteralPath Function:\Get-ItemProperty -ErrorAction SilentlyContinue
+	}
 
 	# No sound (User context): the library is loaded through the checked loader only; without a valid install folder nothing runs (exit 1),
 	# no process, no keys, no registry. The calls into Core Audio need a device and are covered by the manual device test.
