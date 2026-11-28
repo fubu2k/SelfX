@@ -27,6 +27,8 @@
     2.8.19   2026-11-23  fubu2k               Initial version (M1).
     3.1.0    2026-11-27  fubu2k               /cleanold: and /cleanoldpath: (free up space): only old entries, links deleted and never followed,
                                               also while folders are swapped for junctions; fixed folder names only; wrong arguments refused.
+    3.1.0    2026-11-28  fubu2k               Race 9: empty folders are turned into junctions in place (FSCTL_SET_REPARSE_POINT on the open
+                                              folder, no rename) while /removetree: and /cleanold: run; the outside folder must stay intact.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -282,6 +284,150 @@ public static class SelfXTestFileTimes
 	$keptOld = @($keepFiles | Where-Object { Test-Path -LiteralPath $_ }).Count
 	Assert-Equal $keptOld 30 "cleanold race: all old files of the outside folder are intact (helper exit code $($r.Code))"
 	Test-OutsideIntact 'cleanold race'
+
+	# 9. The owner of an EMPTY folder turns it into a junction in place while the helper holds it open (FSCTL_SET_REPARSE_POINT;
+	#    the open handle blocks renaming, not this). Entries listed and opened through the folder would then lie in the outside
+	#    folder. The helper must check every handle and neither delete nor enter such an entry. Test code only.
+	if (-not ('SelfXTestReparse' -as [type])) {
+		Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
+public static class SelfXTestReparse
+{
+    const uint FSCTL_SET_REPARSE_POINT = 0x000900A4;
+    const uint FSCTL_DELETE_REPARSE_POINT = 0x000900AC;
+    const uint IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003;
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool DeviceIoControl(SafeFileHandle device, uint code, byte[] input, int inputSize, IntPtr output, int outputSize, out int returned, IntPtr overlapped);
+    // FILE_WRITE_ATTRIBUTES is enough for FSCTL_SET_REPARSE_POINT; share read/write/delete; BACKUP_SEMANTICS | OPEN_REPARSE_POINT.
+    static SafeFileHandle OpenFolder(string path) { return CreateFileW(@"\\?\" + path, 0x100, 7, IntPtr.Zero, 3, 0x02000000 | 0x00200000, IntPtr.Zero); }
+    static bool Control(string folder, uint code, byte[] buffer)
+    {
+        using (SafeFileHandle handle = OpenFolder(folder))
+        {
+            if (handle.IsInvalid) return false;
+            int returned;
+            return DeviceIoControl(handle, code, buffer, buffer.Length, IntPtr.Zero, 0, out returned, IntPtr.Zero);
+        }
+    }
+    // REPARSE_DATA_BUFFER (MountPointReparseBuffer): tag, data length, reserved, offsets and lengths, substitute and print name.
+    public static bool SetMountPoint(string folder, string target)
+    {
+        byte[] substitute = Encoding.Unicode.GetBytes(@"\??\" + target.TrimEnd('\\') + @"\");
+        byte[] print = Encoding.Unicode.GetBytes(target);
+        int dataLength = 8 + substitute.Length + 2 + print.Length + 2;
+        byte[] buffer = new byte[8 + dataLength];
+        BitConverter.GetBytes(IO_REPARSE_TAG_MOUNT_POINT).CopyTo(buffer, 0);
+        BitConverter.GetBytes((ushort)dataLength).CopyTo(buffer, 4);
+        BitConverter.GetBytes((ushort)0).CopyTo(buffer, 8);
+        BitConverter.GetBytes((ushort)substitute.Length).CopyTo(buffer, 10);
+        BitConverter.GetBytes((ushort)(substitute.Length + 2)).CopyTo(buffer, 12);
+        BitConverter.GetBytes((ushort)print.Length).CopyTo(buffer, 14);
+        substitute.CopyTo(buffer, 16);
+        print.CopyTo(buffer, 16 + substitute.Length + 2);
+        return Control(folder, FSCTL_SET_REPARSE_POINT, buffer);
+    }
+    // True when another handle holds the folder without FILE_SHARE_DELETE (the helper opens every entry that way).
+    public static bool IsHeld(string folder)
+    {
+        using (SafeFileHandle handle = CreateFileW(@"\\?\" + folder, 0x00010000, 7, IntPtr.Zero, 3, 0x02000000 | 0x00200000, IntPtr.Zero))
+        {
+            return handle.IsInvalid && Marshal.GetLastWin32Error() == 32;
+        }
+    }
+    // The attacker in native code (a PowerShell loop is far slower than the helper): wait until the helper has entered the decoy
+    // folder and left it again, delete the files of the target folder from the end (the helper works from the start), and turn
+    // the folder into a junction as soon as it is empty.
+    public static string Attack(string decoy, string folder, string target, int timeoutMs)
+    {
+        System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        // The probe itself opens with DELETE access: a short pause between probes keeps it from blocking the helper's own open.
+        while (!IsHeld(decoy)) { if (watch.ElapsedMilliseconds > 5000) return "decoy not seen"; System.Threading.Thread.SpinWait(2000); }
+        while (IsHeld(decoy)) { if (watch.ElapsedMilliseconds > timeoutMs) return "decoy not left"; System.Threading.Thread.SpinWait(2000); }
+        string[] names = System.IO.Directory.GetFiles(folder);
+        for (int i = names.Length - 1; i >= 0; i--) { try { System.IO.File.Delete(names[i]); } catch (Exception) { } }
+        while (watch.ElapsedMilliseconds < timeoutMs)
+        {
+            foreach (string name in System.IO.Directory.GetFiles(folder)) { try { System.IO.File.Delete(name); } catch (Exception) { } }
+            if (SetMountPoint(folder, target)) return "flipped";
+        }
+        return "not flipped";
+    }
+    public static bool DeleteMountPoint(string folder)
+    {
+        byte[] buffer = new byte[8];
+        BitConverter.GetBytes(IO_REPARSE_TAG_MOUNT_POINT).CopyTo(buffer, 0);
+        return Control(folder, FSCTL_DELETE_REPARSE_POINT, buffer);
+    }
+}
+'@
+	}
+	# The setup works: an empty folder becomes a junction in place and a folder again.
+	$probe = Join-Path $temp 'Probe'
+	[void][IO.Directory]::CreateDirectory($probe)
+	Assert-Equal ([SelfXTestReparse]::SetMountPoint($probe, $outside)) $true 'in-place race: setup turns an empty folder into a junction'
+	Assert-Equal (Test-Path -LiteralPath (Join-Path $probe 'secret.log')) $true 'in-place race: setup junction leads to the outside folder'
+	Assert-Equal ([SelfXTestReparse]::DeleteMountPoint($probe)) $true 'in-place race: setup turns the junction back into a folder'
+	Assert-Equal ([bool]((Get-Item -LiteralPath $probe -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) $false 'in-place race: setup folder is a plain folder again'
+
+	# The attack, made reliable: the root holds a decoy folder A (processed first) and the target folder D with many files (old for
+	# /cleanold:, so that the helper deletes them as fast as the attacker does and both meet in the middle).
+	# The attacker waits until the helper has opened A and left it again (it is then in D: D is open and listed), deletes the
+	# files of D from the end, and turns the empty D into a junction to Outside2 while the helper still walks its list of D. The
+	# names the helper has not reached yet then lie in Outside2, which holds old files of the same names.
+	function Invoke-InPlaceAttack([string]$Root, [string[]]$HelperArguments, [string]$Target, [switch]$OldFiles) {
+		$decoy = Join-Path $Root 'A'
+		$folder = Join-Path $Root 'D'
+		[void][IO.Directory]::CreateDirectory($decoy)
+		[void][IO.Directory]::CreateDirectory($folder)
+		1..4000 | ForEach-Object { [IO.File]::WriteAllText((Join-Path $decoy ('a{0:D5}.txt' -f $_)), 'x') }
+		1..$inPlaceFiles | ForEach-Object { [IO.File]::WriteAllText((Join-Path $folder ('b{0:D5}.txt' -f $_)), 'x') }
+		if ($OldFiles) { Set-TestOld @(Get-ChildItem -LiteralPath $folder -File | ForEach-Object { $_.FullName }) }
+		$shell = [powershell]::Create()
+		[void]$shell.AddScript({ param($decoy, $folder, $target) [SelfXTestReparse]::Attack($decoy, $folder, $target, 20000) }).AddArgument($decoy).AddArgument($folder).AddArgument($Target)
+		$handle = $shell.BeginInvoke()
+		Start-Sleep -Milliseconds 200
+		$out = @(& $exe @HelperArguments 2>&1 | ForEach-Object { "$_" })
+		$state = "$(@($shell.EndInvoke($handle)) -join ' ')"
+		$shell.Dispose()
+		if (Test-Path -LiteralPath $folder) {
+			if ((Get-Item -LiteralPath $folder -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { [void][SelfXTestReparse]::DeleteMountPoint($folder) }
+		}
+		[pscustomobject]@{ State = $state; Output = ($out -join ' | ') }
+	}
+	$inPlaceFiles = 6000
+	$outside2 = Join-Path $temp 'Outside2'
+	[void][IO.Directory]::CreateDirectory($outside2)
+	$outside2Files = @(1..$inPlaceFiles | ForEach-Object { Join-Path $outside2 ('b{0:D5}.txt' -f $_) })
+	foreach ($file in $outside2Files) { [IO.File]::WriteAllText($file, 'keep') }
+	Set-TestOld $outside2Files
+	$flips = 0
+	for ($run = 1; $run -le 3; $run++) {
+		$root = Join-Path $temp "InPlaceOld$run"
+		$attack = Invoke-InPlaceAttack -Root $root -HelperArguments @("/cleanoldpath:$root", '/minage:7') -Target $outside2 -OldFiles
+		if ($attack.State -eq 'flipped') { $flips++ }
+		$left = @($outside2Files | Where-Object { Test-Path -LiteralPath $_ }).Count
+		Assert-Equal $left $inPlaceFiles "in-place race: /cleanold: run $run deletes no old file of Outside2 (attacker: $($attack.State))"
+	}
+	for ($run = 1; $run -le 3; $run++) {
+		$root = Join-Path $temp "InPlaceTree$run"
+		$attack = Invoke-InPlaceAttack -Root $root -HelperArguments @("/removetree:$root") -Target $outside2
+		if ($attack.State -eq 'flipped') { $flips++ }
+		$left = @($outside2Files | Where-Object { Test-Path -LiteralPath $_ }).Count
+		Assert-Equal $left $inPlaceFiles "in-place race: /removetree: run $run deletes no file of Outside2 (attacker: $($attack.State))"
+	}
+	# Without at least one flip during a run the race was not exercised (machine too fast or too slow): that is reported.
+	Assert-Equal ($flips -gt 0) $true "in-place race: the attacker turned the open folder into a junction in at least one of 6 runs ($flips)"
+	Test-OutsideIntact 'in-place race'
+
+	# The helper source checks every child handle (static check; the race above is probabilistic).
+	$serviceSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Service\SelfXService.cs') -Raw
+	Assert-Equal ([regex]::Matches($serviceSource, 'OpenExact\(').Count) 4 'in-place race: RemoveEntry, CleanFolder and CleanOld open children with OpenExact'
+	Assert-Equal ([regex]::Matches($serviceSource, '(?m)^\s+using \(SafeFileHandle handle = Open\((child|path),').Count) 0 'in-place race: no child is opened without the final path check'
 
 } finally {
 	Get-ChildItem -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint } | ForEach-Object { Remove-TestJunction $_.FullName }
