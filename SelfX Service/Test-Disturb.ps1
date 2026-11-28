@@ -48,8 +48,8 @@ $disturbText = [IO.File]::ReadAllText((Join-Path $sources 'SelfXDisturb.ps1'))
 $selfXText = [IO.File]::ReadAllText((Join-Path $sources 'Self_X.ps1'))
 
 # --- Kind of the disturbance (pure) ------------------------------------------------------------------
-$kinds = [ordered]@{ 0 = 'None'; 1 = 'None'; 2 = 'FullScreen'; 3 = 'FullScreen'; 4 = 'Presentation'; 5 = 'None'; 6 = 'QuietTime'; 7 = 'None'; 8 = 'None'; 99 = 'None'; -1 = 'None' }
-foreach ($state in $kinds.Keys) { Assert-Equal (Get-SelfXDisturbKind -State $state) $kinds[$state] "Kind of state $state" }
+$kinds = @(@(0, 'None'), @(1, 'None'), @(2, 'FullScreen'), @(3, 'FullScreen'), @(4, 'Presentation'), @(5, 'None'), @(6, 'QuietTime'), @(7, 'None'), @(8, 'None'), @(99, 'None'), @(-1, 'None'))
+foreach ($pair in $kinds) { Assert-Equal (Get-SelfXDisturbKind -State $pair[0]) $pair[1] "Kind of state $($pair[0])" }
 
 # --- Warning text: only when setting, marking, text and state all say yes ------------------------------------
 $text = 'HINT'
@@ -116,8 +116,8 @@ Assert-True ($selfXText -match '\$Global:SelfX_DisturbWarning = \(Get-SelfXText 
 Assert-Equal ([regex]::Matches($selfXText, 'Get-SelfXDisturbWarning -Enabled \$Global:SelfX_DisturbWarning')).Count 2 'Self_X.ps1 uses the hint in two places (action and restart)'
 Assert-True ($selfXText -match "-Disruptive \(\(\[string\]\`$rowObj\.Disruptive\)\.Trim\(\) -eq 'True'\)") 'The action confirmation uses the Disruptive field of the row'
 Assert-True ($selfXText -match "Write-SelfXLog `"Action '\`$\(\`$rowObj\.Id\)': disturbance hint added") 'The log names the action Id only'
-$noComments = ($disturbText -split "`n" | Where-Object { $_ -notmatch '^\s*#' }) -join "`n"
-$noComments = [regex]::Replace($noComments, '(?s)^<#.*?#>', '')
+$noComments = [regex]::Replace($disturbText, '(?s)^<#.*?#>', '')
+$noComments = ($noComments -split "`n" | Where-Object { $_ -notmatch '^\s*#' }) -join "`n"
 foreach ($forbidden in 'ConsentStore', 'CapabilityAccessManager', 'HKCU', 'HKLM', 'Get-ItemProperty', 'Get-Process', 'Start-Process', 'Write-SelfXLog', 'Out-File', 'Set-Content', 'Add-Content', 'NamedPipe', 'Invoke-SelfXServiceRequest', 'Get-CimInstance', 'quser', 'WTSEnumerateSessions') {
 	Assert-True (-not $noComments.Contains($forbidden)) "SelfXDisturb.ps1 does not use $forbidden"
 }
