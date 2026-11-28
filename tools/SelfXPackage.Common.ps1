@@ -56,6 +56,7 @@
     3.1.0    2026-11-27  fubu2k               Code files SelfX_Device_FreeSpace.ps1 and SelfX_Device_FreeSpaceUser.ps1 (free up space)
     3.1.0    2026-11-27  fubu2k               Code file SelfXEnvironment.ps1 (Environment_Mode)
     3.1.0    2026-11-28  fubu2k               Code file SelfXDisturb.ps1 (warning before disruptive actions)
+    3.1.0    2026-11-28  fubu2k               Library Disturb/SelfXDisturb.dll (Bin\Disturb) is part of the package entries and of the required binaries
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -66,7 +67,7 @@ $script:SelfXConfigFileNames = @('Health_Config.xml', 'Issues_List.xml', 'Networ
 # A new file of the project has to be added here; the tests fail until it is.
 $script:SelfXCodeFileNames = @(
     'Audio/SelfXAudio.dll', 'Branding.ps1', 'CopilotClipboard.ps1', 'CopilotFacts.ps1', 'CopilotPrompt.ps1',
-    'HealthChecks/Check-Compliance.ps1', 'HealthStatus.ps1', 'Languages/ar.xml', 'Languages/bn.xml',
+    'Disturb/SelfXDisturb.dll', 'HealthChecks/Check-Compliance.ps1', 'HealthStatus.ps1', 'Languages/ar.xml', 'Languages/bn.xml',
     'Languages/de.xml', 'Languages/en.xml', 'Languages/es.xml', 'Languages/fa.xml', 'Languages/fr.xml',
     'Languages/hi.xml', 'Languages/id.xml', 'Languages/it.xml', 'Languages/ja.xml', 'Languages/ko.xml',
     'Languages/nl.xml', 'Languages/pl.xml', 'Languages/pt.xml', 'Languages/ru.xml', 'Languages/sw.xml',
@@ -198,7 +199,7 @@ function ConvertTo-SelfXPackageLayout {
 function Get-SelfXPackageEntries {
     # Every file that Install.ps1 installs, with its name (relative to App or Config, '/' as separator), its path in the package
     # and its class: everything below App (except SelfX.Code.json) and Config (except SelfX.Config.json), Uninstall.ps1, the DLLs of
-    # Bin\WinRT (WinRT/<name>), Bin\Audio (Audio/<name>) and the two programs SelfXService.exe and SelfX.exe from Bin. Sorted by name
+    # Bin\WinRT (WinRT/<name>), Bin\Audio (Audio/<name>), Bin\Disturb (Disturb/<name>) and the two programs SelfXService.exe and SelfX.exe from Bin. Sorted by name
     # (ordinal). Throws for the old layout (Sources), a name that is not allowed, a duplicate, a missing program, a file that has no
     # class and a file in the wrong folder (a configuration file in App or a code file in Config).
     param([Parameter(Mandatory = $true)][string]$Stage)
@@ -229,6 +230,14 @@ function Get-SelfXPackageEntries {
         foreach ($item in @(Get-ChildItem -LiteralPath $audio -Recurse -File -Force)) {
             if ($item.DirectoryName -ne (Get-Item -LiteralPath $audio).FullName) { throw "Unexpected sub folder in Bin\Audio: $($item.DirectoryName)" }
             $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'Audio/' + $item.Name; Folder = 'Code' })
+        }
+    }
+    # The library of the disturbance hint comes from Bin too and is installed into the folder App\Disturb.
+    $disturb = Join-Path $Stage 'Bin\Disturb'
+    if (Test-Path -LiteralPath $disturb -PathType Container) {
+        foreach ($item in @(Get-ChildItem -LiteralPath $disturb -Recurse -File -Force)) {
+            if ($item.DirectoryName -ne (Get-Item -LiteralPath $disturb).FullName) { throw "Unexpected sub folder in Bin\Disturb: $($item.DirectoryName)" }
+            $entries.Add([pscustomobject]@{ Path = $item.FullName; Name = 'Disturb/' + $item.Name; Folder = 'Code' })
         }
     }
     # The two programs (service and starter) come from Bin and are installed into App next to the scripts; a missing one is an error.
@@ -498,11 +507,11 @@ function Test-SelfXPayloadFolder {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "The source $($property.Name) is missing in the payload." }
         if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne "$($property.Value)".ToUpperInvariant()) { throw "The source $($property.Name) does not match Bin\SelfX.Binaries.json." }
     }
-    foreach ($required in 'SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll', 'WinRT/SelfXWinRT.dll', 'Audio/SelfXAudio.dll') {
+    foreach ($required in 'SelfXService.exe', 'SelfX.exe', 'SelfXSessionStarter.dll', 'WinRT/SelfXWinRT.dll', 'Audio/SelfXAudio.dll', 'Disturb/SelfXDisturb.dll') {
         if ($null -eq $manifest.Binaries.PSObject.Properties[$required]) { throw "Bin\SelfX.Binaries.json does not list $required." }
     }
     foreach ($property in @($manifest.Binaries.PSObject.Properties)) {
-        if ($property.Name -notmatch '^((WinRT|Audio)/)?[A-Za-z0-9._-]+\.(exe|dll)$') { throw "Bin\SelfX.Binaries.json lists an unexpected file '$($property.Name)'." }
+        if ($property.Name -notmatch '^((WinRT|Audio|Disturb)/)?[A-Za-z0-9._-]+\.(exe|dll)$') { throw "Bin\SelfX.Binaries.json lists an unexpected file '$($property.Name)'." }
         $path = Join-Path $bin $property.Name.Replace('/', '\')
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Bin\$($property.Name) is missing in the payload." }
         if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne "$($property.Value)".ToUpperInvariant()) { throw "Bin\$($property.Name) does not match Bin\SelfX.Binaries.json." }

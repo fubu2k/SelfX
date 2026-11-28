@@ -38,6 +38,7 @@
                                               catalog in the mode Hash
     3.1.0    2026-11-28  fubu2k               Windows check: Windows 11 25H2 and Windows Server 2022/2025 with Desktop Experience are accepted; Server Core,
                                               a domain controller, Windows Enterprise multi-session and unreadable values are refused
+    3.1.0    2026-11-28  fubu2k               Disturb library (Disturb/SelfXDisturb.dll) in the fake package, the layout test and its refusal cases.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -79,6 +80,7 @@ $files = [ordered]@{
 	'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'
 	'WinRT/SelfXWinRT.dll'    = 'Service/SelfXWinRT.cs'
 	'Audio/SelfXAudio.dll'    = 'Service/SelfXAudio.cs'
+	'Disturb/SelfXDisturb.dll' = 'Service/SelfXDisturb.cs'
 }
 
 function Reset-Package {
@@ -113,7 +115,7 @@ try {
 	Reset-Package
 	$verified = Test-SelfXPrebuiltBinaries -BinFolder $bin -PackageFolder $package
 	Assert-Equal $verified['SelfXSessionStarter.dll'] (Get-FileHash -LiteralPath (Join-Path $bin 'SelfXSessionStarter.dll') -Algorithm SHA256).Hash 'N4: the check returns the verified SHA256 of SelfXSessionStarter.dll'
-	Assert-Equal $verified.Count 5 'N4: the check returns one hash per checked file'
+	Assert-Equal $verified.Count 6 'N4: the check returns one hash per checked file'
 
 	Reset-Package
 	Remove-Item -LiteralPath (Join-Path $bin 'SelfX.exe')
@@ -185,6 +187,25 @@ try {
 	$manifest.Binaries | Add-Member -NotePropertyName 'Audio/Other.dll' -NotePropertyValue (Get-FileHash -LiteralPath $extraAudio -Algorithm SHA256).Hash
 	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
 	Assert-Equal ((Test-Accepted) -like 'refused*unexpected file*Audio/Other.dll*') $true 'An additional file listed below Audio is refused'
+
+	# --- Disturb library: expected like the programs, nothing else may be listed below Disturb ---
+	Reset-Package
+	Remove-Item -LiteralPath (Join-Path $bin 'Disturb\SelfXDisturb.dll')
+	Assert-Equal ((Test-Accepted) -like 'refused*Disturb/SelfXDisturb.dll is missing*') $true 'A missing disturb library is refused'
+	Reset-Package
+	[IO.File]::WriteAllText((Join-Path $bin 'Disturb\SelfXDisturb.dll'), 'replaced')
+	Assert-Equal ((Test-Accepted) -like 'refused*Disturb/SelfXDisturb.dll does not match*') $true 'A changed disturb library is refused'
+	Reset-Package
+	[IO.File]::WriteAllText((Join-Path $package 'Service\SelfXDisturb.cs'), '// changed source')
+	Assert-Equal ((Test-Accepted) -like 'refused*not built from*SelfXDisturb.cs*') $true 'A disturb library built from other sources is refused'
+	Reset-Package
+	$extraDisturb = Join-Path $bin 'Disturb\Other.dll'
+	[IO.File]::WriteAllText($extraDisturb, 'other')
+	$manifestPath = Join-Path $bin 'SelfX.Binaries.json'
+	$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+	$manifest.Binaries | Add-Member -NotePropertyName 'Disturb/Other.dll' -NotePropertyValue (Get-FileHash -LiteralPath $extraDisturb -Algorithm SHA256).Hash
+	[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4))
+	Assert-Equal ((Test-Accepted) -like 'refused*unexpected file*Disturb/Other.dll*') $true 'An additional file listed below Disturb is refused'
 
 	Reset-Package
 	Remove-Item -LiteralPath $bin -Recurse -Force
@@ -352,16 +373,16 @@ else {
 	$layoutRoot = Join-Path $root 'layout'
 	$layoutPackage = Join-Path $layoutRoot 'package'
 	$layoutBin = Join-Path $layoutPackage 'Bin'
-	New-Item -ItemType Directory -Path (Join-Path $layoutBin 'WinRT'), (Join-Path $layoutBin 'Audio') -Force | Out-Null
+	New-Item -ItemType Directory -Path (Join-Path $layoutBin 'WinRT'), (Join-Path $layoutBin 'Audio'), (Join-Path $layoutBin 'Disturb') -Force | Out-Null
 	Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Sources') -Destination (Join-Path $layoutPackage 'Sources') -Recurse
 	Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Uninstall.ps1') -Destination $layoutPackage
-	foreach ($name in 'SelfXService.exe', 'SelfX.exe', 'WinRT\SelfXWinRT.dll', 'Audio\SelfXAudio.dll', 'SelfXSessionStarter.dll') { [IO.File]::WriteAllText((Join-Path $layoutBin $name), "binary $name") }
-	[IO.File]::WriteAllText((Join-Path $layoutBin 'SelfX.Binaries.json'), '{ "ManifestVersion": 3, "Sources": {}, "Binaries": { "WinRT/SelfXWinRT.dll": "00", "Audio/SelfXAudio.dll": "00" } }')
+	foreach ($name in 'SelfXService.exe', 'SelfX.exe', 'WinRT\SelfXWinRT.dll', 'Audio\SelfXAudio.dll', 'Disturb\SelfXDisturb.dll', 'SelfXSessionStarter.dll') { [IO.File]::WriteAllText((Join-Path $layoutBin $name), "binary $name") }
+	[IO.File]::WriteAllText((Join-Path $layoutBin 'SelfX.Binaries.json'), '{ "ManifestVersion": 3, "Sources": {}, "Binaries": { "WinRT/SelfXWinRT.dll": "00", "Audio/SelfXAudio.dll": "00", "Disturb/SelfXDisturb.dll": "00" } }')
 	$sorted = ConvertTo-SelfXPackageLayout -Stage $layoutPackage
 	[void](New-SelfXCodeManifest -Stage $layoutPackage -Version '3.1.0')
 	[void](New-SelfXConfigManifest -Stage $layoutPackage)
 	$packageCount = Test-SelfXFileManifest -PackageFolder $layoutPackage
-	Assert-Equal ($packageCount -eq ($sorted.Code + $sorted.Config + 5)) $true "layout: the package lists the sorted files, Uninstall.ps1 and the four files of Bin ($packageCount)"
+	Assert-Equal ($packageCount -eq ($sorted.Code + $sorted.Config + 6)) $true "layout: the package lists the sorted files, Uninstall.ps1 and the five files of Bin ($packageCount)"
 	Assert-Equal (Get-SelfXPackageToolVersion -PackageFolder $layoutPackage) '3.1.0' 'layout: the version comes from App\SelfX.Code.json'
 
 	$device = Join-Path $layoutRoot 'SelfX'
@@ -384,7 +405,7 @@ else {
 	Assert-Equal (Get-TopEntries) 'App,Config' 'old layout -> new: the install folder holds only App and Config'
 	try { $installedCount = Test-SelfXInstalledFiles -InstallFolder $device } catch { $installedCount = "refused: $($_.Exception.Message)" }
 	Assert-Equal $installedCount $packageCount 'old layout -> new: the installed folders match both lists'
-	foreach ($name in 'App\SelfXService.exe', 'App\SelfX.exe', 'App\Uninstall.ps1', 'App\SelfX.Code.json', 'App\SelfXPaths.ps1', 'App\WinRT\SelfXWinRT.dll', 'App\Audio\SelfXAudio.dll', 'App\Scripts_to_run\SelfX_Device_Restart.ps1', 'Config\Tool_Config.xml', 'Config\Issues_List.xml', 'Config\SelfX.Config.json', 'Config\Branding\company_logo.png') {
+	foreach ($name in 'App\SelfXService.exe', 'App\SelfX.exe', 'App\Uninstall.ps1', 'App\SelfX.Code.json', 'App\SelfXPaths.ps1', 'App\WinRT\SelfXWinRT.dll', 'App\Audio\SelfXAudio.dll', 'App\Disturb\SelfXDisturb.dll', 'App\Scripts_to_run\SelfX_Device_Restart.ps1', 'Config\Tool_Config.xml', 'Config\Issues_List.xml', 'Config\SelfX.Config.json', 'Config\Branding\company_logo.png') {
 		Assert-Equal (Test-Path -LiteralPath (Join-Path $device $name) -PathType Leaf) $true "old layout -> new: $name is installed"
 	}
 	foreach ($name in 'App\Tool_Config.xml', 'Config\Self_X.ps1', 'Config\SelfX.Code.json', 'App\SelfX.Config.json', 'App\SelfX.Files.json', 'App\Scripts_to_run\Own_Old.ps1', 'Config\Scripts_to_run\Own_Old.ps1') {

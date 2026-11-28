@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.10
+    Version : 3.1.11
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -44,6 +44,7 @@
     3.1.9    2026-11-28  fubu2k               Question TerminalServerSupportMail (required for WindowsServer) writes TerminalServer_Support_Mail
     3.1.10   2026-11-28  fubu2k               Package for WindowsServer: no step 'pack', no .intunewin file and no IntuneWinAppUtil.exe needed (Intune cannot install apps
                                               on Windows Server); the instructions of the server package do not name the .intunewin file
+    3.1.11   2026-11-28  fubu2k               Defender ASR exclusion: five files (SelfXDisturb.dll added, guide texts de and en)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -57,12 +58,13 @@ $script:WizardAnswerFile = $null
 $script:WizardInteractive = $true
 
 # The files of SelfX that the guide names for a per-rule exclusion of the Defender ASR rule for executable files (installed below
-# %ProgramFiles%\SelfX\App). Exactly these four, no folder and no wildcard; docs\Installation.md lists the same files.
+# %ProgramFiles%\SelfX\App). Exactly these five, no folder and no wildcard; docs\Installation.md lists the same files.
 $script:SelfXAsrExclusionFiles = @(
     'C:\Program Files\SelfX\App\SelfXService.exe',
     'C:\Program Files\SelfX\App\SelfX.exe',
     'C:\Program Files\SelfX\App\WinRT\SelfXWinRT.dll',
-    'C:\Program Files\SelfX\App\Audio\SelfXAudio.dll'
+    'C:\Program Files\SelfX\App\Audio\SelfXAudio.dll',
+    'C:\Program Files\SelfX\App\Disturb\SelfXDisturb.dll'
 )
 
 # ---------------------------------------------------------------- texts

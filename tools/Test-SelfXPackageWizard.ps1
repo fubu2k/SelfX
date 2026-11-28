@@ -75,7 +75,7 @@ function New-FakePayload {
     New-Item -ItemType Directory -Path $repo -Force | Out-Null
     Copy-Item -Path (Join-Path $RepositoryRoot 'SelfX Service\*') -Destination $repo -Recurse -Force
     $bin = Join-Path $repo 'Bin'
-    $programs = [ordered]@{ 'SelfXService.exe' = 'Service/SelfXService.cs'; 'SelfX.exe' = 'Service/SelfXLauncher.cs'; 'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'; 'WinRT/SelfXWinRT.dll' = 'Service/SelfXWinRT.cs'; 'Audio/SelfXAudio.dll' = 'Service/SelfXAudio.cs' }
+    $programs = [ordered]@{ 'SelfXService.exe' = 'Service/SelfXService.cs'; 'SelfX.exe' = 'Service/SelfXLauncher.cs'; 'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'; 'WinRT/SelfXWinRT.dll' = 'Service/SelfXWinRT.cs'; 'Audio/SelfXAudio.dll' = 'Service/SelfXAudio.cs'; 'Disturb/SelfXDisturb.dll' = 'Service/SelfXDisturb.cs' }
     $sources = [ordered]@{}; $binaries = [ordered]@{}
     foreach ($name in $programs.Keys) {
         $path = Join-Path $bin $name.Replace('/', '\')
@@ -320,7 +320,7 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ($guide -match 'Contoso <&> Test' -and $guide -match 'Installationsbefehl' -and $guide -match 'Plattformskript' -and $guide -match 'Detection\.ps1') 'German guide mentions app, commands, detection and scripts'
     Assert ($guide -match 'Get-SelfXAsrEvents\.ps1' -and $guide -match '01443614-cd74-433a-b99e-2ecdc07bfc25' -and $guide -match 'ASR Only Per Rule Exclusions') 'German guide has the step about the Defender ASR rule'
     $asrFiles = @([regex]::Matches($guide, '(?m)^   - (C:\\Program Files\\SelfX\\[^\r\n]+)\r?$') | ForEach-Object { $_.Groups[1].Value })
-    Assert ($asrFiles.Count -eq 4 -and @($asrFiles | Where-Object { $_ -notmatch '^C:\\Program Files\\SelfX\\App\\([A-Za-z]+\\)?[A-Za-z]+\.(exe|dll)$' }).Count -eq 0) 'guide names exactly four program files below SelfX\App for the exclusion (no folder, no wildcard)'
+    Assert ($asrFiles.Count -eq 5 -and @($asrFiles | Where-Object { $_ -notmatch '^C:\\Program Files\\SelfX\\App\\([A-Za-z]+\\)?[A-Za-z]+\.(exe|dll)$' }).Count -eq 0) 'guide names exactly five program files below SelfX\App for the exclusion (no folder, no wildcard)'
     Assert ($guide -match '(?m)^8\. Defender' -and $guide -match '(?m)^9\. Auf einem Pilotger' -and $guide -match '(?m)^7\. Ticket-Zuordnung') 'ASR step comes after the ticket step and before the test step (numbers 8 and 9 with scripts)'
     Initialize-WizardTexts -Folder $WizardFolder -Culture 'en'
     $enGuide = New-SelfXIntuneGuide -Answers @{ OrgName = 'Contoso'; Units = @() } -Version '3.1.0' -PackageFile 'p.intunewin' -DetectionFile 'd.ps1'
@@ -738,7 +738,7 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
         $pkg = Join-Path $order 'package'
         Assert ($script:StampSeen -eq 'https://timestamp.example/ts') 'the time stamp server is passed on'
         $signedNames = @($script:SignedFiles | ForEach-Object { $_.Substring($_.IndexOf('\package\') + 9) -replace '^.*\\', '' })
-        Assert (($signedNames -contains 'Install.ps1') -and ($signedNames -contains 'Detection.ps1') -and ($signedNames -contains 'Uninstall.ps1') -and ($signedNames -contains 'SelfXService.exe') -and ($signedNames -contains 'SelfXWinRT.dll') -and ($signedNames -contains 'SelfXAudio.dll')) 'every program, library and script of the package is signed'
+        Assert (($signedNames -contains 'Install.ps1') -and ($signedNames -contains 'Detection.ps1') -and ($signedNames -contains 'Uninstall.ps1') -and ($signedNames -contains 'SelfXService.exe') -and ($signedNames -contains 'SelfXWinRT.dll') -and ($signedNames -contains 'SelfXAudio.dll') -and ($signedNames -contains 'SelfXDisturb.dll')) 'every program, library and script of the package is signed'
         Assert (@($script:SignedFiles | Where-Object { $_ -match '\.(xml|json|png|cs|cat)$' }).Count -eq 0) 'no data file is signed (they are covered by the catalogs)'
         Assert (@($script:SignedFiles | Where-Object { $_ -like '*Detection.ps1' }).Count -eq 2) 'the Detection.ps1 of the package and the generated detection script are signed'
         $codeCatalog = @($script:CatalogCalls | Where-Object { $_.Folder -eq 'package' })

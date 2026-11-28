@@ -11,7 +11,7 @@
         reported (not hidden), XML with DTD or entity rejected, no user name in the output (also from the fields that must not be
         read), profile folders hidden, control characters removed, filter for the SelfX folder, limit and order, error handling of
         the log (no events, log missing, access denied);
-      - texts: the documentation (English and German) and the texts of the wizard name the rule and exactly the four SelfX files.
+      - texts: the documentation (English and German) and the texts of the wizard name the rule and exactly the five SelfX files.
     On Windows it also calls the real log once (read only) to check the call itself. Works in Windows PowerShell 5.1 and PowerShell 7.
 
 .NOTES
@@ -25,6 +25,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version
+    3.1.0    2026-11-28  fubu2k               Five SelfX files for the exclusion (SelfXDisturb.dll added)
 #>
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -45,7 +46,8 @@ $SelfXFiles = @(
     'C:\Program Files\SelfX\App\SelfXService.exe',
     'C:\Program Files\SelfX\App\SelfX.exe',
     'C:\Program Files\SelfX\App\WinRT\SelfXWinRT.dll',
-    'C:\Program Files\SelfX\App\Audio\SelfXAudio.dll'
+    'C:\Program Files\SelfX\App\Audio\SelfXAudio.dll',
+    'C:\Program Files\SelfX\App\Disturb\SelfXDisturb.dll'
 )
 
 # ---------------------------------------------------------------- static checks
@@ -292,7 +294,7 @@ foreach ($name in $docs.Keys) {
     Assert ($doc -match [regex]::Escape($RuleId) -and $doc -match '1121' -and $doc -match '1122') "$name names the rule ID and the events 1121 and 1122"
     Assert ($doc -match 'Get-SelfXAsrEvents\.ps1') "$name names the diagnostic script"
     $missing = @($SelfXFiles | Where-Object { $doc -notmatch [regex]::Escape($_) })
-    Assert ($missing.Count -eq 0) "$name lists the four SelfX files for the exclusion"
+    Assert ($missing.Count -eq 0) "$name lists the five SelfX files for the exclusion"
     Assert ($doc -match 'learn\.microsoft\.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference' -and $doc -match 'learn\.microsoft\.com/en-us/defender-endpoint/attack-surface-reduction-faq') "$name cites the ASR rules reference and the ASR FAQ"
     Assert ($doc -match '(?i)no guarantee|keine Zusage') "$name says that signing is no guarantee for the rule"
 }

@@ -105,6 +105,8 @@
     3.1.0    2026-11-28  fubu2k               Windows Server 2022 and 2025 with Desktop Experience (build 20348 or newer) are supported next to
                                               Windows 11 25H2; Server Core, domain controllers and Windows Enterprise multi-session stop the
                                               installation before anything is changed (Test-SelfXWindowsSupport)
+    3.1.0    2026-11-28  fubu2k               New library Disturb\SelfXDisturb.dll (state of the notification area): expected, checked and installed like
+                                              Audio\SelfXAudio.dll
 #>
 
 # Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
@@ -258,6 +260,7 @@ function Test-SelfXPrebuiltBinaries {
 		'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'
 		'WinRT/SelfXWinRT.dll'    = 'Service/SelfXWinRT.cs'
 		'Audio/SelfXAudio.dll'    = 'Service/SelfXAudio.cs'
+		'Disturb/SelfXDisturb.dll' = 'Service/SelfXDisturb.cs'
 	}
 	$Verified = @{}
 	$ManifestPath = Join-Path $BinFolder 'SelfX.Binaries.json'
@@ -341,9 +344,9 @@ function Read-SelfXFileList {
 
 function Test-SelfXFileManifest {
 	# Checks the package against App\SelfX.Code.json and Config\SelfX.Config.json. Code names are relative to the code folder:
-	# Uninstall.ps1 (top of the package), the programs SelfXService.exe and SelfX.exe and the DLLs WinRT/<name> and Audio/<name>
+	# Uninstall.ps1 (top of the package), the programs SelfXService.exe and SelfX.exe and the DLLs WinRT/<name>, Audio/<name> and Disturb/<name>
 	# (from Bin), everything else from App. Configuration names are relative to Config. Every file below App and Config, every DLL
-	# of Bin\WinRT and Bin\Audio, Uninstall.ps1 and both programs must be listed in exactly one of the two lists and unchanged,
+	# of Bin\WinRT, Bin\Audio and Bin\Disturb, Uninstall.ps1 and both programs must be listed in exactly one of the two lists and unchanged,
 	# and nothing may be in App or Config that is not listed. Returns the number of checked files, or $null when the package has
 	# neither list (the caller refuses it: no version). A package in the old layout (folder Sources), a mismatch, a missing list
 	# or a file in both lists throws before anything is installed.
@@ -375,19 +378,20 @@ function Test-SelfXFileManifest {
 			}
 			If($ListName -eq 'SelfX.Config.json') { $File = Join-Path $ConfigSource $Relative.Replace('/', '\') }
 			ElseIf($Relative -eq 'Uninstall.ps1') { $File = Join-Path $PackageFolder 'Uninstall.ps1' }
-			ElseIf(($Relative -like 'WinRT/*') -or ($Relative -like 'Audio/*') -or ($ProgramNames -contains $Relative)) { $File = Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') }
+			ElseIf(($Relative -like 'WinRT/*') -or ($Relative -like 'Audio/*') -or ($Relative -like 'Disturb/*') -or ($ProgramNames -contains $Relative)) { $File = Join-Path (Join-Path $PackageFolder 'Bin') $Relative.Replace('/', '\') }
 			Else { $File = Join-Path $AppSource $Relative.Replace('/', '\') }
 			If(-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "$Relative is listed in $ListName but missing in the package." }
 			If((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ne $Entry.Hash) { throw "$Relative does not match its SHA256 in $ListName." }
 			$Listed[$Relative.ToLowerInvariant()] = $ListName
 		}
 	}
-	# Every file of App, Config and of the libraries in Bin\WinRT and Bin\Audio must be listed in the list of its folder.
+	# Every file of App, Config and of the libraries in Bin\WinRT, Bin\Audio and Bin\Disturb must be listed in the list of its folder.
 	$Folders = @(
 		@{ Path = $AppSource; Prefix = ''; List = 'SelfX.Code.json' },
 		@{ Path = $ConfigSource; Prefix = ''; List = 'SelfX.Config.json' },
 		@{ Path = (Join-Path (Join-Path $PackageFolder 'Bin') 'WinRT'); Prefix = 'WinRT/'; List = 'SelfX.Code.json' },
-		@{ Path = (Join-Path (Join-Path $PackageFolder 'Bin') 'Audio'); Prefix = 'Audio/'; List = 'SelfX.Code.json' }
+		@{ Path = (Join-Path (Join-Path $PackageFolder 'Bin') 'Audio'); Prefix = 'Audio/'; List = 'SelfX.Code.json' },
+		@{ Path = (Join-Path (Join-Path $PackageFolder 'Bin') 'Disturb'); Prefix = 'Disturb/'; List = 'SelfX.Code.json' }
 	)
 	ForEach($Folder in $Folders)
 	{
@@ -426,7 +430,7 @@ function Get-SelfXPackageToolVersion {
 
 function Test-SelfXInstalledFiles {
 	# After copying: compares the installed folders with the lists copied into them. App\SelfX.Code.json lists the code folder App
-	# (scripts, WinRT and Audio libraries, SelfXService.exe, SelfX.exe, Uninstall.ps1; names relative to App), Config\SelfX.Config.json
+	# (scripts, WinRT, Audio and Disturb libraries, SelfXService.exe, SelfX.exe, Uninstall.ps1; names relative to App), Config\SelfX.Config.json
 	# the configuration folder Config (names relative to Config). This closes the gap between the check of the package and the copy:
 	# every listed file must exist with the listed SHA256, in exactly one of the two lists; no file in App or Config may be unlisted;
 	# no link may be in the way; and the install folder itself may hold nothing but App and Config (no mixed state with an older
@@ -525,7 +529,7 @@ function Clear-SelfXInstallFolder {
 
 function Copy-SelfXPayload {
 	# Copies the checked package into the emptied install folder: App\* (code, SelfX.Code.json), Uninstall.ps1, SelfXService.exe,
-	# SelfX.exe, Bin\WinRT\*.dll (as listed in Bin\SelfX.Binaries.json) and Bin\Audio\SelfXAudio.dll into InstallFolder\App, and
+	# SelfX.exe, Bin\WinRT\*.dll (as listed in Bin\SelfX.Binaries.json), Bin\Audio\SelfXAudio.dll and Bin\Disturb\SelfXDisturb.dll into InstallFolder\App, and
 	# Config\* (configuration, SelfX.Config.json) into InstallFolder\Config. Nothing is copied to the install folder itself.
 	# With -SignedPackage (trust mode Signature) the two signed catalogs are installed next to their lists: SelfX.Code.cat from
 	# the top of the package into App, Config\SelfX.Config.cat into Config. The service checks the lists against them.
@@ -559,6 +563,10 @@ function Copy-SelfXPayload {
 	$Audio = Join-Path $App 'Audio'
 	New-Item -ItemType Directory -Path $Audio -Force | Out-Null
 	Copy-Item -LiteralPath (Join-Path (Join-Path $Bin 'Audio') 'SelfXAudio.dll') -Destination $Audio -Force
+	# Library for PowerShell 7 (state of the notification area, hint before disruptive actions).
+	$Disturb = Join-Path $App 'Disturb'
+	New-Item -ItemType Directory -Path $Disturb -Force | Out-Null
+	Copy-Item -LiteralPath (Join-Path (Join-Path $Bin 'Disturb') 'SelfXDisturb.dll') -Destination $Disturb -Force
 }
 
 function ConvertTo-SelfXTrustedSignerList {
@@ -1467,7 +1475,7 @@ Try
 	Clear-SelfXInstallFolder -InstallFolder $InstallFolder
 	# Code into App, configuration into Config; the programs and libraries from Bin that were checked at the start (.NET 10, self-contained).
 	Copy-SelfXPayload -PackageFolder $PackageFolder -InstallFolder $InstallFolder -SignedPackage:($TrustMode -eq 'Signature')
-	Write-Output 'Installed App (code, SelfXService.exe, SelfX.exe, WinRT and audio libraries from Bin) and Config (configuration).'
+	Write-Output 'Installed App (code, SelfXService.exe, SelfX.exe, WinRT, audio and disturb libraries from Bin) and Config (configuration).'
 	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM (App and Config inherit the rights).
 	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$InstallFolder' (exit code $LASTEXITCODE)." }

@@ -63,7 +63,7 @@ function New-FakePayload {
     New-Item -ItemType Directory -Path $repo -Force | Out-Null
     Copy-Item -Path (Join-Path $RepositoryRoot 'SelfX Service\*') -Destination $repo -Recurse -Force
     $bin = Join-Path $repo 'Bin'
-    $programs = [ordered]@{ 'SelfXService.exe' = 'Service/SelfXService.cs'; 'SelfX.exe' = 'Service/SelfXLauncher.cs'; 'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'; 'WinRT/SelfXWinRT.dll' = 'Service/SelfXWinRT.cs'; 'Audio/SelfXAudio.dll' = 'Service/SelfXAudio.cs' }
+    $programs = [ordered]@{ 'SelfXService.exe' = 'Service/SelfXService.cs'; 'SelfX.exe' = 'Service/SelfXLauncher.cs'; 'SelfXSessionStarter.dll' = 'Service/SelfXSessionStarter.cs'; 'WinRT/SelfXWinRT.dll' = 'Service/SelfXWinRT.cs'; 'Audio/SelfXAudio.dll' = 'Service/SelfXAudio.cs'; 'Disturb/SelfXDisturb.dll' = 'Service/SelfXDisturb.cs' }
     $sources = [ordered]@{}; $binaries = [ordered]@{}
     foreach ($name in $programs.Keys) {
         $path = Join-Path $bin $name.Replace('/', '\')

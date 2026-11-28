@@ -7,7 +7,8 @@
       - Get-SelfXDisturbKind for every state of SHQueryUserNotificationState (1 to 7), 0 (cannot be read) and values outside the range;
       - Get-SelfXDisturbWarning for every combination of setting, marking and state, an empty text, a state provider that fails
         and one that returns nothing (the hint is only added when everything says yes);
-      - Get-SelfXNotificationState on this device: only a number from 0 to 7, nothing is changed (the API only reads);
+      - Get-SelfXNotificationState on this device: only a number from 0 to 7, nothing is changed (the API only reads); 0 where
+        the built library is not next to the script (source tree);
       - the delivered catalogue: the actions of the six disruptive scripts are marked on every entry, no other action is, and
         Get-SelfXLocalizedActions passes the field on;
       - the delivered Tool_Config.xml has Disturb_Warning = True and every language file has Disturb_Warning_Text;
@@ -26,6 +27,7 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-28  fubu2k               Initial version.
+    3.1.0    2026-11-28  fubu2k               The shell call is made by the built SelfXDisturb.dll: static checks of SelfXDisturb.cs and no Add-Type.
 #>
 $ErrorActionPreference = 'Stop'
 $sources = Join-Path $PSScriptRoot 'Sources'
@@ -121,7 +123,20 @@ $noComments = ($noComments -split "`n" | Where-Object { $_ -notmatch '^\s*#' }) 
 foreach ($forbidden in 'ConsentStore', 'CapabilityAccessManager', 'HKCU', 'HKLM', 'Get-ItemProperty', 'Get-Process', 'Start-Process', 'Write-SelfXLog', 'Out-File', 'Set-Content', 'Add-Content', 'NamedPipe', 'Invoke-SelfXServiceRequest', 'Get-CimInstance', 'quser', 'WTSEnumerateSessions') {
 	Assert-True (-not $noComments.Contains($forbidden)) "SelfXDisturb.ps1 does not use $forbidden"
 }
-Assert-True ($disturbText -cmatch 'SHQueryUserNotificationState' -and $disturbText -cmatch 'shell32\.dll') 'SelfXDisturb.ps1 calls SHQueryUserNotificationState of shell32.dll'
+Assert-True ($noComments -cmatch 'Import-SelfXDisturb -InstallFolder' -and $noComments -cmatch '\[SelfX\.SelfXDisturb\]::GetNotificationState\(\)') 'SelfXDisturb.ps1 reads the state through the checked library'
+Assert-True (-not ($noComments -cmatch 'Add-Type|csc\.exe|dotnet\s+build|DllImport|MemberDefinition')) 'SelfXDisturb.ps1 compiles nothing and declares no native call (the call is made by SelfXDisturb.dll)'
+# The library: one documented call of shell32.dll from the system folder, nothing else.
+$csPath = Join-Path $PSScriptRoot 'Service\SelfXDisturb.cs'
+$csText = [IO.File]::ReadAllText($csPath)
+$csCode = [regex]::Replace($csText, '(?s)^/\*.*?\*/', '')
+$csCode = ($csCode -split "`n" | Where-Object { $_ -notmatch '^\s*//' }) -join "`n"
+Assert-Equal ([regex]::Matches($csCode, 'DllImport\(')).Count 1 'SelfXDisturb.cs declares exactly one native call'
+Assert-True ($csCode -cmatch 'DllImport\("shell32\.dll"' -and $csCode -cmatch 'SHQueryUserNotificationState\(out int state\)') 'SelfXDisturb.cs calls SHQueryUserNotificationState of shell32.dll'
+Assert-True ($csCode -cmatch 'DefaultDllImportSearchPaths\(DllImportSearchPath\.System32\)') 'SelfXDisturb.cs loads shell32.dll from the system folder only'
+foreach ($forbidden in 'System.IO', 'System.Diagnostics', 'Microsoft.Win32', 'Process', 'Registry', 'File.', 'Environment', 'Assembly') {
+	Assert-True (-not $csCode.Contains($forbidden)) "SelfXDisturb.cs does not use $forbidden"
+}
+Assert-True ($csCode -cmatch 'state < StateMin \|\| state > StateMax' -and $csCode -cmatch 'catch \(DllNotFoundException\)') 'SelfXDisturb.cs returns 0 for an invalid value and when the call is not available'
 Assert-True (-not ($disturbText -cmatch '[^\x00-\x7F]')) 'SelfXDisturb.ps1 is plain ASCII (no byte order mark needed)'
 $parseErrors = $null
 [void][Management.Automation.Language.Parser]::ParseInput($disturbText, [ref]$null, [ref]$parseErrors)
@@ -129,6 +144,8 @@ Assert-Equal @($parseErrors).Count 0 'SelfXDisturb.ps1 parses'
 # The file is a code file of the package (class Code) and is listed once.
 $common = [IO.File]::ReadAllText((Join-Path (Split-Path $PSScriptRoot -Parent) 'tools\SelfXPackage.Common.ps1'))
 Assert-Equal ([regex]::Matches($common, "'SelfXDisturb\.ps1'")).Count 1 'SelfXPackage.Common.ps1 lists SelfXDisturb.ps1 once as a code file'
+Assert-Equal ([regex]::Matches($common, "'Disturb/SelfXDisturb\.dll'")).Count 2 'SelfXPackage.Common.ps1 names Disturb/SelfXDisturb.dll in the code names and in the required binaries'
+Assert-True ((Get-Content -LiteralPath (Join-Path (Split-Path $PSScriptRoot -Parent) 'tools\Build-SelfXBinaries.ps1') -Raw) -match "'Service/SelfXDisturb\.cs'\s+=\s+@\{ Project = 'SelfXDisturb';\s+Folder = 'Disturb'; Output = 'SelfXDisturb\.dll' \}") 'Build-SelfXBinaries.ps1 builds the library into Bin\Disturb'
 
 if ($script:errors.Count) {
 	$script:errors | ForEach-Object { Write-Output "FAIL: $_" }

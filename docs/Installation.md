@@ -610,7 +610,7 @@ you cannot set these criteria. The user sees a notification, the rule creates no
 reference](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference), [ASR
 FAQ](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-faq)).
 
-**Why SelfX can be affected.** `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll` and `SelfXAudio.dll` are built on your build machine (step 2.3) and
+**Why SelfX can be affected.** `SelfXService.exe`, `SelfX.exe`, `SelfXWinRT.dll`, `SelfXAudio.dll` and `SelfXDisturb.dll` are built on your build machine (step 2.3) and
 exist only on your devices. A program that Microsoft has not seen before may not meet the criteria, and the FAQ says that a new
 version of an app can be blocked while it builds reputation. This is a conclusion from the way SelfX is built, not a statement of
 Microsoft about SelfX.
@@ -642,13 +642,14 @@ often.
 policy of the type *Attack surface reduction rules*. After the rule is set to Audit, Block or Warn, the setting **ASR Only Per Rule
 Exclusions** appears for this rule ([configure ASR rules and
 exclusions](https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-configure)). Add only the files that
-the events name, at most these four:
+the events name, at most these five:
 
 ```
 C:\Program Files\SelfX\App\SelfXService.exe
 C:\Program Files\SelfX\App\SelfX.exe
 C:\Program Files\SelfX\App\WinRT\SelfXWinRT.dll
 C:\Program Files\SelfX\App\Audio\SelfXAudio.dll
+C:\Program Files\SelfX\App\Disturb\SelfXDisturb.dll
 ```
 
 - Do **not** exclude the folder `C:\Program Files\SelfX` and do not use a wildcard. Do **not** use the global setting *Attack
@@ -766,8 +767,8 @@ single list `SelfX.Files.json`; the installation replaces it.
   from the local cache only, so the service does not wait on a device without a network
   ([Architecture](Architecture.md#the-mode-signature-in-the-service)).
 - For the first rollout you can set `Service_FileCheck` to `Audit` (log only).
-- The libraries `WinRT\*.dll` (Windows Update interface) and `Audio\SelfXAudio.dll` (action "No
-  sound on this PC") are also checked **when loaded** and kept open meanwhile, so that they cannot
+- The libraries `WinRT\*.dll` (Windows Update interface) `Audio\SelfXAudio.dll` (action "No
+  sound on this PC") and `Disturb\SelfXDisturb.dll` (hint before disruptive actions) are also checked **when loaded** and kept open meanwhile, so that they cannot
   be replaced between the check and loading.
 - Limit: the check detects accidents (broken or partial update) and a replaced `SelfX.exe`, but
   not an attacker with administrator rights. The folder rights and App Control help against

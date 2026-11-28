@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SelfX Service: SelfXDisturb.dll, reads the state of the notification area of the own session through SHQueryUserNotificationState
+     (library for PowerShell 7). No NuGet package, no dependency apart from the .NET runtime. -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>SelfXDisturb</AssemblyName>
+    <RootNamespace>SelfX</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\SelfXDisturb.cs" Link="SelfXDisturb.cs" />
+  </ItemGroup>
+</Project>

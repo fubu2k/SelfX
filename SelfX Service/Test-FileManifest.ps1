@@ -41,6 +41,7 @@
                                               installed folder may hold nothing but App and Config (left-over files and non-empty folders refused,
                                               empty folders allowed), unlisted files in Config are refused, the icon rule of Install.ps1 equals
                                               Get-SelfXImagePath.
+    3.1.0    2026-11-28  fubu2k               Library Disturb/SelfXDisturb.dll (Bin\Disturb): code list, check, extra, changed and missing file.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -98,7 +99,7 @@ function Get-ListFiles([string]$Path) {
 	$files = [ordered]@{}; foreach ($property in $list.Files.PSObject.Properties) { $files[$property.Name] = $property.Value }
 	return $files
 }
-# What Install.ps1 does: App\* (with SelfX.Code.json), Uninstall.ps1, the programs from Bin, the DLLs from Bin\WinRT and Bin\Audio into
+# What Install.ps1 does: App\* (with SelfX.Code.json), Uninstall.ps1, the programs from Bin, the DLLs from Bin\WinRT, Bin\Audio and Bin\Disturb into
 # App, and Config\* (with SelfX.Config.json) into Config.
 $installed = Join-Path $root 'installed'
 function New-InstalledCopy {
@@ -112,6 +113,7 @@ function New-InstalledCopy {
 	foreach ($name in 'SelfXService.exe', 'SelfX.exe') { Copy-Item -LiteralPath (Join-Path $pristine "Bin\$name") -Destination $app }
 	Copy-Item -LiteralPath (Join-Path $pristine 'Bin\WinRT') -Destination (Join-Path $app 'WinRT') -Recurse
 	Copy-Item -LiteralPath (Join-Path $pristine 'Bin\Audio') -Destination (Join-Path $app 'Audio') -Recurse
+	Copy-Item -LiteralPath (Join-Path $pristine 'Bin\Disturb') -Destination (Join-Path $app 'Disturb') -Recurse
 }
 try {
 	New-Item -ItemType Directory -Path $pristine -Force | Out-Null
@@ -124,6 +126,9 @@ try {
 	# Stand-in for Bin\Audio\SelfXAudio.dll (audio library of the action "No sound").
 	New-Item -ItemType Directory -Path (Join-Path $pristine 'Bin\Audio') -Force | Out-Null
 	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\Audio\SelfXAudio.dll'), [byte[]](9, 10, 11, 12))
+	# Stand-in for Bin\Disturb\SelfXDisturb.dll (library of the hint before disruptive actions).
+	New-Item -ItemType Directory -Path (Join-Path $pristine 'Bin\Disturb') -Force | Out-Null
+	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\Disturb\SelfXDisturb.dll'), [byte[]](13, 14, 15, 16))
 	# Stand-ins for the two programs of Bin (service and starter).
 	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\SelfXService.exe'), [byte[]](17, 18, 19, 20))
 	[IO.File]::WriteAllBytes((Join-Path $pristine 'Bin\SelfX.exe'), [byte[]](21, 22, 23, 24))
@@ -131,7 +136,7 @@ try {
 	# The package layout of tools\New-SelfXIntuneWin.ps1: code files into App, configuration files into Config, Sources removed.
 	$layout = ConvertTo-SelfXPackageLayout -Stage $pristine
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $pristine 'Sources')) $false 'layout: Sources is removed'
-	Assert-Equal ($layout.Code + $layout.Config) ($expectedCount - 6) 'layout: every file of Sources is sorted (Uninstall.ps1 and the 5 files of Bin stay)'
+	Assert-Equal ($layout.Code + $layout.Config) ($expectedCount - 7) 'layout: every file of Sources is sorted (Uninstall.ps1 and the 6 files of Bin stay)'
 	foreach ($name in 'Self_X.ps1', 'SelfXPaths.ps1', 'Scripts_to_run\SelfX_Device_SyncTime.ps1', 'HealthChecks\Check-Compliance.ps1', 'Languages\de.xml', 'Repair.ico', 'logo.png') {
 		Assert-Equal (Test-Path -LiteralPath (Join-Path $pristine "App\$name") -PathType Leaf) $true "layout: $name is in App"
 		Assert-Equal (Test-Path -LiteralPath (Join-Path $pristine "Config\$name")) $false "layout: $name is not in Config"
@@ -160,7 +165,7 @@ try {
 		Assert-Equal $class $expectedClass "class: $name"
 		if ($expectedClass -eq 'Code') { Assert-Equal ($script:SelfXCodeFileNames -ccontains $name) $true "name list of the project contains $name" }
 	}
-	$fromSources = @($script:SelfXCodeFileNames | Where-Object { $_ -notin 'Uninstall.ps1', 'SelfXService.exe', 'SelfX.exe', 'Audio/SelfXAudio.dll' })
+	$fromSources = @($script:SelfXCodeFileNames | Where-Object { $_ -notin 'Uninstall.ps1', 'SelfXService.exe', 'SelfX.exe', 'Audio/SelfXAudio.dll', 'Disturb/SelfXDisturb.dll' })
 	foreach ($name in $fromSources) { Assert-Equal ($sourceFiles -ccontains $name) $true "name list of the project: $name exists in Sources" }
 	Assert-Equal @($script:SelfXCodeFileNames | Group-Object { $_.ToLowerInvariant() } | Where-Object Count -gt 1).Count 0 'name list of the project has no duplicates'
 	foreach ($case in @(@('Branding/company_logo.png', 'Config'), @('Branding/a/b.xml', 'Config'), @('Tool_Config.xml', 'Config'), @('WinRT/Some.Library.dll', 'Code'), @('Scripts_to_run/Own_Action.ps1', 'Config'), @('HealthChecks/Own-Check.ps1', 'Config'), @('Languages/de-AT.xml', 'Config'), @('Texts/de.xml', 'Config'), @('Texts/zh-Hans.xml', 'Config'))) {
@@ -195,7 +200,7 @@ try {
 	$codeCount = New-SelfXCodeManifest -Stage $pristine -Version '9.9.9'
 	$configCount = New-SelfXConfigManifest -Stage $pristine
 	$count = $codeCount + $configCount
-	Assert-Equal $count $expectedCount 'generator: every file of Sources, Uninstall.ps1, Bin\WinRT, Bin\Audio and the two programs is listed in one of the two lists'
+	Assert-Equal $count $expectedCount 'generator: every file of Sources, Uninstall.ps1, Bin\WinRT, Bin\Audio, Bin\Disturb and the two programs is listed in one of the two lists'
 	$manifest = Get-Content -LiteralPath (Get-ListPath $pristine 'SelfX.Code.json') -Raw | ConvertFrom-Json
 	$configManifest = Get-Content -LiteralPath (Get-ListPath $pristine 'SelfX.Config.json') -Raw | ConvertFrom-Json
 	Assert-Equal $manifest.ManifestVersion 1 'code list: format 1'
@@ -215,7 +220,7 @@ try {
 		Assert-Equal ($null -eq $manifest.Files.$name) $true "code list does not contain $name"
 	}
 	foreach ($listName in 'SelfX.Code.json', 'SelfX.Config.json') { Assert-Equal ($null -eq $manifest.Files.$listName -and $null -eq $configManifest.Files.$listName) $true "no list contains $listName" }
-	foreach ($name in 'WinRT/SelfXWinRT.dll', 'WinRT/Microsoft.Windows.SDK.NET.dll', 'Audio/SelfXAudio.dll') {
+	foreach ($name in 'WinRT/SelfXWinRT.dll', 'WinRT/Microsoft.Windows.SDK.NET.dll', 'Audio/SelfXAudio.dll', 'Disturb/SelfXDisturb.dll') {
 		Assert-Equal ($null -ne $manifest.Files.$name) $true "code list contains $name"
 	}
 	foreach ($name in 'SelfXService.exe', 'SelfX.exe') {
@@ -224,6 +229,7 @@ try {
 	}
 	Assert-Equal $manifest.Files.'WinRT/SelfXWinRT.dll' (Get-FileHash -LiteralPath (Join-Path $pristine 'Bin\WinRT\SelfXWinRT.dll') -Algorithm SHA256).Hash 'code list: SHA256 of the WinRT library'
 	Assert-Equal $manifest.Files.'Audio/SelfXAudio.dll' (Get-FileHash -LiteralPath (Join-Path $pristine 'Bin\Audio\SelfXAudio.dll') -Algorithm SHA256).Hash 'code list: SHA256 of the audio library'
+	Assert-Equal $manifest.Files.'Disturb/SelfXDisturb.dll' (Get-FileHash -LiteralPath (Join-Path $pristine 'Bin\Disturb\SelfXDisturb.dll') -Algorithm SHA256).Hash 'code list: SHA256 of the disturb library'
 	# The lists are in App and Config: they must not count as extra files.
 	Assert-Equal (Test-SelfXFileManifest -PackageFolder $pristine) ($count) 'check: the unchanged package is accepted'
 
@@ -410,6 +416,12 @@ try {
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'Audio/Extra.dll is in the package but not listed' 'check: an extra audio file is refused'
 	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Bin\Audio\SelfXAudio.dll')
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' 'check: a missing audio library is refused'
+	Reset-Package; Add-Content -LiteralPath (Join-Path $package 'Bin\Disturb\SelfXDisturb.dll') -Value 'x'
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'Disturb/SelfXDisturb.dll does not match its SHA256' 'check: a changed disturb library is refused'
+	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'Bin\Disturb\Extra.dll') -Value 'x'
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'Disturb/Extra.dll is in the package but not listed' 'check: an extra disturb file is refused'
+	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Bin\Disturb\SelfXDisturb.dll')
+	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'missing in the package' 'check: a missing disturb library is refused'
 	Reset-Package; Set-Content -LiteralPath (Join-Path $package 'Bin\WinRT\Extra.dll') -Value 'x'
 	Assert-Throws { Test-SelfXFileManifest -PackageFolder $package } 'WinRT/Extra.dll is in the package but not listed' 'check: an extra WinRT library is refused'
 	Reset-Package; Remove-Item -LiteralPath (Join-Path $package 'Bin\WinRT\Microsoft.Windows.SDK.NET.dll')
