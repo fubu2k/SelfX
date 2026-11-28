@@ -101,6 +101,7 @@ Marke: `SelfX.Config.json` enthält `ConfigRevision`, die UTC-Zeit des Paketlauf
 | `Support_Hours` | `Mo.–Fr. 08:00–17:00` |
 | `Support_Phone_number` | `+49 000 0000` |
 | `Support_Mail` | `it-support@ihre-firma.example` |
+| `TerminalServer_Support_Mail` | `ts-support@ihre-firma.example`. Nur auf Windows Server: ersetzt `Support_Mail` und `Ticket_Mail` (siehe [Terminalserver](#terminalserver-windows-server)). |
 | `Support_Teams` | Teams-Adresse oder `https://`-Link |
 | `Support_Website` | `https://support.ihre-firma.example` (nur `https://`) |
 
@@ -182,6 +183,16 @@ Auf einem Terminalserver lehnt auch der Dienst jede `System`-Aktion und jede Rep
 weil das Fenster keine Sicherheitsgrenze ist. Eine Aktion ohne Einstufung gilt als `Hide`.
 
 Die Prüfung anderer aktiver Sitzungen (`OtherSessions`) gilt in beiden Modi gleich.
+
+**Support-Adresse auf einem Terminalserver.** `TerminalServer_Support_Mail` in `Tool_Config.xml` ist
+eine feste E-Mail-Adresse des Teams, das den Terminalserver betreut. Auf Windows Server ist sie die
+Support-E-Mail, der Empfänger des Tickets und die Adresse im Hilfe-Fenster. Die Ticket-Zuordnung
+(`Ticket_Config.xml` und die für ein Gerät in der Registry gesetzte Adresse) wird dort nicht genutzt:
+Support-Einheiten, Group Tags und Geräteklassen beschreiben das Gerät einer Person. Der Computername des
+Servers bleibt im Ticket. Ist `TerminalServer_Support_Mail` leer oder keine einzelne Adresse, gelten
+`Support_Mail` und `Ticket_Mail`, weiterhin ohne Zuordnung, und SelfX schreibt eine Warnung in sein
+Protokoll. Der Paket-Assistent fragt bei einem Paket für Windows Server nach der Adresse; auf Windows 11
+wird die Einstellung ignoriert.
 
 **Gerätestatus und Systeminformationen auf einem Terminalserver.** Der Gerätestatus beschreibt den
 Server, nicht den Arbeitsplatz des Nutzers. `TerminalServer_Health` legt fest, wer ihn bekommt:

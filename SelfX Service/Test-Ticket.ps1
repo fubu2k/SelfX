@@ -9,13 +9,14 @@
     Name    : Test-Ticket.ps1
     Package : SelfX Service
     Context : Build machine / CI (any user)
-    Version : 2.8.7
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.4    2026-11-22  fubu2k               Initial version
     2.8.7    2026-11-22  fubu2k               Recipient and Cc from the registry
+    3.1.0    2026-11-28  fubu2k               Get-SelfXSupportContact: fixed address and no routing on a terminal server
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -313,6 +314,24 @@ try {
 	Remove-Item function:New-SelfXOutlookMail, function:Start-Process -ErrorAction SilentlyContinue
 	if (Test-Path -LiteralPath $ccTemp) { Remove-Item -LiteralPath $ccTemp -Recurse -Force -ErrorAction SilentlyContinue }
 }
+
+# --- support addresses: on a terminal server the fixed address, no routing -----------------------
+$c = Get-SelfXSupportContact -Mode 'Client' -SupportMail ' support@example.com ' -TicketMail '' -TerminalServerMail 'ts@example.com'
+Assert-Equal "$($c.SupportMail)|$($c.TicketMail)|$($c.UseRouting)|$($c.Source)|$($c.Valid)" 'support@example.com|support@example.com|True|Client|True' 'Client: Support_Mail, Ticket_Mail empty = Support_Mail, routing, TerminalServer_Support_Mail ignored'
+$c = Get-SelfXSupportContact -Mode 'Client' -SupportMail 'support@example.com' -TicketMail 'desk@example.com' -TerminalServerMail ''
+Assert-Equal "$($c.SupportMail)|$($c.TicketMail)|$($c.UseRouting)" 'support@example.com|desk@example.com|True' 'Client: own ticket recipient'
+$c = Get-SelfXSupportContact -Mode 'TerminalServer' -SupportMail 'support@example.com' -TicketMail 'desk@example.com' -TerminalServerMail ' ts-support@example.com '
+Assert-Equal "$($c.SupportMail)|$($c.TicketMail)|$($c.UseRouting)|$($c.Source)|$($c.Valid)" 'ts-support@example.com|ts-support@example.com|False|TerminalServer|True' 'TerminalServer: the fixed address for support e-mail and ticket, no routing'
+foreach ($bad in @('', $null, 'a@example.com;b@example.com', 'Support <ts@example.com>', 'ts@example.com?cc=x@example.com', 'no-address')) {
+	$c = Get-SelfXSupportContact -Mode 'TerminalServer' -SupportMail 'support@example.com' -TicketMail '' -TerminalServerMail $bad
+	Assert-Equal "$($c.SupportMail)|$($c.TicketMail)|$($c.UseRouting)|$($c.Source)|$($c.Valid)" 'support@example.com|support@example.com|False|TerminalServerFallback|False' "TerminalServer with '$bad': Support_Mail and Ticket_Mail stay, still no routing, logged as not valid"
+}
+$c = Get-SelfXSupportContact -Mode 'terminalserver' -SupportMail 'support@example.com' -TicketMail '' -TerminalServerMail 'ts@example.com'
+Assert-Equal "$($c.Source)|$($c.UseRouting)" 'Client|True' 'The mode is compared exactly (the value comes from Get-SelfXEnvironmentMode)'
+# Without routing the ticket goes to the fixed recipient even when the registry names another address for the device.
+$noRouting = [pscustomobject]@{ GroupTag = ''; Category = ''; OU = ''; Mail = ''; Cc = '' }
+$t = Get-SelfXTicketTarget -DefaultMail 'ts-support@example.com' -Config $null -DeviceValues $noRouting
+Assert-Equal "$($t.To)|$($t.Cc)|$($t.Unit)|$($t.GroupTag)|$($t.Source)" 'ts-support@example.com||||Default' 'TerminalServer: the ticket target is the fixed address without unit and group tag'
 
 # --- the file has no side effects ---------------------------------------------------------------
 $text = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Sources\TicketMail.ps1'))

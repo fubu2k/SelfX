@@ -60,6 +60,8 @@
                                               ticket and text for Copilot without rows of the class Server for normal users and without the
                                               kinds of connection (Get-SelfXViewScope)
     3.1.0    2026-11-28  fubu2k               The mode comes from Windows (Get-SelfXEnvironmentMode), not from Environment_Mode of Tool_Config.xml
+    3.1.0    2026-11-28  fubu2k               Terminal server: TerminalServer_Support_Mail is the support e-mail, the ticket recipient and the address in
+                                              the help window; no ticket routing there (Get-SelfXSupportContact)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -340,15 +342,18 @@ If(-not $Tool_Version)
 Write-SelfXLog "SelfX $Tool_Version opened: language $($SelfX_UI_Language.Culture) (setting $Global:SelfX_Language_Setting), page '$Page'."
 $Tool_Name = Get-SelfXText "Tool_Name" "SelfX"
 $Support_Phone_number = Get-SelfXText "Support_Phone_number" ""
-$Support_Mail = Get-SelfXText "Support_Mail" ""
-# Ticket by e-mail (off by default): recipient only from the configuration, Ticket_Mail empty = Support_Mail
-$Ticket_Mail = (Get-SelfXText "Ticket_Mail" "").Trim()
-If(-not $Ticket_Mail) { $Ticket_Mail = "$Support_Mail".Trim() }
+# Support e-mail and ticket recipient only from the configuration (TicketSend.ps1, Get-SelfXSupportContact): Ticket_Mail empty =
+# Support_Mail. On a terminal server TerminalServer_Support_Mail replaces both (also in the help window) and the ticket routing is not used.
+$Global:SelfX_Support = Get-SelfXSupportContact -Mode $Global:SelfX_Environment.Mode -SupportMail (Get-SelfXText "Support_Mail" "") -TicketMail (Get-SelfXText "Ticket_Mail" "") -TerminalServerMail (Get-SelfXText "TerminalServer_Support_Mail" "")
+If(-not $Global:SelfX_Support.Valid) { Write-SelfXLog "Terminal server: TerminalServer_Support_Mail is not one plain e-mail address; Support_Mail and Ticket_Mail are used, without ticket routing." 'Warning' }
+$Support_Mail = $Global:SelfX_Support.SupportMail
+# Ticket by e-mail (off by default)
+$Ticket_Mail = $Global:SelfX_Support.TicketMail
 $Ticket_Tag = (Get-SelfXText "Ticket_Subject_Tag" "SelfX").Trim()
 $Ticket_Available = ((Get-SelfXText "Ticket_Enabled" "False") -eq 'True') -and (Test-SelfXTicketAddress $Ticket_Mail)
 # Routing to the support units (Ticket_Config.xml); a file that cannot be used leaves the default recipient
 $Ticket_Routing = $null
-If($Ticket_Available)
+If($Ticket_Available -and $Global:SelfX_Support.UseRouting)
 	{
 		Try
 			{
@@ -2363,8 +2368,10 @@ Function Show-SelfXTicketDialog
 		$Dialog.FindName('TicketIntro').Text = Get-SelfXString 'Ticket_Intro_Text'
 		$Dialog.FindName('TicketLabel').Text = Get-SelfXString 'Ticket_Description_Label'
 		$Dialog.FindName('TicketInfo').Text = Get-SelfXString 'Ticket_Info_Text'
-		# Recipient from the routing (read only values of the device); the user cannot change it
-		$Target = Get-SelfXTicketTarget -DefaultMail $Ticket_Mail -Config $Ticket_Routing
+		# Recipient from the routing (read only values of the device); the user cannot change it. On a terminal server the routing is not
+		# used: no unit, group tag, device class or address of the device, only the fixed recipient.
+		If($Global:SelfX_Support.UseRouting) { $Target = Get-SelfXTicketTarget -DefaultMail $Ticket_Mail -Config $Ticket_Routing }
+		Else { $Target = Get-SelfXTicketTarget -DefaultMail $Ticket_Mail -Config $null -DeviceValues ([pscustomobject]@{ GroupTag = ''; Category = ''; OU = ''; Mail = ''; Cc = '' }) }
 		$Global:SelfX_TicketTarget = $Target
 		Write-SelfXLog "Ticket recipient: $($Target.Source), unit '$($Target.Unit)'"
 		$Dialog.FindName('TicketTarget').Text = Get-SelfXString 'Ticket_Recipient_Text' $Target.To

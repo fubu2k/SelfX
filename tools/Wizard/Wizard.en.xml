@@ -7,7 +7,7 @@
 	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
 	the same placeholders.
 -->
-<Wizard_Language Culture="en" Name="English" Version="1.7.0">
+<Wizard_Language Culture="en" Name="English" Version="1.8.0">
 	<T Id="title">SelfX package wizard</T>
 	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
 	<T Id="rec">Recommendation: </T>
@@ -39,6 +39,8 @@
 	<T Id="TerminalServerHealth.rec">Off. On a terminal server the device status shows the server (updates, Defender, restart), not the place of work of the user, and users could not fix it. Choose AdminOnly when your administrators want to use it.</T>
 	<T Id="SupportMail.ask">Support e-mail address (shared mailbox)</T>
 	<T Id="SupportMail.rec">Use a shared (functional) mailbox, never a personal one. The address is also the recipient of the device logs e-mail.</T>
+	<T Id="TerminalServerSupportMail.ask">Fixed support e-mail address for the terminal server (support e-mail, ticket and help window)</T>
+	<T Id="TerminalServerSupportMail.rec">The address of the team that supports the terminal server. On Windows Server it replaces the support e-mail and the ticket recipient, and the routing to support units is not used (it describes devices of one person). The computer name of the server stays in the ticket.</T>
 	<T Id="SupportPhone.ask">Support phone number (empty = hide)</T>
 	<T Id="SupportPhone.rec">Enter a number only if somebody answers it during the support hours.</T>
 	<T Id="SupportHours.ask">Support hours (empty = hide)</T>

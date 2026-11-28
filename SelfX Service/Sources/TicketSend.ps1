@@ -21,13 +21,15 @@
     Name    : TicketSend.ps1
     Package : SelfX Service
     Context : GUI helper (signed-in user)
-    Version : 2.8.7
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.5    2026-11-22  fubu2k               Initial version
     2.8.7    2026-11-22  fubu2k               Recipient and Cc can be set per device in the registry (TicketMail, TicketCc)
+    3.1.0    2026-11-28  fubu2k               Get-SelfXSupportContact: on a terminal server TerminalServer_Support_Mail is the support e-mail and
+                                              the ticket recipient; the ticket routing is not used there
 #>
 
 function Get-SelfXTicketDeviceValues {
@@ -56,6 +58,34 @@ function Get-SelfXTicketDeviceValues {
         $ou = ConvertTo-SelfXTicketDeviceValue ($distinguishedName -replace '^[^,]*,', '') 'OU'
     }
     return [pscustomobject]@{ GroupTag = $groupTag; Category = $category; OU = $ou; Mail = $mail; Cc = $cc }
+}
+
+function Get-SelfXSupportContact {
+    # Support addresses of the window, from the configuration only (Tool_Config.xml).
+    #  - Client (Windows 11): Support_Mail; Ticket_Mail (empty = Support_Mail); the ticket routing is used (Ticket_Config.xml and the
+    #    address set for the device in the registry, Get-SelfXTicketTarget).
+    #  - TerminalServer (Windows Server): TerminalServer_Support_Mail is the support e-mail, the ticket recipient and the address in the
+    #    help window. The ticket routing is never used there: the support unit, the group tag and the device class describe a device of
+    #    one person, not a server for many. Without one plain address in TerminalServer_Support_Mail Support_Mail and Ticket_Mail stay,
+    #    still without routing, and Valid is $false so that the window can log it.
+    # Needs Test-SelfXTicketAddress (TicketMail.ps1).
+    param(
+        [string]$Mode,
+        [AllowNull()][AllowEmptyString()][string]$SupportMail,
+        [AllowNull()][AllowEmptyString()][string]$TicketMail,
+        [AllowNull()][AllowEmptyString()][string]$TerminalServerMail
+    )
+    $support = "$SupportMail".Trim()
+    $ticket = "$TicketMail".Trim()
+    if (-not $ticket) { $ticket = $support }
+    if ($Mode -cne 'TerminalServer') {
+        return [pscustomobject]@{ SupportMail = $support; TicketMail = $ticket; UseRouting = $true; Source = 'Client'; Valid = $true }
+    }
+    $fixed = "$TerminalServerMail".Trim()
+    if (Test-SelfXTicketAddress $fixed) {
+        return [pscustomobject]@{ SupportMail = $fixed; TicketMail = $fixed; UseRouting = $false; Source = 'TerminalServer'; Valid = $true }
+    }
+    return [pscustomobject]@{ SupportMail = $support; TicketMail = $ticket; UseRouting = $false; Source = 'TerminalServerFallback'; Valid = $false }
 }
 
 function Get-SelfXTicketTarget {

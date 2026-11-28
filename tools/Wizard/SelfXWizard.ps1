@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.8
+    Version : 3.1.9
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -41,6 +41,7 @@
                                               Environment_Mode is no longer written; TerminalServerHealth only for WindowsServer; for WindowsServer the
                                               instructions describe the installation without Intune (by hand or Configuration Manager), file
                                               SelfX-Server-Guide.<language>.txt
+    3.1.9    2026-11-28  fubu2k               Question TerminalServerSupportMail (required for WindowsServer) writes TerminalServer_Support_Mail
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -568,6 +569,7 @@ function Get-WizardQuestions {
     & $add @{ Id = 'TargetOS'; Kind = 'choice'; Choices = @('Windows11', 'WindowsServer'); Default = 'Windows11' }
     & $add @{ Id = 'TerminalServerHealth'; Kind = 'choice'; Choices = @('Off', 'AdminOnly'); When = { param($a) $a.TargetOS -eq 'WindowsServer' }; Default = 'Off' }
     & $add @{ Section = 'support'; Id = 'SupportMail'; Kind = 'mail'; Default = '' }
+    & $add @{ Id = 'TerminalServerSupportMail'; Kind = 'mail'; Required = $true; When = { param($a) $a.TargetOS -eq 'WindowsServer' }; Default = { param($a) $a.SupportMail } }
     & $add @{ Id = 'SupportPhone'; Kind = 'phone'; Default = '' }
     & $add @{ Id = 'SupportHours'; Kind = 'text'; Max = 60; Default = '' }
     & $add @{ Id = 'SupportWebsite'; Kind = 'url'; Default = '' }
@@ -803,7 +805,11 @@ function Get-WizardToolConfigValues {
         Copilot_Enabled             = [bool]$A.CopilotEnabled
     }
     # The mode comes from Windows (no setting); the package for Windows Server decides who gets the device status there.
-    if ($A.TargetOS -eq 'WindowsServer') { $values['TerminalServer_Health'] = $(if ($A.TerminalServerHealth -eq 'AdminOnly') { 'AdminOnly' } else { 'Off' }) }
+    if ($A.TargetOS -eq 'WindowsServer') {
+        $values['TerminalServer_Health'] = $(if ($A.TerminalServerHealth -eq 'AdminOnly') { 'AdminOnly' } else { 'Off' })
+        # The fixed support address of the terminal server (ticket, support e-mail, help window; no ticket routing there).
+        $values['TerminalServer_Support_Mail'] = $A.TerminalServerSupportMail
+    }
     if ($A.TicketEnabled) { $values['Ticket_Mail'] = $A.TicketMail; $values['Ticket_Subject_Tag'] = $A.TicketSubjectTag }
     if ($A.CopilotEnabled) { $values['Copilot_Audience'] = $A.CopilotAudience; $values['Copilot_Clear_Clipboard'] = [bool]$A.CopilotClearClipboard }
     $values['Wiki_Enabled'] = [bool]$A.WikiEnabled

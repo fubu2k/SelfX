@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.6.0
+    Version : 1.7.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -48,6 +48,7 @@
     1.5.0    2026-11-28  fubu2k               Page Basics: question TerminalServerHealth (device status on a terminal server)
     1.6.0    2026-11-28  fubu2k               Page Basics: question TargetOS (Windows 11 or Windows Server) instead of EnvironmentMode; result page:
                                               title of the instructions for a server package (installation without Intune)
+    1.7.0    2026-11-28  fubu2k               Page Support: question TerminalServerSupportMail (only for Windows Server)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -113,7 +114,7 @@ $script:GuiCodeFolder = Get-WizardGuiCodeFolder -ToolsFolder $script:GuiToolsFol
 $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'language'; Questions = @('ToolLanguage', 'ShowLanguageSetting') },
     [pscustomobject]@{ Id = 'basics'; Questions = @('OrgName', 'ToolName', 'TargetOS', 'TerminalServerHealth') },
-    [pscustomobject]@{ Id = 'support'; Questions = @('SupportMail', 'SupportPhone', 'SupportHours', 'SupportWebsite', 'SupportTeams') },
+    [pscustomobject]@{ Id = 'support'; Questions = @('SupportMail', 'TerminalServerSupportMail', 'SupportPhone', 'SupportHours', 'SupportWebsite', 'SupportTeams') },
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },
     [pscustomobject]@{ Id = 'network'; Questions = @('NetworkEnabled', 'NetworkMicrosoft', 'NetworkHostNames') },

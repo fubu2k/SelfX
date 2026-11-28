@@ -17,13 +17,14 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.5.0
+    Version : 1.6.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
               1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
               1.4.0 (2026-11-28, fubu2k) question TerminalServerHealth: only with TerminalServer, default Off, AdminOnly written
               1.5.0 (2026-11-28, fubu2k) question TargetOS instead of EnvironmentMode (no Environment_Mode written); package for Windows Server:
                                          SelfX-Server-Guide without Intune (commands with System32, Configuration Manager, no ticket routing)
+              1.6.0 (2026-11-28, fubu2k) question TerminalServerSupportMail: only for WindowsServer, required, default Support mail
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -198,6 +199,11 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ((Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer'; TerminalServerHealth = 'AdminOnly' }).TerminalServer_Health -eq 'AdminOnly') 'TerminalServerHealth: AdminOnly is written'
     Assert ((Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer' }).TerminalServer_Health -eq 'Off') 'TerminalServerHealth: WindowsServer without the answer writes Off'
     Assert (-not (Get-WizardToolConfigValues -A @{ TargetOS = 'Windows11'; TerminalServerHealth = 'AdminOnly' }).Contains('TerminalServer_Health')) 'TerminalServerHealth: Windows11 writes nothing (the delivered Off stays)'
+    $tsMailQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'TerminalServerSupportMail' })
+    Assert ($tsMailQuestion.Count -eq 1 -and $tsMailQuestion[0].Kind -eq 'mail' -and $tsMailQuestion[0].Required -and ((& $tsMailQuestion[0].When @{ TargetOS = 'WindowsServer' }) -eq $true) -and ((& $tsMailQuestion[0].When @{ TargetOS = 'Windows11' }) -eq $false) -and ((& $tsMailQuestion[0].Default @{ SupportMail = 's@contoso.example' }) -eq 's@contoso.example')) 'TerminalServerSupportMail: one required mail question, only for WindowsServer, default the support mail'
+    Assert-Throws { ConvertTo-WizardValue -Kind 'mail' -Value 'a@contoso.example;b@contoso.example' } 'TerminalServerSupportMail: a list of addresses is refused'
+    Assert ((Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer'; TerminalServerSupportMail = 'ts@contoso.example' }).TerminalServer_Support_Mail -eq 'ts@contoso.example') 'TerminalServerSupportMail: written as TerminalServer_Support_Mail'
+    Assert (-not (Get-WizardToolConfigValues -A @{ TargetOS = 'Windows11'; TerminalServerSupportMail = 'ts@contoso.example' }).Contains('TerminalServer_Support_Mail')) 'TerminalServerSupportMail: Windows11 writes nothing (the delivered empty value stays)'
     # Instructions for Windows Server: no Intune; the commands run in a 64-bit process (System32, not sysnative). English texts here; the
     # German ones of the tests before are loaded again afterwards.
     Initialize-WizardTexts -Folder $WizardFolder -Culture 'en'
@@ -615,11 +621,13 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert (@($sep.GuideSteps.Steps | ForEach-Object { $_.Id }) -contains 'separate' -and ((Get-Content -LiteralPath (Join-Path $work 'result\sep\SelfX-Intune-Guide.en.txt') -Raw) -match 'separate configuration package')) 'separate config: the full guide has the note'
     Assert ((Get-Content -LiteralPath (Join-Path $work 'result\sep\package\Install.ps1') -Raw) -eq (Get-Content -LiteralPath (Join-Path $finalOut 'package\Install.ps1') -Raw)) 'separate config: the full package itself is the same'
     # Package for Windows Server: the same package, TerminalServer_Health from the answer, instructions without Intune in their own file.
-    $srvAnswers = [ordered]@{}; foreach ($key in $buildAnswers.Keys) { $srvAnswers[$key] = $buildAnswers[$key] }; $srvAnswers.TargetOS = 'WindowsServer'; $srvAnswers.TerminalServerHealth = 'AdminOnly'
+    $srvAnswers = [ordered]@{}; foreach ($key in $buildAnswers.Keys) { $srvAnswers[$key] = $buildAnswers[$key] }; $srvAnswers.TargetOS = 'WindowsServer'; $srvAnswers.TerminalServerHealth = 'AdminOnly'; $srvAnswers.TerminalServerSupportMail = 'ts-support@contoso.example'
     $srvBuild = Invoke-SelfXPackageBuild -Answers $srvAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv') -ToolPath $dummyTool -Language 'en'
     $srvTool = ([xml](Get-Content -LiteralPath (Join-Path $work 'result\srv\package\Config\Tool_Config.xml') -Raw)).GUI_Config
     Assert ($srvBuild.TargetOS -eq 'WindowsServer' -and $srvBuild.GuideFile -eq 'SelfX-Server-Guide.en.txt' -and (Test-Path -LiteralPath (Join-Path $work 'result\srv\SelfX-Server-Guide.en.txt')) -and -not (Test-Path -LiteralPath (Join-Path $work 'result\srv\SelfX-Intune-Guide.en.txt'))) 'server package: the instructions are SelfX-Server-Guide.en.txt'
-    Assert ($srvTool.TerminalServer_Health -eq 'AdminOnly' -and $null -eq $srvTool.Environment_Mode) 'server package: TerminalServer_Health AdminOnly, no Environment_Mode'
+    Assert ($srvTool.TerminalServer_Health -eq 'AdminOnly' -and $null -eq $srvTool.Environment_Mode -and $srvTool.TerminalServer_Support_Mail -eq 'ts-support@contoso.example') 'server package: TerminalServer_Health AdminOnly, the fixed support address, no Environment_Mode'
+    $srvMissing = [ordered]@{}; foreach ($key in $srvAnswers.Keys) { if ($key -ne 'TerminalServerSupportMail') { $srvMissing[$key] = $srvAnswers[$key] } }; $srvMissing.SupportMail = ''
+    Assert-Throws { Invoke-SelfXPackageBuild -Answers $srvMissing -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv-nomail') -ToolPath $dummyTool -Language 'en' } 'server package: without a fixed support address (and without a support mail as default) the build stops'
     Assert ((Get-Content -LiteralPath (Join-Path $work 'result\srv\SelfX-Server-Guide.en.txt') -Raw) -match 'Intune cannot install apps on Windows Server' -and $result.TargetOS -eq 'Windows11') 'server package: the guide explains why there is no Intune step; a package for Windows 11 says Windows11'
     Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\bad') -ToolPath $dummyTool -PackageKind 'Other' } 'an unknown package kind is refused'
     $cfgNoInstall = Join-Path $work 'build-cfg-noinstall'; Copy-Item -LiteralPath $payload -Destination $cfgNoInstall -Recurse; Remove-Item -LiteralPath (Join-Path $cfgNoInstall 'Install.ps1')
