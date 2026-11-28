@@ -702,7 +702,7 @@ Bạn có muốn tiếp tục không?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Làm mới cài đặt của công ty (Group Policy) trên PC này</Name>
 				<Explanation>Các cài đặt của công ty bạn, như ổ đĩa mạng, máy in hoặc quy tắc bảo mật, không đến được hoặc đã cũ. Hành động này yêu cầu Windows áp dụng lại chính sách nhóm. Chỉ hoạt động trên thiết bị đã tham gia miền (kể cả thiết bị tham gia kiểu kết hợp).</Explanation>
-				<Alerte_MSG>Windows kiểm tra và áp dụng lại chính sách nhóm của công ty bạn. Việc này có thể mất vài phút. Bạn không bị đăng xuất và Windows không khởi động lại; cài đặt cần khởi động lại hoặc đăng nhập lại sẽ có hiệu lực sau đó. Nếu thiết bị chưa tham gia miền, hành động kết thúc với mã thoát 3 và không thay đổi gì.
+				<Alerte_MSG>Windows kiểm tra và áp dụng lại chính sách nhóm của công ty bạn. Việc này có thể mất vài phút. Bạn không bị đăng xuất và Windows không khởi động lại; cài đặt cần khởi động lại hoặc đăng nhập lại sẽ có hiệu lực sau đó. Nếu thiết bị chưa tham gia miền, hành động kết thúc với mã thoát 3 và không thay đổi gì. Trên máy chủ đầu cuối (Windows Server), chỉ cài đặt người dùng của riêng bạn được cập nhật, không phải cài đặt của máy tính.
 
 Bạn có muốn tiếp tục không?</Alerte_MSG>
 			</Action>

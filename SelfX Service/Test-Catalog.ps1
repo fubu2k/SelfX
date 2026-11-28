@@ -43,6 +43,8 @@
     3.1.0    2026-11-27  fubu2k               Required classification TerminalServer (Show or Hide) on every action and remediation, the same
                                               for every entry of a script, with negative examples
     3.1.0    2026-11-28  fubu2k               Optional element Disruptive: exactly True, only with a script, the same for every entry of a script (negative examples)
+    3.1.0    2026-11-28  fubu2k               Classification of Office licence reset, OneDrive reset and group policy update (Show) and of No sound (Hide) checked by name;
+                                              what a terminal server offers is decided by Test-SelfXShownInEnvironment (the rule of the window)
 #>
 param(
 	[string]$SourcesFolder = (Join-Path $PSScriptRoot 'Sources')
@@ -198,6 +200,29 @@ $terminalServerProblems = @(Get-TerminalServerProblems $catalog $health)
 Assert-True ($terminalServerProblems.Count -eq 0) ("Every action and remediation is classified TerminalServer Show or Hide, the same for every entry of a script" + $(if ($terminalServerProblems.Count) { ': ' + ($terminalServerProblems -join '; ') }))
 
 # Negative examples: the rule must find each mistake.
+# The delivered classification of four actions that depend on the terminal server decision: Office licence reset, OneDrive reset and
+# group policy update are offered on a terminal server (Show); No sound is not (Hide). All four run as the user, so the window decides
+# what is offered (Test-SelfXShownInEnvironment, the rule of SelfXEnvironment.ps1); the service is not involved.
+. (Join-Path $SourcesFolder 'SelfXEnvironment.ps1')
+$expectedClassification = [ordered]@{
+	'SelfX_Office_ResetLicence.ps1' = 'Show'
+	'SelfX_OneDrive_Reset.ps1'      = 'Show'
+	'SelfX_Device_GpUpdate.ps1'     = 'Show'
+	'SelfX_Audio_Restore.ps1'       = 'Hide'
+}
+foreach ($scriptName in $expectedClassification.Keys) {
+	$entries = @($catalog.SelectNodes('//Action') | Where-Object { "$($_.Script)".Trim() -ceq $scriptName })
+	Assert-True ($entries.Count -gt 0) "$scriptName is used by an action of the catalogue"
+	foreach ($entry in $entries) {
+		$classification = "$($entry.SelectSingleNode('TerminalServer').InnerText)".Trim()
+		Assert-True ($classification -ceq $expectedClassification[$scriptName]) "$($entry.GetAttribute('Id')) ($scriptName) is classified $($expectedClassification[$scriptName]) (found '$classification')"
+		Assert-True ("$($entry.Context)".Trim() -ceq 'User') "$($entry.GetAttribute('Id')) ($scriptName) runs as the user (the service is not involved)"
+		$offeredOnServer = [bool](Test-SelfXShownInEnvironment 'TerminalServer' $classification)
+		Assert-True ($offeredOnServer -eq ($expectedClassification[$scriptName] -ceq 'Show')) "$($entry.GetAttribute('Id')): offered on a terminal server = $($expectedClassification[$scriptName] -ceq 'Show')"
+		Assert-True ([bool](Test-SelfXShownInEnvironment 'Client' $classification)) "$($entry.GetAttribute('Id')): always offered on Windows 11"
+	}
+}
+
 function New-TerminalServerExample([string]$Actions, [string]$Remediations = '') {
 	return [pscustomobject]@{
 		Catalog = [xml]"<Actions><Quick_Solution>$Actions</Quick_Solution></Actions>"

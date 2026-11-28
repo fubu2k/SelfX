@@ -214,7 +214,8 @@ Classification of the bundled actions:
 | Teams, Word, Excel, Outlook, OneDrive (restart, cache, reset, add-in, AutoComplete) | own session and profile | `Show` |
 | Edge, Chrome and Firefox cache | browser of the own session | `Show` |
 | Device slow, bring windows back, Citrix Workspace restart | own session | `Show` |
-| Office licence reset, group policy update | own profile (test them on your session host first) | `Show` |
+| Office licence reset | own profile (test it on your session host first) | `Show` |
+| Group policy update (`SelfX_Device_GpUpdate.ps1`) | policies of the signed-in user only: on Windows Server the script runs `gpupdate.exe /target:user /force`, never the computer part; on Windows 11 `gpupdate.exe /force` | `Show` |
 | Password reset, security info (links) | browser of the user | `Show` |
 | No sound (`SelfX_Audio_Restore.ps1`) | redirected audio of a remote session, not tested | `Hide` |
 | Clear DNS cache (`SelfX_Device_ClearCache.ps1`) | DNS cache of the whole device | `Hide` |

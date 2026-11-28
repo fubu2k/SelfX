@@ -50,9 +50,10 @@
 	  2.4.12   2026-11-27  fubu2k               New required field TerminalServer (Show or Hide) on every action, for Environment_Mode TerminalServer
 	  2.4.13   2026-11-28  fubu2k               Description of TerminalServer: the mode comes from Windows (Windows Server = TerminalServer); no change of an action
 	  2.4.14   2026-11-28  fubu2k               New optional field Disruptive (True) on the actions that close Teams or Office programs or restart the network adapters
+	  2.4.15   2026-11-28  fubu2k               D_Device_GpUpdate: the confirmation says that on a terminal server only the user settings are updated
 -->
 <Actions>
-	<XML_Version>2.4.14</XML_Version>
+	<XML_Version>2.4.15</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -892,7 +893,7 @@ Do you want to continue?</Alerte_MSG>
 			<TerminalServer>Show</TerminalServer>
 			<Requires>DomainJoined</Requires>
 			<Category>Device</Category>
-			<Alerte_MSG>Windows checks and applies the group policies of your company again. This can take a few minutes. You are not signed out and Windows does not restart; a setting that needs a restart or a new sign-in takes effect after the next one. If your device is not joined to a domain, the action ends with the exit code 3 and changes nothing.
+			<Alerte_MSG>Windows checks and applies the group policies of your company again. This can take a few minutes. You are not signed out and Windows does not restart; a setting that needs a restart or a new sign-in takes effect after the next one. If your device is not joined to a domain, the action ends with the exit code 3 and changes nothing. On a terminal server (Windows Server), only your own user settings are updated, not the settings of the computer.
 
 Do you want to continue?</Alerte_MSG>
 		</Action>
