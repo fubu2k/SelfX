@@ -1054,6 +1054,8 @@ try {
             $type.GetField('installRoot', $flags).SetValue($instance, $temp)
             # Flat layout of the test: Health_Config.xml is in the same folder.
             $type.GetField('configRoot', $flags).SetValue($instance, $temp)
+            # Mode Client for these checks (the mode comes from Windows; the CI runs on Windows Server, where STATUS is off by default).
+            $type.GetField('terminalServerForTest', $flags).SetValue($instance, [Nullable[bool]]$false)
             Assert-Equal $type.GetField('cacheFile', $flags).GetValue($instance) (Join-Path $temp 'Cache\Health.json') 'Cache file is next to the log folder'
             $read = $type.GetMethod('ReadBackgroundSettings', $flags)
             [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig/>')
