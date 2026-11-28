@@ -31,6 +31,8 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.14   2026-11-23  fubu2k               Initial version.
     2.9.0    2026-11-27  fubu2k               The hashes are read from SelfX.Code.json (the libraries are code), no longer from SelfX.Files.json.
+    3.1.0    2026-11-28  fubu2k               Import-SelfXWinRTProjection: after the same check also loads the Windows SDK projection (WinRT.Runtime.dll,
+                                              Microsoft.Windows.SDK.NET.dll), so a caller can use a WinRT type directly (UserName.ps1)
 #>
 
 # Open file handles of the checked DLLs; they stay open until the process ends (see above).
@@ -108,4 +110,15 @@ function Import-SelfXWinRT {
 	$InstallFolder = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
 	Test-SelfXWinRTFiles -InstallFolder $InstallFolder
 	[void][Reflection.Assembly]::LoadFrom((Join-Path (Join-Path $InstallFolder 'WinRT') 'SelfXWinRT.dll'))
+}
+
+# Import-SelfXWinRT and then the two DLLs of the Windows SDK projection from the same checked folder (they stay open from the check, so the
+# loaded files are the checked ones). Afterwards the WinRT types of the projection, for example [Windows.System.User], are available.
+function Import-SelfXWinRTProjection {
+	param([Parameter(Mandatory = $true)][string]$InstallFolder)
+	$InstallFolder = [IO.Path]::GetFullPath($InstallFolder).TrimEnd('\')
+	Import-SelfXWinRT -InstallFolder $InstallFolder
+	foreach ($name in 'WinRT.Runtime.dll', 'Microsoft.Windows.SDK.NET.dll') {
+		[void][Reflection.Assembly]::LoadFrom((Join-Path (Join-Path $InstallFolder 'WinRT') $name))
+	}
 }

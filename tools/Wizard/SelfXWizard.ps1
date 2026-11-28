@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.14
+    Version : 3.1.15
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -54,6 +54,7 @@
                                               into the output folder (signed in the mode Signature); question HealthInventory writes Inventory
                                               Enabled into Health_Config.xml (Set-SelfXHealthInventory) and copies SelfX-Inventory-DCR.json; guide
                                               step 'monitoring'; result MonitoringFiles
+    3.1.15   2026-11-28  fubu2k               Question GreetingName (FirstName or Off, default FirstName) on the page Basics writes Greeting_Name
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -645,6 +646,7 @@ function Get-WizardQuestions {
     & $add @{ Id = 'ToolName'; Kind = 'text'; Max = 40; Required = $true; Default = 'SelfX' }
     & $add @{ Id = 'TargetOS'; Kind = 'choice'; Choices = @('Windows11', 'WindowsServer'); Default = 'Windows11' }
     & $add @{ Id = 'TerminalServerHealth'; Kind = 'choice'; Choices = @('Off', 'AdminOnly'); When = { param($a) $a.TargetOS -eq 'WindowsServer' }; Default = 'Off' }
+    & $add @{ Id = 'GreetingName'; Kind = 'choice'; Choices = @('FirstName', 'Off'); Default = 'FirstName' }
     & $add @{ Section = 'support'; Id = 'SupportMail'; Kind = 'mail'; Default = '' }
     & $add @{ Id = 'TerminalServerSupportMail'; Kind = 'mail'; Required = $true; When = { param($a) $a.TargetOS -eq 'WindowsServer' }; Default = { param($a) $a.SupportMail } }
     & $add @{ Id = 'SupportPhone'; Kind = 'phone'; Default = '' }
@@ -879,6 +881,8 @@ function Get-WizardToolConfigValues {
         Show_Tray_Icon              = $A.TrayIcon
         # Hint before disruptive actions (Self_X.ps1, SelfXDisturb.ps1); an answer file without it keeps the default True.
         Disturb_Warning             = $(if ($null -eq $A.DisturbWarning) { $true } else { [bool]$A.DisturbWarning })
+        # Greeting with the first name (UserName.ps1); an answer file without it keeps the default FirstName.
+        Greeting_Name               = $(if ($A.GreetingName -eq 'Off') { 'Off' } else { 'FirstName' })
         Support_Mail                = $A.SupportMail
         Support_Phone_number        = $A.SupportPhone
         Support_Hours               = $A.SupportHours

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Run isolated tests of the SelfX user interface, the tray icon and the theme without showing a window.
 .DESCRIPTION
@@ -19,6 +19,8 @@
                                        ticket.
     3.1.0  2026-11-28  fubu2k          The window and the status icon take the mode from Windows, not from Environment_Mode.
     3.1.0  2026-11-28  fubu2k          Terminal server: fixed support address (Get-SelfXSupportContact), no ticket routing.
+    3.1.0  2026-11-28  fubu2k          Greeting: names with markup, braces, control and direction characters, empty name, 40 characters,
+                                       hours of the day, Greeting_Name, Off, time limit, right to left, texts in all language files.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -493,6 +495,86 @@ try {
     Assert-Equal ($guiText.Contains('.AddArgument([bool]$Global:SelfX_View.TerminalServer).AddArgument([bool]$Global:SelfX_View.ServerRows)') -and $trayText.Contains('.AddArgument([bool]$Global:Tray_View.TerminalServer).AddArgument([bool]$Global:Tray_View.ServerRows)')) $true 'View: the values of the view reach the background collection'
     Assert-Equal ($guiText.Contains('-WindowsBuild $(If($Global:SelfX_View.ServerRows)')) $true 'View: the ticket names the Windows build only with server rows'
     Assert-Equal ($trayText.Contains('If($Global:Tray_Job -or -not $Global:Tray_View.Health) { return }') -and $trayText.Contains('$Tray_Status_Open, $Tray_Status_Check)) { $Item.Visible = $false }')) $true 'View: the status icon asks for no status and hides the status entries'
+
+    # --- Greeting with the first name (UserName.ps1, Greeting_Name) -------------------------------------------------------------
+    . "$sources\UserName.ps1"
+    $greetTexts = @{ Morning = 'Good morning, {0}.'; Day = 'Hello, {0}.'; Evening = 'Good evening, {0}.'; Neutral = 'Welcome.' }
+    foreach ($case in @(@(5, 'Good morning, Anna.'), @(11, 'Good morning, Anna.'), @(12, 'Hello, Anna.'), @(17, 'Hello, Anna.'), @(18, 'Good evening, Anna.'), @(23, 'Good evening, Anna.'), @(0, 'Good evening, Anna.'), @(4, 'Good evening, Anna.'))) {
+        Assert-Equal (Get-SelfXGreetingText -Name 'Anna' -Hour $case[0] -Texts $greetTexts) $case[1] "Greeting: hour $($case[0])"
+    }
+    foreach ($empty in @('', $null, '   ', "`t`r`n", ([string][char]0x202E))) {
+        Assert-Equal (Get-SelfXGreetingText -Name $empty -Hour 9 -Texts $greetTexts) 'Welcome.' 'Greeting: an empty name gives the neutral text'
+    }
+    Assert-Equal (Get-SelfXGreetingText -Name 'Anna' -Hour 9 -Texts @{ Morning = 'Good morning.'; Neutral = 'Welcome.' }) 'Welcome.' 'Greeting: a text without {0} (override) never shows the name'
+    $special = '<Anna & {0} {1:D2} $(x)>'
+    Assert-Equal (Get-SelfXGreetingText -Name $special -Hour 9 -Texts $greetTexts) "Good morning, $special." 'Greeting: < > & { } $( ) stay plain text (no format string, no expansion)'
+    Assert-Equal (ConvertTo-SelfXGreetingName ("An`r`nna`t B" + [char]0 + [char]0x85)) 'Anna B' 'Greeting: control characters and line breaks are removed'
+    Assert-Equal (ConvertTo-SelfXGreetingName ("Anna" + [char]0x202E + "lagi" + [char]0x2066 + [char]0x200F)) 'Annalagi' 'Greeting: characters that change the reading direction are removed'
+    Assert-Equal (ConvertTo-SelfXGreetingName ('x' * 60)).Length 40 'Greeting: at most 40 characters'
+    $emoji = ('a' * 39) + [char]::ConvertFromUtf32(0x1F600)
+    Assert-Equal (ConvertTo-SelfXGreetingName $emoji) ('a' * 39) 'Greeting: a surrogate pair at the limit is not cut in two'
+    $combining = ('a' * 39) + 'e' + [char]0x0301
+    Assert-Equal (ConvertTo-SelfXGreetingName $combining) ('a' * 39) 'Greeting: a letter with its combining mark is not cut at the limit'
+    Assert-Equal (ConvertTo-SelfXGreetingName ('Zoë' + [char]0x200C + 'x')) ('Zoë' + [char]0x200C + 'x') 'Greeting: letters and joiners stay'
+    foreach ($mode in @(@('', 'FirstName'), @($null, 'FirstName'), @('FirstName', 'FirstName'), @(' firstname ', 'FirstName'), @('Off', 'Off'), @('off', 'Off'), @('True', 'Off'), @('DisplayName', 'Off'))) {
+        Assert-Equal (ConvertTo-SelfXGreetingMode $mode[0]) $mode[1] "Greeting_Name '$($mode[0])' -> $($mode[1])"
+    }
+    Assert-Equal (Get-SelfXUserFirstName -Provider { 'Anna' }) 'Anna' 'Greeting: the first name of the provider'
+    Assert-Equal (Get-SelfXUserFirstName -Provider { throw 'WinRT failed' }) '' 'Greeting: an error gives no name'
+    Assert-Equal (Get-SelfXUserFirstName -Provider { 42 }) '' 'Greeting: a value that is no text gives no name'
+    Assert-Equal (Get-SelfXUserFirstName -Provider { "  <b>Anna</b>`n" }) '<b>Anna</b>' 'Greeting: the provider value is cleaned'
+    # The name reaches the window only as TextBlock.Text: markup in a name is shown as text, also right to left.
+    $block = New-Object System.Windows.Controls.TextBlock
+    $block.FlowDirection = 'RightToLeft'
+    $block.Text = Get-SelfXGreetingText -Name '<Bold>Anna</Bold>' -Hour 9 -Texts @{ Morning = 'صباح الخير، {0}.'; Neutral = 'أهلًا بك.' }
+    Assert-Equal $block.Text 'صباح الخير، <Bold>Anna</Bold>.' 'Greeting: right to left, the name is plain text'
+    Assert-Equal ($block.Inlines.Count) 1 'Greeting: no markup is interpreted'
+    $mainNoGreeting = $main
+    Assert-Equal ($mainXml.SelectSingleNode("//*[@Name='Greeting']") -ne $null -and -not $mainXml.SelectSingleNode("//*[@Name='Greeting']").HasAttribute('Text')) $true 'Greeting: one TextBlock without text in the XAML'
+    Assert-Equal ($mainNoGreeting -match 'Greeting_(Morning|Day|Evening|Neutral)|\{0\}') $false 'Greeting: no greeting text and no placeholder in the XAML'
+    Assert-Equal ([regex]::Matches($guiText, '\$Greeting\.Text = Get-SelfXGreetingText').Count) 2 'Greeting: the window sets the text only through Get-SelfXGreetingText (neutral first, then with the name)'
+    Assert-Equal ($guiText.IndexOf("If(`$Global:SelfX_GreetingMode -eq 'FirstName')") -lt $guiText.IndexOf('$Global:Greeting_Handle = $Global:Greeting_PS.BeginInvoke()') -and $guiText.IndexOf("If(`$Global:SelfX_GreetingMode -eq 'FirstName')") -gt 0) $true 'Greeting: with Off no lookup is started'
+    Assert-Equal ($guiText.Contains('$Global:Greeting_Watch.ElapsedMilliseconds -ge 2000') -and $guiText.Contains('[void]$Global:Greeting_PS.BeginStop($null, $null)')) $true 'Greeting: time limit of 2 seconds, then the lookup is stopped and the greeting stays neutral'
+    Assert-Equal ($guiText.Contains('ConvertTo-SelfXGreetingMode -Value (Get-SelfXText "Greeting_Name" "FirstName")')) $true 'Greeting: Greeting_Name is read with the default FirstName'
+    Assert-Equal ($guiText -match 'Write-SelfXLog[^\r\n]*Greeting_Name') $false 'Greeting: the name is not logged'
+    $userNameText = [IO.File]::ReadAllText("$sources\UserName.ps1")
+    $userNameAst = Get-ScriptAst "$sources\UserName.ps1"
+    $userNameCommands = @($userNameAst.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true) | ForEach-Object { $_.GetCommandName() } | Where-Object { $_ } | Sort-Object -Unique)
+    Assert-Equal (($userNameCommands | Where-Object { $_ -notin @('ConvertTo-SelfXGreetingName', 'Read-SelfXWinRTFirstName', 'Import-SelfXWinRTProjection', 'New-Object') }) -join ',') '' 'Greeting: UserName.ps1 calls no other command (no log, no file, no registry, no network, no service)'
+    $userNameTokens = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile("$sources\UserName.ps1", [ref]$userNameTokens, [ref]$null)
+    $userNameCode = (@($userNameTokens | Where-Object { $_.Kind -ne 'Comment' } | ForEach-Object { $_.Text }) -join ' ')
+    Assert-Equal ($userNameCode -match '(?i)Add-Type|Invoke-Expression|DirectoryServices|LDAP|graph\.microsoft|GetUserNameEx|Registry|HKCU|HKLM|DisplayName|AccountName') $false 'Greeting: no compiling, no LDAP, no Graph, no display or account name, no registry'
+    Assert-Equal ($userNameText.Contains('[Windows.System.User]::GetDefault()') -and $userNameText.Contains('[Windows.System.KnownUserProperties]::FirstName')) $true 'Greeting: the first name comes from Windows.System.User'
+    $toolConfigGreeting = [xml][IO.File]::ReadAllText("$sources\Tool_Config.xml")
+    Assert-Equal "$($toolConfigGreeting.GUI_Config.Greeting_Name)".Trim() 'FirstName' 'Greeting: the delivered Tool_Config.xml has Greeting_Name = FirstName'
+    foreach ($file in Get-ChildItem -LiteralPath "$sources\Languages" -Filter '*.xml') {
+        $lang = [xml][IO.File]::ReadAllText($file.FullName)
+        foreach ($key in 'Greeting_Morning', 'Greeting_Day', 'Greeting_Evening') {
+            $value = "$($lang.SelfX_Language.UI.$key)"
+            Assert-Equal ([regex]::Matches($value, '\{0\}').Count -eq 1 -and $value -notmatch '\{[1-9]' -and $value.Length -lt 80) $true "$($file.Name): $key has {0} once"
+        }
+        $neutralText = "$($lang.SelfX_Language.UI.Greeting_Neutral)"
+        Assert-Equal ($neutralText.Length -gt 0 -and $neutralText -notmatch '[{}<>&]') $true "$($file.Name): Greeting_Neutral has no placeholder"
+    }
+    # One real call through the Windows SDK projection (read only), when the programs were built (Bin\WinRT).
+    $builtWinRT = Join-Path $PSScriptRoot 'Bin\WinRT'
+    if ($PSVersionTable.PSEdition -eq 'Core' -and (Test-Path -LiteralPath (Join-Path $builtWinRT 'SelfXWinRT.dll'))) {
+        . "$sources\SelfXWinRT.ps1"
+        $fakeApp = Join-Path $temp 'App'
+        [void][IO.Directory]::CreateDirectory((Join-Path $fakeApp 'WinRT'))
+        $files = [ordered]@{}
+        foreach ($dll in Get-ChildItem -LiteralPath $builtWinRT -Filter '*.dll') {
+            Copy-Item -LiteralPath $dll.FullName -Destination (Join-Path $fakeApp "WinRT\$($dll.Name)")
+            $files["WinRT/$($dll.Name)"] = (Get-FileHash -LiteralPath $dll.FullName -Algorithm SHA256).Hash
+        }
+        [IO.File]::WriteAllText((Join-Path $fakeApp 'SelfX.Code.json'), ([ordered]@{ ManifestVersion = 1; Files = $files } | ConvertTo-Json -Depth 3))
+        $watch = [Diagnostics.Stopwatch]::StartNew()
+        $realName = Get-SelfXUserFirstName -InstallFolder $fakeApp -TimeoutMs 2000
+        Assert-Equal ($realName -is [string] -and $realName.Length -le 40 -and $watch.ElapsedMilliseconds -lt 5000) $true "Greeting: the real call returns a text of at most 40 characters ($($watch.ElapsedMilliseconds) ms)"
+        $realName = $null
+        foreach ($stream in @($Script:SelfXWinRTHandles)) { $stream.Dispose() }
+    } else { Write-Output 'SKIP greeting: real call (no built Bin\WinRT or Windows PowerShell 5.1)' }
 } finally {
     Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }
