@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Riavvia ora</Button_Restart_Now>
 		<Health_Restart_Started>Windows si riavvia tra circa 30 secondi. Salva ora il tuo lavoro.</Health_Restart_Started>
 		<Disturb_Warning_Text>Sembra che lei sia in una riunione o in una presentazione. Questa azione può interromperla.</Disturb_Warning_Text>
+		<Greeting_Morning>Buongiorno, {0}.</Greeting_Morning>
+		<Greeting_Day>Buongiorno, {0}.</Greeting_Day>
+		<Greeting_Evening>Buonasera, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Le diamo il benvenuto.</Greeting_Neutral>
 		<Health_Updates_Started>Gli aggiornamenti di Windows vengono cercati, scaricati e installati. Può richiedere alcuni minuti; puoi continuare a lavorare.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update ha terminato. Lo stato del dispositivo viene controllato di nuovo e indica se è necessario un riavvio.</Health_Updates_Done>
 		<Health_Apps_Button>Riprova</Health_Apps_Button>

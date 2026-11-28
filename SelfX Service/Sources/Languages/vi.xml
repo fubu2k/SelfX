@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Khởi động lại ngay</Button_Restart_Now>
 		<Health_Restart_Started>Windows sẽ khởi động lại sau khoảng 30 giây. Hãy lưu công việc ngay bây giờ.</Health_Restart_Started>
 		<Disturb_Warning_Text>Có vẻ bạn đang họp hoặc đang thuyết trình. Thao tác này có thể làm gián đoạn.</Disturb_Warning_Text>
+		<Greeting_Morning>Chào buổi sáng, {0}.</Greeting_Morning>
+		<Greeting_Day>Xin chào, {0}.</Greeting_Day>
+		<Greeting_Evening>Chào buổi tối, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Chào mừng bạn.</Greeting_Neutral>
 		<Health_Updates_Started>Đang tìm, tải xuống và cài đặt các bản cập nhật Windows. Việc này có thể mất vài phút; bạn có thể tiếp tục làm việc.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update đã hoàn tất. Trạng thái thiết bị được kiểm tra lại và cho biết có cần khởi động lại hay không.</Health_Updates_Done>
 		<Health_Apps_Button>Thử lại</Health_Apps_Button>

@@ -57,6 +57,7 @@
     3.1.0    2026-11-27  fubu2k               Code file SelfXEnvironment.ps1 (Environment_Mode)
     3.1.0    2026-11-28  fubu2k               Code file SelfXDisturb.ps1 (warning before disruptive actions)
     3.1.0    2026-11-28  fubu2k               Library Disturb/SelfXDisturb.dll (Bin\Disturb) is part of the package entries and of the required binaries
+    3.1.0    2026-11-28  fubu2k               Code file UserName.ps1 (greeting with the first name)
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -93,7 +94,7 @@ $script:SelfXCodeFileNames = @(
     'Scripts_to_run/SelfX_Word_Reboot.ps1', 'SelfX.exe', 'SelfXAudio.ps1', 'SelfXDefender.ps1',
     'SelfXDeviceSecurity.ps1', 'SelfXDisturb.ps1', 'SelfXEnvironment.ps1', 'SelfXLog.ps1', 'SelfXNetwork.ps1', 'SelfXOffice.ps1', 'SelfXPaths.ps1', 'SelfXService.exe',
     'SelfXServiceClient.ps1', 'SelfXWinRT.ps1', 'SelfXWindows.ps1', 'SelfX_Tray.ps1', 'Self_X.ps1',
-    'SupportLinks.ps1', 'SupportReport.ps1', 'SystemInfo.ps1', 'TicketMail.ps1', 'TicketSend.ps1', 'Uninstall.ps1',
+    'SupportLinks.ps1', 'SupportReport.ps1', 'SystemInfo.ps1', 'TicketMail.ps1', 'TicketSend.ps1', 'Uninstall.ps1', 'UserName.ps1',
     'icon_systray.ico', 'logo.png'
 )
 

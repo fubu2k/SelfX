@@ -18,6 +18,7 @@
 	3.1.0    2026-11-28  fubu2k               New setting TerminalServer_Support_Mail (fixed support address on a terminal server)
 	3.1.0    2026-11-28  fubu2k               New setting Disturb_Warning (True or False): hint before disruptive actions when the own session looks busy
 	3.1.0    2026-11-28  fubu2k               New setting EventLog_CallerSid (True or False): SID of the caller in the events of System actions
+	3.1.0    2026-11-28  fubu2k               New setting Greeting_Name (FirstName or Off): greeting with the first name of the user
 -->
 <GUI_Config>	
 	<!-- Language of the user interface. All texts are in Languages\<culture>.xml (see docs\Configuration.md) -->
@@ -55,6 +56,7 @@
 	
 	<!-- Hint before disruptive actions -->
 	<Disturb_Warning>True</Disturb_Warning> <!-- True or False. True = before an action that closes Teams or Office programs, restarts the network adapters or restarts the device (<Disruptive> in Issues_List.xml), SelfX adds the hint "You appear to be in a meeting or presentation" to the confirmation when Windows reports presentation settings, a full-screen program or quiet time for the own session of the user. Only a hint: nothing is blocked, switched or sent to the service, no program name is read or logged. False = no hint -->
+	<Greeting_Name>FirstName</Greeting_Name> <!-- FirstName or Off. FirstName = the window greets the user with the first name that Windows knows for the account (Windows.System.User, for example "Good morning, Anna."); without a first name, or when the privacy setting "Account info" does not allow it, the greeting is neutral. The display name or the account name is never used instead. The name is not logged, not saved and not sent anywhere. Off = always the neutral greeting. Any other value = Off -->
 
 	<!-- Message bar at the bottom -->
 	<Show_Reboot_Warning>True</Show_Reboot_Warning> <!-- Show the reboot warning: True or False -->	
