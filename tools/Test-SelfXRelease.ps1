@@ -25,7 +25,7 @@
     Name    : Test-SelfXRelease.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 3.1.2
+    Version : 3.1.3
     Exit code: 0 = all tests passed, 1 = at least one failed
 
     History:
@@ -35,6 +35,7 @@
     3.1.1    2026-11-27  fubu2k               A script of the assistant may dot-source a code file of the package (App of the payload: the
                                               window SelfXWizardGui.ps1 loads Branding.ps1); eleven Windows PowerShell 5.1 tests
     3.1.2    2026-11-28  fubu2k               Thirteen Windows PowerShell 5.1 tests (tools\Test-SelfXHealthDetection.ps1)
+    3.1.3    2026-11-28  fubu2k               service-ci.yml loads PSScriptAnalyzer only when every file has a valid Microsoft signature.
 #>
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -496,6 +497,7 @@ $ci = [IO.File]::ReadAllText((Join-Path $RepositoryRoot '.github/workflows/servi
 Assert ($ci -match '(?m)^  workflow_call:\s*$') 'the CI workflow can be called by the release workflow'
 Assert ([regex]::Matches($ci, 'Test-SelfXRelease\.ps1').Count -eq 2) 'this test runs in Windows PowerShell 5.1 and in PowerShell 7'
 Assert ($ci -match "Count -ne 13") 'the count of the Windows PowerShell 5.1 tests is 13'
+Assert ($ci -match 'Save-Module PSScriptAnalyzer -RequiredVersion 1\.23\.0' -and $ci -match 'Get-AuthenticodeSignature' -and $ci -notmatch 'Install-Module PSScriptAnalyzer') 'PSScriptAnalyzer is loaded only with a valid Microsoft signature'
 
 # ---------------------------------------------------------------- docs
 Write-Host 'Docs'
