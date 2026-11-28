@@ -102,6 +102,8 @@
                                        case (also right after a planted file was removed) it is created new (CreateNew), so a file that a user
                                        creates in the gap is never written. A default report (-Protect) is opened without sharing, so nobody can
                                        hold a read handle before the access rights are set. -UserView accepts only the SID of a user account.
+    1.3.7    fubu2k                    Security: no Add-Type with source text any more (the OOBEComplete API line is gone; the setup registry
+                                       line shows OOBEInProgress). Windows PowerShell 5.1 compiled it with csc.exe in the TEMP folder of SYSTEM.
 #>
 
 [CmdletBinding()]
@@ -130,7 +132,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.3.6'
+$ScriptVersion = '1.3.7'
 if ($UserView) {
     try { $null = [Security.Principal.SecurityIdentifier]::new("$CallerSid") } catch { Write-Error 'The user view needs a valid -CallerSid.'; exit 2 }
     # Only the SID of a user account (local/domain S-1-5-21-..., Entra ID S-1-12-1-...), never a group or a well-known SID.
@@ -550,14 +552,8 @@ Invoke-Safe 'Loaded profiles' {
 
 # ------------------------------------------------------------------------------------------------
 Add-Section '2. Windows setup / ESP / Autopilot state'
-Invoke-Safe 'OOBE API' {
-    if (-not ('SelfX.DeviceLogs.Collector' -as [type])) {
-        Add-Type -Namespace SelfX.DeviceLogs -Name Collector -MemberDefinition '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool OOBEComplete(out int isOOBEComplete);'
-    }
-    $completed = 0
-    $ok = [SelfX.DeviceLogs.Collector]::OOBEComplete([ref]$completed)
-    "OOBEComplete API : ok=$ok completed=$completed"
-}
+# The state of the out-of-box experience comes from the setup registry below (OOBEInProgress). The former call of the API
+# OOBEComplete compiled C# on the device (Add-Type); nothing is compiled on a device (as SYSTEM in Windows\Temp under 5.1).
 Invoke-Safe 'Setup registry' {
     $setup = Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\Setup' -ErrorAction Stop
     "HKLM\SYSTEM\Setup: OOBEInProgress=$($setup.OOBEInProgress); SystemSetupInProgress=$($setup.SystemSetupInProgress); SetupType=$($setup.SetupType); CmdLine='$($setup.CmdLine)'"
