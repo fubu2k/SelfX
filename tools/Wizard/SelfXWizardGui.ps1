@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.11.0
+    Version : 1.12.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -56,6 +56,7 @@
                                               (build setting TimestampServer); the switch "without time stamp" is passed to the build as -NoTimestamp
     1.11.0   2026-11-28  fubu2k               Page More settings: questions HealthRemediation (Intune Remediations, not for Windows Server) and
                                               HealthInventory (inventory file); result page lists the files of the monitoring
+    1.12.0   2026-11-28  fubu2k               Page Basics: question GreetingName (greeting with the first name)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -120,7 +121,7 @@ $script:GuiCodeFolder = Get-WizardGuiCodeFolder -ToolsFolder $script:GuiToolsFol
 # (Test-SelfXWizardGui.ps1 checks this). The page 'summary' has the build settings, which are not answers (same as the console).
 $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'language'; Questions = @('ToolLanguage', 'ShowLanguageSetting') },
-    [pscustomobject]@{ Id = 'basics'; Questions = @('OrgName', 'ToolName', 'TargetOS', 'TerminalServerHealth') },
+    [pscustomobject]@{ Id = 'basics'; Questions = @('OrgName', 'ToolName', 'TargetOS', 'TerminalServerHealth', 'GreetingName') },
     [pscustomobject]@{ Id = 'support'; Questions = @('SupportMail', 'TerminalServerSupportMail', 'SupportPhone', 'SupportHours', 'SupportWebsite', 'SupportTeams') },
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },

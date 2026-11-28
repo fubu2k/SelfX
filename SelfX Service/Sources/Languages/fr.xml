@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Redémarrer maintenant</Button_Restart_Now>
 		<Health_Restart_Started>Windows redémarre dans environ 30 secondes. Enregistrez votre travail maintenant.</Health_Restart_Started>
 		<Disturb_Warning_Text>Vous semblez être en réunion ou en présentation. Cette action peut l'interrompre.</Disturb_Warning_Text>
+		<Greeting_Morning>Bonjour, {0}.</Greeting_Morning>
+		<Greeting_Day>Bonjour, {0}.</Greeting_Day>
+		<Greeting_Evening>Bonsoir, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Bienvenue.</Greeting_Neutral>
 		<Health_Updates_Started>Les mises à jour Windows sont recherchées, téléchargées et installées. Cela peut prendre plusieurs minutes ; vous pouvez continuer à travailler.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update a terminé. L’état de l’appareil est vérifié à nouveau et indique si un redémarrage est nécessaire.</Health_Updates_Done>
 		<Health_Apps_Button>Réessayer</Health_Apps_Button>

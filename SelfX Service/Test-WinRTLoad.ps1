@@ -26,6 +26,7 @@
     2.8.14   2026-11-23  fubu2k               Initial version.
     2.9.0    2026-11-27  fubu2k               The hashes come from SelfX.Code.json.
     3.1.0    2026-11-28  fubu2k               SelfXDisturb.ps1 is a third script that loads a checked library.
+    3.1.0    2026-11-28  fubu2k               Import-SelfXWinRTProjection (used by UserName.ps1): the same check first, nothing loaded on a difference.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -161,6 +162,15 @@ try {
 	Assert-Equal @([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { try { $_.Location -and $_.Location.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } catch { $false } }).Count 0 'Import-SelfXWinRT: no assembly of the test folder was loaded'
 	New-Install
 	Assert-Throws { Import-SelfXWinRT -InstallFolder $install } 'load|format|assembly' 'Import-SelfXWinRT: a checked file reaches the loader (stand-in bytes are no assembly)'
+	Close-Handles
+	# Import-SelfXWinRTProjection (UserName.ps1) runs the same check first: a changed DLL is refused before anything is loaded.
+	New-Install; [IO.File]::WriteAllBytes($mainDll, [byte[]](9, 9, 9, 9))
+	Assert-Throws { Import-SelfXWinRTProjection -InstallFolder $install } 'does not match' 'Import-SelfXWinRTProjection: a changed DLL is refused before the loader'
+	Assert-Equal @([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { try { $_.Location -and $_.Location.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } catch { $false } }).Count 0 'Import-SelfXWinRTProjection: no assembly of the test folder was loaded'
+	$projectionText = (Get-Command Import-SelfXWinRTProjection).ScriptBlock.ToString()
+	Assert-Equal ($projectionText.IndexOf('Import-SelfXWinRT -InstallFolder') -ge 0 -and $projectionText.IndexOf('Import-SelfXWinRT -InstallFolder') -lt $projectionText.IndexOf('LoadFrom')) $true 'Import-SelfXWinRTProjection: the check runs before the projection is loaded'
+	$userNameText = Get-Content -LiteralPath (Join-Path $sources 'UserName.ps1') -Raw
+	Assert-Equal ($userNameText -match 'Import-SelfXWinRTProjection -InstallFolder') $true 'UserName.ps1 loads the projection through Import-SelfXWinRTProjection'
 	Close-Handles
 
 	# --- the callers and the service ---

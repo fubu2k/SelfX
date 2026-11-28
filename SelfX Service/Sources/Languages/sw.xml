@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Anzisha upya sasa</Button_Restart_Now>
 		<Health_Restart_Started>Windows itaanzishwa upya baada ya takriban sekunde 30. Hifadhi kazi yako sasa.</Health_Restart_Started>
 		<Disturb_Warning_Text>Inaonekana uko katika mkutano au wasilisho. Kitendo hiki kinaweza kuukatiza.</Disturb_Warning_Text>
+		<Greeting_Morning>Habari za asubuhi, {0}.</Greeting_Morning>
+		<Greeting_Day>Habari za mchana, {0}.</Greeting_Day>
+		<Greeting_Evening>Habari za jioni, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Karibu.</Greeting_Neutral>
 		<Health_Updates_Started>Masasisho ya Windows yanatafutwa, kupakuliwa na kusakinishwa. Hii inaweza kuchukua dakika kadhaa; unaweza kuendelea kufanya kazi.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update imemaliza. Hali ya kifaa inakaguliwa tena na inaonyesha kama kuanzisha upya kunahitajika.</Health_Updates_Done>
 		<Health_Apps_Button>Jaribu tena</Health_Apps_Button>
