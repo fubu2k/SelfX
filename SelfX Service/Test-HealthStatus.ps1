@@ -18,6 +18,8 @@
                                            and without the kinds of connection; answer UNAVAILABLE TerminalServer in the client.
         3.1.0  2026-11-28  fubu2k          The mode comes from the product type of Windows (mocked: the CI runs on Windows Server); an old
                                            Environment_Mode in Tool_Config.xml and an unreadable file do not change it.
+        3.1.0  2026-11-28  fubu2k          Row "Company apps": known error codes get an explanation in the language of the user
+                                           (Add-SelfXAppErrorText); unknown codes, other rows and texts without a code stay unchanged.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -525,6 +527,28 @@ try {
     $info = @(ConvertTo-SelfXHealthInfo @([pscustomobject]@{Id='Disk'; Name='C:'; Status='Error'; Detail='90%'; Remediation='Repair-Disk.ps1'}))
     Assert-Equal $info[0].Remediation 'Repair-Disk.ps1' 'Remediation preserved for UI binding'
     Assert-Equal "$($info[0].HealthId)/$($info[0].HealthName)" 'Disk/C:' 'Check identity preserved for recheck'
+    # Row "Company apps": known codes get a short explanation in the language of the user (here German), once per code, at the end.
+    $appDetail = '2 of 3 app(s) could not be installed: Teams (error 0x80070643); Word (error 0x80070643).'
+    $appRow = @(ConvertTo-SelfXHealthInfo @([pscustomobject]@{Id='Applications'; Name=''; Status='Error'; Detail=$appDetail; Remediation=''}))[0]
+    $germanText = Get-SelfXInfoText 'AppError_80070643'
+    Assert-Equal ($germanText -ne $Script:SelfXInfoDefaultText['AppError_80070643'] -and $germanText.Length -gt 20) $true 'App error: the explanation comes from the language of the user'
+    Assert-Equal $appRow.Detail ($appDetail + ' 0x80070643: ' + $germanText) 'App error: a known code is explained once, at the end'
+    Assert-Equal (Add-SelfXAppErrorText 'Teams (error 0x80070643); Edge (error 0x87D1041C).') ('Teams (error 0x80070643); Edge (error 0x87D1041C). 0x80070643: ' + $germanText + ' 0x87D1041C: ' + (Get-SelfXInfoText 'AppError_87D1041C')) 'App error: two codes, two explanations in the order of the text'
+    Assert-Equal (Add-SelfXAppErrorText 'Teams (error 0x00000643).') ('Teams (error 0x00000643). 0x80070643: ' + $germanText) 'App error: an exit code of the installer (1603) is looked up as 0x80070643'
+    Assert-Equal (Add-SelfXAppErrorText 'Teams (error 0x87d1041c).') ('Teams (error 0x87d1041c). 0x87D1041C: ' + (Get-SelfXInfoText 'AppError_87D1041C')) 'App error: the case of the hex digits does not matter'
+    foreach ($same in @('Teams (error 0x80041234).', 'Teams (state 2000).', '', 'All 3 app(s) installed.', 'Teams (error 0x8007064)', 'error 0xZZZZZZZZ')) {
+        Assert-Equal (Add-SelfXAppErrorText $same) $same "App error: '$same' stays unchanged (unknown code or no code)"
+    }
+    $diskRow = @(ConvertTo-SelfXHealthInfo @([pscustomobject]@{Id='Disk'; Name='C:'; Status='Error'; Detail='error 0x80070070'; Remediation=''}))[0]
+    Assert-Equal $diskRow.Detail 'error 0x80070070' 'App error: only the row "Company apps" gets explanations'
+    $codeKeys = @($Script:SelfXInfoDefaultText.Keys | Where-Object { $_ -like 'AppError_*' })
+    Assert-Equal (($codeKeys.Count -ge 10 -and $codeKeys.Count -le 20) -and -not @($codeKeys | Where-Object { $_ -notmatch '^AppError_[0-9A-F]{8}$' }).Count) $true "App error: 10 to 20 codes, each AppError_ and eight upper-case hex digits ($($codeKeys.Count))"
+    $englishLanguage = [xml][IO.File]::ReadAllText("$sources\Languages\en.xml")
+    Assert-Equal @($codeKeys | Where-Object { $englishLanguage.SelfX_Language.SystemInfo.$_ -ne $Script:SelfXInfoDefaultText[$_] }).Count 0 'App error: the English defaults are the texts of en.xml'
+    $infoSource = [IO.File]::ReadAllText("$sources\SystemInfo.ps1")
+    $addStart = $infoSource.IndexOf('function Add-SelfXAppErrorText')
+    $addBody = $infoSource.Substring($addStart, $infoSource.IndexOf('function ConvertTo-SelfXHealthInfo') - $addStart)
+    Assert-Equal ($addBody -notmatch 'Start-Process|Invoke-|Get-Item|Set-|Remove-|New-Item|Write-SelfXLog|Out-File') $true 'App error: the explanation starts nothing, reads nothing and writes nothing'
     & {
         function Get-SelfXServiceHealthReport { param($Id, $Name)
             if ($script:recheckFails) { throw 'Mock busy' }

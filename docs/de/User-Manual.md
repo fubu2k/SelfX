@@ -114,6 +114,8 @@ Prüfung. Die Zeile unter dem Titel zeigt, wann zuletzt geprüft wurde.
 - **Erneut versuchen** (bei **Unternehmens-Apps**): Eine App Ihres Unternehmens konnte nicht
   installiert werden. SelfX startet die Installation sofort neu. Den Fortschritt sehen Sie im
   Unternehmensportal. Schlägt sie wieder fehl, senden Sie die Protokolle an den Support.
+  Bei bekannten Fehlercodes sagt die Karte in einem Satz, was schiefging und was Sie tun können
+  (zum Beispiel das Gerät neu starten oder Speicherplatz freigeben).
 - **Pfeil** auf einer Karte: Prüft nur diesen Status erneut. Oben: prüft alles erneut.
 - **Alle Probleme beheben**: Führt alle möglichen Reparaturen nacheinander aus. Speichern Sie
   vorher Ihre Arbeit.

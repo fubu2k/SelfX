@@ -332,6 +332,18 @@ Descrição do problema:</Report_Mail_Body>
 		<Health_Unknown>Desconhecido</Health_Unknown>
 		<Health_Pending>Pendente</Health_Pending>
 		<Health_Unavailable>Relatório de estado local indisponível: {0}</Health_Unavailable>
+		<AppError_87D1041C>A aplicação foi instalada, mas já não é encontrada (por exemplo, porque foi removida). As aplicações obrigatórias são reinstaladas na próxima sincronização.</AppError_87D1041C>
+		<AppError_8000FFFF>Ocorreu um erro inesperado durante a instalação. Reinicie o dispositivo e tente novamente. Se falhar outra vez, contacte o suporte.</AppError_8000FFFF>
+		<AppError_80070643>Ocorreu um erro grave durante a instalação. Reinicie o dispositivo e tente novamente. Se falhar outra vez, contacte o suporte.</AppError_80070643>
+		<AppError_80070642>A instalação foi cancelada. Inicie-a novamente e não a cancele.</AppError_80070642>
+		<AppError_80070652>Estava a decorrer outra instalação ao mesmo tempo. Aguarde até terminar e tente novamente.</AppError_80070652>
+		<AppError_80070653>Não foi possível abrir o ficheiro de instalação. Tente novamente mais tarde. Se falhar outra vez, contacte o suporte.</AppError_80070653>
+		<AppError_80070659>A instalação está bloqueada por uma regra do dispositivo. Contacte o suporte.</AppError_80070659>
+		<AppError_80070660>A pasta de ficheiros temporários está cheia ou não pode ser usada. Liberte espaço em disco e tente novamente.</AppError_80070660>
+		<AppError_80070666>Já está instalada outra versão desta aplicação. Contacte o suporte.</AppError_80070666>
+		<AppError_80070BC2>A instalação precisa de um reinício. Reinicie o dispositivo.</AppError_80070BC2>
+		<AppError_80070070>Não há espaço suficiente no disco. Liberte espaço em disco e tente novamente.</AppError_80070070>
+		<AppError_80070005>O acesso foi negado durante a instalação. Contacte o suporte.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

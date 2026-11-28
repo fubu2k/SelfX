@@ -332,6 +332,18 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<Health_Unknown>Haijulikani</Health_Unknown>
 		<Health_Pending>Inasubiri</Health_Pending>
 		<Health_Unavailable>Ripoti ya hali ya ndani haipatikani: {0}</Health_Unavailable>
+		<AppError_87D1041C>Programu ilisakinishwa lakini haipatikani tena (kwa mfano, iliondolewa). Programu za lazima husakinishwa tena wakati wa usawazishaji unaofuata.</AppError_87D1041C>
+		<AppError_8000FFFF>Hitilafu isiyotarajiwa ilitokea wakati wa usakinishaji. Washa upya kifaa na ujaribu tena. Ikishindwa tena, wasiliana na usaidizi.</AppError_8000FFFF>
+		<AppError_80070643>Hitilafu kubwa ilitokea wakati wa usakinishaji. Washa upya kifaa na ujaribu tena. Ikishindwa tena, wasiliana na usaidizi.</AppError_80070643>
+		<AppError_80070642>Usakinishaji ulighairiwa. Uanzishe tena na usiughairi.</AppError_80070642>
+		<AppError_80070652>Usakinishaji mwingine ulikuwa unaendelea wakati huo huo. Subiri hadi ukamilike, kisha ujaribu tena.</AppError_80070652>
+		<AppError_80070653>Faili ya usakinishaji haikuweza kufunguliwa. Jaribu tena baadaye. Ikishindwa tena, wasiliana na usaidizi.</AppError_80070653>
+		<AppError_80070659>Usakinishaji umezuiwa na sheria ya kifaa. Wasiliana na usaidizi.</AppError_80070659>
+		<AppError_80070660>Folda ya faili za muda imejaa au haiwezi kutumika. Futa nafasi kwenye diski na ujaribu tena.</AppError_80070660>
+		<AppError_80070666>Toleo jingine la programu hii tayari limesakinishwa. Wasiliana na usaidizi.</AppError_80070666>
+		<AppError_80070BC2>Usakinishaji unahitaji kuwasha upya. Washa upya kifaa.</AppError_80070BC2>
+		<AppError_80070070>Hakuna nafasi ya kutosha kwenye diski. Futa nafasi kwenye diski na ujaribu tena.</AppError_80070070>
+		<AppError_80070005>Ufikiaji ulikataliwa wakati wa usakinishaji. Wasiliana na usaidizi.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
