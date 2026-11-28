@@ -430,7 +430,7 @@ Konfigurations-Apps: Eine neuere ersetzt eine ältere, die Geräte installieren 
 
 - SelfX ist installiert und hat einen Vertrauensanker; der Anker ist sicher. Der Modus (Hash oder Signatur) ist der des Geräts. `-TrustedSigner` und
   `-AllowHashMode` lassen sich nicht mit `-ConfigOnly` kombinieren: Ein Konfigurationspaket kann nicht ändern, wem vertraut wird.
-- Das Paket enthält nur `Install.ps1` und `Config`, keinen Link, und jede Datei steht mit ihrem SHA256 in `Config\SelfX.Config.json`. Im Modus Signatur müssen die Skripte
+- Das Paket enthält nur `Install.ps1`, `Config` und `Detection.ps1` (sie wird weder ausgeführt noch installiert), keinen Link, und jede Datei steht mit ihrem SHA256 in `Config\SelfX.Config.json`. Im Modus Signatur müssen die Skripte
   und `Config\SelfX.Config.cat` eine gültige Signatur eines Signierers des Geräts tragen.
 - `MinCodeVersion` in `SelfX.Config.json` (die Code-Version, für die die Konfiguration gemacht ist) darf nicht neuer sein als der installierte Code
   (`App\SelfX.Code.json`). Installieren Sie in diesem Fall zuerst das vollständige Paket.

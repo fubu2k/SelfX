@@ -33,7 +33,7 @@
     users (S-1-5-32-545) can read. A device whose anchor says Signature is installed in the mode Hash only with the explicit
     switch -AllowHashMode (protection against a downgrade); -AllowHashMode together with -TrustedSigner is an error.
     Parameters are bound by name only.
-    Mode -ConfigOnly (package of the assistant that holds only Install.ps1 and Config): replaces the folder Config of an existing
+    Mode -ConfigOnly (package of the assistant that holds only Install.ps1, Config and Detection.ps1): replaces the folder Config of an existing
     installation and nothing else; the service, the programs, the shortcuts and the trust anchor are not touched and nothing is
     restarted (the service reads its settings anew at every use; an open SelfX window keeps its texts until it is closed). The
     trust mode is the one of the anchor on the device: -TrustedSigner and -AllowHashMode are errors. Mode Signature: Install.ps1
@@ -109,6 +109,8 @@
                                               Audio\SelfXAudio.dll
     3.1.0    2026-11-28  fubu2k               Trust mode Signature: Detection.ps1 at the top of the package needs no embedded signature (exactly this one
                                               path, Test-SelfXUnsignedPackageFile); a full package still covers it with SelfX.Code.cat
+    3.1.0    2026-11-28  fubu2k               -ConfigOnly: the package may hold Detection.ps1 at the top (the configuration package of the wizard keeps
+                                              it); it is neither run nor installed
 #>
 
 # Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
@@ -924,7 +926,7 @@ function Test-SelfXTrustAnchorState {
 }
 
 # ------------------------------------------------------------------------------------------------ mode -ConfigOnly
-# A package of the assistant with only Install.ps1 and Config replaces the folder Config of an existing installation. The functions
+# A package of the assistant with only Install.ps1, Config and Detection.ps1 (not run, not installed) replaces the folder Config of an existing installation. The functions
 # below are called by Invoke-SelfXConfigOnly (Test-InstallConfigOnly.ps1 takes them out of this file and runs them in a temporary folder).
 
 function ConvertTo-SelfXCodeVersion {
@@ -947,8 +949,10 @@ function Get-SelfXConfigMinCodeVersion {
 }
 
 function Test-SelfXConfigPackageLayout {
-	# The package of -ConfigOnly holds Install.ps1 and the folder Config and nothing else, and no link anywhere. A full package (App,
-	# Bin, Service, Uninstall.ps1) is refused: it would silently leave the code of the device unchanged. Throws; nothing is changed.
+	# The package of -ConfigOnly holds Install.ps1, the folder Config and, optionally, the file Detection.ps1 (the package wizard keeps it
+	# in the configuration package; it is neither run nor installed: only Config is copied), and nothing else, and no link anywhere. A
+	# full package (App, Bin, Service, Uninstall.ps1) is refused: it would silently leave the code of the device unchanged. Throws;
+	# nothing is changed.
 	param([Parameter(Mandatory = $true)][string]$PackageFolder)
 	$Root = (Get-Item -LiteralPath $PackageFolder -Force).FullName.TrimEnd('\')
 	ForEach($Item in @(Get-ChildItem -LiteralPath $Root -Recurse -Force))
@@ -959,8 +963,9 @@ function Test-SelfXConfigPackageLayout {
 	{
 		If(($Item.Name -ieq 'Install.ps1') -and -not $Item.PSIsContainer) { continue }
 		If(($Item.Name -ieq 'Config') -and $Item.PSIsContainer) { continue }
+		If(($Item.Name -ieq 'Detection.ps1') -and -not $Item.PSIsContainer) { continue }
 		If(@('App', 'Bin', 'Service', 'Uninstall.ps1') -contains $Item.Name) { throw "-ConfigOnly: the package holds '$($Item.Name)': it is a full package. Install it without -ConfigOnly. Nothing was changed." }
-		throw "-ConfigOnly: the package holds the unexpected entry '$($Item.Name)' (only Install.ps1 and Config are allowed). Nothing was changed."
+		throw "-ConfigOnly: the package holds the unexpected entry '$($Item.Name)' (only Install.ps1, Detection.ps1 and Config are allowed). Nothing was changed."
 	}
 	If(-not (Test-Path -LiteralPath (Join-Path $Root 'Config') -PathType Container)) { throw '-ConfigOnly: the folder Config is missing in the package. Nothing was changed.' }
 }

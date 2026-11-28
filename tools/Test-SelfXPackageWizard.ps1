@@ -17,7 +17,7 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.9.0
+    Version : 1.9.1
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
               1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
@@ -27,6 +27,7 @@
               1.6.0 (2026-11-28, fubu2k) question TerminalServerSupportMail: only for WindowsServer, required, default Support mail
               1.7.0 (2026-11-28, fubu2k) package for WindowsServer: no step pack, no .intunewin file, no tool needed; Windows11 unchanged
               1.8.0 (2026-11-28, fubu2k) question DisturbWarning: default yes, writes Disturb_Warning
+              1.9.1 (2026-11-28, fubu2k) the configuration package of the wizard passes the layout rule of Install.ps1 -ConfigOnly
               1.9.0 (2026-11-28, fubu2k) time stamp: kind timestamp, TimestampServer in the answer file (console, saved, refused when invalid, in no
                                          file of the package), -NoTimestamp needed without a service, test signature first, unreachable service
     Exit code: 0 = all tests passed, 1 = at least one failed
@@ -644,6 +645,15 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ($cfg.PackageKind -eq 'ConfigOnly' -and $cfg.PackageFile -eq "SelfX-Config-$($cfg.Version).intunewin" -and $cfg.DetectionFile -eq "SelfX-Config-$($cfg.Version).Detection.ps1") 'config package: file names SelfX-Config-<version>'
     $cfgTop = @(Get-ChildItem -LiteralPath (Join-Path $cfgOut 'package') -Force | ForEach-Object { $_.Name } | Sort-Object)
     Assert (($cfgTop -join ',') -eq 'Config,Detection.ps1,Install.ps1') 'config package: only Install.ps1, Detection.ps1 and Config are packaged'
+    # The layout rule of Install.ps1 -ConfigOnly (taken out of Install.ps1, not run) accepts what the wizard builds.
+    $installAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $RepositoryRoot 'SelfX Service\Install.ps1'), [ref]$null, [ref]$null)
+    $layoutRule = $installAst.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Test-SelfXConfigPackageLayout' }, $true)
+    Assert ($null -ne $layoutRule) 'Install.ps1 defines Test-SelfXConfigPackageLayout'
+    if ($null -ne $layoutRule) {
+        . ([scriptblock]::Create($layoutRule.Extent.Text))
+        $layoutAnswer = 'accepted'; try { Test-SelfXConfigPackageLayout -PackageFolder (Join-Path $cfgOut 'package') } catch { $layoutAnswer = $_.Exception.Message }
+        Assert ($layoutAnswer -eq 'accepted') "config package: Install.ps1 -ConfigOnly accepts the layout of the wizard ($layoutAnswer)"
+    }
     $cfgList = Get-Content -LiteralPath (Join-Path $cfgOut 'package\Config\SelfX.Config.json') -Raw | ConvertFrom-Json
     Assert ($cfgList.MinCodeVersion -eq $cfg.Version) 'config package: MinCodeVersion is the code version of the payload'
     Assert ($null -ne $cfgList.Files.PSObject.Properties['Tool_Config.xml'] -and $null -ne $cfgList.Files.PSObject.Properties['Branding/logo.png']) 'config package: the list names the configuration and the logo'
