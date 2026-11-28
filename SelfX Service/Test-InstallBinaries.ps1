@@ -382,7 +382,7 @@ else {
 	[void](New-SelfXCodeManifest -Stage $layoutPackage -Version '3.1.0')
 	[void](New-SelfXConfigManifest -Stage $layoutPackage)
 	$packageCount = Test-SelfXFileManifest -PackageFolder $layoutPackage
-	Assert-Equal ($packageCount -eq ($sorted.Code + $sorted.Config + 5)) $true "layout: the package lists the sorted files, Uninstall.ps1 and the four files of Bin ($packageCount)"
+	Assert-Equal ($packageCount -eq ($sorted.Code + $sorted.Config + 6)) $true "layout: the package lists the sorted files, Uninstall.ps1 and the five files of Bin ($packageCount)"
 	Assert-Equal (Get-SelfXPackageToolVersion -PackageFolder $layoutPackage) '3.1.0' 'layout: the version comes from App\SelfX.Code.json'
 
 	$device = Join-Path $layoutRoot 'SelfX'

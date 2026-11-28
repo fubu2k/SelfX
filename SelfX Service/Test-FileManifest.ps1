@@ -136,7 +136,7 @@ try {
 	# The package layout of tools\New-SelfXIntuneWin.ps1: code files into App, configuration files into Config, Sources removed.
 	$layout = ConvertTo-SelfXPackageLayout -Stage $pristine
 	Assert-Equal (Test-Path -LiteralPath (Join-Path $pristine 'Sources')) $false 'layout: Sources is removed'
-	Assert-Equal ($layout.Code + $layout.Config) ($expectedCount - 6) 'layout: every file of Sources is sorted (Uninstall.ps1 and the 5 files of Bin stay)'
+	Assert-Equal ($layout.Code + $layout.Config) ($expectedCount - 7) 'layout: every file of Sources is sorted (Uninstall.ps1 and the 6 files of Bin stay)'
 	foreach ($name in 'Self_X.ps1', 'SelfXPaths.ps1', 'Scripts_to_run\SelfX_Device_SyncTime.ps1', 'HealthChecks\Check-Compliance.ps1', 'Languages\de.xml', 'Repair.ico', 'logo.png') {
 		Assert-Equal (Test-Path -LiteralPath (Join-Path $pristine "App\$name") -PathType Leaf) $true "layout: $name is in App"
 		Assert-Equal (Test-Path -LiteralPath (Join-Path $pristine "Config\$name")) $false "layout: $name is not in Config"

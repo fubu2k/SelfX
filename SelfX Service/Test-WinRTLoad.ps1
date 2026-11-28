@@ -17,7 +17,7 @@
     Name    : Test-WinRTLoad.ps1
     Package : SelfX Service
     Context : Packaging test (run by the administrator or the CI; not installed)
-    Version : 2.9.0
+    Version : 3.1.0
     Exit code: 0 = all checks passed, 1 = errors found
 
     History:
@@ -25,6 +25,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.14   2026-11-23  fubu2k               Initial version.
     2.9.0    2026-11-27  fubu2k               The hashes come from SelfX.Code.json.
+    3.1.0    2026-11-28  fubu2k               SelfXDisturb.ps1 is a third script that loads a checked library.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -163,8 +164,8 @@ try {
 	Close-Handles
 
 	# --- the callers and the service ---
-	$loaders = @(Get-ChildItem -LiteralPath $sources -Recurse -Filter '*.ps1' -File | Where-Object { $_.Name -notin 'SelfXWinRT.ps1', 'SelfXAudio.ps1' -and (Select-String -LiteralPath $_.FullName -Pattern 'Assembly\]::(LoadFrom|LoadFile|Load)\b' -Quiet) })
-	Assert-Equal ($loaders.Name -join ', ') '' 'no other script loads an assembly (only SelfXWinRT.ps1 and SelfXAudio.ps1)'
+	$loaders = @(Get-ChildItem -LiteralPath $sources -Recurse -Filter '*.ps1' -File | Where-Object { $_.Name -notin 'SelfXWinRT.ps1', 'SelfXAudio.ps1', 'SelfXDisturb.ps1' -and (Select-String -LiteralPath $_.FullName -Pattern 'Assembly\]::(LoadFrom|LoadFile|Load)\b' -Quiet) })
+	Assert-Equal ($loaders.Name -join ', ') '' 'no other script loads an assembly (only SelfXWinRT.ps1, SelfXAudio.ps1 and SelfXDisturb.ps1)'
 	foreach ($caller in 'HealthStatus.ps1', 'Scripts_to_run\SelfX_Updates_Install.ps1') {
 		$text = Get-Content -LiteralPath (Join-Path $sources $caller) -Raw
 		Assert-Equal ($text -match 'Import-SelfXWinRT -InstallFolder') $true "$caller loads the library through Import-SelfXWinRT"

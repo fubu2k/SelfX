@@ -144,7 +144,7 @@ Assert-Equal @($parseErrors).Count 0 'SelfXDisturb.ps1 parses'
 # The file is a code file of the package (class Code) and is listed once.
 $common = [IO.File]::ReadAllText((Join-Path (Split-Path $PSScriptRoot -Parent) 'tools\SelfXPackage.Common.ps1'))
 Assert-Equal ([regex]::Matches($common, "'SelfXDisturb\.ps1'")).Count 1 'SelfXPackage.Common.ps1 lists SelfXDisturb.ps1 once as a code file'
-Assert-Equal ([regex]::Matches($common, "'Disturb/SelfXDisturb\.dll'")).Count 1 'SelfXPackage.Common.ps1 lists Disturb/SelfXDisturb.dll once as a code file'
+Assert-Equal ([regex]::Matches($common, "'Disturb/SelfXDisturb\.dll'")).Count 2 'SelfXPackage.Common.ps1 names Disturb/SelfXDisturb.dll in the code names and in the required binaries'
 Assert-True ((Get-Content -LiteralPath (Join-Path (Split-Path $PSScriptRoot -Parent) 'tools\Build-SelfXBinaries.ps1') -Raw) -match "'Service/SelfXDisturb\.cs'\s+=\s+@\{ Project = 'SelfXDisturb';\s+Folder = 'Disturb'; Output = 'SelfXDisturb\.dll' \}") 'Build-SelfXBinaries.ps1 builds the library into Bin\Disturb'
 
 if ($script:errors.Count) {
