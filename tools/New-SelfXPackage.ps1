@@ -10,7 +10,7 @@
     folder only when all steps worked. Result in the output folder:
 
       package\                                  the configured package folder (input of the packaging)
-      SelfX-Service-<version>.intunewin         the package for Intune (not with -ConfigureOnly; SelfX-Config-... with -ConfigPackage)
+      SelfX-Service-<version>.intunewin         the package for Intune (not with -ConfigureOnly, not for Windows Server; SelfX-Config-... with -ConfigPackage)
       SelfX-Service-<version>.Detection.ps1     the detection script for Intune (not with -ConfigureOnly; signed in the trust mode Signature)
       SelfX.AppLocker.xml, AppControl\          AppLocker rules and App Control (WDAC) supplemental policy for the mode (optional)
       Set-SelfXSupportUnit-*.ps1                Intune platform scripts for the ticket routing (one per unit/group tag/device class)
@@ -31,7 +31,8 @@
     Default: build\SelfX-Guided in the repository (payload: the folder SelfX-Guided next to the payload folder).
 
 .PARAMETER ToolPath
-    IntuneWinAppUtil.exe (Win32 Content Prep Tool). Checked for the Microsoft signature by New-SelfXIntuneWin.ps1.
+    IntuneWinAppUtil.exe (Win32 Content Prep Tool). Checked for the Microsoft signature by New-SelfXIntuneWin.ps1. Not needed (and not asked)
+    for a package for Windows Server (answer TargetOS = WindowsServer): it has no .intunewin file.
 
 .PARAMETER BuildBinaries
     Only in the repository: build the programs (tools\Build-SelfXBinaries.ps1) when the folder Bin is missing. Without the switch the
@@ -77,7 +78,7 @@
     Name    : New-SelfXPackage.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 1.3.2
+    Version : 1.3.3
     Exit code: 0 = done, 1 = error or aborted
     Works in Windows PowerShell 5.1 and PowerShell 7. The wizard sends nothing; only -PfxPath makes it ask for the password of the PFX file (hidden, not stored).
 
@@ -94,6 +95,7 @@
     1.3.0    2026-11-27  fubu2k               -ConfigPackage (the configuration package) and -SeparateConfig (the full package of a setup with a configuration package)
     1.3.1    2026-11-27  fubu2k               Answer file: the answer NetworkTargets (own network targets) is known
     1.3.2    2026-11-28  fubu2k               Help: SelfX-Server-Guide for a package for Windows Server (question TargetOS)
+    1.3.3    2026-11-28  fubu2k               Package for Windows Server: no .intunewin file, no question and no need for IntuneWinAppUtil.exe
 #>
 [CmdletBinding()]
 param(
@@ -190,7 +192,7 @@ try {
             $OutputFolder = Get-WizardAnswer -Question @{ Id = 'Output'; Kind = 'text'; Max = 260; Default = $OutputFolder } -Answers $answers -Source @{}
         }
     }
-    if (-not $ConfigureOnly -and -not $ToolPath) {
+    if (-not $ConfigureOnly -and -not $ToolPath -and $answers.TargetOS -ne 'WindowsServer') {
         $ToolPath = $defaults.ToolPath
         if ($interactive) { $ToolPath = Get-WizardAnswer -Question @{ Id = 'Tool'; Kind = 'text'; Max = 260; Default = $ToolPath } -Answers $answers -Source @{} }
     }

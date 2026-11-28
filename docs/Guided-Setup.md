@@ -30,7 +30,7 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 | Connection check | Switch the connection check on, the delivered Microsoft targets on or off, host names in the report on or off, and your own targets (name, host, port, group, kind; up to 8 own targets). See [Network measurements](Configuration.md#network-measurements) |
 | Further settings | Copilot Chat, company wiki, status icon, shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
 | Signature | No certificate (trust mode Hash), a certificate from the store (only suitable, valid ones) or a PFX file with its password; time stamp service; additional signers for a change of the certificate. Shows subject, issuer, end of validity, thumbprint and the revocation list addresses with warnings. See [Code signing certificate](Certificate-Guide.md) |
-| Summary | Your answers, the package folder, the output folder, `IntuneWinAppUtil.exe`, "only write the configuration" |
+| Summary | Your answers, the package folder, the output folder, `IntuneWinAppUtil.exe` (not for Windows Server), "only write the configuration" |
 | Build the Intune package | One click; a list shows every step; **Cancel** stops the build, the output folder stays unchanged |
 | Result | Files, **Open folder**, **Copy instructions** and the steps for Intune as cards with copy buttons (app name, install and uninstall command with `-TrustedSigner`, requirement script, detection script, thumbprints, ASR file list) |
 
@@ -68,7 +68,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\New-SelfXPackage
 ```
 
 In the repository the wizard works on the package folder `SelfX Service` and needs the folder `Bin` (`-BuildBinaries` builds it, with
-the .NET SDK 10). You need `IntuneWinAppUtil.exe`. Download the file from Microsoft:
+the .NET SDK 10). You need `IntuneWinAppUtil.exe`, except for a package for Windows Server (it has no `.intunewin` file). Download the file from Microsoft:
 <https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool> (file `IntuneWinAppUtil.exe` in the repository,
 preferably from the latest release tag). The wizard asks for the path of the file and checks the Microsoft signature.
 
@@ -77,7 +77,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 | `-Language en` | Language of the wizard (`de`, `en`). Without it the wizard asks first, in English; English is preselected and the other languages are a numbered list. |
 | `-AnswerFile <file>` | Uses saved answers and asks nothing (for updates and automation). |
 | `-OutputFolder <folder>` | Default: `build\SelfX-Guided` in the repository, `SelfX-Guided` next to the unpacked payload archive. The folder must be new, empty or the result of an earlier run. |
-| `-ToolPath <file>` | Path of `IntuneWinAppUtil.exe`. |
+| `-ToolPath <file>` | Path of `IntuneWinAppUtil.exe`. Not needed and not asked for a package for Windows Server. |
 | `-PayloadFolder <folder>` | A folder in the layout of the unpacked payload archive. Default: the unpacked archive that contains `tools`, otherwise the repository. |
 | `-BuildBinaries` | Only in the repository: builds the folder `Bin` if it is missing. |
 | `-ConfigureOnly` | Writes configuration, scripts and instructions only; nothing is packed or signed. |
@@ -109,7 +109,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
    ID of your base policy. Without an ID no App Control file is written. The rule scripts need Windows PowerShell 5.1; AppLocker also the
    AppLocker cmdlets, App Control the module ConfigCI. Without them the run stops with a clear text: answer *no* or create the files on
    another PC (`tools\New-SelfXAppLockerRules.ps1`, `tools\New-SelfXWdacPolicy.ps1`).
-9. **Build:** output folder and path of `IntuneWinAppUtil.exe`.
+9. **Build:** output folder and path of `IntuneWinAppUtil.exe` (not asked for a package for Windows Server).
 
 Every input is checked (addresses, https links, colors, lengths, characters); an invalid input is
 refused at once. Values are written to the XML files as escaped text. The logo must be a `png`, `jpg` or `ico` file of at most 2 MB; the
@@ -136,7 +136,7 @@ certificate protected: whoever has it can sign files that SelfX accepts.
 
 | File | Purpose |
 |---|---|
-| `SelfX-Service-<version>.intunewin` | The package for Intune. |
+| `SelfX-Service-<version>.intunewin` | The package for Intune. Not built for a package for Windows Server: its installation is the folder `package`. |
 | `SelfX-Service-<version>.Detection.ps1` | The detection script. Upload **this** file. |
 | `SelfX-Config-<version>.intunewin`, `SelfX-Config-<version>.Detection.ps1` | Instead of the two files above, when you build the configuration package (summary page: *Configuration package*, console: `-ConfigPackage`). It holds only `Install.ps1`, `Detection.ps1` and `Config` and is installed with `Install.ps1 -ConfigOnly`: [second package for the configuration](Installation.md#second-intune-package-the-configuration-only). |
 | `Set-SelfXSupportUnit-*.ps1` | Platform scripts for the ticket routing (per unit, group tag and device class). Units routed by OU only need none. |
