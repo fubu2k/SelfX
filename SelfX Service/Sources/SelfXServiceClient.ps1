@@ -35,6 +35,8 @@
     3.1.0    2026-11-28  fubu2k               Invoke-SelfXAppRetry (APPRETRY <app id>, retry of one Intune app; only a GUID is sent; answer
                                               ERROR Unknown app = status AppGone). Health rows Applications may carry Apps (ID, name, problem),
                                               checked: at most 20, GUID, Failed or Stalled, name without control characters
+    3.1.0    2026-11-28  fubu2k               RUN and APPRETRY are sent only when the pipe server is confirmed as the running service (an undetermined
+                                              state no longer lets them through; PING, STATUS and HEALTH as before)
 #>
 
 $Script:SelfXDefaultPipeName = 'SelfX.Service'
@@ -103,11 +105,14 @@ namespace SelfXClient
 
 function Test-SelfXPipeServer {
 	# Throws when the pipe is definitely not served by the SelfX service. An error while checking (for example a
-	# restricted language mode that blocks Add-Type) does not stop the request: the check must not break the tool.
-	param([Parameter(Mandatory = $true)]$Pipe)
+	# restricted language mode that blocks Add-Type) does not stop a request that only reads (PING, STATUS, HEALTH).
+	# -RequireConfirmed (RUN, APPRETRY: the user confirmed an action): the server must be confirmed as the service,
+	# otherwise a process that took over the pipe name while the service was stopped could fake "done".
+	param([Parameter(Mandatory = $true)]$Pipe, [switch]$RequireConfirmed)
 	$state = -1
 	try { $state = [int](Get-SelfXPipeServerState -Pipe $Pipe) } catch { $state = -1 }
 	if ($state -eq 0) { throw 'The pipe is not served by the running SelfX service.' }
+	if ($RequireConfirmed -and $state -ne 1) { throw 'The pipe server could not be confirmed as the running SelfX service.' }
 }
 
 function Get-SelfXPowerShellPath {
@@ -153,7 +158,7 @@ function Invoke-SelfXServiceRequest {
 	try {
 		$pipe.Connect($ConnectTimeoutMs)
 		# Nothing is sent before the server is known: only the real service may answer on the default pipe.
-		if ($PipeName -eq $Script:SelfXDefaultPipeName) { Test-SelfXPipeServer -Pipe $pipe }
+		if ($PipeName -eq $Script:SelfXDefaultPipeName) { Test-SelfXPipeServer -Pipe $pipe -RequireConfirmed:($Request -match '^(RUN|APPRETRY) ') }
 		# A BOM-free UTF-8 line matches the service protocol; flush before waiting for a reply.
 		$encoding = New-Object System.Text.UTF8Encoding($false)
 		$writer = New-Object System.IO.StreamWriter($pipe, $encoding, 1024, $true)
