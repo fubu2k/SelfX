@@ -30,6 +30,10 @@
 		<Button_Restart_Now>รีสตาร์ตตอนนี้</Button_Restart_Now>
 		<Health_Restart_Started>Windows จะรีสตาร์ตในอีกประมาณ 30 วินาที โปรดบันทึกงานของคุณตอนนี้</Health_Restart_Started>
 		<Disturb_Warning_Text>ดูเหมือนว่าคุณกำลังอยู่ในการประชุมหรือการนำเสนอ การดำเนินการนี้อาจขัดจังหวะได้</Disturb_Warning_Text>
+		<Greeting_Morning>สวัสดีตอนเช้า คุณ{0}</Greeting_Morning>
+		<Greeting_Day>สวัสดี คุณ{0}</Greeting_Day>
+		<Greeting_Evening>สวัสดีตอนเย็น คุณ{0}</Greeting_Evening>
+		<Greeting_Neutral>ยินดีต้อนรับ</Greeting_Neutral>
 		<Health_Updates_Started>กำลังค้นหา ดาวน์โหลด และติดตั้งการอัปเดต Windows อาจใช้เวลาหลายนาที คุณสามารถทำงานต่อได้</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update เสร็จแล้ว สถานะอุปกรณ์จะถูกตรวจสอบอีกครั้งและแสดงว่าจำเป็นต้องรีสตาร์ตหรือไม่</Health_Updates_Done>
 		<Health_Apps_Button>ลองอีกครั้ง</Health_Apps_Button>

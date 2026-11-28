@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Uruchom ponownie teraz</Button_Restart_Now>
 		<Health_Restart_Started>System Windows zostanie uruchomiony ponownie za około 30 sekund. Zapisz teraz swoją pracę.</Health_Restart_Started>
 		<Disturb_Warning_Text>Wygląda na to, że jesteś na spotkaniu lub prezentacji. Ta akcja może je przerwać.</Disturb_Warning_Text>
+		<Greeting_Morning>Dzień dobry, {0}.</Greeting_Morning>
+		<Greeting_Day>Dzień dobry, {0}.</Greeting_Day>
+		<Greeting_Evening>Dobry wieczór, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Witamy.</Greeting_Neutral>
 		<Health_Updates_Started>Aktualizacje systemu Windows są wyszukiwane, pobierane i instalowane. Może to potrwać kilka minut; możesz dalej pracować.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update zakończył działanie. Stan urządzenia jest sprawdzany ponownie i pokazuje, czy potrzebne jest ponowne uruchomienie.</Health_Updates_Done>
 		<Health_Apps_Button>Spróbuj ponownie</Health_Apps_Button>

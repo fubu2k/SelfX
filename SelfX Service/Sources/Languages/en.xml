@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Restart now</Button_Restart_Now>
 		<Health_Restart_Started>Windows restarts in about 30 seconds. Save your work now.</Health_Restart_Started>
 		<Disturb_Warning_Text>You appear to be in a meeting or presentation. This action can interrupt it.</Disturb_Warning_Text>
+		<Greeting_Morning>Good morning, {0}.</Greeting_Morning>
+		<Greeting_Day>Hello, {0}.</Greeting_Day>
+		<Greeting_Evening>Good evening, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Welcome.</Greeting_Neutral>
 		<Health_Updates_Started>Windows updates are being searched, downloaded and installed. This can take several minutes; you can keep working.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update has finished. The device status is checked again and shows whether a restart is needed.</Health_Updates_Done>
 		<Health_Apps_Button>Try again</Health_Apps_Button>

@@ -30,6 +30,10 @@
 		<Button_Restart_Now>立即重新启动</Button_Restart_Now>
 		<Health_Restart_Started>Windows 将在约 30 秒后重新启动。请立即保存您的工作。</Health_Restart_Started>
 		<Disturb_Warning_Text>您似乎正在开会或进行演示。此操作可能会将其中断。</Disturb_Warning_Text>
+		<Greeting_Morning>早上好，{0}。</Greeting_Morning>
+		<Greeting_Day>你好，{0}。</Greeting_Day>
+		<Greeting_Evening>晚上好，{0}。</Greeting_Evening>
+		<Greeting_Neutral>欢迎。</Greeting_Neutral>
 		<Health_Updates_Started>正在搜索、下载并安装 Windows 更新。这可能需要几分钟；您可以继续工作。</Health_Updates_Started>
 		<Health_Updates_Done>Windows 更新已完成。将重新检查设备状态，并显示是否需要重新启动。</Health_Updates_Done>
 		<Health_Apps_Button>重试</Health_Apps_Button>

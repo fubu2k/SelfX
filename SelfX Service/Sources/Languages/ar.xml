@@ -30,6 +30,10 @@
 		<Button_Restart_Now>إعادة التشغيل الآن</Button_Restart_Now>
 		<Health_Restart_Started>ستتم إعادة تشغيل Windows خلال 30 ثانية تقريباً. احفظ عملك الآن.</Health_Restart_Started>
 		<Disturb_Warning_Text>يبدو أنك في اجتماع أو عرض تقديمي. قد يؤدي هذا الإجراء إلى مقاطعته.</Disturb_Warning_Text>
+		<Greeting_Morning>صباح الخير، {0}.</Greeting_Morning>
+		<Greeting_Day>مرحبًا، {0}.</Greeting_Day>
+		<Greeting_Evening>مساء الخير، {0}.</Greeting_Evening>
+		<Greeting_Neutral>أهلًا بك.</Greeting_Neutral>
 		<Health_Updates_Started>يتم البحث عن تحديثات Windows وتنزيلها وتثبيتها. قد يستغرق ذلك عدة دقائق؛ يمكنك متابعة العمل.</Health_Updates_Started>
 		<Health_Updates_Done>انتهى Windows Update. يتم فحص حالة الجهاز مرة أخرى لتوضيح ما إذا كانت إعادة التشغيل مطلوبة.</Health_Updates_Done>
 		<Health_Apps_Button>إعادة المحاولة</Health_Apps_Button>

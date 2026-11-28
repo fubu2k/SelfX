@@ -30,6 +30,10 @@
 		<Button_Restart_Now>अभी पुनः आरंभ करें</Button_Restart_Now>
 		<Health_Restart_Started>Windows लगभग 30 सेकंड में पुनः आरंभ होगा। अभी अपना काम सहेजें।</Health_Restart_Started>
 		<Disturb_Warning_Text>ऐसा लगता है कि आप किसी मीटिंग या प्रेज़ेंटेशन में हैं। यह कार्रवाई उसे बाधित कर सकती है।</Disturb_Warning_Text>
+		<Greeting_Morning>सुप्रभात, {0}।</Greeting_Morning>
+		<Greeting_Day>नमस्ते, {0}।</Greeting_Day>
+		<Greeting_Evening>शुभ संध्या, {0}।</Greeting_Evening>
+		<Greeting_Neutral>स्वागत है।</Greeting_Neutral>
 		<Health_Updates_Started>Windows अपडेट खोजे, डाउनलोड और इंस्टॉल किए जा रहे हैं। इसमें कई मिनट लग सकते हैं; आप काम जारी रख सकते हैं।</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update पूरा हो गया। डिवाइस स्थिति फिर से जाँची जा रही है और दिखाती है कि पुनः आरंभ आवश्यक है या नहीं।</Health_Updates_Done>
 		<Health_Apps_Button>फिर से प्रयास करें</Health_Apps_Button>

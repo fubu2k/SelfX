@@ -68,6 +68,9 @@
                                               confirmation; several: a choice). Only the ID of the chosen app goes to the service (APPRETRY), which checks it
                                               against its own reading of the IME cache. "Fix all problems" still retries all failed apps
     3.1.0    2026-11-28  fubu2k               Answer NotNeeded of the service (the check of a repair is OK in the status cache): information instead of an error
+    3.1.0    2026-11-28  fubu2k               Greeting above the title (Greeting_Name: FirstName or Off; UserName.ps1): neutral at once, the first name of the
+                                              user from Windows.System.User is added from a short process of its own within 2 seconds (the window loads
+                                              no WinRT library); only TextBlock.Text, not logged, not saved, not sent to the service
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -198,6 +201,8 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 . "$Current_Folder\SelfXPaths.ps1"
 . "$Current_Folder\SelfXEnvironment.ps1"
 . "$Current_Folder\SelfXDisturb.ps1"
+# Greeting (UserName.ps1): the first name is read by a short process of its own, so the window loads no WinRT library.
+. "$Current_Folder\UserName.ps1"
 . "$Current_Folder\SelfXServiceClient.ps1"
 . "$Current_Folder\Branding.ps1"
 . "$Current_Folder\Localization.ps1"
@@ -350,6 +355,8 @@ Write-SelfXLog "SelfX $Tool_Version opened: language $($SelfX_UI_Language.Cultur
 $Tool_Name = Get-SelfXText "Tool_Name" "SelfX"
 # Hint before a disruptive action when the own session looks busy (presentation, full screen, quiet time); only a text, nothing is blocked.
 $Global:SelfX_DisturbWarning = (Get-SelfXText "Disturb_Warning" "True") -ne 'False'
+# Greeting with the first name of the user (Greeting_Name: FirstName = default, Off; any other value = Off). The name is never logged.
+$Global:SelfX_GreetingMode = ConvertTo-SelfXGreetingMode -Value (Get-SelfXText "Greeting_Name" "FirstName")
 $Support_Phone_number = Get-SelfXText "Support_Phone_number" ""
 # Support e-mail and ticket recipient only from the configuration (TicketSend.ps1, Get-SelfXSupportContact): Ticket_Mail empty =
 # Support_Mail. On a terminal server TerminalServer_Support_Mail replaces both (also in the help window) and the ticket routing is not used.
@@ -965,6 +972,7 @@ __TEMPLATES__
           <Grid Name="Page_Actions">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
             <StackPanel Margin="0,0,12,0">
+              <TextBlock Name="Greeting" Style="{StaticResource SubText}" Margin="0,0,0,2"/>
               <TextBlock Name="Main_Title" Style="{StaticResource PageTitle}"/>
               <TextBlock Name="Subtitle" Style="{StaticResource SubText}" Margin="0,4,0,0"/>
               <!-- Three simple steps (explanation only, not clickable) -->
@@ -1210,6 +1218,33 @@ If($SelfX_UI_Language.FlowDirection -eq 'RightToLeft')
 	}
 $TitleText.Text = $Form.Title
 $Subtitle.Text = Get-SelfXString 'Subtitle_Text'
+# Greeting: neutral at once; with Greeting_Name = FirstName the first name is added from a short process of its own (UserName.ps1
+# -PrintFirstName, time limit 2 seconds; then it is ended). The name is set only through TextBlock.Text, never placed in XAML.
+$Global:SelfX_GreetingTexts = @{
+	Morning = [string](Get-SelfXString 'Greeting_Morning'); Day = [string](Get-SelfXString 'Greeting_Day')
+	Evening = [string](Get-SelfXString 'Greeting_Evening'); Neutral = [string](Get-SelfXString 'Greeting_Neutral')
+}
+$Greeting.Text = Get-SelfXGreetingText -Name '' -Hour (Get-Date).Hour -Texts $Global:SelfX_GreetingTexts
+$Greeting_Timer = New-Object System.Windows.Threading.DispatcherTimer
+$Greeting_Timer.Interval = [TimeSpan]::FromMilliseconds(100)
+$Greeting_Timer.Add_Tick({
+	# Time limit 2 seconds: then the process is ended and the greeting stays neutral.
+	$Greeting_State = Get-SelfXFirstNameLookupState -Lookup $Global:Greeting_Lookup -TimeoutMs 2000
+	If(-not $Greeting_State.Done) { return }
+	$Greeting_Timer.Stop()
+	$Global:Greeting_Lookup = $null
+	$Greeting.Text = Get-SelfXGreetingText -Name $Greeting_State.Name -Hour (Get-Date).Hour -Texts $Global:SelfX_GreetingTexts
+	$Greeting_State = $null
+})
+If($Global:SelfX_GreetingMode -eq 'FirstName')
+	{
+		Try
+			{
+				$Global:Greeting_Lookup = Start-SelfXFirstNameLookup -InstallFolder $Current_Folder
+				$Greeting_Timer.Start()
+			}
+		Catch { Write-SelfXLog "Greeting: the first name is not looked up ($($_.Exception.GetType().Name))." 'Warning' }
+	}
 $NavText1.Text = Get-SelfXString 'Troubleshooting_Tab_Text'
 $NavText2.Text = Get-SelfXString 'Nav_Status_Text'
 $NavText3.Text = Get-SelfXString 'SystemInfo_Tab_Text'

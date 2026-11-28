@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Перезагрузить сейчас</Button_Restart_Now>
 		<Health_Restart_Started>Windows перезагрузится примерно через 30 секунд. Сохраните свою работу сейчас.</Health_Restart_Started>
 		<Disturb_Warning_Text>Похоже, вы находитесь на собрании или презентации. Это действие может прервать её.</Disturb_Warning_Text>
+		<Greeting_Morning>Доброе утро, {0}.</Greeting_Morning>
+		<Greeting_Day>Добрый день, {0}.</Greeting_Day>
+		<Greeting_Evening>Добрый вечер, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Добро пожаловать.</Greeting_Neutral>
 		<Health_Updates_Started>Выполняется поиск, загрузка и установка обновлений Windows. Это может занять несколько минут; вы можете продолжать работу.</Health_Updates_Started>
 		<Health_Updates_Done>Центр обновления Windows завершил работу. Состояние устройства проверяется снова и показывает, нужна ли перезагрузка.</Health_Updates_Done>
 		<Health_Apps_Button>Повторить</Health_Apps_Button>

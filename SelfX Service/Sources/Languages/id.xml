@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Mulai ulang sekarang</Button_Restart_Now>
 		<Health_Restart_Started>Windows dimulai ulang dalam sekitar 30 detik. Simpan pekerjaan Anda sekarang.</Health_Restart_Started>
 		<Disturb_Warning_Text>Anda tampaknya sedang dalam rapat atau presentasi. Tindakan ini dapat menghentikannya.</Disturb_Warning_Text>
+		<Greeting_Morning>Selamat pagi, {0}.</Greeting_Morning>
+		<Greeting_Day>Selamat siang, {0}.</Greeting_Day>
+		<Greeting_Evening>Selamat malam, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Selamat datang.</Greeting_Neutral>
 		<Health_Updates_Started>Pembaruan Windows sedang dicari, diunduh, dan dipasang. Ini dapat memakan waktu beberapa menit; Anda dapat terus bekerja.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update telah selesai. Status perangkat diperiksa lagi dan menunjukkan apakah perlu dimulai ulang.</Health_Updates_Done>
 		<Health_Apps_Button>Coba lagi</Health_Apps_Button>
