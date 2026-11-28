@@ -1601,7 +1601,7 @@ namespace SelfX
 
         /// <summary>
         /// The counting rule of CountOtherUserSessions, without Windows calls (tested by Test-ServicePipe.ps1): the sessions other
-        /// than the caller's and session 0, with their state and DOMAIN\user (null = not readable or no user). An active session
+        /// than the caller's and session 0, with their state and DOMAIN\user (null or empty = not readable or no user). An active session
         /// without a readable account fails closed (-1); a disconnected session without a user (the sign-in screen of a closed
         /// remote desktop connection) holds no user's work and is skipped. Other states (listener, idle) are not counted.
         /// </summary>
@@ -1612,7 +1612,7 @@ namespace SelfX
             for (int i = 0; i < states.Length; i++)
             {
                 if (states[i] != WtsActive && states[i] != WtsDisconnected) continue;
-                if (accounts[i] == null)
+                if (string.IsNullOrEmpty(accounts[i]))
                 {
                     if (states[i] == WtsActive) return -1;
                     continue;
