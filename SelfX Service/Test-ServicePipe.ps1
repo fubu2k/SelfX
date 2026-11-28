@@ -1102,7 +1102,7 @@ if ($rowRule) {
 		@('[{"Id":"Disk","Status":""}]', @('Disk'), @($null), $false, 'an empty status does not count'),
 		@('', @('Disk'), @($null), $false, 'an empty cache does not count'))) {
 		# A cast to [string[]] turns $null into '': the names are copied one by one so that "no name" stays null.
-		$names = New-Object 'string[]' @($case[2]).Count
+		$names = [string[]]::new(@($case[2]).Count)
 		for ($i = 0; $i -lt $names.Length; $i++) { if ($null -ne @($case[2])[$i]) { $names[$i] = [string]@($case[2])[$i] } }
 		$result = $rowRule.Invoke($null, [object[]]@([string]$case[0], [string[]]@($case[1]), $names))
 		Assert-True ($result -eq $case[3]) "When: $($case[4]) = $($case[3]) (got $result)"
