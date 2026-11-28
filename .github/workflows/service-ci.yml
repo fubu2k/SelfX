@@ -76,9 +76,21 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          # Fixed version from the PowerShell Gallery.
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.23.0 -Repository PSGallery -Scope CurrentUser -Force
-          Import-Module PSScriptAnalyzer -RequiredVersion 1.23.0
+          # Fixed version from the PowerShell Gallery, saved to a folder of the run and loaded only when every library and the module
+          # files (manifest, root module) carry a valid Authenticode signature of Microsoft (the Gallery itself offers no hash pin).
+          $modules = Join-Path $env:RUNNER_TEMP 'psmodules'
+          Save-Module PSScriptAnalyzer -RequiredVersion 1.23.0 -Repository PSGallery -Path $modules -Force
+          $moduleFolder = Join-Path $modules 'PSScriptAnalyzer\1.23.0'
+          $signed = @(Get-ChildItem -LiteralPath $moduleFolder -Recurse -File -Filter '*.dll') + @(Get-ChildItem -LiteralPath $moduleFolder -File | Where-Object { $_.Name -in @('PSScriptAnalyzer.psd1', 'PSScriptAnalyzer.psm1') })
+          if ($signed.Count -lt 3) { throw "PSScriptAnalyzer 1.23.0 is incomplete ($($signed.Count) files)." }
+          foreach ($file in $signed) {
+            $signature = Get-AuthenticodeSignature -LiteralPath $file.FullName
+            if ($signature.Status -ne 'Valid' -or "$($signature.SignerCertificate.Subject)" -notmatch '(^|, )O=Microsoft Corporation(,|$)') {
+              throw "PSScriptAnalyzer file is not validly signed by Microsoft: $($file.Name) ($($signature.Status))."
+            }
+          }
+          Write-Output "PSScriptAnalyzer 1.23.0: $($signed.Count) files with a valid Microsoft signature."
+          Import-Module (Join-Path $moduleFolder 'PSScriptAnalyzer.psd1')
           $settings = Join-Path $env:GITHUB_WORKSPACE '.github\PSScriptAnalyzerSettings.psd1'
           $results = @('SelfX Service', 'tools') | ForEach-Object {
             Invoke-ScriptAnalyzer -Path (Join-Path $env:GITHUB_WORKSPACE $_) -Recurse -Settings $settings
