@@ -411,7 +411,7 @@ a newer configuration app replaces an older one, the devices install the new one
 
 - SelfX is installed and has a trust anchor; the anchor is safe. The mode (Hash or Signature) is the one of the device. `-TrustedSigner` and
   `-AllowHashMode` cannot be combined with `-ConfigOnly`: a configuration package cannot change who is trusted.
-- The package holds only `Install.ps1` and `Config`, no link, and every file is in `Config\SelfX.Config.json` with its SHA256. In the mode Signature the
+- The package holds only `Install.ps1`, `Config` and `Detection.ps1` (it is neither run nor installed), no link, and every file is in `Config\SelfX.Config.json` with its SHA256. In the mode Signature the
   scripts and `Config\SelfX.Config.cat` must carry a valid signature of a signer of the device.
 - `MinCodeVersion` in `SelfX.Config.json` (the code version the configuration is made for) must not be newer than the installed code version
   (`App\SelfX.Code.json`). Install the full package first when it is.

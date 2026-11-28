@@ -25,6 +25,8 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version (Install.ps1 -ConfigOnly).
     3.1.0    2026-11-28  fubu2k               Signature check of -ConfigOnly: Detection.ps1 at the top is not checked, a Detection.ps1 below Config is
+    3.1.0    2026-11-28  fubu2k               Layout of -ConfigOnly: the package of the wizard with Detection.ps1 is accepted, Detection.ps1 is not installed;
+                                              a folder named Detection.ps1 and files with similar names are refused
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -155,6 +157,24 @@ try {
 	Reset-Fixture
 	[IO.File]::WriteAllText((Join-Path $package 'extra.txt'), 'x')
 	Assert-Equal ((Invoke-Config) -like "refused: -ConfigOnly: the package holds the unexpected entry 'extra.txt'*") $true 'Unknown entry at the top: refused'
+	# Detection.ps1 at the top: the configuration package of the wizard keeps it (Convert-SelfXPackageToConfigOnly); it is neither run nor installed.
+	Reset-Fixture
+	[IO.File]::WriteAllText((Join-Path $package 'Detection.ps1'), '# detection script of the configuration package')
+	Assert-Equal (Invoke-Config) 'accepted' 'Package of the wizard (Install.ps1, Detection.ps1, Config): accepted'
+	Assert-Equal (Get-InstalledText 'Issues_List.xml') '<Issues version="new" />' 'Package with Detection.ps1: the new configuration is installed'
+	Assert-Equal @(Get-ChildItem -LiteralPath $install -Recurse -Force -Filter 'Detection.ps1').Count 0 'Package with Detection.ps1: Detection.ps1 is not installed'
+	Reset-Fixture
+	[IO.File]::WriteAllText((Join-Path $package 'DETECTION.PS1'), '# other spelling')
+	Assert-Equal (Invoke-Config) 'accepted' 'Detection.ps1 in another case: accepted (Windows compares file names without case)'
+	Reset-Fixture
+	New-Item -ItemType Directory -Path (Join-Path $package 'Detection.ps1') | Out-Null
+	Assert-Equal ((Invoke-Config) -like "refused: -ConfigOnly: the package holds the unexpected entry 'Detection.ps1'*") $true 'A folder named Detection.ps1: refused'
+	Test-NothingChanged 'Folder named Detection.ps1'
+	foreach ($name in 'Detection2.ps1', 'Detection.ps1.ps1', 'XDetection.ps1', 'Detection.psm1', 'Detection.txt') {
+		Reset-Fixture
+		[IO.File]::WriteAllText((Join-Path $package $name), '# x')
+		Assert-Equal ((Invoke-Config) -like "refused: -ConfigOnly: the package holds the unexpected entry '$name'*") $true "A file with a similar name ($name): refused"
+	}
 	Reset-Fixture
 	Remove-Item -LiteralPath (Join-Path $package 'Config') -Recurse -Force
 	Assert-Equal ((Invoke-Config) -like 'refused: -ConfigOnly: the folder Config is missing*') $true 'No Config folder: refused'
