@@ -17,7 +17,7 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.7.0
+    Version : 1.8.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
               1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
@@ -26,6 +26,7 @@
                                          SelfX-Server-Guide without Intune (commands with System32, Configuration Manager, no ticket routing)
               1.6.0 (2026-11-28, fubu2k) question TerminalServerSupportMail: only for WindowsServer, required, default Support mail
               1.7.0 (2026-11-28, fubu2k) package for WindowsServer: no step pack, no .intunewin file, no tool needed; Windows11 unchanged
+              1.8.0 (2026-11-28, fubu2k) question DisturbWarning: default yes, writes Disturb_Warning
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -200,6 +201,10 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ((Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer'; TerminalServerHealth = 'AdminOnly' }).TerminalServer_Health -eq 'AdminOnly') 'TerminalServerHealth: AdminOnly is written'
     Assert ((Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer' }).TerminalServer_Health -eq 'Off') 'TerminalServerHealth: WindowsServer without the answer writes Off'
     Assert (-not (Get-WizardToolConfigValues -A @{ TargetOS = 'Windows11'; TerminalServerHealth = 'AdminOnly' }).Contains('TerminalServer_Health')) 'TerminalServerHealth: Windows11 writes nothing (the delivered Off stays)'
+    $disturbQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'DisturbWarning' })
+    Assert ($disturbQuestion.Count -eq 1 -and $disturbQuestion[0].Kind -eq 'bool' -and $disturbQuestion[0].Default -eq $true -and $null -eq $disturbQuestion[0].When) 'DisturbWarning: one yes/no question, default yes, always asked'
+    Assert ((Get-WizardToolConfigValues -A @{ DisturbWarning = $false }).Disturb_Warning -eq $false -and (Get-WizardToolConfigValues -A @{ DisturbWarning = $true }).Disturb_Warning -eq $true) 'DisturbWarning: the answer is written as Disturb_Warning'
+    Assert ((Get-WizardToolConfigValues -A @{}).Disturb_Warning -eq $true) 'DisturbWarning: an answer file without it keeps the hint on'
     $tsMailQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'TerminalServerSupportMail' })
     Assert ($tsMailQuestion.Count -eq 1 -and $tsMailQuestion[0].Kind -eq 'mail' -and $tsMailQuestion[0].Required -and ((& $tsMailQuestion[0].When @{ TargetOS = 'WindowsServer' }) -eq $true) -and ((& $tsMailQuestion[0].When @{ TargetOS = 'Windows11' }) -eq $false) -and ((& $tsMailQuestion[0].Default @{ SupportMail = 's@contoso.example' }) -eq 's@contoso.example')) 'TerminalServerSupportMail: one required mail question, only for WindowsServer, default the support mail'
     Assert-Throws { ConvertTo-WizardValue -Kind 'mail' -Value 'a@contoso.example;b@contoso.example' } 'TerminalServerSupportMail: a list of addresses is refused'
@@ -291,6 +296,7 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ((Test-Path (Join-Path $out 'package\Config\Branding\logo.png')) -and -not (Test-Path (Join-Path $out 'package\Config\Branding\company_logo.png'))) 'logo copied, placeholder removed'
     Assert ($g.Service_FileCheck -eq 'Enforce' -and $g.Service_Privileges -eq 'Restricted') 'secure defaults stay without expert mode'
     Assert ($null -eq $g.Environment_Mode -and $g.TerminalServer_Health -eq 'Off') 'Tool_Config: no Environment_Mode (the mode comes from Windows), the delivered TerminalServer_Health Off stays'
+    Assert ($g.Disturb_Warning -eq 'True') 'Tool_Config: Disturb_Warning True (default of the question)'
     Assert (-not (Test-Path (Join-Path $out 'package\Service\Projects')) -and @(Get-ChildItem (Join-Path $out 'package') -Recurse -Filter 'Test-*.ps1').Count -eq 0) 'copy has no project files and no tests'
 
     $ticket = Read-SelfXTicketConfig -Path (Join-Path $out 'package\Config\Ticket_Config.xml')

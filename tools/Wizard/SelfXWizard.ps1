@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.11
+    Version : 3.1.12
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -45,6 +45,7 @@
     3.1.10   2026-11-28  fubu2k               Package for WindowsServer: no step 'pack', no .intunewin file and no IntuneWinAppUtil.exe needed (Intune cannot install apps
                                               on Windows Server); the instructions of the server package do not name the .intunewin file
     3.1.11   2026-11-28  fubu2k               Defender ASR exclusion: five files (SelfXDisturb.dll added, guide texts de and en)
+    3.1.12   2026-11-28  fubu2k               Question DisturbWarning (hint before disruptive actions, default yes) writes Disturb_Warning
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -599,6 +600,7 @@ function Get-WizardQuestions {
     & $add @{ Id = 'WikiUrl'; Kind = 'url'; Required = $true; When = { param($a) $a.WikiEnabled }; Default = '' }
     & $add @{ Id = 'WikiName'; Kind = 'text'; Max = 40; When = { param($a) $a.WikiEnabled }; Default = '' }
     & $add @{ Section = 'behavior'; Id = 'TrayIcon'; Kind = 'bool'; Default = $true }
+    & $add @{ Id = 'DisturbWarning'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'ShortcutDesktop'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'ShortcutStartMenu'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'Expert'; Kind = 'bool'; Default = $false }
@@ -800,6 +802,8 @@ function Get-WizardToolConfigValues {
         Shortcut_Desktop            = $A.ShortcutDesktop
         Shortcut_StartMenu          = $A.ShortcutStartMenu
         Show_Tray_Icon              = $A.TrayIcon
+        # Hint before disruptive actions (Self_X.ps1, SelfXDisturb.ps1); an answer file without it keeps the default True.
+        Disturb_Warning             = $(if ($null -eq $A.DisturbWarning) { $true } else { [bool]$A.DisturbWarning })
         Support_Mail                = $A.SupportMail
         Support_Phone_number        = $A.SupportPhone
         Support_Hours               = $A.SupportHours

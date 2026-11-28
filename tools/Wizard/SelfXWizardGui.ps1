@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.8.0
+    Version : 1.9.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -51,6 +51,7 @@
     1.7.0    2026-11-28  fubu2k               Page Support: question TerminalServerSupportMail (only for Windows Server)
     1.8.0    2026-11-28  fubu2k               Windows Server: no field for IntuneWinAppUtil.exe on the page Summary, no step 'pack' in the progress list,
                                               no .intunewin file on the result page
+    1.9.0    2026-11-28  fubu2k               Page More settings: question DisturbWarning (hint before disruptive actions)
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -120,7 +121,7 @@ $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },
     [pscustomobject]@{ Id = 'network'; Questions = @('NetworkEnabled', 'NetworkMicrosoft', 'NetworkHostNames') },
-    [pscustomobject]@{ Id = 'more'; Questions = @('CopilotEnabled', 'CopilotAudience', 'CopilotClearClipboard', 'WikiEnabled', 'WikiUrl', 'WikiName', 'TrayIcon', 'ShortcutDesktop', 'ShortcutStartMenu', 'Expert', 'LogRetention', 'FileCheck', 'Privileges', 'AppLockerRules', 'WdacBasePolicyId') },
+    [pscustomobject]@{ Id = 'more'; Questions = @('CopilotEnabled', 'CopilotAudience', 'CopilotClearClipboard', 'WikiEnabled', 'WikiUrl', 'WikiName', 'TrayIcon', 'DisturbWarning', 'ShortcutDesktop', 'ShortcutStartMenu', 'Expert', 'LogRetention', 'FileCheck', 'Privileges', 'AppLockerRules', 'WdacBasePolicyId') },
     [pscustomobject]@{ Id = 'signing'; Questions = @() },
     [pscustomobject]@{ Id = 'summary'; Questions = @() },
     [pscustomobject]@{ Id = 'build'; Questions = @() },
