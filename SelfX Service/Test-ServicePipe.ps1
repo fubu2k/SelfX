@@ -65,6 +65,9 @@
                                               TerminalServer, missing remediation, other sessions, the shared pause with RUN; SELFX_APP_ID only for the app
                                               of the service (an inherited value is removed); event 4014 (fields, only on a change, invalid ID or code not
                                               written, rate limit).
+    3.1.0    2026-11-28  fubu2k               Whitelist: every remediation of a script counts (Block or Hide of a second entry), a remediation together
+                                              with a catalog action of the script (Block of the remediation), and a User action that is also named as a
+                                              remediation is refused.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -1012,6 +1015,7 @@ $envApp = Join-Path $envRoot 'App'
 $envConfig = Join-Path $envRoot 'Config'
 New-Item -ItemType Directory -Path (Join-Path $envApp 'Scripts_to_run'), $envConfig -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $envApp 'Scripts_to_run\Ts_Block.ps1') -Value 'exit 0'
+foreach ($name in 'Ts_RemTwo.ps1', 'Ts_UserRem.ps1', 'Ts_CatRem.ps1') { Set-Content -LiteralPath (Join-Path $envApp "Scripts_to_run\$name") -Value 'exit 0' }
 Set-Content -LiteralPath (Join-Path $envConfig 'Issues_List.xml') -Value @'
 <Actions><Quick_Solution>
 <Action Id="S_Hide"><Script>Ts_Hide.ps1</Script><Context>System</Context><TerminalServer>Hide</TerminalServer></Action>
@@ -1023,6 +1027,8 @@ Set-Content -LiteralPath (Join-Path $envConfig 'Issues_List.xml') -Value @'
 <Action Id="S_Mixed2"><Script>Ts_Mixed.ps1</Script><Context>System</Context><TerminalServer>Hide</TerminalServer></Action>
 <Action Id="S_Block"><Script>Ts_Block.ps1</Script><Context>System</Context><OtherSessions>Block</OtherSessions><TerminalServer>Show</TerminalServer></Action>
 <Action Id="U_User"><Script>Ts_User.ps1</Script><Context>User</Context><TerminalServer>Show</TerminalServer></Action>
+<Action Id="U_UserRem"><Script>Ts_UserRem.ps1</Script><Context>User</Context><TerminalServer>Show</TerminalServer></Action>
+<Action Id="S_CatRem"><Script>Ts_CatRem.ps1</Script><Context>System</Context><TerminalServer>Show</TerminalServer></Action>
 </Quick_Solution></Actions>
 '@
 Set-Content -LiteralPath (Join-Path $envConfig 'Health_Config.xml') -Value @'
@@ -1030,6 +1036,10 @@ Set-Content -LiteralPath (Join-Path $envConfig 'Health_Config.xml') -Value @'
 <Remediation Id="Disk" Script="Ts_RemHide.ps1" TerminalServer="Hide" />
 <Remediation Id="Updates" Script="Ts_RemShow.ps1" TerminalServer="Show" />
 <Remediation Id="Defender" Script="Ts_RemNone.ps1" />
+<Remediation Id="Two1" Script="Ts_RemTwo.ps1" TerminalServer="Show" />
+<Remediation Id="Two2" Script="Ts_RemTwo.ps1" OtherSessions="Block" TerminalServer="Hide" />
+<Remediation Id="UserRem" Script="Ts_UserRem.ps1" TerminalServer="Show" />
+<Remediation Id="CatRem" Script="Ts_CatRem.ps1" OtherSessions="Block" TerminalServer="Show" />
 </Remediations></HealthConfig>
 '@
 $envService = New-Object SelfX.SelfXService(('SelfX.EnvTest.' + [guid]::NewGuid().ToString('N')), $logDirectory)
@@ -1059,7 +1069,11 @@ foreach ($case in @(
 	@('Ts_RemShow.ps1', $false, 'ERROR Script not found', 'a remediation classified Show passes the check'),
 	@('Ts_User.ps1', $false, 'ERROR Action is not allowed', 'a User action is still not a System action'),
 	@('Unknown.ps1', $false, 'ERROR Action is not allowed', 'an unknown script is still refused by the whitelist'),
-	@('Ts_Block.ps1', $false, 'ERROR OtherSessions', 'the check of other sessions still applies (unknown session = fail closed)'))) {
+	@('Ts_Block.ps1', $false, 'ERROR OtherSessions', 'the check of other sessions still applies (unknown session = fail closed)'),
+	@('Ts_RemTwo.ps1', $false, 'ERROR TerminalServer', 'a second remediation of the script classified Hide is refused'),
+	@('Ts_UserRem.ps1', $false, 'ERROR Action is not allowed', 'a User action that is also named as a remediation is refused'),
+	@('Ts_UserRem.ps1', $true, 'ERROR Action is not allowed', 'a User action that is also named as a remediation is refused for an administrator too'),
+	@('Ts_CatRem.ps1', $false, 'ERROR OtherSessions', 'Block of a remediation applies to the catalog action of the same script'))) {
 	$answer = Invoke-EnvRequest $case[0] $case[1]
 	Assert-True ($answer -ceq $case[2]) "Mode TerminalServer: $($case[3]) ($($case[0]): '$answer')"
 }
@@ -1067,7 +1081,8 @@ foreach ($case in @(
 Set-EnvTerminalServer $false
 foreach ($config in @(@('<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>', 'an old Environment_Mode TerminalServer'), @('<GUI_Config />', 'no Environment_Mode'), @('<GUI_Config><Environment_Mode>Client', 'an unreadable Tool_Config.xml'))) {
 	Set-EnvConfig $config[0]
-	foreach ($case in @(@('Ts_Hide.ps1', 'ERROR Script not found'), @('Ts_None.ps1', 'ERROR Script not found'), @('Ts_RemHide.ps1', 'ERROR Script not found'), @('Ts_Block.ps1', 'ERROR OtherSessions'), @('Ts_User.ps1', 'ERROR Action is not allowed'))) {
+	foreach ($case in @(@('Ts_Hide.ps1', 'ERROR Script not found'), @('Ts_None.ps1', 'ERROR Script not found'), @('Ts_RemHide.ps1', 'ERROR Script not found'), @('Ts_Block.ps1', 'ERROR OtherSessions'), @('Ts_User.ps1', 'ERROR Action is not allowed'),
+			@('Ts_RemTwo.ps1', 'ERROR OtherSessions'), @('Ts_UserRem.ps1', 'ERROR Action is not allowed'), @('Ts_CatRem.ps1', 'ERROR OtherSessions'))) {
 		$answer = Invoke-EnvRequest $case[0]
 		Assert-True ($answer -ceq $case[1]) "Mode Client with $($config[1]): $($case[0]) gives '$($case[1])' (got '$answer')"
 	}
