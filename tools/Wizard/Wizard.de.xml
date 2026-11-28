@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.11.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.12.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -35,6 +35,8 @@
 	<T Id="TargetOS.rec">Windows11 für PCs und Notebooks. WindowsServer für Terminalserver: Dort blendet SelfX Aktionen und Reparaturen aus, die den ganzen Server oder alle Nutzer betreffen, und der Dienst lehnt sie ab. SelfX erkennt das selbst an Windows; die Antwort wählt die Anleitung am Ende (Intune kann auf Windows Server keine Apps installieren) und die Frage zum Gerätestatus.</T>
 	<T Id="TerminalServerHealth.ask">Gerätestatus auf dem Terminalserver: Off (niemand) oder AdminOnly (nur Administratoren, die SelfX mit erhöhten Rechten gestartet haben)</T>
 	<T Id="TerminalServerHealth.rec">Off. Auf einem Terminalserver zeigt der Gerätestatus den Server (Updates, Defender, Neustart), nicht den Arbeitsplatz des Nutzers, und Nutzer könnten nichts davon beheben. Wählen Sie AdminOnly, wenn Ihre Administratoren ihn nutzen wollen.</T>
+	<T Id="GreetingName.ask">Begrüßung im SelfX-Fenster: FirstName („Guten Morgen, Anna.“ mit dem Vornamen, den Windows für das Konto kennt) oder Off (immer „Willkommen.“)</T>
+	<T Id="GreetingName.rec">FirstName. Ohne Vornamen oder wenn die Windows-Datenschutzeinstellung „Kontoinformationen“ es nicht erlaubt, grüßt SelfX ohne Namen; den Anzeigenamen oder den Kontonamen nimmt es nie stattdessen. Der Name wird nicht protokolliert, gespeichert oder weitergegeben.</T>
 	<T Id="SupportMail.ask">E-Mail-Adresse des Supports (Funktionspostfach)</T>
 	<T Id="SupportMail.rec">Nehmen Sie ein Funktionspostfach, nie ein persönliches. Die Adresse ist auch der Empfänger der E-Mail mit den Geräteprotokollen.</T>
 	<T Id="TerminalServerSupportMail.ask">Feste Support-E-Mail-Adresse für den Terminalserver (Support-E-Mail, Ticket und Hilfe-Fenster)</T>

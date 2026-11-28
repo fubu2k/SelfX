@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Reiniciar ahora</Button_Restart_Now>
 		<Health_Restart_Started>Windows se reiniciará en unos 30 segundos. Guarde su trabajo ahora.</Health_Restart_Started>
 		<Disturb_Warning_Text>Parece que está en una reunión o en una presentación. Esta acción puede interrumpirla.</Disturb_Warning_Text>
+		<Greeting_Morning>Buenos días, {0}.</Greeting_Morning>
+		<Greeting_Day>Buenas tardes, {0}.</Greeting_Day>
+		<Greeting_Evening>Buenas noches, {0}.</Greeting_Evening>
+		<Greeting_Neutral>Le damos la bienvenida.</Greeting_Neutral>
 		<Health_Updates_Started>Se están buscando, descargando e instalando las actualizaciones de Windows. Puede tardar varios minutos; puede seguir trabajando.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update ha terminado. Se vuelve a comprobar el estado del dispositivo, que indica si hace falta reiniciar.</Health_Updates_Done>
 		<Health_Apps_Button>Reintentar</Health_Apps_Button>
