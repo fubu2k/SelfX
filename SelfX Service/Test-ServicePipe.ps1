@@ -1206,6 +1206,8 @@ Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Ok.ps1') -Value 'exit 0'
 Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Fail.ps1') -Value 'exit 3'
 Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Slow.ps1') -Value 'Start-Sleep -Seconds 30'
 $pwshPath = [string](Get-Process -Id $PID).Path
+# The working directory of an action is the scripts folder of the instance.
+[SelfX.SelfXService].GetField('scriptsRoot', $instanceFlags).SetValue($evService, [string]$evScripts)
 function Invoke-EventScript([string]$Name, [int]$Timeout = 60, [string]$Sid = 'S-1-5-21-1-2-3-1001', [bool]$Admin = $false) {
 	return [string]$startScript.Invoke($evService, [object[]]@($pwshPath, [string](Join-Path $evScripts $Name), $Name, [int]$Timeout, 'TEST\user', $false, '', $Sid, $false, $Admin))
 }
