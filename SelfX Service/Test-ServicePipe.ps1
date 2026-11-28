@@ -1258,7 +1258,8 @@ Assert-True ($sourceText.Contains('if (health)') -and $sourceText.Contains('Repo
 
 # Health rows: only a change to Error, Detail is never read; invalid JSON and the placeholder Collection change nothing.
 $state = [System.Collections.Generic.Dictionary[string, string]]::new()
-function Get-Changes([string]$Json) { return @($findChanges.Invoke($null, [object[]]@($Json, $state.psobject.BaseObject))) }
+# The comma keeps the list as one object (a function would unroll it).
+function Get-Changes([string]$Json) { return , $findChanges.Invoke($null, [object[]]@($Json, $state.psobject.BaseObject)) }
 $rows = '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"C:\\Users\\someone\\secret"},{"Id":"Defender","Name":"","Status":"OK","Detail":"ok"}]'
 $c = Get-Changes $rows
 Assert-True ($c.Count -eq 1 -and [string]$c[0][0] -ceq 'Disk' -and [string]$c[0][1] -ceq 'C:' -and [string]$c[0][2] -ceq '-') 'Health: a row seen first with Error is reported once (previous status -)'
@@ -1305,10 +1306,10 @@ Assert-True ((Get-TestEvents 4011).Count -eq 21) 'Rate limit: a new minute write
 $evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddMinutes(5))
 [void]$securityEvent.Invoke($evService, [object[]]@(4005, [Diagnostics.EventLogEntryType]::Error, 'Files changed.'))
 Assert-True ((Get-TestEvents 4005).Count -eq 10) 'Rate limit: a security event stays limited for 10 minutes (the shorter window does not apply)'
-$evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddMinutes(10).AddSeconds(1))
+$evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddMinutes(11))
 [void]$securityEvent.Invoke($evService, [object[]]@(4005, [Diagnostics.EventLogEntryType]::Error, 'Files changed.'))
 $suppressed = @(Get-TestEvents 4099 | Where-Object { [string]$_[2][1] -ceq '4005' })
-Assert-True ($suppressed.Count -eq 1 -and [string]$suppressed[0][2][2] -ceq '3' -and (Get-TestEvents 4005).Count -eq 11) 'Rate limit: after 10 minutes 4099 reports 3 left-out security events, then the event is written'
+Assert-True ($suppressed.Count -eq 1 -and [string]$suppressed[0][2][2] -ceq '3' -and (Get-TestEvents 4005).Count -eq 11) 'Rate limit: 10 minutes after the first of them 4099 reports 3 left-out security events, then the event is written'
 
 # --- N5 (pass 2): an unexpected exception while a request is processed gets the fixed answer, not a timeout ---
 Assert-True ($sourceText -match 'response = "ERROR Internal error";') 'N5: the service answers an unexpected exception with the fixed text ERROR Internal error'
