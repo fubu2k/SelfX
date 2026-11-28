@@ -60,6 +60,11 @@ Description:
     does not itself restart Windows. /console runs with the invoking user's rights;
     /pipe: and /logdir: override the endpoint and log location for troubleshooting.
     Program.Main returns 0 after normal service/console completion, not an action code.
+    Windows event log: own classic log SelfX (Applications and Services Logs), source SelfXService, created by Install.ps1.
+    Every entry carries its fields as separate insertion strings in a fixed order (field 1 = fixed English text): security
+    events 4001-4008 (at most 10 per ID in 10 minutes), System action started/succeeded/failed 4010-4012 and a health row that
+    changed to Error 4013 (at most 20 per ID and minute), 4099 = entries left out. No user names, no paths, no detail texts; the
+    SID of the caller only with EventLog_CallerSid = True in Tool_Config.xml. Fields are cleaned (control characters) and shortened.
     Built with the .NET 10 SDK (Projects\SelfXService\SelfXService.csproj); no remote API is used.
 
 Notes:
@@ -116,6 +121,10 @@ Notes:
                                               every other product type (Windows Server, Windows Enterprise multi-session) and version data that
                                               cannot be read = TerminalServer (fail closed). Environment_Mode of Tool_Config.xml is ignored (a note
                                               in the log when it is still there); the warning of event 4009 is gone (the mode can no longer differ)
+    3.1.0    2026-11-28  fubu2k               Own event log SelfX (source SelfXService, AutoLog off): entries with separate fields (EventInstance);
+                                              new events 4010-4012 (System action started, succeeded, failed: script, result, exit code,
+                                              duration, SID only with EventLog_CallerSid = True) and 4013 (health row changed to Error: type,
+                                              name, previous status); own rate limit of 20 per ID and minute for them; 4099 with fields
 */
 
 using System;
@@ -289,12 +298,30 @@ namespace SelfX
         bool firstPipeInstanceCreated;
         int pipeInUseFailures;
         // Windows event log: only when running under the Service Control Manager, fixed texts, rate limited per
-        // event ID (the Application log can be read by every user, so no request text and no user names go there).
+        // event ID (the event log can be read by every user, so no request text and no user names go there).
+        // Own classic log "SelfX" (Applications and Services Logs), source SelfXService; Install.ps1 creates both and moves
+        // the source of older versions out of the Application log. Every entry has its fields as separate insertion strings
+        // (EventInstance): field 1 is a fixed English text, the other fields follow in a fixed order (docs\Installation.md).
+        const string EventLogName = "SelfX";
+        const string EventSourceName = "SelfXService";
         bool securityEventsEnabled;
+        EventLog eventLog;
+        bool eventLogWriteFailed;
         readonly object eventLock = new object();
         readonly Dictionary<int, EventWindow> eventWindows = new Dictionary<int, EventWindow>();
+        // Security events (4001-4008): at most 10 per event ID in 10 minutes. Operational events (4010-4013): at most 20 per
+        // event ID and minute, so a busy device (several users, terminal server) does not lose them after a few actions.
         const int MaxSecurityEventsPerWindow = 10;
         static readonly TimeSpan SecurityEventWindow = TimeSpan.FromMinutes(10);
+        const int MaxOperationalEventsPerWindow = 20;
+        static readonly TimeSpan OperationalEventWindow = TimeSpan.FromMinutes(1);
+        // Length limits of one insertion string: the message (field 1) and every other field.
+        const int MaxEventMessageLength = 800;
+        const int MaxEventFieldLength = 256;
+        // Tests: when set, entries are collected here instead of the event log (also outside the Service Control Manager),
+        // and eventClockForTest replaces the clock of the rate limit.
+        List<object[]> eventsForTest;
+        DateTime? eventClockForTest;
         const int EventPipeInUse = 4001;
         const int EventRejected = 4002;
         const int EventPowerShellUnprotected = 4003;
@@ -305,10 +332,23 @@ namespace SelfX
         // Mode TerminalServer: a request for an action that is not classified TerminalServer Show was refused.
         // (Event 4009, "session host but Environment_Mode Client", is no longer written: the mode comes from Windows.)
         const int EventTerminalServerRefused = 4008;
+        // Operational events (4009 stays unused). A System action (RUN, also a remediation) started, ended with exit code 0, or
+        // failed (other exit code, timeout, start error); a health check row changed to Error.
+        const int EventActionStarted = 4010;
+        const int EventActionSucceeded = 4011;
+        const int EventActionFailed = 4012;
+        const int EventHealthError = 4013;
+        // Tool_Config.xml: EventLog_CallerSid = True adds the SID of the requesting user to 4010-4012; anything else = no SID.
+        const string EventCallerSidSetting = "EventLog_CallerSid";
+        const string EventNoValue = "-";
         // Answer to HEALTH and STATUS when the device status is not available to the caller (mode TerminalServer).
         const string HealthUnavailableResponse = "UNAVAILABLE TerminalServer";
         const int EventSuppressed = 4099;
         sealed class EventWindow { public DateTime Start = DateTime.MinValue; public int Count; public int Suppressed; }
+        // Last status per health row (Id + name) seen by this service process, for event 4013 (change to Error).
+        readonly Dictionary<string, string> healthRowStatus = new Dictionary<string, string>(StringComparer.Ordinal);
+        readonly object healthRowLock = new object();
+        const int MaxHealthRowsTracked = 200;
         volatile string backgroundState = "Active";
         volatile int backgroundInterval = 15;
         volatile int backgroundProcessId;
@@ -355,7 +395,8 @@ namespace SelfX
             ServiceName = DefaultServiceName;
             CanStop = true;
             CanShutdown = true;
-            AutoLog = true;
+            // The entries go to the own log SelfX (WriteEventRecord); AutoLog would write to the Application log with the same source.
+            AutoLog = false;
 
             installRoot = AppContext.BaseDirectory.TrimEnd('\\');
             configRoot = GetConfigRoot(installRoot);
@@ -2258,6 +2299,14 @@ namespace SelfX
             {
                 Log("Start '" + scriptName + "' requested by " + user + " (timeout " + timeoutSeconds + " s).");
             }
+            // Events 4010-4012 for System actions (RUN, also a remediation); health runs only report rows that changed to Error (4013).
+            // The script name is the checked file name of the catalog; the SID only with EventLog_CallerSid = True.
+            string eventSid = health ? EventNoValue : EventCallerSid(callerSid);
+            if (!health)
+            {
+                WriteEventRecord(EventActionStarted, EventLogEntryType.Information,
+                    ActionEventFields(EventActionStarted, scriptName, null, null, 0, eventSid, callerIsAdmin));
+            }
             Stopwatch watch = Stopwatch.StartNew();
             string result;
             using (Process process = new Process())
@@ -2265,7 +2314,19 @@ namespace SelfX
                 process.StartInfo = startInfo;
                 process.OutputDataReceived += collect;
                 process.ErrorDataReceived += collect;
-                process.Start();
+                try
+                {
+                    process.Start();
+                }
+                catch (Exception)
+                {
+                    if (!health)
+                    {
+                        WriteEventRecord(EventActionFailed, EventLogEntryType.Error,
+                            ActionEventFields(EventActionFailed, scriptName, "StartError", EventNoValue, (long)watch.Elapsed.TotalSeconds, eventSid, callerIsAdmin));
+                    }
+                    throw;
+                }
                 AttachToJob(process, scriptName);
                 if (background)
                 {
@@ -2299,6 +2360,23 @@ namespace SelfX
             lock (outputLock)
             {
                 text = output.ToString().Trim();
+            }
+            long seconds = (long)watch.Elapsed.TotalSeconds;
+            if (health)
+            {
+                if (result == "DONE 0" && !outputOverflow) ReportHealthChanges(text);
+            }
+            else if (result == "DONE 0")
+            {
+                WriteEventRecord(EventActionSucceeded, EventLogEntryType.Information,
+                    ActionEventFields(EventActionSucceeded, scriptName, "ExitCode", "0", seconds, eventSid, callerIsAdmin));
+            }
+            else
+            {
+                bool timeout = result == "TIMEOUT";
+                WriteEventRecord(EventActionFailed, timeout ? EventLogEntryType.Error : EventLogEntryType.Warning,
+                    ActionEventFields(EventActionFailed, scriptName, timeout ? "Timeout" : "ExitCode",
+                        timeout ? EventNoValue : result.Substring("DONE ".Length), seconds, eventSid, callerIsAdmin));
             }
             if (background)
             {
@@ -2912,12 +2990,62 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Write a security-relevant event to the Application log: fixed texts only, at most MaxSecurityEventsPerWindow per
-        /// event ID and 10 minutes; the number of events that were left out is reported once the window is over.
+        /// Write a security-relevant event (4001-4008) to the log SelfX: one field, a fixed text. See WriteEventRecord.
         /// </summary>
         void SecurityEvent(int id, EventLogEntryType type, string message)
         {
-            if (!securityEventsEnabled) return;
+            WriteEventRecord(id, type, new string[] { message });
+        }
+
+        /// <summary>True for the operational events 4010-4013 (own rate limit), false for the security events.</summary>
+        static bool IsOperationalEvent(int id)
+        {
+            return id >= EventActionStarted && id <= EventHealthError;
+        }
+
+        /// <summary>
+        /// Make one insertion string safe for the event log: control characters and Unicode line or paragraph separators are
+        /// removed, '%' becomes '_' (Event Viewer would read "%%n" as a reference to a parameter message), the text is trimmed
+        /// and shortened to maxLength characters. An empty result becomes "-", so every field has a value and the field count
+        /// never changes.
+        /// </summary>
+        static string CleanEventField(string value, int maxLength)
+        {
+            if (value == null) return EventNoValue;
+            StringBuilder clean = new StringBuilder(Math.Min(value.Length, maxLength));
+            foreach (char c in value)
+            {
+                if (clean.Length >= maxLength) break;
+                if (char.IsControl(c) || c == '\u2028' || c == '\u2029' || c == '\u0085') continue;
+                clean.Append(c == '%' ? '_' : c);
+            }
+            string text = clean.ToString().Trim();
+            return text.Length == 0 ? EventNoValue : text;
+        }
+
+        /// <summary>Cleans all fields: the first (the message) up to MaxEventMessageLength, the others up to MaxEventFieldLength.</summary>
+        static string[] CleanEventFields(string[] fields)
+        {
+            string[] clean = new string[fields == null ? 0 : fields.Length];
+            for (int i = 0; i < clean.Length; i++)
+            {
+                clean[i] = CleanEventField(fields[i], i == 0 ? MaxEventMessageLength : MaxEventFieldLength);
+            }
+            return clean;
+        }
+
+        /// <summary>
+        /// Write one entry to the log SelfX with its fields as separate insertion strings (EventInstance). Rate limit per event ID:
+        /// security events at most MaxSecurityEventsPerWindow in SecurityEventWindow, operational events at most
+        /// MaxOperationalEventsPerWindow in OperationalEventWindow; the number of entries that were left out is reported as
+        /// event 4099 (fields: message, event ID, count) once the window is over.
+        /// </summary>
+        void WriteEventRecord(int id, EventLogEntryType type, string[] fields)
+        {
+            if (!securityEventsEnabled && eventsForTest == null) return;
+            bool operational = IsOperationalEvent(id);
+            int limit = operational ? MaxOperationalEventsPerWindow : MaxSecurityEventsPerWindow;
+            TimeSpan length = operational ? OperationalEventWindow : SecurityEventWindow;
             int suppressedBefore = 0;
             bool write = false;
             lock (eventLock)
@@ -2928,15 +3056,15 @@ namespace SelfX
                     window = new EventWindow();
                     eventWindows[id] = window;
                 }
-                DateTime now = DateTime.UtcNow;
-                if (now - window.Start >= SecurityEventWindow)
+                DateTime now = eventClockForTest ?? DateTime.UtcNow;
+                if (now - window.Start >= length)
                 {
                     suppressedBefore = window.Suppressed;
                     window.Start = now;
                     window.Count = 0;
                     window.Suppressed = 0;
                 }
-                if (window.Count < MaxSecurityEventsPerWindow)
+                if (window.Count < limit)
                 {
                     window.Count++;
                     write = true;
@@ -2946,18 +3074,133 @@ namespace SelfX
                     window.Suppressed++;
                 }
             }
+            if (suppressedBefore > 0)
+            {
+                EmitEvent(EventSuppressed, EventLogEntryType.Warning, CleanEventFields(new string[] {
+                    "Further events of one ID were not written (rate limit).",
+                    id.ToString(CultureInfo.InvariantCulture),
+                    suppressedBefore.ToString(CultureInfo.InvariantCulture) }));
+            }
+            if (write)
+            {
+                EmitEvent(id, type, CleanEventFields(fields));
+            }
+        }
+
+        /// <summary>The sink of WriteEventRecord: the test list, otherwise the log SelfX. A failure is noted once in the service log.</summary>
+        void EmitEvent(int id, EventLogEntryType type, string[] fields)
+        {
+            if (eventsForTest != null)
+            {
+                lock (eventLock) { eventsForTest.Add(new object[] { id, type, fields }); }
+                return;
+            }
             try
             {
-                if (suppressedBefore > 0)
+                lock (eventLock)
                 {
-                    this.EventLog.WriteEntry("Event " + id + ": " + suppressedBefore + " further event(s) of this kind were not written.", EventLogEntryType.Warning, EventSuppressed);
+                    if (eventLog == null) eventLog = new EventLog(EventLogName, ".", EventSourceName);
                 }
-                if (write)
+                eventLog.WriteEvent(new EventInstance(id, 0, type), fields);
+            }
+            catch (Exception ex)
+            {
+                // For example the source is still registered in the Application log (installation not finished): the service keeps
+                // running; the problem is noted once (no loop: Log does not write events).
+                if (!eventLogWriteFailed)
                 {
-                    this.EventLog.WriteEntry(message.Length > 800 ? message.Substring(0, 800) : message, type, id);
+                    eventLogWriteFailed = true;
+                    Log("Warning: an entry could not be written to the event log " + EventLogName + " (" + ex.GetType().Name + "). Install SelfX again.");
                 }
             }
-            catch { }
+        }
+
+        /// <summary>The SID for the events 4010-4012: only with EventLog_CallerSid = True in Tool_Config.xml, otherwise "-".</summary>
+        string EventCallerSid(string callerSid)
+        {
+            if (string.IsNullOrEmpty(callerSid)) return EventNoValue;
+            string setting = ReadToolConfigValue(EventCallerSidSetting);
+            if (setting == null || !string.Equals(setting.Trim(), "True", StringComparison.OrdinalIgnoreCase)) return EventNoValue;
+            // Only a value in the form of a SID is written.
+            return Regex.IsMatch(callerSid, @"^S-1-[0-9]+(-[0-9]+){1,14}$") ? callerSid : EventNoValue;
+        }
+
+        /// <summary>
+        /// Fields of 4010 (started): message, script, caller SID, caller elevated (True/False).
+        /// Fields of 4011 (succeeded) and 4012 (failed): message, script, result (ExitCode, Timeout, StartError), exit code
+        /// ("-" without one), duration in whole seconds, caller SID.
+        /// </summary>
+        static string[] ActionEventFields(int id, string scriptName, string result, string exitCode, long durationSeconds, string sid, bool callerIsAdmin)
+        {
+            if (id == EventActionStarted)
+            {
+                return new string[] { "A SelfX action was started as SYSTEM.", scriptName, sid, callerIsAdmin ? "True" : "False" };
+            }
+            string message = id == EventActionSucceeded ? "A SelfX action as SYSTEM ended successfully." : "A SelfX action as SYSTEM failed.";
+            return new string[] { message, scriptName, result, exitCode, durationSeconds.ToString(CultureInfo.InvariantCulture), sid };
+        }
+
+        /// <summary>
+        /// Reads the JSON answer of HealthStatus.ps1 (array of rows with Id, Name, Status) and returns the rows that changed to
+        /// Error since the last answer seen by this service process, as {Id, Name, previous status}. A row seen for the first time
+        /// with Error counts as a change (previous status "-"), so the state after a restart is reported once. Only the fields Id,
+        /// Name and Status are read, never Detail (it can name apps, files or accounts). The rows of a single check update only
+        /// their own entries. Invalid JSON changes nothing.
+        /// </summary>
+        static List<string[]> FindHealthErrorChanges(string json, Dictionary<string, string> lastStatus)
+        {
+            List<string[]> changes = new List<string[]>();
+            if (string.IsNullOrEmpty(json)) return changes;
+            try
+            {
+                using (JsonDocument document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 }))
+                {
+                    JsonElement top = document.RootElement;
+                    List<JsonElement> rows = new List<JsonElement>();
+                    // ConvertTo-Json writes a single row as an object, several rows as an array.
+                    if (top.ValueKind == JsonValueKind.Object) rows.Add(top);
+                    else if (top.ValueKind == JsonValueKind.Array) { foreach (JsonElement item in top.EnumerateArray()) rows.Add(item); }
+                    foreach (JsonElement row in rows)
+                    {
+                        if (row.ValueKind != JsonValueKind.Object) continue;
+                        string id = JsonText(row, "Id");
+                        string name = JsonText(row, "Name");
+                        string status = JsonText(row, "Status");
+                        if (id.Length == 0 || id == "Collection" || status.Length == 0) continue;
+                        string key = id + "\n" + name;
+                        string previous;
+                        bool known = lastStatus.TryGetValue(key, out previous);
+                        if (!known && lastStatus.Count >= MaxHealthRowsTracked) continue;
+                        lastStatus[key] = status;
+                        if (status == "Error" && (!known || previous != "Error"))
+                        {
+                            changes.Add(new string[] { id, name, known ? previous : EventNoValue });
+                        }
+                    }
+                }
+            }
+            catch (JsonException) { }
+            return changes;
+        }
+
+        /// <summary>A string property of a JSON object, or "" when it is missing or not a string.</summary>
+        static string JsonText(JsonElement element, string name)
+        {
+            JsonElement value;
+            if (element.TryGetProperty(name, out value) && value.ValueKind == JsonValueKind.String) return value.GetString() ?? "";
+            return "";
+        }
+
+        /// <summary>Writes event 4013 (fields: message, check type, row name, previous status) for every row that changed to Error.</summary>
+        void ReportHealthChanges(string json)
+        {
+            List<string[]> changes;
+            lock (healthRowLock) { changes = FindHealthErrorChanges(json, healthRowStatus); }
+            foreach (string[] change in changes)
+            {
+                WriteEventRecord(EventHealthError, EventLogEntryType.Warning, new string[] {
+                    "A SelfX health check changed to the status Error.", change[0], change[1], change[2] });
+            }
         }
 
         /// <summary>

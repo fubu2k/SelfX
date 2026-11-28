@@ -4,8 +4,10 @@
 
 .DESCRIPTION
     Compiles Service\SelfXService.cs in memory and starts only its pipe listener in this process, under a test
-    pipe name of its own ("SelfX.Test.<guid>"). Nothing is installed, no service is registered, no action and no
-    health check is run (the background checks start after 120 seconds; the test stops the listener before).
+    pipe name of its own ("SelfX.Test.<guid>"). Nothing is installed, no service is registered, no action of the catalog and no
+    health check is run (the background checks start after 120 seconds; the test stops the listener before). The event log
+    checks start three small scripts of their own (exit 0, exit 3, a timeout) from a temporary folder through the start path of
+    the service; their entries are collected in the test instance, nothing is written to the Windows event log.
     Checked:
       - PING answers PONG.
       - A5: the per-user limit (8 open connections) applies before any data is read: a 9th connection of the
@@ -54,6 +56,9 @@
     3.1.0    2026-11-28  fubu2k               The mode comes from Windows: test instances set it through the field terminalServerForTest; an old
                                               Environment_Mode in Tool_Config.xml (Client or TerminalServer) and an unreadable file do not change it;
                                               no check of the setting and no event 4009 any more.
+    3.1.0    2026-11-28  fubu2k               Event log SelfX: fields per event ID (4002, 4010-4013, 4099), cleaning of fields, EventLog_CallerSid, health
+                                              rows that change to Error, rate limits of security and operational events; actions run through the real
+                                              start path with small scripts in a temporary folder (exit 0, exit 3, timeout, start error).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -1144,6 +1149,167 @@ Remove-Item -LiteralPath $oldOther -Force
 [void]$reportService.CleanupReports()
 Assert-True (-not (Test-Path -LiteralPath $sidOld)) 'Reports: an empty SID folder is removed'
 Assert-True (Test-Path -LiteralPath $sidNew) 'Reports: the folder with a recent report stays'
+
+# --- Event log SelfX: fields as separate insertion strings, cleaning, SID setting, health changes, rate limits ---------------------
+# Test instances collect the entries in the field eventsForTest instead of writing to the Windows event log (nothing is registered).
+Assert-True ($sourceText.Contains('const string EventLogName = "SelfX";') -and $sourceText.Contains('const string EventSourceName = "SelfXService";')) 'Event log: own log SelfX with the source SelfXService'
+Assert-True ($sourceText.Contains('AutoLog = false;') -and -not $sourceText.Contains('AutoLog = true;')) 'Event log: AutoLog is off (it would write to the Application log)'
+Assert-True (-not $sourceText.Contains('this.EventLog.WriteEntry')) 'Event log: nothing is written through the Application log of ServiceBase any more'
+Assert-True ($sourceText.Contains('eventLog.WriteEvent(new EventInstance(id, 0, type), fields);')) 'Event log: entries are written with separate insertion strings (EventInstance)'
+Assert-True (-not ($sourceText -match 'const int \w+ = 4009;')) 'Event log: the ID 4009 is not used again'
+$evService = New-Object SelfX.SelfXService(('SelfX.EventTest.' + [guid]::NewGuid().ToString('N')), $logDirectory)
+$evConfig = Join-Path $dataRoot 'EventConfig'
+New-Item -ItemType Directory -Path $evConfig -Force | Out-Null
+[SelfX.SelfXService].GetField('configRoot', $instanceFlags).SetValue($evService, $evConfig)
+$evList = [System.Collections.Generic.List[object[]]]::new()
+[SelfX.SelfXService].GetField('eventsForTest', $instanceFlags).SetValue($evService, $evList)
+$evClock = [SelfX.SelfXService].GetField('eventClockForTest', $instanceFlags)
+$evNow = [datetime]::new(2026, 11, 28, 10, 0, 0, [DateTimeKind]::Utc)
+$evClock.SetValue($evService, [Nullable[datetime]]$evNow)
+$writeRecord = [SelfX.SelfXService].GetMethod('WriteEventRecord', $instanceFlags)
+$securityEvent = [SelfX.SelfXService].GetMethod('SecurityEvent', $instanceFlags)
+$startScript = [SelfX.SelfXService].GetMethod('StartScript', $instanceFlags)
+$cleanField = [SelfX.SelfXService].GetMethod('CleanEventField', $staticFlags)
+$findChanges = [SelfX.SelfXService].GetMethod('FindHealthErrorChanges', $staticFlags)
+$reportChanges = [SelfX.SelfXService].GetMethod('ReportHealthChanges', $instanceFlags)
+Assert-True ($null -ne $writeRecord -and $null -ne $startScript -and $null -ne $cleanField -and $null -ne $findChanges -and $null -ne $reportChanges) 'Event log: the service has the event functions'
+function Get-TestEvents([int]$Id) { return @($evList | Where-Object { [int]$_[0] -eq $Id }) }
+function Clear-TestEvents { $evList.Clear() }
+function Set-EventConfig([string]$Text) { Set-Content -LiteralPath (Join-Path $evConfig 'Tool_Config.xml') -Value $Text }
+
+# Cleaning of one field: control characters and separators are removed, '%' becomes '_', empty = '-', length limit.
+foreach ($case in @(
+	@($null, 256, '-', 'null'), @('', 256, '-', 'empty'), @("   ", 256, '-', 'only spaces'),
+	@("a`r`nb`tc", 256, 'abc', 'CR, LF and tab'), @("x$([char]0x2028)y$([char]0x2029)z$([char]0x85)", 256, 'xyz', 'Unicode line and paragraph separators'),
+	@("$([char]0)n$([char]0x1b)[31m", 256, 'n[31m', 'NUL and escape'), @('%%1234 and %1', 256, '__1234 and _1', 'parameter references'),
+	@(('A' * 300), 256, ('A' * 256), 'longer than the limit'), @('Disk C:', 256, 'Disk C:', 'a normal value'))) {
+	$value = if ($null -eq $case[0]) { $null } else { [string]$case[0] }
+	$result = [string]$cleanField.Invoke($null, [object[]]@($value, [int]$case[1]))
+	Assert-True ($result -ceq $case[2]) "Event log: cleaning of $($case[3]) gives '$($case[2])' (got '$result')"
+}
+
+# A security event has one field (the fixed text); a test instance writes also outside the Service Control Manager.
+Clear-TestEvents
+[void]$securityEvent.Invoke($evService, [object[]]@(4002, [Diagnostics.EventLogEntryType]::Warning, "A request was rejected.`r`nInjected line"))
+$entry = @(Get-TestEvents 4002)
+Assert-True ($entry.Count -eq 1 -and @($entry[0][2]).Count -eq 1) 'Event log: a security event has exactly one field'
+Assert-True ($entry.Count -eq 1 -and [string]$entry[0][2][0] -ceq 'A request was rejected.Injected line') 'Event log: the message of a security event is cleaned (no line break)'
+$plain = New-Object SelfX.SelfXService(('SelfX.EventPlain.' + [guid]::NewGuid().ToString('N')), $logDirectory)
+$plainError = $null
+try { [void]$securityEvent.Invoke($plain, [object[]]@(4002, [Diagnostics.EventLogEntryType]::Warning, 'x')) } catch { $plainError = $_ }
+Assert-True ($null -eq $plainError) 'Event log: outside the Service Control Manager (console, tests) nothing is written and nothing fails'
+
+# System actions through the real start path with small scripts in a temporary folder (pwsh of this test; nothing is changed).
+$evScripts = Join-Path $dataRoot 'EventScripts'
+New-Item -ItemType Directory -Path $evScripts -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Ok.ps1') -Value 'exit 0'
+Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Fail.ps1') -Value 'exit 3'
+Set-Content -LiteralPath (Join-Path $evScripts 'Ev_Slow.ps1') -Value 'Start-Sleep -Seconds 30'
+$pwshPath = [string](Get-Process -Id $PID).Path
+# The working directory of an action is the scripts folder of the instance.
+[SelfX.SelfXService].GetField('scriptsRoot', $instanceFlags).SetValue($evService, [string]$evScripts)
+function Invoke-EventScript([string]$Name, [int]$Timeout = 60, [string]$Sid = 'S-1-5-21-1-2-3-1001', [bool]$Admin = $false) {
+	return [string]$startScript.Invoke($evService, [object[]]@($pwshPath, [string](Join-Path $evScripts $Name), $Name, [int]$Timeout, 'TEST\user', $false, '', $Sid, $false, $Admin))
+}
+Set-EventConfig '<GUI_Config />'
+Clear-TestEvents
+$answer = Invoke-EventScript 'Ev_Ok.ps1'
+$started = @(Get-TestEvents 4010)
+$succeeded = @(Get-TestEvents 4011)
+Assert-True ($answer -ceq 'DONE 0') "Event log: the test script ends with DONE 0 (got '$answer')"
+Assert-True ($started.Count -eq 1 -and @($started[0][2]).Count -eq 4) 'Event log: 4010 (started) has 4 fields'
+Assert-True ($started.Count -eq 1 -and [string]$started[0][2][1] -ceq 'Ev_Ok.ps1' -and [string]$started[0][2][2] -ceq '-' -and [string]$started[0][2][3] -ceq 'False') 'Event log: 4010 = message, script, SID (- without the setting), elevated'
+Assert-True ($succeeded.Count -eq 1 -and @($succeeded[0][2]).Count -eq 6) 'Event log: 4011 (succeeded) has 6 fields'
+Assert-True ($succeeded.Count -eq 1 -and "$($succeeded[0][1])" -eq 'Information' -and [string]$succeeded[0][2][2] -ceq 'ExitCode' -and [string]$succeeded[0][2][3] -ceq '0' -and [string]$succeeded[0][2][4] -match '^\d+$' -and [string]$succeeded[0][2][5] -ceq '-') 'Event log: 4011 = message, script, ExitCode, 0, seconds, SID'
+Assert-True (@(Get-TestEvents 4012).Count -eq 0) 'Event log: no 4012 for a successful action'
+Clear-TestEvents
+$answer = Invoke-EventScript 'Ev_Fail.ps1'
+$failed = @(Get-TestEvents 4012)
+Assert-True ($answer -ceq 'DONE 3' -and $failed.Count -eq 1 -and @($failed[0][2]).Count -eq 6) 'Event log: 4012 (failed) has 6 fields'
+Assert-True ($failed.Count -eq 1 -and "$($failed[0][1])" -eq 'Warning' -and [string]$failed[0][2][2] -ceq 'ExitCode' -and [string]$failed[0][2][3] -ceq '3') 'Event log: 4012 for an exit code other than 0 = Warning with the exit code'
+Clear-TestEvents
+$answer = Invoke-EventScript 'Ev_Slow.ps1' 1
+$failed = @(Get-TestEvents 4012)
+Assert-True ($answer -ceq 'TIMEOUT' -and $failed.Count -eq 1 -and "$($failed[0][1])" -eq 'Error' -and [string]$failed[0][2][2] -ceq 'Timeout' -and [string]$failed[0][2][3] -ceq '-') 'Event log: 4012 for a timeout = Error, result Timeout, no exit code'
+Clear-TestEvents
+$startError = $null
+try { [void]$startScript.Invoke($evService, [object[]]@([string](Join-Path $evScripts 'missing-pwsh.exe'), [string](Join-Path $evScripts 'Ev_Ok.ps1'), 'Ev_Ok.ps1', 60, 'TEST\user', $false, '', 'S-1-5-21-1-2-3-1001', $false, $false)) } catch { $startError = $_ }
+$failed = @(Get-TestEvents 4012)
+Assert-True ($null -ne $startError -and $failed.Count -eq 1 -and [string]$failed[0][2][2] -ceq 'StartError') 'Event log: 4012 with StartError when PowerShell cannot be started (the error is passed on)'
+
+# The SID only with EventLog_CallerSid = True, and only in the form of a SID.
+foreach ($case in @(
+	@('<GUI_Config><EventLog_CallerSid>True</EventLog_CallerSid></GUI_Config>', 'S-1-5-21-1-2-3-1001', 'S-1-5-21-1-2-3-1001', 'True'),
+	@('<GUI_Config><EventLog_CallerSid> true </EventLog_CallerSid></GUI_Config>', 'S-1-5-21-1-2-3-1001', 'S-1-5-21-1-2-3-1001', 'true with spaces'),
+	@('<GUI_Config><EventLog_CallerSid>False</EventLog_CallerSid></GUI_Config>', 'S-1-5-21-1-2-3-1001', '-', 'False'),
+	@('<GUI_Config><EventLog_CallerSid>Yes</EventLog_CallerSid></GUI_Config>', 'S-1-5-21-1-2-3-1001', '-', 'an invalid value'),
+	@('<GUI_Config><EventLog_CallerSid>True', 'S-1-5-21-1-2-3-1001', '-', 'an unreadable Tool_Config.xml'),
+	@('<GUI_Config><EventLog_CallerSid>True</EventLog_CallerSid></GUI_Config>', 'S-1-5-21-1-2-3-1001%%1', '-', 'True with a value that is no SID'),
+	@('<GUI_Config><EventLog_CallerSid>True</EventLog_CallerSid></GUI_Config>', $null, '-', 'True without a caller SID'))) {
+	Set-EventConfig $case[0]
+	Clear-TestEvents
+	[void](Invoke-EventScript 'Ev_Ok.ps1' 60 $case[1] $true)
+	$s1 = @(Get-TestEvents 4010)
+	$s2 = @(Get-TestEvents 4011)
+	Assert-True ($s1.Count -eq 1 -and $s2.Count -eq 1 -and [string]$s1[0][2][2] -ceq $case[2] -and [string]$s2[0][2][5] -ceq $case[2]) "Event log: EventLog_CallerSid with $($case[3]) writes the SID '$($case[2])'"
+	Assert-True ($s1.Count -eq 1 -and [string]$s1[0][2][3] -ceq 'True') "Event log: 4010 marks an elevated caller ($($case[3]))"
+}
+Assert-True ($sourceText.Contains('if (health)') -and $sourceText.Contains('ReportHealthChanges(text)')) 'Event log: a health run reports rows that changed to Error, no action events'
+
+# Health rows: only a change to Error, Detail is never read; invalid JSON and the placeholder Collection change nothing.
+$state = [System.Collections.Generic.Dictionary[string, string]]::new()
+# The comma keeps the list as one object (a function would unroll it).
+function Get-Changes([string]$Json) { return , $findChanges.Invoke($null, [object[]]@($Json, $state.psobject.BaseObject)) }
+$rows = '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"C:\\Users\\someone\\secret"},{"Id":"Defender","Name":"","Status":"OK","Detail":"ok"}]'
+$c = Get-Changes $rows
+Assert-True ($c.Count -eq 1 -and [string]$c[0][0] -ceq 'Disk' -and [string]$c[0][1] -ceq 'C:' -and [string]$c[0][2] -ceq '-') 'Health: a row seen first with Error is reported once (previous status -)'
+Assert-True ((Get-Changes $rows).Count -eq 0) 'Health: the same Error again is not reported'
+[void](Get-Changes '[{"Id":"Disk","Name":"C:","Status":"OK"}]')
+$c = Get-Changes '{"Id":"Disk","Name":"C:","Status":"Error"}'
+Assert-True ($c.Count -eq 1 -and [string]$c[0][2] -ceq 'OK') 'Health: OK -> Error is reported with the previous status (also a single row as an object)'
+$c = Get-Changes '[{"Id":"Defender","Name":"","Status":"Error"}]'
+Assert-True ($c.Count -eq 1 -and [string]$c[0][0] -ceq 'Defender' -and [string]$c[0][2] -ceq 'OK') 'Health: a single check updates only its own row'
+foreach ($bad in @('not json', '', '[{"Id":"Collection","Name":"x","Status":"Error"}]', '[{"Name":"x","Status":"Error"}]', '[{"Id":"X","Status":5}]', '[[1,2],3]')) {
+	Assert-True ((Get-Changes $bad).Count -eq 0) "Health: '$bad' gives no change"
+}
+$deep = ('[' * 20) + (']' * 20)
+Assert-True ((Get-Changes $deep).Count -eq 0) 'Health: too deep JSON gives no change (no exception)'
+$many = '[' + ((1..250 | ForEach-Object { '{"Id":"Custom","Name":"N' + $_ + '","Status":"Error"}' }) -join ',') + ']'
+$state.Clear()
+$c = Get-Changes $many
+Assert-True ($c.Count -eq 200 -and $state.Count -eq 200) "Health: at most 200 rows are kept (got $($c.Count) changes, $($state.Count) rows)"
+Clear-TestEvents
+[void]$reportChanges.Invoke($evService, [object[]]@('[{"Id":"Services","Name":"Spooler%%1`n","Status":"Error","Detail":"C:\\Users\\someone"}]'.Replace('`n', '\n')))
+$h = @(Get-TestEvents 4013)
+Assert-True ($h.Count -eq 1 -and @($h[0][2]).Count -eq 4 -and "$($h[0][1])" -eq 'Warning') 'Health: 4013 has 4 fields (message, type, name, previous status)'
+Assert-True ($h.Count -eq 1 -and [string]$h[0][2][1] -ceq 'Services' -and [string]$h[0][2][2] -ceq 'Spooler__1' -and [string]$h[0][2][3] -ceq '-') 'Health: 4013 fields are cleaned (no line break, no parameter reference)'
+Assert-True ($h.Count -eq 1 -and -not ((@($h[0][2]) -join '|') -match 'Users')) 'Health: the detail text is not written'
+
+# Rate limits: operational events 20 per ID and minute, security events 10 per ID and 10 minutes, then 4099 with the count.
+# The earlier checks wrote with the clock at $evNow; the limits are checked one hour later, in fresh windows.
+$evNow = $evNow.AddHours(1)
+$evClock.SetValue($evService, [Nullable[datetime]]$evNow)
+Clear-TestEvents
+$fields = [string[]]@('A SelfX action as SYSTEM ended successfully.', 'Ev_Ok.ps1', 'ExitCode', '0', '1', '-')
+for ($i = 0; $i -lt 25; $i++) { [void]$writeRecord.Invoke($evService, [object[]]@(4011, [Diagnostics.EventLogEntryType]::Information, $fields)) }
+Assert-True ((Get-TestEvents 4011).Count -eq 20 -and (Get-TestEvents 4099).Count -eq 0) "Rate limit: 20 of 25 operational events in one minute are written (got $((Get-TestEvents 4011).Count))"
+$evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddSeconds(59))
+[void]$writeRecord.Invoke($evService, [object[]]@(4011, [Diagnostics.EventLogEntryType]::Information, $fields))
+Assert-True ((Get-TestEvents 4011).Count -eq 20) 'Rate limit: still limited within the minute'
+for ($i = 0; $i -lt 12; $i++) { [void]$securityEvent.Invoke($evService, [object[]]@(4005, [Diagnostics.EventLogEntryType]::Error, 'Files changed.')) }
+Assert-True ((Get-TestEvents 4005).Count -eq 10) "Rate limit: 10 of 12 security events are written (got $((Get-TestEvents 4005).Count))"
+$evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddSeconds(61))
+[void]$writeRecord.Invoke($evService, [object[]]@(4011, [Diagnostics.EventLogEntryType]::Information, $fields))
+$suppressed = @(Get-TestEvents 4099)
+Assert-True ($suppressed.Count -eq 1 -and @($suppressed[0][2]).Count -eq 3 -and [string]$suppressed[0][2][1] -ceq '4011' -and [string]$suppressed[0][2][2] -ceq '6') "Rate limit: after the minute 4099 reports 6 left-out entries of 4011 (fields message, ID, count)"
+Assert-True ((Get-TestEvents 4011).Count -eq 21) 'Rate limit: a new minute writes again'
+$evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddMinutes(5))
+[void]$securityEvent.Invoke($evService, [object[]]@(4005, [Diagnostics.EventLogEntryType]::Error, 'Files changed.'))
+Assert-True ((Get-TestEvents 4005).Count -eq 10) 'Rate limit: a security event stays limited for 10 minutes (the shorter window does not apply)'
+$evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddMinutes(11))
+[void]$securityEvent.Invoke($evService, [object[]]@(4005, [Diagnostics.EventLogEntryType]::Error, 'Files changed.'))
+$suppressed = @(Get-TestEvents 4099 | Where-Object { [string]$_[2][1] -ceq '4005' })
+Assert-True ($suppressed.Count -eq 1 -and [string]$suppressed[0][2][2] -ceq '3' -and (Get-TestEvents 4005).Count -eq 11) 'Rate limit: 10 minutes after the first of them 4099 reports 3 left-out security events, then the event is written'
 
 # --- N5 (pass 2): an unexpected exception while a request is processed gets the fixed answer, not a timeout ---
 Assert-True ($sourceText -match 'response = "ERROR Internal error";') 'N5: the service answers an unexpected exception with the fixed text ERROR Internal error'

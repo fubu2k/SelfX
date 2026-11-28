@@ -45,6 +45,8 @@
     there, and exchanged by two renames (the old one becomes InstallFolder.ConfigOld); an error at any step puts the old folder
     back. A script of an action that is running keeps the folder locked: the exchange is retried for 20 seconds, then it stops
     and the old configuration stays. No change before all checks have passed. Exits 0 or 1 as the full installation does.
+    Creates the Windows event log SelfX (Applications and Services Logs, source SelfXService, 20 MB, oldest entries overwritten)
+    and moves the source of older versions out of the Application log; a failure there is a warning and does not stop the installation.
     Registers and starts an automatic LOCAL SYSTEM service with recovery restart actions.
     Restricts installed files against user modification and ProgramData\SelfX logs and the
     status cache to SYSTEM/administrators. Creates ProgramData\SelfX\Logs\Users, in which users
@@ -109,6 +111,9 @@
                                               Audio\SelfXAudio.dll
     3.1.0    2026-11-28  fubu2k               Trust mode Signature: Detection.ps1 at the top of the package needs no embedded signature (exactly this one
                                               path, Test-SelfXUnsignedPackageFile); a full package still covers it with SelfX.Code.cat
+    3.1.0    2026-11-28  fubu2k               Own event log SelfX (Applications and Services Logs) with the source SelfXService, 20 MB, oldest entries
+                                              overwritten (Initialize-SelfXEventLog); the source of older versions is moved out of the Application log
+                                              (its old entries stay there); a failure is a warning, not a stop
     3.1.0    2026-11-28  fubu2k               -ConfigOnly: the package may hold Detection.ps1 at the top (the configuration package of the wizard keeps
                                               it); it is neither run nor installed
 #>
@@ -1328,6 +1333,43 @@ function Set-SelfXServicePrivileges {
 	return "Restricted to: $($actual -join ', ')."
 }
 
+# Windows event log of the service: own classic log "SelfX" (Applications and Services Logs) with the source "SelfXService".
+# Versions before 3.1.0 wrote with this source to the Application log; a source belongs to exactly one log, so it is moved.
+function Get-SelfXEventSourceLog {
+	# Name of the log in which the source is registered, '' when it is not registered.
+	param([Parameter(Mandatory = $true)][string]$Source)
+	if (-not [Diagnostics.EventLog]::SourceExists($Source)) { return '' }
+	return "$([Diagnostics.EventLog]::LogNameFromSourceName($Source, '.'))"
+}
+
+function Initialize-SelfXEventLog {
+	# Creates the log and the source when they are missing, moves the source out of another log (the old entries stay there) and
+	# sets size and overflow (overwrite the oldest entries as needed). A failure is a warning only: the event log is monitoring,
+	# not a protection, and the installation (Autopilot) must not fail because of it; the service then writes only its own log file.
+	param([string]$LogName = 'SelfX', [string]$Source = 'SelfXService', [long]$MaximumSize = 20MB)
+	try {
+		$steps = New-Object System.Collections.Generic.List[string]
+		$current = Get-SelfXEventSourceLog -Source $Source
+		if ($current -and ($current -ne $LogName)) {
+			Remove-EventLog -Source $Source -ErrorAction Stop
+			$steps.Add("source $Source moved from the log '$current' (older entries stay there)")
+			$current = ''
+		}
+		if (-not $current) {
+			New-EventLog -LogName $LogName -Source $Source -ErrorAction Stop
+			if (-not $steps.Count) { $steps.Add("log $LogName with source $Source created") }
+		}
+		Limit-EventLog -LogName $LogName -MaximumSize $MaximumSize -OverflowAction OverwriteAsNeeded -ErrorAction Stop
+		$after = Get-SelfXEventSourceLog -Source $Source
+		if ($after -ne $LogName) { Write-Warning "The event source $Source is registered in '$after', not in '$LogName': the service writes no Windows events."; return 'not ready.' }
+		if (-not $steps.Count) { $steps.Add('already in place') }
+		return "$LogName ($($steps -join '; '); at most $([int]($MaximumSize / 1MB)) MB, oldest entries overwritten)."
+	} catch {
+		Write-Warning "The event log $LogName could not be prepared ($($_.Exception.Message)): the service writes no Windows events. The installation continues."
+		return 'not ready.'
+	}
+}
+
 function Invoke-SelfXSafeDelete {
 	# Runs the delete helper of SelfXService.exe (/removetree: or /cleandata:, class SafeTree). The helper opens every entry
 	# once without following links and deletes through that handle, so a folder that a user replaces by a junction between
@@ -1518,6 +1560,8 @@ Try
 		Test-SelfXInstalledLists -InstallFolder $InstallFolder -Verified $VerifiedSignatures
 		Write-Output 'Installed lists and catalogs (App\SelfX.Code.cat, Config\SelfX.Config.cat) are the ones of the signed package.'
 	}
+	# Event log SelfX, while the service is not registered (an older service wrote with the same source to the Application log).
+	Write-Output ("Windows event log: " + (Initialize-SelfXEventLog))
 	# The trust anchor, before the service is registered and started (the service reads it).
 	Set-SelfXTrustAnchor -Mode $TrustMode -Signers $AllowedSigners
 	Write-Output "Trust anchor written: HKLM\SOFTWARE\SelfX\Trust, Mode = $TrustMode."

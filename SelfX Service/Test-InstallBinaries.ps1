@@ -41,6 +41,8 @@
     3.1.0    2026-11-28  fubu2k               Disturb library (Disturb/SelfXDisturb.dll) in the fake package, the layout test and its refusal cases.
     3.1.0    2026-11-28  fubu2k               Trust mode Signature: Detection.ps1 at the top without a signature is accepted (and still covered by
                                               SelfX.Code.cat); a Detection.ps1 elsewhere and files with similar names are refused
+    3.1.0    2026-11-28  fubu2k               Event log SelfX: new installation, move of the source out of the Application log, existing log, failures
+                                              (warning only), order in Install.ps1; the registration commands are replaced by functions of the test.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -72,6 +74,49 @@ foreach ($forbidden in 'SeTcbPrivilege', 'SeDebugPrivilege', 'SeCreateTokenPrivi
 	Assert-Equal ($privileges -contains $forbidden) $false "N5: $forbidden is removed from the service"
 }
 Assert-Equal ("$(Set-SelfXServicePrivileges -Name 'SelfXTestNoSuchService' -Mode 'Default')" -like 'Default*') $true 'N5: Service_Privileges = Default leaves the privileges unchanged (no sc.exe call)'
+
+# Event log SelfX (Initialize-SelfXEventLog): the registration commands are replaced by functions of this test; nothing is
+# registered on the device. State: the log in which the source is registered ('' = not registered) and the calls.
+$eventDefinition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Initialize-SelfXEventLog' }, $true)
+Assert-Equal ($null -ne $eventDefinition) $true 'Install.ps1 defines Initialize-SelfXEventLog'
+Assert-Equal ($null -ne $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-SelfXEventSourceLog' }, $true)) $true 'Install.ps1 defines Get-SelfXEventSourceLog'
+if ($eventDefinition) {
+	. ([scriptblock]::Create($eventDefinition.Extent.Text))
+	$script:eventSourceLog = ''
+	$script:eventCalls = New-Object System.Collections.Generic.List[string]
+	$script:eventFail = ''
+	function Get-SelfXEventSourceLog { param([string]$Source) return $script:eventSourceLog }
+	function Remove-EventLog { [CmdletBinding()] param([string]$LogName, [string]$Source) $script:eventCalls.Add("Remove $LogName|$Source"); if ($script:eventFail -eq 'Remove') { throw 'access denied' }; if ($Source) { $script:eventSourceLog = '' } }
+	function New-EventLog { [CmdletBinding()] param([string]$LogName, [string]$Source) $script:eventCalls.Add("New $LogName|$Source"); if ($script:eventFail -eq 'New') { throw 'access denied' }; if ($script:eventFail -ne 'Elsewhere') { $script:eventSourceLog = $LogName } }
+	function Limit-EventLog { [CmdletBinding()] param([string]$LogName, [long]$MaximumSize, [string]$OverflowAction) $script:eventCalls.Add("Limit $LogName|$MaximumSize|$OverflowAction") }
+	function Invoke-EventCase([string]$Before, [string]$Fail = '') {
+		$script:eventSourceLog = $Before; $script:eventFail = $Fail; $script:eventCalls.Clear()
+		$result = "$(Initialize-SelfXEventLog 3>$null)"
+		return [pscustomobject]@{ Result = $result; Calls = ($script:eventCalls -join ';'); After = $script:eventSourceLog }
+	}
+	$limit = "Limit SelfX|$(20MB)|OverwriteAsNeeded"
+	$case = Invoke-EventCase ''
+	Assert-Equal $case.Calls "New SelfX|SelfXService;$limit" 'Event log: a new installation creates the log SelfX with the source SelfXService, 20 MB, overwrite as needed'
+	Assert-Equal ($case.Result -like 'SelfX (log SelfX with source SelfXService created*') $true "Event log: the result names the new log ($($case.Result))"
+	$case = Invoke-EventCase 'Application'
+	Assert-Equal $case.Calls "Remove |SelfXService;New SelfX|SelfXService;$limit" 'Event log: an update moves the source out of the Application log (registration only), then creates it in SelfX'
+	Assert-Equal ($case.Result -like "*moved from the log 'Application'*") $true "Event log: the move is named ($($case.Result))"
+	Assert-Equal $case.After 'SelfX' 'Event log: after the update the source belongs to SelfX'
+	$case = Invoke-EventCase 'SelfX'
+	Assert-Equal $case.Calls $limit 'Event log: an existing log SelfX is only limited again (nothing removed, nothing doubled)'
+	Assert-Equal ($case.Result -like '*already in place*') $true 'Event log: an existing log is reported as in place'
+	$case = Invoke-EventCase '' 'New'
+	Assert-Equal $case.Result 'not ready.' 'Event log: a failed creation is a warning only, the installation continues (no exception)'
+	$case = Invoke-EventCase 'Application' 'Remove'
+	Assert-Equal $case.Result 'not ready.' 'Event log: a failed move is a warning only'
+	Assert-Equal ($case.Calls -like '*New *') $false 'Event log: after a failed move nothing is created (a source cannot be in two logs)'
+	$case = Invoke-EventCase '' 'Elsewhere'
+	Assert-Equal $case.Result 'not ready.' 'Event log: a source that is not in SelfX after the step is reported as not ready'
+	Remove-Item -Path Function:\Remove-EventLog, Function:\New-EventLog, Function:\Limit-EventLog, Function:\Get-SelfXEventSourceLog
+}
+$installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
+$eventAt = $installText.IndexOf('"Windows event log: " + (Initialize-SelfXEventLog)')
+Assert-Equal ($eventAt -gt $installText.IndexOf('& sc.exe delete $ServiceName') -and $eventAt -lt $installText.IndexOf('New-Service -Name $ServiceName')) $true 'Event log: Install.ps1 prepares the log after the old service is removed and before the new one is registered'
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('SelfXInstallBinariesTest_' + [guid]::NewGuid().ToString('N'))
 $package = Join-Path $root 'package'
