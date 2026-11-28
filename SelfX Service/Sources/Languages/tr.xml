@@ -30,6 +30,10 @@
 		<Button_Restart_Now>Şimdi yeniden başlat</Button_Restart_Now>
 		<Health_Restart_Started>Windows yaklaşık 30 saniye içinde yeniden başlatılacak. Çalışmanızı şimdi kaydedin.</Health_Restart_Started>
 		<Disturb_Warning_Text>Bir toplantıda veya sunumda olduğunuz anlaşılıyor. Bu eylem onu kesintiye uğratabilir.</Disturb_Warning_Text>
+		<Greeting_Morning>Günaydın {0}.</Greeting_Morning>
+		<Greeting_Day>Merhaba {0}.</Greeting_Day>
+		<Greeting_Evening>İyi akşamlar {0}.</Greeting_Evening>
+		<Greeting_Neutral>Hoş geldiniz.</Greeting_Neutral>
 		<Health_Updates_Started>Windows güncelleştirmeleri aranıyor, indiriliyor ve yükleniyor. Bu birkaç dakika sürebilir; çalışmaya devam edebilirsiniz.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update tamamlandı. Cihaz durumu yeniden denetleniyor ve yeniden başlatma gerekip gerekmediğini gösteriyor.</Health_Updates_Done>
 		<Health_Apps_Button>Yeniden dene</Health_Apps_Button>
