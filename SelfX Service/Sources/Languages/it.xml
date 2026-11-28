@@ -332,6 +332,18 @@ Descrizione del problema:</Report_Mail_Body>
 		<Health_Unknown>Sconosciuto</Health_Unknown>
 		<Health_Pending>In sospeso</Health_Pending>
 		<Health_Unavailable>Rapporto di stato locale non disponibile: {0}</Health_Unavailable>
+		<AppError_87D1041C>L'app è stata installata ma non viene più trovata (ad esempio perché è stata rimossa). Le app obbligatorie vengono reinstallate alla prossima sincronizzazione.</AppError_87D1041C>
+		<AppError_8000FFFF>Si è verificato un errore imprevisto durante l'installazione. Riavvia il dispositivo e riprova. Se non riesce di nuovo, contatta il supporto.</AppError_8000FFFF>
+		<AppError_80070643>Si è verificato un errore grave durante l'installazione. Riavvia il dispositivo e riprova. Se non riesce di nuovo, contatta il supporto.</AppError_80070643>
+		<AppError_80070642>L'installazione è stata annullata. Avviala di nuovo e non annullarla.</AppError_80070642>
+		<AppError_80070652>Un'altra installazione era in corso. Attendi che finisca, poi riprova.</AppError_80070652>
+		<AppError_80070653>Impossibile aprire il file di installazione. Riprova più tardi. Se non riesce di nuovo, contatta il supporto.</AppError_80070653>
+		<AppError_80070659>L'installazione è bloccata da una regola del dispositivo. Contatta il supporto.</AppError_80070659>
+		<AppError_80070660>La cartella dei file temporanei è piena o non utilizzabile. Libera spazio su disco e riprova.</AppError_80070660>
+		<AppError_80070666>È già installata un'altra versione di questa app. Contatta il supporto.</AppError_80070666>
+		<AppError_80070BC2>L'installazione richiede un riavvio. Riavvia il dispositivo.</AppError_80070BC2>
+		<AppError_80070070>Lo spazio su disco non è sufficiente. Libera spazio su disco e riprova.</AppError_80070070>
+		<AppError_80070005>L'accesso è stato negato durante l'installazione. Contatta il supporto.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

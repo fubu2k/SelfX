@@ -332,6 +332,18 @@ Deskripsi masalah:</Report_Mail_Body>
 		<Health_Unknown>Tidak diketahui</Health_Unknown>
 		<Health_Pending>Tertunda</Health_Pending>
 		<Health_Unavailable>Laporan status lokal tidak tersedia: {0}</Health_Unavailable>
+		<AppError_87D1041C>Aplikasi sudah diinstal tetapi tidak ditemukan lagi (misalnya karena dihapus). Aplikasi wajib diinstal ulang pada sinkronisasi berikutnya.</AppError_87D1041C>
+		<AppError_8000FFFF>Terjadi kesalahan tak terduga saat instalasi. Mulai ulang perangkat dan coba lagi. Jika gagal lagi, hubungi dukungan.</AppError_8000FFFF>
+		<AppError_80070643>Terjadi kesalahan serius saat instalasi. Mulai ulang perangkat dan coba lagi. Jika gagal lagi, hubungi dukungan.</AppError_80070643>
+		<AppError_80070642>Instalasi dibatalkan. Mulai lagi dan jangan dibatalkan.</AppError_80070642>
+		<AppError_80070652>Instalasi lain sedang berjalan pada saat yang sama. Tunggu hingga selesai, lalu coba lagi.</AppError_80070652>
+		<AppError_80070653>File instalasi tidak dapat dibuka. Coba lagi nanti. Jika gagal lagi, hubungi dukungan.</AppError_80070653>
+		<AppError_80070659>Instalasi diblokir oleh aturan perangkat. Hubungi dukungan.</AppError_80070659>
+		<AppError_80070660>Folder file sementara penuh atau tidak dapat digunakan. Kosongkan ruang disk dan coba lagi.</AppError_80070660>
+		<AppError_80070666>Versi lain dari aplikasi ini sudah terinstal. Hubungi dukungan.</AppError_80070666>
+		<AppError_80070BC2>Instalasi memerlukan mulai ulang. Mulai ulang perangkat.</AppError_80070BC2>
+		<AppError_80070070>Ruang disk tidak cukup. Kosongkan ruang disk dan coba lagi.</AppError_80070070>
+		<AppError_80070005>Akses ditolak saat instalasi. Hubungi dukungan.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

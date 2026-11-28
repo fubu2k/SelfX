@@ -105,6 +105,8 @@ under the title shows when the last check ran.
   changes nothing. *Fix all problems* **never** restarts the computer.
 - **Retry** (for **Company apps**): a company app could not be installed. SelfX restarts the installation at
   once. You can follow the progress in the company portal. If it fails again, send the logs to support.
+  For known error codes the card says in one sentence what went wrong and what you can do (for example
+  restart the device or free up disk space).
 - **Arrow** on a card: checks only this status again. At the top: checks everything again.
 - **Fix all problems**: runs all possible repairs one after another. Save your work first.
 

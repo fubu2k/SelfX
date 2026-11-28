@@ -332,6 +332,18 @@
 		<Health_Unknown>未知</Health_Unknown>
 		<Health_Pending>待处理</Health_Pending>
 		<Health_Unavailable>本地状态报告不可用：{0}</Health_Unavailable>
+		<AppError_87D1041C>该应用已安装，但已找不到（例如已被删除）。必需的应用会在下次同步时重新安装。</AppError_87D1041C>
+		<AppError_8000FFFF>安装过程中发生意外错误。请重启设备后重试。如果仍然失败，请联系支持人员。</AppError_8000FFFF>
+		<AppError_80070643>安装过程中发生严重错误。请重启设备后重试。如果仍然失败，请联系支持人员。</AppError_80070643>
+		<AppError_80070642>安装已取消。请重新开始，不要取消。</AppError_80070642>
+		<AppError_80070652>同时有另一个安装正在运行。请等待其完成后重试。</AppError_80070652>
+		<AppError_80070653>无法打开安装文件。请稍后重试。如果仍然失败，请联系支持人员。</AppError_80070653>
+		<AppError_80070659>安装被设备的规则阻止。请联系支持人员。</AppError_80070659>
+		<AppError_80070660>临时文件文件夹已满或无法使用。请释放磁盘空间后重试。</AppError_80070660>
+		<AppError_80070666>已安装此应用的另一个版本。请联系支持人员。</AppError_80070666>
+		<AppError_80070BC2>安装需要重启。请重启设备。</AppError_80070BC2>
+		<AppError_80070070>磁盘空间不足。请释放磁盘空间后重试。</AppError_80070070>
+		<AppError_80070005>安装过程中访问被拒绝。请联系支持人员。</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

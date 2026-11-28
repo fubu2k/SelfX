@@ -332,6 +332,18 @@
 		<Health_Unknown>未知</Health_Unknown>
 		<Health_Pending>待處理</Health_Pending>
 		<Health_Unavailable>本機狀態報告無法使用：{0}</Health_Unavailable>
+		<AppError_87D1041C>此應用程式已安裝，但已找不到（例如已被移除）。必要的應用程式會在下次同步時重新安裝。</AppError_87D1041C>
+		<AppError_8000FFFF>安裝期間發生未預期的錯誤。請重新啟動裝置後再試一次。如果仍然失敗，請聯絡支援人員。</AppError_8000FFFF>
+		<AppError_80070643>安裝期間發生嚴重錯誤。請重新啟動裝置後再試一次。如果仍然失敗，請聯絡支援人員。</AppError_80070643>
+		<AppError_80070642>安裝已取消。請重新開始，不要取消。</AppError_80070642>
+		<AppError_80070652>同時有另一個安裝正在執行。請等待其完成後再試一次。</AppError_80070652>
+		<AppError_80070653>無法開啟安裝檔案。請稍後再試。如果仍然失敗，請聯絡支援人員。</AppError_80070653>
+		<AppError_80070659>安裝遭裝置的規則封鎖。請聯絡支援人員。</AppError_80070659>
+		<AppError_80070660>暫存檔案資料夾已滿或無法使用。請釋放磁碟空間後再試一次。</AppError_80070660>
+		<AppError_80070666>已安裝此應用程式的另一個版本。請聯絡支援人員。</AppError_80070666>
+		<AppError_80070BC2>安裝需要重新啟動。請重新啟動裝置。</AppError_80070BC2>
+		<AppError_80070070>磁碟空間不足。請釋放磁碟空間後再試一次。</AppError_80070070>
+		<AppError_80070005>安裝期間存取遭拒。請聯絡支援人員。</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

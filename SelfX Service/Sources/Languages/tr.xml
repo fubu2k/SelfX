@@ -332,6 +332,18 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<Health_Unknown>Bilinmiyor</Health_Unknown>
 		<Health_Pending>Bekliyor</Health_Pending>
 		<Health_Unavailable>Yerel durum raporu kullanılamıyor: {0}</Health_Unavailable>
+		<AppError_87D1041C>Uygulama yüklendi ancak artık bulunamıyor (örneğin kaldırıldı). Zorunlu uygulamalar bir sonraki eşitlemede yeniden yüklenir.</AppError_87D1041C>
+		<AppError_8000FFFF>Yükleme sırasında beklenmeyen bir hata oluştu. Cihazı yeniden başlatın ve tekrar deneyin. Yine olmazsa desteğe başvurun.</AppError_8000FFFF>
+		<AppError_80070643>Yükleme sırasında ciddi bir hata oluştu. Cihazı yeniden başlatın ve tekrar deneyin. Yine olmazsa desteğe başvurun.</AppError_80070643>
+		<AppError_80070642>Yükleme iptal edildi. Yeniden başlatın ve iptal etmeyin.</AppError_80070642>
+		<AppError_80070652>Aynı anda başka bir yükleme çalışıyordu. Bitmesini bekleyin, sonra tekrar deneyin.</AppError_80070652>
+		<AppError_80070653>Yükleme dosyası açılamadı. Daha sonra tekrar deneyin. Yine olmazsa desteğe başvurun.</AppError_80070653>
+		<AppError_80070659>Yükleme, cihazın bir kuralı tarafından engelleniyor. Desteğe başvurun.</AppError_80070659>
+		<AppError_80070660>Geçici dosyalar klasörü dolu veya kullanılamıyor. Disk alanı boşaltın ve tekrar deneyin.</AppError_80070660>
+		<AppError_80070666>Bu uygulamanın başka bir sürümü zaten yüklü. Desteğe başvurun.</AppError_80070666>
+		<AppError_80070BC2>Yükleme için yeniden başlatma gerekiyor. Cihazı yeniden başlatın.</AppError_80070BC2>
+		<AppError_80070070>Diskte yeterli alan yok. Disk alanı boşaltın ve tekrar deneyin.</AppError_80070070>
+		<AppError_80070005>Yükleme sırasında erişim reddedildi. Desteğe başvurun.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

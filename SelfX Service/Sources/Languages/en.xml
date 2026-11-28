@@ -375,6 +375,18 @@ The data comes from the diagnostic tool SelfX. Names and addresses are replaced 
 		<Health_Unknown>Unknown</Health_Unknown>
 		<Health_Pending>Pending</Health_Pending>
 		<Health_Unavailable>Local health report unavailable: {0}</Health_Unavailable>
+		<AppError_87D1041C>The app was installed but is not found any more (for example, it was removed). Required apps are installed again at the next sync.</AppError_87D1041C>
+		<AppError_8000FFFF>An unexpected error occurred during the installation. Restart the device and try again. If it fails again, contact the support.</AppError_8000FFFF>
+		<AppError_80070643>A serious error occurred during the installation. Restart the device and try again. If it fails again, contact the support.</AppError_80070643>
+		<AppError_80070642>The installation was cancelled. Start it again and do not cancel it.</AppError_80070642>
+		<AppError_80070652>Another installation was running at the same time. Wait until it has finished, then try again.</AppError_80070652>
+		<AppError_80070653>The installation file could not be opened. Try again later. If it fails again, contact the support.</AppError_80070653>
+		<AppError_80070659>The installation is blocked by a rule of the device. Contact the support.</AppError_80070659>
+		<AppError_80070660>The folder for temporary files is full or cannot be used. Free up disk space and try again.</AppError_80070660>
+		<AppError_80070666>Another version of this app is already installed. Contact the support.</AppError_80070666>
+		<AppError_80070BC2>The installation needs a restart. Restart the device.</AppError_80070BC2>
+		<AppError_80070070>There is not enough space on the disk. Free up disk space and try again.</AppError_80070070>
+		<AppError_80070005>Access was denied during the installation. Contact the support.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

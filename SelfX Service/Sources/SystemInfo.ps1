@@ -40,6 +40,8 @@
     3.1.0    2026-11-27  fubu2k               Health rows carry UserRemediation (part of a repair that SelfX runs in the context of the user)
     3.1.0    2026-11-28  fubu2k               Get-SelfXSystemInfo -ServerRows (rows of the class Server) and -TerminalServer (no kinds of connection); what is
                                               not shown is not read. Status request answered UNAVAILABLE TerminalServer: no status rows
+    3.1.0    2026-11-28  fubu2k               Row "Company apps": a known error code of an app gets a short explanation with a tip in the language of the
+                                              user (texts AppError_<code>, Add-SelfXAppErrorText); unknown codes stay as they are
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -81,6 +83,22 @@ $Script:SelfXInfoDefaultText = @{
 	Health_Custom = 'Custom check'; Health_Collection = 'Health collection'
 	Health_OK = 'OK'; Health_Pending = 'Pending'; Health_Error = 'Error'; Health_Unknown = 'Unknown'
 	Health_Unavailable = 'Local health report unavailable: {0}'
+	# Error codes of app installations (Intune Management Extension), as HRESULT. Only codes with a source; the key is AppError_ and the
+	# eight hex digits. Sources (Microsoft Learn): "Intune app installation error reference" (0x87D1041C, 0x8000FFFF); "MsiExec.exe and
+	# InstMsi.exe error messages" (Windows Installer 1602, 1603, 1618, 1619, 1625, 1632, 1638, 3010 as 0x8007xxxx); "System error codes
+	# (0-499)" (5 access denied, 112 disk full). The text says what happened and what the user can do; it never starts an action.
+	AppError_87D1041C = 'The app was installed but is not found any more (for example, it was removed). Required apps are installed again at the next sync.'
+	AppError_8000FFFF = 'An unexpected error occurred during the installation. Restart the device and try again. If it fails again, contact the support.'
+	AppError_80070643 = 'A serious error occurred during the installation. Restart the device and try again. If it fails again, contact the support.'
+	AppError_80070642 = 'The installation was cancelled. Start it again and do not cancel it.'
+	AppError_80070652 = 'Another installation was running at the same time. Wait until it has finished, then try again.'
+	AppError_80070653 = 'The installation file could not be opened. Try again later. If it fails again, contact the support.'
+	AppError_80070659 = 'The installation is blocked by a rule of the device. Contact the support.'
+	AppError_80070660 = 'The folder for temporary files is full or cannot be used. Free up disk space and try again.'
+	AppError_80070666 = 'Another version of this app is already installed. Contact the support.'
+	AppError_80070BC2 = 'The installation needs a restart. Restart the device.'
+	AppError_80070070 = 'There is not enough space on the disk. Free up disk space and try again.'
+	AppError_80070005 = 'Access was denied during the installation. Contact the support.'
 }
 # Labels used by the current collection (defaults overlaid with the -Text hashtable of Get-SelfXSystemInfo).
 $Script:SelfXInfoText = $Script:SelfXInfoDefaultText.Clone()
@@ -225,12 +243,33 @@ function Format-SelfXUserTimeText {
     })
 }
 
+function Add-SelfXAppErrorText {
+	# Row "Company apps": HealthStatus.ps1 (SYSTEM) writes the codes in English as "error 0x8XXXXXXX". For every known code (an
+	# English default AppError_<8 hex digits> exists) the explanation in the language of the user is added once at the end. An exit
+	# code of an installer written as 0x0000XXXX is looked up as the Windows error 0x8007XXXX. Unknown codes stay as they are.
+	param([AllowEmptyString()][string]$Detail)
+	if ($Detail -notmatch 'error 0x[0-9A-Fa-f]{8}') { return $Detail }
+	$added = New-Object System.Collections.Generic.List[string]
+	$notes = New-Object System.Collections.Generic.List[string]
+	foreach ($match in [regex]::Matches($Detail, 'error 0x([0-9A-Fa-f]{8})')) {
+		$hex = $match.Groups[1].Value.ToUpperInvariant()
+		if ($hex -match '^0000([0-9A-F]{4})$') { $hex = '8007' + $Matches[1] }
+		$key = "AppError_$hex"
+		if ($added.Contains($key) -or -not $Script:SelfXInfoDefaultText.ContainsKey($key)) { continue }
+		$added.Add($key)
+		$notes.Add(('0x{0}: {1}' -f $hex, (Get-SelfXInfoText $key)))
+	}
+	if (-not $notes.Count) { return $Detail }
+	return ($Detail + ' ' + ($notes -join ' '))
+}
+
 function ConvertTo-SelfXHealthInfo {
     param([object[]]$Results)
     foreach ($result in $Results) {
         $property = Get-SelfXInfoText "Health_$($result.Id)"
         if ($result.Name) { $property += " ($($result.Name))" }
         $detailText = Format-SelfXUserTimeText "$($result.Detail)"
+        if ("$($result.Id)" -eq 'Applications') { $detailText = Add-SelfXAppErrorText $detailText }
         $value = (Get-SelfXInfoText "Health_$($result.Status)") + ' - ' + $detailText
         $item = New-SelfXInfoItem (Get-SelfXInfoText 'Category_Health') $property $value $result.Status
         $item | Add-Member -NotePropertyName Remediation -NotePropertyValue "$($result.Remediation)"

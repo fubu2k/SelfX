@@ -332,6 +332,18 @@ Description du problème :</Report_Mail_Body>
 		<Health_Unknown>Inconnu</Health_Unknown>
 		<Health_Pending>En attente</Health_Pending>
 		<Health_Unavailable>Rapport d’état local indisponible : {0}</Health_Unavailable>
+		<AppError_87D1041C>L'application a été installée mais est introuvable (par exemple, elle a été supprimée). Les applications obligatoires sont réinstallées à la prochaine synchronisation.</AppError_87D1041C>
+		<AppError_8000FFFF>Une erreur inattendue s'est produite pendant l'installation. Redémarrez l'appareil et réessayez. Si cela échoue encore, contactez le support.</AppError_8000FFFF>
+		<AppError_80070643>Une erreur grave s'est produite pendant l'installation. Redémarrez l'appareil et réessayez. Si cela échoue encore, contactez le support.</AppError_80070643>
+		<AppError_80070642>L'installation a été annulée. Relancez-la et ne l'annulez pas.</AppError_80070642>
+		<AppError_80070652>Une autre installation était en cours. Attendez qu'elle soit terminée, puis réessayez.</AppError_80070652>
+		<AppError_80070653>Le fichier d'installation n'a pas pu être ouvert. Réessayez plus tard. Si cela échoue encore, contactez le support.</AppError_80070653>
+		<AppError_80070659>L'installation est bloquée par une règle de l'appareil. Contactez le support.</AppError_80070659>
+		<AppError_80070660>Le dossier des fichiers temporaires est plein ou inutilisable. Libérez de l'espace disque et réessayez.</AppError_80070660>
+		<AppError_80070666>Une autre version de cette application est déjà installée. Contactez le support.</AppError_80070666>
+		<AppError_80070BC2>L'installation nécessite un redémarrage. Redémarrez l'appareil.</AppError_80070BC2>
+		<AppError_80070070>L'espace disque est insuffisant. Libérez de l'espace disque et réessayez.</AppError_80070070>
+		<AppError_80070005>L'accès a été refusé pendant l'installation. Contactez le support.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

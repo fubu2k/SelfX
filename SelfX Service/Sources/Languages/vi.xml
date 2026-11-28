@@ -332,6 +332,18 @@ Mô tả sự cố:</Report_Mail_Body>
 		<Health_Unknown>Không rõ</Health_Unknown>
 		<Health_Pending>Đang chờ</Health_Pending>
 		<Health_Unavailable>Không có báo cáo trạng thái cục bộ: {0}</Health_Unavailable>
+		<AppError_87D1041C>Ứng dụng đã được cài đặt nhưng không còn tìm thấy (ví dụ: đã bị gỡ bỏ). Các ứng dụng bắt buộc sẽ được cài lại ở lần đồng bộ tiếp theo.</AppError_87D1041C>
+		<AppError_8000FFFF>Đã xảy ra lỗi không mong muốn khi cài đặt. Khởi động lại thiết bị và thử lại. Nếu vẫn không được, hãy liên hệ bộ phận hỗ trợ.</AppError_8000FFFF>
+		<AppError_80070643>Đã xảy ra lỗi nghiêm trọng khi cài đặt. Khởi động lại thiết bị và thử lại. Nếu vẫn không được, hãy liên hệ bộ phận hỗ trợ.</AppError_80070643>
+		<AppError_80070642>Quá trình cài đặt đã bị hủy. Hãy bắt đầu lại và đừng hủy.</AppError_80070642>
+		<AppError_80070652>Có một quá trình cài đặt khác đang chạy cùng lúc. Hãy chờ nó hoàn tất rồi thử lại.</AppError_80070652>
+		<AppError_80070653>Không thể mở tệp cài đặt. Hãy thử lại sau. Nếu vẫn không được, hãy liên hệ bộ phận hỗ trợ.</AppError_80070653>
+		<AppError_80070659>Quá trình cài đặt bị chặn bởi một quy tắc của thiết bị. Hãy liên hệ bộ phận hỗ trợ.</AppError_80070659>
+		<AppError_80070660>Thư mục tệp tạm đã đầy hoặc không dùng được. Hãy giải phóng dung lượng đĩa và thử lại.</AppError_80070660>
+		<AppError_80070666>Một phiên bản khác của ứng dụng này đã được cài đặt. Hãy liên hệ bộ phận hỗ trợ.</AppError_80070666>
+		<AppError_80070BC2>Quá trình cài đặt cần khởi động lại. Hãy khởi động lại thiết bị.</AppError_80070BC2>
+		<AppError_80070070>Không đủ dung lượng trên đĩa. Hãy giải phóng dung lượng đĩa và thử lại.</AppError_80070070>
+		<AppError_80070005>Quyền truy cập bị từ chối khi cài đặt. Hãy liên hệ bộ phận hỗ trợ.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

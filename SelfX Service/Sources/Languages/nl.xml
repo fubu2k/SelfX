@@ -332,6 +332,18 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<Health_Unknown>Onbekend</Health_Unknown>
 		<Health_Pending>In behandeling</Health_Pending>
 		<Health_Unavailable>Lokaal statusrapport niet beschikbaar: {0}</Health_Unavailable>
+		<AppError_87D1041C>De app is geïnstalleerd, maar wordt niet meer gevonden (bijvoorbeeld omdat hij is verwijderd). Verplichte apps worden bij de volgende synchronisatie opnieuw geïnstalleerd.</AppError_87D1041C>
+		<AppError_8000FFFF>Er is een onverwachte fout opgetreden tijdens de installatie. Start het apparaat opnieuw op en probeer het nog eens. Lukt het weer niet, neem dan contact op met de support.</AppError_8000FFFF>
+		<AppError_80070643>Er is een ernstige fout opgetreden tijdens de installatie. Start het apparaat opnieuw op en probeer het nog eens. Lukt het weer niet, neem dan contact op met de support.</AppError_80070643>
+		<AppError_80070642>De installatie is geannuleerd. Start hem opnieuw en annuleer hem niet.</AppError_80070642>
+		<AppError_80070652>Er liep tegelijk een andere installatie. Wacht tot die klaar is en probeer het dan opnieuw.</AppError_80070652>
+		<AppError_80070653>Het installatiebestand kon niet worden geopend. Probeer het later opnieuw. Lukt het weer niet, neem dan contact op met de support.</AppError_80070653>
+		<AppError_80070659>De installatie wordt geblokkeerd door een regel van het apparaat. Neem contact op met de support.</AppError_80070659>
+		<AppError_80070660>De map voor tijdelijke bestanden is vol of niet bruikbaar. Maak schijfruimte vrij en probeer het opnieuw.</AppError_80070660>
+		<AppError_80070666>Er is al een andere versie van deze app geïnstalleerd. Neem contact op met de support.</AppError_80070666>
+		<AppError_80070BC2>De installatie vereist een herstart. Start het apparaat opnieuw op.</AppError_80070BC2>
+		<AppError_80070070>Er is niet genoeg ruimte op de schijf. Maak schijfruimte vrij en probeer het opnieuw.</AppError_80070070>
+		<AppError_80070005>Toegang is geweigerd tijdens de installatie. Neem contact op met de support.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

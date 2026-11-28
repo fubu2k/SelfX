@@ -373,6 +373,18 @@ Die Daten stammen vom Diagnose-Werkzeug SelfX. Namen und Adressen sind absichtli
 		<Health_Unknown>Unbekannt</Health_Unknown>
 		<Health_Pending>Bald erledigen</Health_Pending>
 		<Health_Unavailable>Der Gerätestatus ist gerade nicht verfügbar: {0}</Health_Unavailable>
+		<AppError_87D1041C>Die App wurde installiert, wird aber nicht mehr gefunden (zum Beispiel, weil sie entfernt wurde). Pflicht-Apps werden bei der nächsten Synchronisierung neu installiert.</AppError_87D1041C>
+		<AppError_8000FFFF>Bei der Installation ist ein unerwarteter Fehler aufgetreten. Starten Sie das Gerät neu und versuchen Sie es erneut. Klappt es wieder nicht, wenden Sie sich an den Support.</AppError_8000FFFF>
+		<AppError_80070643>Bei der Installation ist ein schwerer Fehler aufgetreten. Starten Sie das Gerät neu und versuchen Sie es erneut. Klappt es wieder nicht, wenden Sie sich an den Support.</AppError_80070643>
+		<AppError_80070642>Die Installation wurde abgebrochen. Starten Sie sie erneut und brechen Sie sie nicht ab.</AppError_80070642>
+		<AppError_80070652>Gleichzeitig lief eine andere Installation. Warten Sie, bis sie fertig ist, und versuchen Sie es dann erneut.</AppError_80070652>
+		<AppError_80070653>Die Installationsdatei konnte nicht geöffnet werden. Versuchen Sie es später erneut. Klappt es wieder nicht, wenden Sie sich an den Support.</AppError_80070653>
+		<AppError_80070659>Die Installation wird durch eine Regel des Geräts blockiert. Wenden Sie sich an den Support.</AppError_80070659>
+		<AppError_80070660>Der Ordner für temporäre Dateien ist voll oder nicht nutzbar. Geben Sie Speicherplatz frei und versuchen Sie es erneut.</AppError_80070660>
+		<AppError_80070666>Eine andere Version dieser App ist bereits installiert. Wenden Sie sich an den Support.</AppError_80070666>
+		<AppError_80070BC2>Die Installation braucht einen Neustart. Starten Sie das Gerät neu.</AppError_80070BC2>
+		<AppError_80070070>Auf dem Datenträger ist nicht genug Platz. Geben Sie Speicherplatz frei und versuchen Sie es erneut.</AppError_80070070>
+		<AppError_80070005>Bei der Installation wurde der Zugriff verweigert. Wenden Sie sich an den Support.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

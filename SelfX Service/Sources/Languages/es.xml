@@ -332,6 +332,18 @@ Descripción del problema:</Report_Mail_Body>
 		<Health_Unknown>Desconocido</Health_Unknown>
 		<Health_Pending>Pendiente</Health_Pending>
 		<Health_Unavailable>Informe de estado local no disponible: {0}</Health_Unavailable>
+		<AppError_87D1041C>La aplicación se instaló, pero ya no se encuentra (por ejemplo, porque se eliminó). Las aplicaciones obligatorias se vuelven a instalar en la próxima sincronización.</AppError_87D1041C>
+		<AppError_8000FFFF>Se produjo un error inesperado durante la instalación. Reinicie el dispositivo e inténtelo de nuevo. Si vuelve a fallar, póngase en contacto con soporte.</AppError_8000FFFF>
+		<AppError_80070643>Se produjo un error grave durante la instalación. Reinicie el dispositivo e inténtelo de nuevo. Si vuelve a fallar, póngase en contacto con soporte.</AppError_80070643>
+		<AppError_80070642>Se canceló la instalación. Iníciela de nuevo y no la cancele.</AppError_80070642>
+		<AppError_80070652>Se estaba ejecutando otra instalación al mismo tiempo. Espere a que termine y vuelva a intentarlo.</AppError_80070652>
+		<AppError_80070653>No se pudo abrir el archivo de instalación. Inténtelo más tarde. Si vuelve a fallar, póngase en contacto con soporte.</AppError_80070653>
+		<AppError_80070659>Una regla del dispositivo bloquea la instalación. Póngase en contacto con soporte.</AppError_80070659>
+		<AppError_80070660>La carpeta de archivos temporales está llena o no se puede usar. Libere espacio en disco e inténtelo de nuevo.</AppError_80070660>
+		<AppError_80070666>Ya hay otra versión de esta aplicación instalada. Póngase en contacto con soporte.</AppError_80070666>
+		<AppError_80070BC2>La instalación necesita un reinicio. Reinicie el dispositivo.</AppError_80070BC2>
+		<AppError_80070070>No hay espacio suficiente en el disco. Libere espacio en disco e inténtelo de nuevo.</AppError_80070070>
+		<AppError_80070005>Se denegó el acceso durante la instalación. Póngase en contacto con soporte.</AppError_80070005>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
