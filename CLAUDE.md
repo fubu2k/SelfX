@@ -148,7 +148,8 @@ pull request. They are constants in `SelfXService.cs`:
   running `SelfXService` (process ID from the service control manager).
 - `OtherSessions` = `Block` stays on every disturbing action (restart, Windows updates, disk check, restart of the
   network adapters, restart of the Intune service, time synchronization) and on **every** catalogue entry of the
-  same script. A normal user is blocked while another user has an active session; elevated administrators are not;
+  same script. A normal user is blocked while another user is signed in (an active **or disconnected** session: with fast
+  user switching the other session is disconnected, its work stays open); elevated administrators are not;
   when the sessions cannot be read, the action is blocked. A new disturbing action gets `OtherSessions` = `Block`.
 - The device logs report contains only the data of the requesting user unless an elevated administrator asks.
 

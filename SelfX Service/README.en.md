@@ -169,7 +169,8 @@ user, for example the device logs report.
 - Blocked actions on multi-user devices (2.6.10): for actions with
   `OtherSessions=Block` (restart, Windows updates, disk check, restart of the
   network adapters and of the Intune service) a normal user gets a notice
-  instead of the action while another user has an active session. Elevated
+  instead of the action while another user is signed in (active or
+  disconnected session, for example after fast user switching). Elevated
   administrators are not restricted. If the sessions cannot be read, the action
   is blocked.
 - Pipe limits (2.6.10): a connection must send its request within 5 seconds and

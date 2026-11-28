@@ -147,6 +147,10 @@ Notes:
                                               final path of its handle is exactly the expected path. A user could turn an empty folder into a
                                               junction in place while it was open, so that the entries listed and opened through it lay outside
                                               the root (delete as SYSTEM outside Windows\Temp). Such entries are kept and counted.
+    3.1.0    2026-11-28  fubu2k               OtherSessions = Block also counts disconnected sessions of other users (WTSDisconnected): with fast
+                                              user switching on Windows 11 the session of the other user is disconnected, not active, so a normal
+                                              user could restart the device while another user still had open work. A disconnected session
+                                              without a user is skipped; an active session without a readable account still fails closed
 */
 
 using System;
@@ -257,7 +261,10 @@ namespace SelfX
         const int WtsUserName = 5;
         const int WtsDomainName = 7;
 
+        // WTS_CONNECTSTATE_CLASS (wtsapi32.h). A disconnected session is still signed in (fast user switching on Windows 11, a
+        // closed remote desktop window): its programs and open documents keep running.
         const int WtsActive = 0;
+        const int WtsDisconnected = 4;
 
         // Version data of the running Windows: the product type decides the mode (Client or TerminalServer, IsTerminalServer).
         // RtlGetVersion is not subject to the compatibility manifest like GetVersionEx and VerifyVersionInfo (deprecated since
@@ -1099,7 +1106,8 @@ namespace SelfX
             }
 
             // Disruptive actions (restart, network, disk check, updates): a normal user may not start them while another
-            // user has an active session. Elevated administrators are not restricted. Fail closed if sessions cannot be read.
+            // user is signed in (active or disconnected session). Elevated administrators are not restricted. Fail closed if
+            // sessions cannot be read.
             if (blockOtherSessions && !callerIsAdmin)
             {
                 int others = CountOtherUserSessions(callerSid, callerSession);
@@ -1563,8 +1571,8 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Number of ACTIVE sessions of other users (not the caller's session, not session 0, not another session of the
-        /// caller's own account). The accounts are compared by DOMAIN\user as Windows reports it for the sessions, so no
+        /// Number of signed-in sessions of other users, active or disconnected (not the caller's session, not session 0, not
+        /// another session of the caller's own account). The accounts are compared by DOMAIN\user as Windows reports it for the sessions, so no
         /// account lookup and no privilege beyond the service's normal rights is needed (works for local, domain and
         /// Entra ID accounts alike). Returns -1 when the sessions cannot be determined, so that the caller fails closed.
         /// </summary>
@@ -1578,20 +1586,44 @@ namespace SelfX
             if (!WTSEnumerateSessions(IntPtr.Zero, 0, 1, out info, out count)) return -1;
             try
             {
-                int others = 0;
+                List<int> states = new List<int>();
+                List<string> accounts = new List<string>();
                 int size = Marshal.SizeOf(typeof(WtsSessionInfo));
                 for (int i = 0; i < count; i++)
                 {
                     WtsSessionInfo session = (WtsSessionInfo)Marshal.PtrToStructure(new IntPtr(info.ToInt64() + (long)i * size), typeof(WtsSessionInfo));
-                    if (session.State != WtsActive || session.SessionId == 0 || session.SessionId == callerSession) continue;
-                    string account = GetSessionAccount(session.SessionId);
-                    if (account == null) return -1;
-                    if (!string.Equals(account, callerAccount, StringComparison.OrdinalIgnoreCase)) others++;
+                    if (session.SessionId == 0 || session.SessionId == callerSession) continue;
+                    if (session.State != WtsActive && session.State != WtsDisconnected) continue;
+                    states.Add(session.State);
+                    accounts.Add(GetSessionAccount(session.SessionId));
                 }
-                return others;
+                return CountOtherAccounts(states.ToArray(), accounts.ToArray(), callerAccount);
             }
             catch { return -1; }
             finally { WTSFreeMemory(info); }
+        }
+
+        /// <summary>
+        /// The counting rule of CountOtherUserSessions, without Windows calls (tested by Test-ServicePipe.ps1): the sessions other
+        /// than the caller's and session 0, with their state and DOMAIN\user (null or empty = not readable or no user). An active session
+        /// without a readable account fails closed (-1); a disconnected session without a user (the sign-in screen of a closed
+        /// remote desktop connection) holds no user's work and is skipped. Other states (listener, idle) are not counted.
+        /// </summary>
+        static int CountOtherAccounts(int[] states, string[] accounts, string callerAccount)
+        {
+            if (states == null || accounts == null || states.Length != accounts.Length || string.IsNullOrEmpty(callerAccount)) return -1;
+            int others = 0;
+            for (int i = 0; i < states.Length; i++)
+            {
+                if (states[i] != WtsActive && states[i] != WtsDisconnected) continue;
+                if (string.IsNullOrEmpty(accounts[i]))
+                {
+                    if (states[i] == WtsActive) return -1;
+                    continue;
+                }
+                if (!string.Equals(accounts[i], callerAccount, StringComparison.OrdinalIgnoreCase)) others++;
+            }
+            return others;
         }
 
         // The two lists written at package build (tools\SelfXPackage.Common.ps1): code (same for every company) and configuration.

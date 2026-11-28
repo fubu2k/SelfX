@@ -125,7 +125,7 @@ Aktion hat eine eindeutige `Id`. Die Übersetzungen werden über diese `Id` zuge
 | `Script` | Name des Skripts in `Scripts_to_run`. Bei `Link` nicht nötig. |
 | `Link` | Nur bei `Link`: Name der Einstellung (`Link_<Name>`) in `Tool_Config.xml`. |
 | `TimeoutSeconds` | Nur bei `System`: Zeitlimit von 1 bis 7200 Sekunden, Standard 900. |
-| `OtherSessions` | Nur bei `System`: `Block` verhindert die Aktion für normale Nutzer, solange ein anderer Nutzer angemeldet ist. Administratoren sind nicht betroffen. |
+| `OtherSessions` | Nur bei `System`: `Block` verhindert die Aktion für normale Nutzer, solange ein anderer Nutzer angemeldet ist. Eine aktive und eine getrennte Sitzung zählen beide (beim schnellen Benutzerwechsel ist die Sitzung des anderen Nutzers getrennt, seine Programme laufen weiter). Administratoren sind nicht betroffen. |
 | `TerminalServer` | Pflicht. `Show`: Die Aktion betrifft nur die eigene Sitzung oder das eigene Profil und wird auf einem Terminalserver (Windows Server) angeboten. `Hide`: Sie betrifft das ganze Gerät oder alle Nutzer und wird dort ausgeblendet. Verwenden Sie bei allen Einträgen desselben Skripts denselben Wert. |
 | `Disruptive` | Optional. `True` kennzeichnet eine Aktion, die ein Programm schließt, die Netzwerkadapter neu startet oder das Gerät neu startet und damit eine Besprechung beenden kann. Gültig ist nur der Wert `True`. Bei allen Einträgen eines Skripts derselbe Wert (`Test-Catalog.ps1` prüft das). Siehe [Hinweis vor störenden Aktionen](#hinweis-vor-störenden-aktionen). |
 | `Post_Action` | Nur bei `System`: `MailReport` öffnet nach einem erfolgreichen Lauf eine E-Mail an den Support mit dem Bericht. |
@@ -186,7 +186,7 @@ Auf einem Terminalserver lehnt auch der Dienst jede `System`-Aktion und jede Rep
 `Show` eingestuft ist, auch für Administratoren (Ereignis 4008). Das Ausblenden im Fenster reicht nicht,
 weil das Fenster keine Sicherheitsgrenze ist. Eine Aktion ohne Einstufung gilt als `Hide`.
 
-Die Prüfung anderer aktiver Sitzungen (`OtherSessions`) gilt in beiden Modi gleich.
+Die Prüfung anderer angemeldeter Sitzungen (`OtherSessions`, aktiv oder getrennt) gilt in beiden Modi gleich.
 
 **Support-Adresse auf einem Terminalserver.** `TerminalServer_Support_Mail` in `Tool_Config.xml` ist
 eine feste E-Mail-Adresse des Teams, das den Terminalserver betreut. Auf Windows Server ist sie die

@@ -65,6 +65,8 @@
                                               TerminalServer, missing remediation, other sessions, the shared pause with RUN; SELFX_APP_ID only for the app
                                               of the service (an inherited value is removed); event 4014 (fields, only on a change, invalid ID or code not
                                               written, rate limit).
+    3.1.0    2026-11-28  fubu2k               OtherSessions: the counting rule (CountOtherAccounts) counts disconnected sessions of other users (fast user
+                                              switching), skips a disconnected session without a user and fails closed for an active session without one.
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -974,6 +976,32 @@ if ($countMethod) {
 	$result = $countMethod.Invoke($null, @('S-1-5-21-1-2-3-1001', $own))
 	Assert-True ($result -ge -1) "N5: the check for the own session returns a number (got $result)"
 }
+# OtherSessions counts signed-in sessions of other users, active (0) or disconnected (4, fast user switching): the counting rule
+# without Windows calls. Each case: states, accounts (null = no readable user), expected result.
+$countRule = [SelfX.SelfXService].GetMethod('CountOtherAccounts', [Reflection.BindingFlags]'NonPublic,Static')
+Assert-True ($null -ne $countRule) 'OtherSessions: the service has the counting rule'
+if ($countRule) {
+	$caller = 'CONTOSO\alice'
+	foreach ($case in @(
+		@(@(), @(), 0, 'no other session'),
+		@(@(0), @('CONTOSO\bob'), 1, 'another user, active session'),
+		@(@(4), @('CONTOSO\bob'), 1, 'another user, disconnected session (fast user switching)'),
+		@(@(4, 0), @('CONTOSO\bob', 'CONTOSO\carol'), 2, 'two other users'),
+		@(@(4), @('contoso\ALICE'), 0, 'a second, disconnected session of the caller'),
+		@(@(0), @('CONTOSO\alice'), 0, 'a second, active session of the caller'),
+		@(@(4), @($null), 0, 'a disconnected session without a user'),
+		@(@(0), @($null), -1, 'an active session without a readable user fails closed'),
+		@(@(6), @('CONTOSO\bob'), 0, 'a listener session is not counted'),
+		@(@(5, 1), @('CONTOSO\bob', 'CONTOSO\bob'), 0, 'idle and connected sessions are not counted'))) {
+		$states = [int[]]@($case[0])
+		$accounts = [string[]]@($case[1])
+		$result = $countRule.Invoke($null, [object[]]@($states, $accounts, $caller))
+		Assert-True ($result -eq $case[2]) "OtherSessions: $($case[3]) = $($case[2]) (got $result)"
+	}
+	Assert-True ($countRule.Invoke($null, [object[]]@([int[]]@(0), [string[]]@(), $caller)) -eq -1) 'OtherSessions: lists of different length fail closed'
+	Assert-True ($countRule.Invoke($null, [object[]]@([int[]]@(), [string[]]@(), '')) -eq -1) 'OtherSessions: no caller account fails closed'
+}
+Assert-True ($sourceText -match 'session\.State != WtsActive && session\.State != WtsDisconnected') 'OtherSessions: the enumeration keeps active and disconnected sessions'
 
 # --- Mode (from Windows): TerminalServer refuses actions that are not classified Show, for every caller ---------------------------
 # A test instance gets its code, configuration and catalogue folders set to a test folder; ProcessRequest is called directly. The mode
