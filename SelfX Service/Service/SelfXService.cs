@@ -143,6 +143,9 @@ Notes:
                                               one JSON line with schema version 1 in ProgramData\SelfX\Inventory\SelfX.Inventory.json (status per
                                               check type, failed apps with code, no names or detail texts), rotation at MaxSizeKB (64-10240, default
                                               1024) to SelfX.Inventory.json.old, no link followed; nothing while TerminalServer_Health is Off
+    3.1.0    2026-11-28  fubu2k               Whitelist: every remediation of a script counts, not only the first (OtherSessions Block or TerminalServer
+                                              Hide of any entry applies, also together with a catalog action of the script); a script that the catalog
+                                              lists with Context User never runs as SYSTEM, also not as a remediation
 */
 
 using System;
@@ -1496,37 +1499,59 @@ namespace SelfX
             }
 
             // scriptName is validated by ScriptNamePattern, so it contains no quotes.
+            // One script, one context: a script that any catalog entry lists with another context than System (User) never runs as
+            // SYSTEM, neither through a System entry nor as a remediation (fail closed; Test-Catalog.ps1 refuses such a catalog).
+            if (catalog.SelectSingleNode("//Action[normalize-space(Script)='" + scriptName + "' and normalize-space(Context)!='System']") != null) return false;
             XmlNode action = catalog.SelectSingleNode(
                 "//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "']");
-            if (action == null)
+
+            // All remediations of the script in Health_Config.xml. A script can be named by several remediations (Defender and
+            // Compliance) and also by a catalog action: the strictest setting of all entries applies, as for several catalog entries.
+            XmlNodeList remediations = null;
+            string healthConfig = GetConfigFilePath("Health_Config.xml");
+            if (File.Exists(healthConfig))
             {
-                string healthConfig = GetConfigFilePath("Health_Config.xml");
-                if (!File.Exists(healthConfig)) return false;
                 XmlDocument health = new XmlDocument();
                 health.XmlResolver = null;
                 using (XmlReader reader = XmlReader.Create(healthConfig, settings)) { health.Load(reader); }
-                XmlNode remediation = health.SelectSingleNode("/HealthConfig/Remediations/Remediation[@Script='" + scriptName + "']");
-                if (remediation == null) return false;
-                XmlAttribute remediationSessions = remediation.Attributes["OtherSessions"];
-                blockOtherSessions = remediationSessions != null && remediationSessions.Value.Trim() == "Block";
-                XmlAttribute remediationTerminalServer = remediation.Attributes["TerminalServer"];
-                hideOnTerminalServer = remediationTerminalServer == null || remediationTerminalServer.Value.Trim() != "Show";
-                // Optional TimeoutSeconds attribute (long repairs such as installing updates), bounded like catalog actions.
-                XmlAttribute remediationTimeout = remediation.Attributes["TimeoutSeconds"];
+                remediations = health.SelectNodes("/HealthConfig/Remediations/Remediation[@Script='" + scriptName + "']");
+            }
+            int remediationCount = remediations == null ? 0 : remediations.Count;
+            if (action == null && remediationCount == 0) return false;
+
+            bool remediationBlock = false;
+            bool remediationHide = false;
+            int remediationTimeoutSeconds = 0;
+            for (int i = 0; i < remediationCount; i++)
+            {
+                XmlElement remediation = remediations[i] as XmlElement;
+                if (remediation == null) { remediationHide = true; remediationBlock = true; continue; }
+                if (remediation.GetAttribute("OtherSessions").Trim() == "Block") remediationBlock = true;
+                if (!remediation.HasAttribute("TerminalServer") || remediation.GetAttribute("TerminalServer").Trim() != "Show") remediationHide = true;
+                // Optional TimeoutSeconds attribute (long repairs such as installing updates), bounded like catalog actions; the first
+                // valid value counts (Test-Catalog.ps1 checks the range).
                 int remediationConfigured;
-                if (remediationTimeout != null && int.TryParse(remediationTimeout.Value.Trim(), out remediationConfigured) && remediationConfigured > 0)
+                if (remediationTimeoutSeconds == 0 && int.TryParse(remediation.GetAttribute("TimeoutSeconds").Trim(), out remediationConfigured) && remediationConfigured > 0)
                 {
-                    timeoutSeconds = Math.Min(remediationConfigured, MaxTimeoutSeconds);
+                    remediationTimeoutSeconds = Math.Min(remediationConfigured, MaxTimeoutSeconds);
                 }
+            }
+
+            if (action == null)
+            {
+                blockOtherSessions = remediationBlock;
+                hideOnTerminalServer = remediationHide;
+                if (remediationTimeoutSeconds > 0) timeoutSeconds = remediationTimeoutSeconds;
                 return true;
             }
 
-            // A script can have several catalog entries: Block applies when any System entry of the script says Block.
-            blockOtherSessions = catalog.SelectSingleNode(
+            // A script can have several catalog entries: Block applies when any System entry of the script (or any remediation of it)
+            // says Block.
+            blockOtherSessions = remediationBlock || catalog.SelectSingleNode(
                 "//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "' and normalize-space(OtherSessions)='Block']") != null;
             // Hide when any System entry of the script is not classified Show by exactly one element (one script, one classification;
             // Test-Catalog.ps1 checks it). A second TerminalServer element must not turn a Hide into the Show of the first one.
-            hideOnTerminalServer = catalog.SelectSingleNode(
+            hideOnTerminalServer = remediationHide || catalog.SelectSingleNode(
                 "//Action[normalize-space(Context)='System' and normalize-space(Script)='" + scriptName + "' and not(count(TerminalServer)=1 and normalize-space(TerminalServer)='Show')]") != null;
 
             XmlNode timeoutNode = action.SelectSingleNode("TimeoutSeconds");
