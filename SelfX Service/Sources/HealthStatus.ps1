@@ -25,6 +25,7 @@
                                        SYSTEM part): returned as UserRemediation, same name rule, never the same file as Script
     3.1.0  2026-11-27  fubu2k          Environment_Mode TerminalServer (Tool_Config.xml): a repair not classified TerminalServer="Show"
                                        is returned without Remediation and UserRemediation (SelfXEnvironment.ps1)
+    3.1.0  2026-11-28  fubu2k          The mode comes from Windows (Get-SelfXEnvironmentMode), not from Tool_Config.xml
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -76,7 +77,7 @@ function Get-SelfXDiskHealth {
 
 # Paths of the configuration (Health_Config.xml) and of the health scripts (App\HealthChecks, Config\HealthChecks).
 . (Join-Path $PSScriptRoot 'SelfXPaths.ps1')
-# Environment_Mode and the TerminalServer classification of the repairs.
+# The mode of Windows (Client or TerminalServer) and the TerminalServer classification of the repairs.
 . (Join-Path $PSScriptRoot 'SelfXEnvironment.ps1')
 
 # Defender status through CIM (SelfXDefender.ps1, no Defender module).
@@ -500,7 +501,7 @@ function Get-SelfXHealth {
         )
         # Multi-row checks (Disk, BitLocker) are narrowed to the requested drive afterwards.
         if ($OnlyId -and $OnlyName) { $results = @($results | Where-Object { $_.Name -eq $OnlyName -or -not $_.Name }) }
-        $environment = Get-SelfXEnvironmentMode -ToolConfigPath (Get-SelfXConfigPath -Name 'Tool_Config.xml' -CodeRoot $Root)
+        $environment = Get-SelfXEnvironmentMode
         foreach ($result in $results) {
             # When="NotOK" offers the remediation only while the status is not OK (default: Always).
             $matches = @($config.SelectNodes('/HealthConfig/Remediations/Remediation') | Where-Object {
@@ -526,7 +527,7 @@ function Get-SelfXHealth {
                     throw "Invalid remediation UserScript for $($result.Id)."
                 }
                 if ($when -eq 'NotOK' -and $result.Status -eq 'OK') { $script = ''; $userScript = '' }
-                # Environment_Mode TerminalServer: a repair that is not classified Show is not offered (the service refuses it as well).
+                # Terminal server: a repair that is not classified Show is not offered (the service refuses it as well).
                 if (-not (Test-SelfXShownInEnvironment $environment.Mode $terminalServer)) { $script = ''; $userScript = '' }
             }
             $result | Add-Member -NotePropertyName Remediation -NotePropertyValue $script

@@ -30,6 +30,7 @@
     3.1.0    2026-11-27  fubu2k               Layout App/Config: lists in App and Config, the old layout is not detected, paths of the programs and of
                                               Tool_Config.xml.
     3.1.0    2026-11-27  fubu2k               Trust anchor: Test-SelfXTrustAnchor against a test key in HKCU (missing, Hash, Signature, other values).
+    3.1.0    2026-11-28  fubu2k               "Not detected" ends with exit code 0 and no output (Intune and Configuration Manager).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -328,6 +329,13 @@ try {
 	Assert-Equal $anchorText.Contains('If($Anchor.Reason) { Exit-Detection 1') $true 'Detection.ps1: a missing trust anchor is "not detected"'
 	Assert-Equal $anchorText.Contains('[Microsoft.Win32.RegistryView]::Registry64') $true 'Detection.ps1 reads the trust anchor from the 64-bit view'
 	Assert-Equal ([regex]::Matches($anchorText, 'Exit-Detection 1[^\r\n]*(Signature|Hash)').Count) 0 'Detection.ps1: no exit with an error because of the mode'
+	# "Not detected" is exit code 0 without output: Configuration Manager reads any other exit code as "unknown" (and does not install),
+	# Intune reads both as "not installed". Only a detected installation writes to the output.
+	$exitStart = $anchorText.IndexOf('function Exit-Detection {')
+	$exitBody = $anchorText.Substring($exitStart, $anchorText.IndexOf("`n}", $exitStart) - $exitStart)
+	Assert-Equal ($exitBody -match '(?m)^\s*exit 0\s*$' -and $exitBody -notmatch 'exit \$Code') $true 'Detection.ps1: every result ends with exit code 0'
+	Assert-Equal ($exitBody -match 'if \(\$Code -eq 0\) \{ Write-Output') $true 'Detection.ps1: only a detected installation writes to the output'
+	Assert-Equal ([regex]::Matches($anchorText, '(?m)^\s*exit\b').Count) 1 'Detection.ps1: Exit-Detection is the only place that ends the script'
 } finally {
 	Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }

@@ -36,6 +36,8 @@
                                               (replaced cmdlets and, with a trusted test root, real certificates), copy step, trust anchor in a test key.
     3.1.0    2026-11-27  fubu2k               Trust mode Signature: both catalogs are installed next to their lists and compared after the copy; no
                                               catalog in the mode Hash
+    3.1.0    2026-11-28  fubu2k               Windows check: Windows 11 25H2 and Windows Server 2022/2025 with Desktop Experience are accepted; Server Core,
+                                              a domain controller, Windows Enterprise multi-session and unreadable values are refused
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -50,7 +52,7 @@ $tokens = $null
 $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Install.ps1'), [ref]$tokens, [ref]$parseErrors)
 Assert-Equal @($parseErrors).Count 0 'Install.ps1 parses'
-foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Test-SelfXWindowsBuild', 'Invoke-SelfXSafeDelete', 'Initialize-SelfXDataFolder', 'Get-SelfXServicePrivileges', 'Set-SelfXServicePrivileges') {
+foreach ($name in 'Test-SelfXPrebuiltBinaries', 'Test-SelfXPowerShell7', 'Get-SelfXWindowsInfo', 'Test-SelfXWindowsSupport', 'Invoke-SelfXSafeDelete', 'Initialize-SelfXDataFolder', 'Get-SelfXServicePrivileges', 'Set-SelfXServicePrivileges') {
 	$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
 	Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
 	if (-not $definition) { $script:errors | ForEach-Object { Write-Output "FAIL: $_" }; exit 1 }
@@ -236,20 +238,36 @@ try {
 	& icacls.exe $root /remove:g '*S-1-1-0' | Out-Null
 	Assert-Equal (Test-PowerShell7Result $fakeExe '1.0.0') 'accepted' 'After removing the extra rights the folder is accepted again'
 
-	# Windows 11 25H2 (build 26200) is the minimum; older builds stop the installation (hard abort).
-	function Test-WindowsBuildResult {
-		param([int]$Build)
-		try { return "accepted $(Test-SelfXWindowsBuild -Build $Build)" } catch { return 'refused: ' + $_.Exception.Message }
+	# Windows 11 25H2 (build 26200) and Windows Server 2022 or 2025 with Desktop Experience (build 20348) are the minimum; everything else
+	# stops the installation (hard abort): older builds, Server Core, a domain controller, Windows Enterprise multi-session, unreadable values.
+	function Test-WindowsSupportResult {
+		param([int]$Build, [string]$ProductType, [string]$InstallationType = '', [string]$EditionId = '', [int]$ServerGuiShell = 0)
+		$info = [pscustomobject]@{ Build = $Build; ProductType = $ProductType; InstallationType = $InstallationType; EditionId = $EditionId; ServerGuiShell = $ServerGuiShell }
+		try { $result = Test-SelfXWindowsSupport -Info $info; return "accepted $($result.Kind) $($result.Build)" } catch { return 'refused: ' + $_.Exception.Message }
 	}
-	Assert-Equal (Test-WindowsBuildResult 26200) 'accepted 26200' 'Windows 11 25H2 (build 26200) is accepted'
-	Assert-Equal (Test-WindowsBuildResult 26300) 'accepted 26300' 'A newer build is accepted'
-	Assert-Equal ((Test-WindowsBuildResult 26199) -like 'refused*Windows build 26199 is not supported*') $true 'Build 26199 is refused'
-	Assert-Equal ((Test-WindowsBuildResult 26100) -like 'refused*25H2*') $true 'Windows 11 24H2 (build 26100) is refused'
-	Assert-Equal ((Test-WindowsBuildResult 19045) -like 'refused*') $true 'Windows 10 is refused'
-	$readBuild = Test-SelfXWindowsBuild -MinimumBuild 1
-	Assert-Equal ($readBuild -is [int] -and $readBuild -gt 0) $true 'The build number of this computer is read from the registry'
+	Assert-Equal (Test-WindowsSupportResult 26200 'WinNT' 'Client' 'Enterprise') 'accepted Client 26200' 'Windows 11 25H2 (build 26200) is accepted'
+	Assert-Equal (Test-WindowsSupportResult 26300 'WinNT' 'Client' 'Professional') 'accepted Client 26300' 'A newer Windows 11 build is accepted'
+	Assert-Equal ((Test-WindowsSupportResult 26199 'WinNT' 'Client' 'Enterprise') -like 'refused*Windows build 26199 is not supported*') $true 'Build 26199 is refused'
+	Assert-Equal ((Test-WindowsSupportResult 26100 'WinNT' 'Client' 'Enterprise') -like 'refused*25H2*') $true 'Windows 11 24H2 (build 26100) is refused'
+	Assert-Equal ((Test-WindowsSupportResult 19045 'WinNT' 'Client' 'Enterprise') -like 'refused*') $true 'Windows 10 is refused'
+	Assert-Equal (Test-WindowsSupportResult 20348 'ServerNT' 'Server' 'ServerDatacenter' 1) 'accepted Server 20348' 'Windows Server 2022 with Desktop Experience is accepted'
+	Assert-Equal (Test-WindowsSupportResult 26100 'ServerNT' 'Server' 'ServerStandard' 1) 'accepted Server 26100' 'Windows Server 2025 with Desktop Experience is accepted'
+	Assert-Equal ((Test-WindowsSupportResult 17763 'ServerNT' 'Server' 'ServerStandard' 1) -like 'refused*Windows Server build 17763 is not supported*') $true 'Windows Server 2019 is refused'
+	Assert-Equal ((Test-WindowsSupportResult 20348 'ServerNT' 'Server Core' 'ServerDatacenter' 0) -like 'refused*Server Core*') $true 'Windows Server Core is refused'
+	Assert-Equal ((Test-WindowsSupportResult 26100 'ServerNT' 'Server' 'ServerStandard' 0) -like 'refused*Server Core*') $true 'A server without the desktop (no ServerGuiShell) is refused'
+	Assert-Equal ((Test-WindowsSupportResult 26200 'ServerNT' 'Client' 'ServerRdsh') -like 'refused*multi-session*') $true 'Windows Enterprise multi-session (product type of a server) is refused'
+	Assert-Equal ((Test-WindowsSupportResult 26200 'WinNT' 'Client' 'ServerRdsh') -like 'refused*multi-session*') $true 'Windows Enterprise multi-session is refused for any product type'
+	Assert-Equal ((Test-WindowsSupportResult 26200 'ServerNT' 'Client' 'Enterprise') -like 'refused*installation type*') $true 'A server product type with another installation type is refused'
+	Assert-Equal ((Test-WindowsSupportResult 20348 'LanmanNT' 'Server' 'ServerDatacenter' 1) -like 'refused*domain controller*') $true 'A domain controller is refused'
+	Assert-Equal ((Test-WindowsSupportResult 26200 '' 'Client' 'Enterprise') -like 'refused*product type of Windows cannot be read*') $true 'A product type that cannot be read is refused'
+	Assert-Equal ((Test-WindowsSupportResult 26200 'Other' 'Client' 'Enterprise') -like "refused*product type 'Other'*") $true 'An unknown product type is refused'
+	Assert-Equal ((Test-WindowsSupportResult 0 'WinNT' 'Client' 'Enterprise') -like 'refused*build number cannot be read*') $true 'A build that cannot be read is refused'
+	Assert-Equal (Test-WindowsSupportResult 26200 'winnt' 'Client' 'Enterprise') 'accepted Client 26200' 'The product type is compared without case'
+	# The facts of this computer are read from the registry (the result is not judged: the CI runs on Windows Server).
+	$readInfo = Get-SelfXWindowsInfo
+	Assert-Equal ($readInfo.Build -is [int] -and $readInfo.Build -gt 0 -and @('WinNT', 'ServerNT', 'LanmanNT') -contains $readInfo.ProductType) $true "The build number and the product type of this computer are read from the registry ($($readInfo.ProductType) $($readInfo.Build))"
 	$installText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.ps1'))
-	Assert-Equal ($installText.IndexOf('$null = Test-SelfXWindowsBuild') -ge 0 -and $installText.IndexOf('$null = Test-SelfXWindowsBuild') -lt $installText.IndexOf('New-Item -ItemType Directory -Path $LogFolder')) $true 'The build check runs before the installer changes anything'
+	Assert-Equal ($installText.IndexOf('$SelfXWindows = Test-SelfXWindowsSupport') -ge 0 -and $installText.IndexOf('$SelfXWindows = Test-SelfXWindowsSupport') -lt $installText.IndexOf('New-Item -ItemType Directory -Path $LogFolder')) $true 'The check of Windows runs before the installer changes anything'
 
 # Initialize-SelfXDataFolder: links and foreign-owned entries in ProgramData\SelfX are removed, owner and
 # rights are set again. Needs administrator rights (icacls /setowner); without them these checks are skipped.

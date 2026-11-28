@@ -69,8 +69,7 @@ Marke: `SelfX.Config.json` enthält `ConfigRevision`, die UTC-Zeit des Paketlauf
 | `Tool_Language` | `de` | Standardsprache. `Auto` nimmt die Anzeigesprache von Windows. Sie können auch `en`, `fr-CH` oder `zh-Hans` schreiben. |
 | `Show_Language_Setting` | `True` | Nutzer können die Sprache selbst wählen. `False`: immer `Tool_Language`. |
 | `Tool_Name` | SelfX | Name in der Titelleiste. |
-| `Environment_Mode` | `Client` | Wo SelfX läuft. `Client`: PC oder Notebook einer Person. `TerminalServer`: Terminalserver oder Sitzungshost mit mehreren Nutzern gleichzeitig. Siehe [Terminalserver und Sitzungshost](#terminalserver-und-sitzungshost-environment_mode). Jeder andere Wert gilt als `Client`. |
-| `TerminalServer_Health` | `Off` | Nur bei `Environment_Mode` = `TerminalServer`: wer den Gerätestatus bekommt. `Off`: niemand. `AdminOnly`: nur Administratoren, die SelfX mit erhöhten Rechten gestartet haben. Jeder andere Wert gilt als `Off`. |
+| `TerminalServer_Health` | `Off` | Nur auf Windows Server (Modus `TerminalServer`, siehe [Terminalserver](#terminalserver-windows-server)): wer den Gerätestatus bekommt. `Off`: niemand. `AdminOnly`: nur Administratoren, die SelfX mit erhöhten Rechten gestartet haben. Jeder andere Wert gilt als `Off`. |
 | `Tool_Theme` | `Auto` | Standardfarbe: `Auto` (folgt Windows), `Dark` oder `Light`. |
 | `Show_Theme_Button` | `True` | Nutzer können das Design selbst wählen. |
 | `Default_Solution_Mode` | `Simplified` | Startansicht der Fehlerbehebung: `Simplified` (einfach) oder `Detailed` (ausführlich). |
@@ -123,7 +122,7 @@ Aktion hat eine eindeutige `Id`. Die Übersetzungen werden über diese `Id` zuge
 | `Link` | Nur bei `Link`: Name der Einstellung (`Link_<Name>`) in `Tool_Config.xml`. |
 | `TimeoutSeconds` | Nur bei `System`: Zeitlimit von 1 bis 7200 Sekunden, Standard 900. |
 | `OtherSessions` | Nur bei `System`: `Block` verhindert die Aktion für normale Nutzer, solange ein anderer Nutzer angemeldet ist. Administratoren sind nicht betroffen. |
-| `TerminalServer` | Pflicht. `Show`: Die Aktion betrifft nur die eigene Sitzung oder das eigene Profil und wird bei `Environment_Mode` = `TerminalServer` angeboten. `Hide`: Sie betrifft das ganze Gerät oder alle Nutzer und wird dort ausgeblendet. Verwenden Sie bei allen Einträgen desselben Skripts denselben Wert. |
+| `TerminalServer` | Pflicht. `Show`: Die Aktion betrifft nur die eigene Sitzung oder das eigene Profil und wird auf einem Terminalserver (Windows Server) angeboten. `Hide`: Sie betrifft das ganze Gerät oder alle Nutzer und wird dort ausgeblendet. Verwenden Sie bei allen Einträgen desselben Skripts denselben Wert. |
 | `Post_Action` | Nur bei `System`: `MailReport` öffnet nach einem erfolgreichen Lauf eine E-Mail an den Support mit dem Bericht. |
 
 Beispiel:
@@ -159,23 +158,28 @@ Do you want to continue?</Alerte_MSG>
 Sprachdateien. Ohne Übersetzung erscheint der englische Text. Stufen Sie sie mit `TerminalServer`
 ein; ohne diese Angabe schlägt `Test-Catalog.ps1` fehl.
 
-### Terminalserver und Sitzungshost (`Environment_Mode`)
+### Terminalserver (Windows Server)
 
-Ein Paket funktioniert auf PCs und auf Sitzungshosts. Die Einstellung `Environment_Mode` in
-`Tool_Config.xml` sagt, wo SelfX läuft. Der Paket-Assistent fragt danach („Wo läuft SelfX?“). Bauen
-Sie je Geräteart ein eigenes Paket.
+Ein Paket funktioniert auf PCs und auf Terminalservern. SelfX übernimmt den Modus von Windows; es gibt
+keine Einstellung dafür, und niemand auf dem Gerät kann ihn ändern:
 
-- `Client` (Standard): ein PC oder Notebook einer Person. Alle Aktionen werden angezeigt.
-- `TerminalServer`: ein Terminalserver oder Sitzungshost, an dem mehrere Personen gleichzeitig
-  arbeiten, zum Beispiel Windows Enterprise multi-session. Angezeigt werden nur Aktionen und
-  Reparaturen mit `TerminalServer` = `Show`. Sie betreffen nur die eigene Sitzung oder das eigene
-  Profil. Aktionen mit `Hide` betreffen das ganze Gerät oder alle Nutzer, zum Beispiel ein Neustart,
-  Windows-Updates oder die Netzwerkadapter.
+- Windows 11 (Modus `Client`): ein PC oder Notebook einer Person. Alle Aktionen werden angezeigt.
+- Windows Server 2022 oder 2025 mit Desktopdarstellung (Modus `TerminalServer`): ein Terminalserver,
+  an dem mehrere Personen gleichzeitig arbeiten. Angezeigt werden nur Aktionen und Reparaturen mit
+  `TerminalServer` = `Show`. Sie betreffen nur die eigene Sitzung oder das eigene Profil. Aktionen mit
+  `Hide` betreffen den ganzen Server oder alle Nutzer, zum Beispiel ein Neustart, Windows-Updates oder
+  die Netzwerkadapter.
 
-Bei `TerminalServer` lehnt auch der Dienst jede `System`-Aktion und jede Reparatur ab, die nicht als
+Windows Enterprise multi-session, Server Core und Domänencontroller werden nicht unterstützt:
+`Install.ps1` bricht dort ab, bevor es etwas ändert. Kann der Produkttyp von Windows nicht gelesen
+werden, arbeitet SelfX wie auf einem Terminalserver. Ein Element `Environment_Mode` aus einem früheren
+Build in `Tool_Config.xml` wird ignoriert (der Dienst schreibt einen Hinweis in sein Protokoll). Intune
+kann auf Windows Server keine Apps installieren; siehe
+[Installation, Windows Server](Installation.md#windows-server-terminalserver).
+
+Auf einem Terminalserver lehnt auch der Dienst jede `System`-Aktion und jede Reparatur ab, die nicht als
 `Show` eingestuft ist, auch für Administratoren (Ereignis 4008). Das Ausblenden im Fenster reicht nicht,
-weil das Fenster keine Sicherheitsgrenze ist. Eine Aktion ohne Einstufung gilt als `Hide`. Kann der
-Dienst `Tool_Config.xml` nicht lesen, behandelt er Anfragen wie bei `TerminalServer`.
+weil das Fenster keine Sicherheitsgrenze ist. Eine Aktion ohne Einstufung gilt als `Hide`.
 
 Die Prüfung anderer aktiver Sitzungen (`OtherSessions`) gilt in beiden Modi gleich.
 
@@ -194,9 +198,6 @@ der Erfassung. Zeilen zum Server (Name, Hardware, Windows, Verwaltung, Adressen,
 nur Administratoren mit erhöhten Rechten. LAN, WLAN, Mobilfunk und VPN werden auf einem Terminalserver
 nicht angezeigt. SelfX liest diese Werte mit den Rechten des Nutzers; das Ausblenden hält die Ansicht
 übersichtlich und ist keine Sicherheitsgrenze.
-
-Ist Windows ein Sitzungshost, steht `Environment_Mode` aber auf `Client`, schreibt der Dienst beim Start
-eine Warnung (Ereignis 4009). Er ändert die Einstellung nicht selbst.
 
 Einstufung der mitgelieferten Aktionen:
 

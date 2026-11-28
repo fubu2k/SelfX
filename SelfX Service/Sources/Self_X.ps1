@@ -59,6 +59,7 @@
     3.1.0    2026-11-28  fubu2k               TerminalServer_Health (Off or AdminOnly): page Device status only when the user may see it; system information,
                                               ticket and text for Copilot without rows of the class Server for normal users and without the
                                               kinds of connection (Get-SelfXViewScope)
+    3.1.0    2026-11-28  fubu2k               The mode comes from Windows (Get-SelfXEnvironmentMode), not from Environment_Mode of Tool_Config.xml
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -287,18 +288,18 @@ If($SelfX_Needs_Domain)
 	}
 $Global:SelfX_Quick_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Quick_Actions $SelfX_Domain_Joined)
 $Global:SelfX_Detailed_Actions = @(Select-SelfXRequirementActions $Global:SelfX_Detailed_Actions $SelfX_Domain_Joined)
-# Environment_Mode (Tool_Config.xml): on a terminal server or session host (TerminalServer) only actions classified
+# Mode from Windows (SelfXEnvironment.ps1): on Windows Server and other session hosts (TerminalServer) only actions classified
 # <TerminalServer>Show</TerminalServer> are shown; they affect only the own session or profile. The service refuses the other
-# System actions for every caller, so hiding them here keeps the list clear; it is not the security boundary (SelfXEnvironment.ps1).
-$Global:SelfX_Environment = ConvertTo-SelfXEnvironmentMode (Get-SelfXText 'Environment_Mode' '')
-If(-not $Global:SelfX_Environment.Valid) { Write-SelfXLog "Environment_Mode in Tool_Config.xml is not Client or TerminalServer; Client is used." 'Warning' }
+# System actions for every caller, so hiding them here keeps the list clear; it is not the security boundary.
+$Global:SelfX_Environment = Get-SelfXEnvironmentMode
+If(-not $Global:SelfX_Environment.Valid) { Write-SelfXLog "The product type of Windows cannot be read; SelfX works as on a terminal server." 'Warning' }
 Function Select-SelfXEnvironmentActions
 	{
 		param($Actions, [string]$Mode)
 		foreach($Action in $Actions)
 			{
 				If(Test-SelfXShownInEnvironment $Mode $Action.TerminalServer) { $Action; continue }
-				Write-SelfXLog "Action '$($Action.Id)' is not shown: it is not classified TerminalServer Show (Environment_Mode TerminalServer)."
+				Write-SelfXLog "Action '$($Action.Id)' is not shown: it is not classified TerminalServer Show (terminal server)."
 			}
 	}
 $Global:SelfX_Quick_Actions = @(Select-SelfXEnvironmentActions $Global:SelfX_Quick_Actions $Global:SelfX_Environment.Mode)
@@ -306,13 +307,13 @@ $Global:SelfX_Detailed_Actions = @(Select-SelfXEnvironmentActions $Global:SelfX_
 # Repairs of the device status: with TerminalServer only those classified TerminalServer="Show" in Health_Config.xml. The health
 # collection clears the others too; this second check also covers a status cache written before the mode was changed.
 $Global:SelfX_RemediationClassification = Get-SelfXRemediationClassification -HealthConfigPath (Get-SelfXConfigPath -Name 'Health_Config.xml' -CodeRoot $Current_Folder)
-# Environment_Mode TerminalServer: the device status and the server rows describe the server, not the place of work of the user.
+# Mode TerminalServer: the device status and the server rows describe the server, not the place of work of the user.
 # TerminalServer_Health (Off or AdminOnly) decides about the device status; normal users see only rows of the class User. The service
 # checks the device status on its own (HEALTH, STATUS); the rest is collected with the rights of the user, so hiding it keeps the view
 # and the ticket lean, it is not a security boundary.
 $Global:SelfX_HealthAccess = ConvertTo-SelfXHealthAccess $Global:SelfX_Environment.Mode (Get-SelfXText 'TerminalServer_Health' '')
 $Global:SelfX_View = Get-SelfXViewScope -Mode $Global:SelfX_Environment.Mode -HealthAccess $Global:SelfX_HealthAccess -IsAdmin (Test-SelfXElevatedAdministrator)
-If($Global:SelfX_View.TerminalServer) { Write-SelfXLog "Environment_Mode TerminalServer: device status $(If($Global:SelfX_View.Health) { 'shown' } Else { 'not shown' }) (TerminalServer_Health $($Global:SelfX_HealthAccess)), server rows $(If($Global:SelfX_View.ServerRows) { 'shown' } Else { 'not shown' })." }
+If($Global:SelfX_View.TerminalServer) { Write-SelfXLog "Terminal server: device status $(If($Global:SelfX_View.Health) { 'shown' } Else { 'not shown' }) (TerminalServer_Health $($Global:SelfX_HealthAccess)), server rows $(If($Global:SelfX_View.ServerRows) { 'shown' } Else { 'not shown' })." }
 
 # The version of the code: ToolVersion of SelfX.Code.json in the install folder (Tool_Config.xml no longer carries it; an old Tool_Version
 # element there is ignored). Display only: a missing or unreadable list shows '?' and is logged, it never stops the window.
@@ -1876,7 +1877,7 @@ $Global:Health_AutoFull = $False
 Function Start-SelfXHealthJob
 	{
 		param([ValidateSet('Cached', 'Full', 'Single')][string]$Mode, [string]$Id = '', [string]$Name = '')
-		# Environment_Mode TerminalServer without the device status for this user: no request to the service (it would refuse it).
+		# Terminal server without the device status for this user: no request to the service (it would refuse it).
 		If(-not $Global:SelfX_View.Health) { return $False }
 		If($Global:Health_Busy) { return $False }
 		$Global:Health_Busy = $True
@@ -2006,7 +2007,7 @@ Function Update-SelfXStatusView
 		$Order = @{ Error = 0; Pending = 1; Unknown = 2; OK = 3 }
 		$Index = 0
 		$Cards = @($Global:Health_Items | ForEach-Object {
-			# Environment_Mode TerminalServer: a repair that is not classified Show has no button (and its part of the user is not offered).
+			# Terminal server: a repair that is not classified Show has no button (and its part of the user is not offered).
 			$Offered = Test-SelfXRemediationOffered -Mode "$($Global:SelfX_Environment.Mode)" -Script "$($_.Remediation)" -Classification $Global:SelfX_RemediationClassification
 			$Remediation = $(If($Offered) { "$($_.Remediation)" } Else { '' })
 			$UserRemediation = $(If($Offered) { "$($_.UserRemediation)" } Else { '' })

@@ -60,8 +60,17 @@ Pester; do not add Pester tests and do not add a test framework.
 ## 2. Project and architecture
 
 **SelfX Service** is a self-service troubleshooting tool for Windows 11 (25H2, build 26200, is the minimum; the
-installation stops on older builds). Users without technical knowledge fix common problems (Teams, Office,
+installation stops on older builds) and for terminal servers with Windows Server 2022 or 2025 with Desktop
+Experience (build 20348 or newer). Users without technical knowledge fix common problems (Teams, Office,
 OneDrive, Outlook, Intune, Windows Update, network) and send device logs to the support.
+
+- The mode comes from Windows, never from a setting: product type workstation (Windows 11) = `Client`, every
+  other product type and unreadable data = `TerminalServer` (service: `IsTerminalServer`, PowerShell:
+  `Get-SelfXEnvironmentMode` in `SelfXEnvironment.ps1`). With `TerminalServer` only entries classified
+  `TerminalServer` = `Show` are offered and the service refuses the others. `Install.ps1` stops on Server Core,
+  domain controllers and Windows Enterprise multi-session. Intune cannot install apps on Windows Server: servers
+  get the package folder by hand or with Configuration Manager (`Detection.ps1` ends "not detected" with exit
+  code 0 and no output, which both Intune and Configuration Manager read as "not installed").
 
 - Installed machine-wide, works **fully offline**: no central backend, no download of scripts or configuration,
   no cloud credentials on the client. Do not add any of these.

@@ -15,6 +15,7 @@
       SelfX.AppLocker.xml, AppControl\          AppLocker rules and App Control (WDAC) supplemental policy for the mode (optional)
       Set-SelfXSupportUnit-*.ps1                Intune platform scripts for the ticket routing (one per unit/group tag/device class)
       SelfX-Intune-Guide.<language>.txt         short instructions for Intune in the language of the wizard
+      SelfX-Server-Guide.<language>.txt         instead, for a package for Windows Server: installation by hand or with Configuration Manager
       selfx-answers.json                        your answers (contains mailbox addresses: do not commit)
 
     Languages of the wizard: tools\Wizard\Wizard.<culture>.xml (de, en). Missing texts come from English.
@@ -76,7 +77,7 @@
     Name    : New-SelfXPackage.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 1.3.1
+    Version : 1.3.2
     Exit code: 0 = done, 1 = error or aborted
     Works in Windows PowerShell 5.1 and PowerShell 7. The wizard sends nothing; only -PfxPath makes it ask for the password of the PFX file (hidden, not stored).
 
@@ -92,6 +93,7 @@
     1.2.0    2026-11-27  fubu2k               -AdditionalSigner (further thumbprints for -TrustedSigner, change of the certificate)
     1.3.0    2026-11-27  fubu2k               -ConfigPackage (the configuration package) and -SeparateConfig (the full package of a setup with a configuration package)
     1.3.1    2026-11-27  fubu2k               Answer file: the answer NetworkTargets (own network targets) is known
+    1.3.2    2026-11-28  fubu2k               Help: SelfX-Server-Guide for a package for Windows Server (question TargetOS)
 #>
 [CmdletBinding()]
 param(

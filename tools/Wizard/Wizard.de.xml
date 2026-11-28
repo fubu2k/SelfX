@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.6.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.7.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -31,8 +31,8 @@
 	<T Id="OrgName.rec">Der Kurzname Ihrer Firma oder Behörde, zum Beispiel Contoso.</T>
 	<T Id="ToolName.ask">Name des Werkzeugs in der Titelleiste und in den Verknüpfungen</T>
 	<T Id="ToolName.rec">Behalten Sie SelfX. Nutzer finden es schneller, wenn der Name überall gleich ist.</T>
-	<T Id="EnvironmentMode.ask">Wo läuft SelfX? Client (PC oder Notebook einer Person) oder TerminalServer (Terminalserver oder Sitzungshost mit mehreren Nutzern gleichzeitig)</T>
-	<T Id="EnvironmentMode.rec">Client für PCs und Notebooks. TerminalServer für Windows Enterprise multi-session oder einen Remotedesktop-Sitzungshost: SelfX blendet dann Aktionen und Reparaturen aus, die das ganze Gerät oder alle Nutzer betreffen, und der Dienst lehnt sie ab. Bauen Sie je Geräteart ein eigenes Paket.</T>
+	<T Id="TargetOS.ask">Für welches Windows ist das Paket? Windows11 (PCs und Notebooks, Installation mit Intune) oder WindowsServer (Windows Server 2022 oder 2025 als Terminalserver, Installation ohne Intune)</T>
+	<T Id="TargetOS.rec">Windows11 für PCs und Notebooks. WindowsServer für Terminalserver: Dort blendet SelfX Aktionen und Reparaturen aus, die den ganzen Server oder alle Nutzer betreffen, und der Dienst lehnt sie ab. SelfX erkennt das selbst an Windows; die Antwort wählt die Anleitung am Ende (Intune kann auf Windows Server keine Apps installieren) und die Frage zum Gerätestatus.</T>
 	<T Id="TerminalServerHealth.ask">Gerätestatus auf dem Terminalserver: Off (niemand) oder AdminOnly (nur Administratoren, die SelfX mit erhöhten Rechten gestartet haben)</T>
 	<T Id="TerminalServerHealth.rec">Off. Auf einem Terminalserver zeigt der Gerätestatus den Server (Updates, Defender, Neustart), nicht den Arbeitsplatz des Nutzers, und Nutzer könnten nichts davon beheben. Wählen Sie AdminOnly, wenn Ihre Administratoren ihn nutzen wollen.</T>
 	<T Id="SupportMail.ask">E-Mail-Adresse des Supports (Funktionspostfach)</T>
@@ -189,6 +189,19 @@
 	<T Id="guide.c8">8. Auf einem Pilotgerät testen: Install.log in %ProgramData%\SelfX\Logs meldet "SelfX configuration installed"; SelfX neu öffnen, um die neuen Einstellungen zu sehen.</T>
 	<T Id="guide.sep">{0}. Dieses vollständige Paket gehört zu einer Umgebung mit getrenntem Konfigurationspaket: Sein Erkennungsskript vergleicht die Konfiguration nicht. Nach einer neuen Code-Version installiert das Konfigurationspaket die Einstellungen (beide Pakete aus denselben Antworten und demselben Release bauen).</T>
 	<T Id="guide.sep1">   Einstellungen, die nur das vollständige Paket anwendet (Verknüpfungen, Eintrag des Statussymbols, Symbol, Dienstrechte), ändert das Konfigurationspaket nicht: im vollständigen Paket ändern.</T>
+	<T Id="guide.srv.title">SelfX auf Windows Server: Kurzanleitung für {0} (Version {1})</T>
+	<T Id="guide.srv.intro">Intune kann auf Windows Server keine Apps installieren (nur Builds von Windows Server Insider Preview lassen sich in Intune registrieren). Installieren Sie SelfX von Hand oder mit Configuration Manager. Beginnen Sie immer mit einem Pilotserver.</T>
+	<T Id="guide.srv.c.intro">Dies ist das Konfigurationspaket. Es ersetzt nur die Einstellungen eines bereits installierten SelfX (zuerst das vollständige Paket installieren). Intune kann auf Windows Server keine Apps installieren: Installieren Sie es von Hand oder mit Configuration Manager. Beginnen Sie mit einem Pilotserver.</T>
+	<T Id="guide.srv1">1. Voraussetzungen: Windows Server 2022 oder 2025 mit Desktopdarstellung (Build 20348 oder neuer), 64 Bit. Install.ps1 bricht ohne Änderung ab auf Server Core, auf einem Domänencontroller und auf Windows Enterprise multi-session.</T>
+	<T Id="guide.srv1b">   PowerShell 7.6 oder neuer (MSI von Microsoft, für alle Nutzer) muss ebenfalls installiert sein; bis dahin ist SelfX installiert, startet aber keine Aktion. Details: docs\de\Installation.md, Kapitel 3.2.</T>
+	<T Id="guide.srv2">2. Dateien: Der Ordner {0} im Ausgabeordner ist die Installation. Kopieren Sie ihn unverändert auf den Server oder in eine Freigabe, die nur Administratoren ändern können (Nutzer nur lesen). Install.ps1 prüft jede Datei, bevor es etwas ändert. Die Datei {1} ist nur für Intune und wird nicht gebraucht.</T>
+	<T Id="guide.srv3">3. Installieren: Öffnen Sie eine erhöhte 64-Bit-Windows-PowerShell als Administrator (oder als SYSTEM), wechseln Sie in den kopierten Paketordner und starten Sie: {0}</T>
+	<T Id="guide.srv3b">   Deinstallieren: {0}</T>
+	<T Id="guide.srv3c">3. Installieren: In einer erhöhten 64-Bit-Windows-PowerShell im kopierten Paketordner: {0}. Es braucht ein installiertes SelfX ab Version {1} und ändert nur die Einstellungen. Es gibt nichts zu deinstallieren: Das vollständige Paket entfernt SelfX.</T>
+	<T Id="guide.srv4">4. Configuration Manager (optional): Legen Sie eine Anwendung mit dem Bereitstellungstyp Skriptinstallationsprogramm an. Inhaltsspeicherort: der kopierte Paketordner. Installations- und Deinstallationsprogramm: die Befehle oben. Installationsverhalten: Für System installieren. Lassen Sie „Installations- und Deinstallationsprogramm auf 64-Bit-Clients als 32-Bit-Prozess ausführen“ aus.</T>
+	<T Id="guide.srv4b">   Erkennungsmethode: „Benutzerdefiniertes Skript zum Erkennen dieses Bereitstellungstyps verwenden“, Skripttyp PowerShell, Inhalt von {0} (nicht die Datei im Repository). Es schreibt eine Zeile und endet mit 0, wenn SelfX installiert ist, sonst schreibt es nichts.</T>
+	<T Id="guide.srv5">{0}. Test auf einem Pilotserver: Melden Sie sich als normaler Nutzer an (Remotedesktop). SelfX zeigt nur Aktionen für die eigene Sitzung, der Dienst SelfXService läuft, und SelfXService.log in %ProgramData%\SelfX\Logs nennt den Modus TerminalServer. Danach auf den übrigen Servern installieren.</T>
+	<T Id="guide.srv.update">Später aktualisieren: Payload-Archiv des neuen Release entpacken, den Assistenten mit Ihren gespeicherten Antworten ({0}) erneut ausführen und den neuen Paketordner auf dieselbe Weise installieren.</T>
 	<T Id="guide.update">Update später: das Nutzlast-Archiv des neuen Release entpacken, den Assistenten mit Ihren gespeicherten Antworten erneut starten ({0}) und das neue Paket als neue Version der App hochladen.</T>
 	<T Id="guide.answers">Ihre Antworten sind in {0} gespeichert. Die Datei enthält Ihre Postfachadressen: nicht in Git einchecken.</T>
 	<T Id="guide.script.header">Set-SelfXSupportUnit-Skript für die Einheit {0}. Weisen Sie es der Entra-Gerätegruppe dieser Einheit zu.</T>
@@ -275,6 +288,7 @@
 	<T Id="gui.result.copy">_Anleitung kopieren</T>
 	<T Id="gui.result.copied">Die Anleitung ist in der Zwischenablage.</T>
 	<T Id="gui.result.guide">Was Sie in Intune tun</T>
+	<T Id="gui.result.guide.server">Was Sie auf dem Server tun</T>
 	<T Id="gui.page.errors">Bitte korrigieren Sie die markierten Felder.</T>
 	<T Id="gui.answers.loaded">Antworten aus {0} geladen. Prüfen Sie die markierten Felder.</T>
 	<T Id="gui.answers.saved">Antworten in {0} gespeichert. Die Datei enthält Ihre Postfachadressen: nicht in Git einchecken.</T>
@@ -351,5 +365,6 @@
 	<T Id="gui.copy.folder">Ausgabeordner kopieren</T>
 	<T Id="gui.copy.thumbprints">Fingerabdrücke kopieren</T>
 	<T Id="gui.copy.asr">Dateiliste kopieren</T>
+	<T Id="gui.copy.packagefolder">Pfad des Paketordners kopieren</T>
 	<T Id="gui.result.copied.value">In der Zwischenablage: {0}</T>
 </Wizard_Language>

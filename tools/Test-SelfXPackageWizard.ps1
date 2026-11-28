@@ -17,11 +17,13 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.4.0
+    Version : 1.5.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
               1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
               1.4.0 (2026-11-28, fubu2k) question TerminalServerHealth: only with TerminalServer, default Off, AdminOnly written
+              1.5.0 (2026-11-28, fubu2k) question TargetOS instead of EnvironmentMode (no Environment_Mode written); package for Windows Server:
+                                         SelfX-Server-Guide without Intune (commands with System32, Configuration Manager, no ticket routing)
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -185,17 +187,35 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
 Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 'Intune service' }) -ExistingLabels @('intune service') } 'network targets: a label of the delivered targets is refused'
     Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Everything' -Choices @('Enforce', 'Audit') } 'choice rejects unknown'
     Assert ((ConvertTo-WizardValue -Kind 'choice' -Value 'audit' -Choices @('Enforce', 'Audit')) -eq 'Audit') 'choice case insensitive'
-    $environmentQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'EnvironmentMode' })
-    Assert ($environmentQuestion.Count -eq 1 -and $environmentQuestion[0].Default -eq 'Client' -and (($environmentQuestion[0].Choices) -join ',') -eq 'Client,TerminalServer') 'EnvironmentMode: one question, default Client, choices Client and TerminalServer'
-    Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Server' -Choices $environmentQuestion[0].Choices } 'EnvironmentMode: another value is refused'
-    Assert ((Get-WizardToolConfigValues -A @{ EnvironmentMode = 'TerminalServer' }).Environment_Mode -eq 'TerminalServer') 'EnvironmentMode: TerminalServer is written as Environment_Mode'
-    Assert ((Get-WizardToolConfigValues -A @{}).Environment_Mode -eq 'Client') 'EnvironmentMode: an answer file without the answer writes Client'
+    $targetQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'TargetOS' })
+    Assert ($targetQuestion.Count -eq 1 -and $targetQuestion[0].Default -eq 'Windows11' -and (($targetQuestion[0].Choices) -join ',') -eq 'Windows11,WindowsServer') 'TargetOS: one question, default Windows11, choices Windows11 and WindowsServer'
+    Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'TerminalServer' -Choices $targetQuestion[0].Choices } 'TargetOS: another value is refused'
+    Assert (@((Get-WizardQuestions) | Where-Object { $_.Id -eq 'EnvironmentMode' }).Count -eq 0) 'TargetOS: the question EnvironmentMode is gone (SelfX takes the mode from Windows)'
+    Assert (-not (Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer' }).Contains('Environment_Mode') -and -not (Get-WizardToolConfigValues -A @{}).Contains('Environment_Mode')) 'TargetOS: Environment_Mode is never written'
     $healthQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'TerminalServerHealth' })
-    Assert ($healthQuestion.Count -eq 1 -and $healthQuestion[0].Default -eq 'Off' -and ((& $healthQuestion[0].When @{ EnvironmentMode = 'TerminalServer' }) -eq $true) -and ((& $healthQuestion[0].When @{ EnvironmentMode = 'Client' }) -eq $false)) 'TerminalServerHealth: one question, default Off, asked only with TerminalServer'
+    Assert ($healthQuestion.Count -eq 1 -and $healthQuestion[0].Default -eq 'Off' -and ((& $healthQuestion[0].When @{ TargetOS = 'WindowsServer' }) -eq $true) -and ((& $healthQuestion[0].When @{ TargetOS = 'Windows11' }) -eq $false) -and ((& $healthQuestion[0].When @{}) -eq $false)) 'TerminalServerHealth: one question, default Off, asked only for WindowsServer'
     Assert-Throws { ConvertTo-WizardValue -Kind 'choice' -Value 'Everyone' -Choices $healthQuestion[0].Choices } 'TerminalServerHealth: another value is refused'
-    Assert ((Get-WizardToolConfigValues -A @{ EnvironmentMode = 'TerminalServer'; TerminalServerHealth = 'AdminOnly' }).TerminalServer_Health -eq 'AdminOnly') 'TerminalServerHealth: AdminOnly is written'
-    Assert ((Get-WizardToolConfigValues -A @{ EnvironmentMode = 'TerminalServer' }).TerminalServer_Health -eq 'Off') 'TerminalServerHealth: TerminalServer without the answer writes Off'
-    Assert (-not (Get-WizardToolConfigValues -A @{ EnvironmentMode = 'Client'; TerminalServerHealth = 'AdminOnly' }).Contains('TerminalServer_Health')) 'TerminalServerHealth: Client writes nothing (the delivered Off stays)'
+    Assert ((Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer'; TerminalServerHealth = 'AdminOnly' }).TerminalServer_Health -eq 'AdminOnly') 'TerminalServerHealth: AdminOnly is written'
+    Assert ((Get-WizardToolConfigValues -A @{ TargetOS = 'WindowsServer' }).TerminalServer_Health -eq 'Off') 'TerminalServerHealth: WindowsServer without the answer writes Off'
+    Assert (-not (Get-WizardToolConfigValues -A @{ TargetOS = 'Windows11'; TerminalServerHealth = 'AdminOnly' }).Contains('TerminalServer_Health')) 'TerminalServerHealth: Windows11 writes nothing (the delivered Off stays)'
+    # Instructions for Windows Server: no Intune; the commands run in a 64-bit process (System32, not sysnative). English texts here; the
+    # German ones of the tests before are loaded again afterwards.
+    Initialize-WizardTexts -Folder $WizardFolder -Culture 'en'
+    $srvGuide = Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; TargetOS = 'WindowsServer'; Units = @() } -Version '3.1.0' -PackageFile 'p.intunewin' -DetectionFile 'd.ps1' -OutputFolder 'C:\Out'
+    $srvIds = @($srvGuide.Steps | ForEach-Object { $_.Id }) -join ','
+    $srvText = (@($srvGuide.Header) + @($srvGuide.Steps | ForEach-Object { $_.Lines })) -join "`n"
+    $srvInstall = @($srvGuide.Steps | Where-Object Id -eq 'program' | ForEach-Object { $_.Copies } | Where-Object Label -eq 'gui.copy.install')[0].Value
+    Assert ($srvIds -eq 'requirements,files,program,configmgr,asr,test') "server guide: steps without Intune ($srvIds)"
+    Assert ($srvInstall -like '%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe *-File .\Install.ps1' -and $srvText -notmatch 'sysnative' -and $srvText -notmatch 'intune\.microsoft\.com') 'server guide: install command with System32, no sysnative, no Intune admin center'
+    Assert ($srvText -match '20348' -and $srvText -match 'Server Core' -and $srvText -match 'Configuration Manager' -and $srvText -match '(?m)^6\. Test on a pilot server') 'server guide: requirements, Configuration Manager and the test step (6)'
+    Assert ((@($srvGuide.Steps | Where-Object Id -eq 'files')[0].Copies[0].Value) -eq 'C:\Out\package') 'server guide: the path of the package folder can be copied'
+    $srvSigned = Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; TargetOS = 'WindowsServer'; Units = @(@{ Id = 'U'; GroupTags = @('T') }) } -Version '3.1.0' -PackageFile 'p' -DetectionFile 'd' -ScriptFiles @('Set-SelfXSupportUnit-U.ps1') -TrustedSigner @(('A' * 40)) -RuleFiles @('SelfX.AppLocker.xml') -PackageKind FullSeparateConfig
+    Assert ((@($srvSigned.Steps | ForEach-Object { $_.Id }) -join ',') -eq 'requirements,files,program,configmgr,trust,certchange,rules,asr,test,separate' -and ((@($srvSigned.Steps | ForEach-Object { $_.Lines }) -join "`n") -match "-TrustedSigner $('A' * 40)")) 'server guide: signature, rules and the note of a separate configuration; no Intune platform scripts for the ticket routing'
+    $srvConfig = Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; TargetOS = 'WindowsServer'; Units = @() } -Version '3.1.0' -PackageFile 'p' -DetectionFile 'd' -PackageKind ConfigOnly
+    $srvConfigText = (@($srvConfig.Header) + @($srvConfig.Steps | ForEach-Object { $_.Lines })) -join "`n"
+    Assert ((@($srvConfig.Steps | ForEach-Object { $_.Id }) -join ',') -eq 'requirements,files,program,configmgr,test' -and $srvConfigText -match 'Install\.ps1 -ConfigOnly' -and $srvConfigText -match 'configuration package' -and $srvConfigText -notmatch 'Uninstall\.ps1') 'server guide of the configuration package: -ConfigOnly, nothing to uninstall'
+    Assert ((@((Get-SelfXIntuneGuideSteps -Answers @{ OrgName = 'C'; TargetOS = 'Windows11'; Units = @() } -Version '3.1.0').Steps | ForEach-Object { $_.Id }) -join ',') -eq 'app,program,requirements,detection,dependency,assignment,asr,test') 'Windows11: the Intune guide as before'
+    Initialize-WizardTexts -Folder $WizardFolder -Culture 'de-CH'
     Assert-Throws { ConvertTo-WizardValue -Kind 'text' -Value "a`r`nb" -Max 40 } 'text rejects line breaks'
     Assert ((ConvertTo-WizardValue -Kind 'list' -Value 'A, B ,,C').Count -eq 3) 'list splits at commas'
     Assert-Throws { Test-WizardUnitValues -Unit ([pscustomobject]@{ GroupTags = @('x;y'); Categories = @(); OUs = @() }) } 'group tag rejects ;'
@@ -262,7 +282,7 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ($g.Brand_Accent_Color -eq '#E20074' -and $g.Brand_Logo -eq 'Branding\logo.png') 'Tool_Config: branding'
     Assert ((Test-Path (Join-Path $out 'package\Config\Branding\logo.png')) -and -not (Test-Path (Join-Path $out 'package\Config\Branding\company_logo.png'))) 'logo copied, placeholder removed'
     Assert ($g.Service_FileCheck -eq 'Enforce' -and $g.Service_Privileges -eq 'Restricted') 'secure defaults stay without expert mode'
-    Assert ($g.Environment_Mode -eq 'Client') 'Tool_Config: Environment_Mode Client without an answer'
+    Assert ($null -eq $g.Environment_Mode -and $g.TerminalServer_Health -eq 'Off') 'Tool_Config: no Environment_Mode (the mode comes from Windows), the delivered TerminalServer_Health Off stays'
     Assert (-not (Test-Path (Join-Path $out 'package\Service\Projects')) -and @(Get-ChildItem (Join-Path $out 'package') -Recurse -Filter 'Test-*.ps1').Count -eq 0) 'copy has no project files and no tests'
 
     $ticket = Read-SelfXTicketConfig -Path (Join-Path $out 'package\Config\Ticket_Config.xml')
@@ -594,6 +614,13 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     Assert ($sep.PackageFile -eq $fullPackageBefore -and $sepDetection -match "PackageKind = 'FullWithoutConfig'" -and $sepDetection -notmatch "ExpectedCodeHash = '__") 'separate config: the full package keeps its names and its detection does not compare the configuration'
     Assert (@($sep.GuideSteps.Steps | ForEach-Object { $_.Id }) -contains 'separate' -and ((Get-Content -LiteralPath (Join-Path $work 'result\sep\SelfX-Intune-Guide.en.txt') -Raw) -match 'separate configuration package')) 'separate config: the full guide has the note'
     Assert ((Get-Content -LiteralPath (Join-Path $work 'result\sep\package\Install.ps1') -Raw) -eq (Get-Content -LiteralPath (Join-Path $finalOut 'package\Install.ps1') -Raw)) 'separate config: the full package itself is the same'
+    # Package for Windows Server: the same package, TerminalServer_Health from the answer, instructions without Intune in their own file.
+    $srvAnswers = [ordered]@{}; foreach ($key in $buildAnswers.Keys) { $srvAnswers[$key] = $buildAnswers[$key] }; $srvAnswers.TargetOS = 'WindowsServer'; $srvAnswers.TerminalServerHealth = 'AdminOnly'
+    $srvBuild = Invoke-SelfXPackageBuild -Answers $srvAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\srv') -ToolPath $dummyTool -Language 'en'
+    $srvTool = ([xml](Get-Content -LiteralPath (Join-Path $work 'result\srv\package\Config\Tool_Config.xml') -Raw)).GUI_Config
+    Assert ($srvBuild.TargetOS -eq 'WindowsServer' -and $srvBuild.GuideFile -eq 'SelfX-Server-Guide.en.txt' -and (Test-Path -LiteralPath (Join-Path $work 'result\srv\SelfX-Server-Guide.en.txt')) -and -not (Test-Path -LiteralPath (Join-Path $work 'result\srv\SelfX-Intune-Guide.en.txt'))) 'server package: the instructions are SelfX-Server-Guide.en.txt'
+    Assert ($srvTool.TerminalServer_Health -eq 'AdminOnly' -and $null -eq $srvTool.Environment_Mode) 'server package: TerminalServer_Health AdminOnly, no Environment_Mode'
+    Assert ((Get-Content -LiteralPath (Join-Path $work 'result\srv\SelfX-Server-Guide.en.txt') -Raw) -match 'Intune cannot install apps on Windows Server' -and $result.TargetOS -eq 'Windows11') 'server package: the guide explains why there is no Intune step; a package for Windows 11 says Windows11'
     Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder (Join-Path $work 'result\bad') -ToolPath $dummyTool -PackageKind 'Other' } 'an unknown package kind is refused'
     $cfgNoInstall = Join-Path $work 'build-cfg-noinstall'; Copy-Item -LiteralPath $payload -Destination $cfgNoInstall -Recurse; Remove-Item -LiteralPath (Join-Path $cfgNoInstall 'Install.ps1')
     Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $cfgNoInstall -OutputFolder (Join-Path $work 'result\bad') -ToolPath $dummyTool -PackageKind ConfigOnly } 'config package: a payload without Install.ps1 is refused'

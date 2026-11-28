@@ -25,9 +25,9 @@
 	                 active session on the device (restart, network, disk check, ...). Elevated administrators are not
 	                 restricted. Default: no restriction. Set it on every entry of the same script (Test-Catalog.ps1 checks this).
 	  TerminalServer Required for every action. Show = the action only affects the own session or profile and is offered with
-	                 Environment_Mode TerminalServer (Tool_Config.xml); Hide = it affects the device, the network or all users and is
-	                 not shown there (System actions are also refused by the service, for every caller). With Environment_Mode Client
-	                 every action is shown. Use the same value on every entry of the same script (Test-Catalog.ps1 checks both).
+	                 on a terminal server (Windows Server: mode TerminalServer, taken from Windows); Hide = it affects the device, the
+	                 network or all users and is not shown there (System actions are also refused by the service, for every caller).
+	                 On Windows 11 (mode Client) every action is shown. Use the same value on every entry of the same script (Test-Catalog.ps1 checks both).
 	  Requires       Optional. DomainJoined = the action is shown only on a domain or hybrid joined device (hidden when the device is
 	                 clearly not joined; if the state cannot be read it stays visible). Only a User action should use it; the script
 	                 must check the requirement itself (Test-Catalog.ps1 allows only this value).
@@ -43,9 +43,10 @@
 	  2.4.10   2026-11-23  fubu2k               New action D_Device_NoSound (unmute the default playback device, minimum volume 30 %, SelfXAudio.dll, Context User)
 	  2.4.11   2026-11-23  fubu2k               New optional field Requires (DomainJoined); D_Device_GpUpdate is hidden on devices that are not domain / hybrid joined
 	  2.4.12   2026-11-27  fubu2k               New required field TerminalServer (Show or Hide) on every action, for Environment_Mode TerminalServer
+	  2.4.13   2026-11-28  fubu2k               Description of TerminalServer: the mode comes from Windows (Windows Server = TerminalServer); no change of an action
 -->
 <Actions>
-	<XML_Version>2.4.12</XML_Version>
+	<XML_Version>2.4.13</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>

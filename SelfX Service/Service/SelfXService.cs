@@ -112,6 +112,10 @@ Notes:
                                               background checks (Background Enabled is ignored), no status cache, HEALTH and STATUS answer
                                               UNAVAILABLE TerminalServer to every caller; AdminOnly = only elevated administrators get HEALTH and
                                               STATUS. Any other value and an unreadable Tool_Config.xml count as Off. The log housekeeping keeps running
+    3.1.0    2026-11-28  fubu2k               The mode comes from Windows, not from a setting: product type workstation (Windows 11) = Client,
+                                              every other product type (Windows Server, Windows Enterprise multi-session) and version data that
+                                              cannot be read = TerminalServer (fail closed). Environment_Mode of Tool_Config.xml is ignored (a note
+                                              in the log when it is still there); the warning of event 4009 is gone (the mode can no longer differ)
 */
 
 using System;
@@ -224,7 +228,7 @@ namespace SelfX
 
         const int WtsActive = 0;
 
-        // Version data of the running Windows, only for the warning "session host in Environment_Mode Client" (never a decision).
+        // Version data of the running Windows: the product type decides the mode (Client or TerminalServer, IsTerminalServer).
         // RtlGetVersion is not subject to the compatibility manifest like GetVersionEx and VerifyVersionInfo (deprecated since
         // Windows 10). Layout: RTL_OSVERSIONINFOEXW (wdm.h) = OSVERSIONINFOEXW (winnt.h).
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -298,11 +302,10 @@ namespace SelfX
         const int EventFilesChanged = 4005;
         const int EventTrustAnchor = 4006;
         const int EventSignature = 4007;
-        // Environment_Mode TerminalServer: a request for an action that is not classified TerminalServer Show was refused.
+        // Mode TerminalServer: a request for an action that is not classified TerminalServer Show was refused.
+        // (Event 4009, "session host but Environment_Mode Client", is no longer written: the mode comes from Windows.)
         const int EventTerminalServerRefused = 4008;
-        // Windows is a session host for several users, but Environment_Mode is Client (warning at the start, nothing is switched).
-        const int EventSessionHostClient = 4009;
-        // Answer to HEALTH and STATUS when the device status is not available to the caller (Environment_Mode TerminalServer).
+        // Answer to HEALTH and STATUS when the device status is not available to the caller (mode TerminalServer).
         const string HealthUnavailableResponse = "UNAVAILABLE TerminalServer";
         const int EventSuppressed = 4099;
         sealed class EventWindow { public DateTime Start = DateTime.MinValue; public int Count; public int Suppressed; }
@@ -417,7 +420,7 @@ namespace SelfX
             background.Name = "SelfXBackgroundHealth";
             background.Start();
             Log("Service started. Version " + Version + ", pipe '" + pipeName + "', code '" + installRoot + "', configuration '" + configRoot + "'.");
-            CheckEnvironmentMode();
+            LogEnvironmentMode();
         }
 
         /// <summary>
@@ -882,7 +885,7 @@ namespace SelfX
             }
             if (request == "STATUS")
             {
-                // Environment_Mode TerminalServer: the status describes the server, not the place of work of the user (TerminalServer_Health).
+                // Mode TerminalServer: the status describes the server, not the place of work of the user (TerminalServer_Health).
                 // No log line here: the status icon of every signed-in user asks regularly.
                 if (!IsHealthAllowed(callerIsAdmin)) return HealthUnavailableResponse;
                 return GetStatusResponse();
@@ -890,10 +893,10 @@ namespace SelfX
             Match healthMatch = HealthRequestPattern.Match(request);
             if (healthMatch.Success)
             {
-                // Environment_Mode TerminalServer: checks run only as TerminalServer_Health allows (before anything is started).
+                // Mode TerminalServer: checks run only as TerminalServer_Health allows (before anything is started).
                 if (!IsHealthAllowed(callerIsAdmin))
                 {
-                    LogRejected("HEALTH request from " + user + " refused: the device status is not available in Environment_Mode TerminalServer (TerminalServer_Health).");
+                    LogRejected("HEALTH request from " + user + " refused: the device status is not available on a terminal server (TerminalServer_Health).");
                     return HealthUnavailableResponse;
                 }
                 string healthScript = Path.Combine(installRoot, "HealthStatus.ps1");
@@ -960,19 +963,14 @@ namespace SelfX
                 return "ERROR Action is not allowed";
             }
 
-            // Environment_Mode TerminalServer (Tool_Config.xml): an action that is not classified TerminalServer Show is refused for
+            // Mode TerminalServer (from Windows, IsTerminalServer): an action that is not classified TerminalServer Show is refused for
             // every caller, also for elevated administrators. The window hides these actions, but the window is no security boundary.
-            // An unreadable Tool_Config.xml counts as TerminalServer (fail closed; the file check would not start the script anyway).
-            if (hideOnTerminalServer)
+            // No file, setting or request can switch the mode; version data that cannot be read count as TerminalServer (fail closed).
+            if (hideOnTerminalServer && IsTerminalServer())
             {
-                string mode = ReadToolConfigValue("Environment_Mode");
-                bool modeValid;
-                if (mode == null || IsTerminalServerMode(mode, out modeValid))
-                {
-                    LogRejected("Request from " + user + " for '" + scriptName + "' refused: the action is not available in Environment_Mode TerminalServer.",
-                        EventTerminalServerRefused, "A SelfX action that is not available on a terminal server or session host (Environment_Mode TerminalServer) was requested and refused. Details are in SelfXService.log in the protected log folder.");
-                    return "ERROR TerminalServer";
-                }
+                LogRejected("Request from " + user + " for '" + scriptName + "' refused: the action is not available on a terminal server (mode TerminalServer).",
+                    EventTerminalServerRefused, "A SelfX action that is not available on a terminal server or session host (mode TerminalServer) was requested and refused. Details are in SelfXService.log in the protected log folder.");
+                return "ERROR TerminalServer";
             }
 
             // The script of the project (App\Scripts_to_run) or an own script of the company that SelfX.Config.json lists with its
@@ -1024,15 +1022,14 @@ namespace SelfX
         enum HealthAccess { Everyone, AdminOnly, Off }
 
         /// <summary>
-        /// Access to the device status from Environment_Mode and TerminalServer_Health of Tool_Config.xml (null = the file cannot be
-        /// read). Client: everyone. TerminalServer (also an unreadable file): AdminOnly only for exactly that value (case is ignored),
-        /// otherwise Off (default, empty, any other value): on a terminal server the status describes the server, and every user
-        /// would see its security state.
+        /// Access to the device status from the mode and TerminalServer_Health of Tool_Config.xml (null = the file cannot be read).
+        /// Client: everyone. TerminalServer: AdminOnly only for exactly that value (case is ignored), otherwise Off (default, empty,
+        /// any other value, unreadable file): on a terminal server the status describes the server, and every user would see its
+        /// security state.
         /// </summary>
-        static HealthAccess GetHealthAccess(string environmentMode, string terminalServerHealth)
+        static HealthAccess GetHealthAccess(bool terminalServer, string terminalServerHealth)
         {
-            bool valid;
-            if (environmentMode != null && !IsTerminalServerMode(environmentMode, out valid)) return HealthAccess.Everyone;
+            if (!terminalServer) return HealthAccess.Everyone;
             if (terminalServerHealth != null && string.Equals(terminalServerHealth.Trim(), "AdminOnly", StringComparison.OrdinalIgnoreCase)) return HealthAccess.AdminOnly;
             return HealthAccess.Off;
         }
@@ -1046,7 +1043,7 @@ namespace SelfX
 
         HealthAccess ReadHealthAccess()
         {
-            return GetHealthAccess(ReadToolConfigValue("Environment_Mode"), ReadToolConfigValue("TerminalServer_Health"));
+            return GetHealthAccess(IsTerminalServer(), ReadToolConfigValue("TerminalServer_Health"));
         }
 
         /// <summary>True when the caller gets HEALTH and STATUS; AdminOnly needs an elevated administrator (the same check as for RUN).</summary>
@@ -1057,21 +1054,9 @@ namespace SelfX
         }
 
         /// <summary>
-        /// Environment_Mode of Tool_Config.xml: true only for TerminalServer (case is ignored). Empty (element missing, for example in
-        /// an older configuration) and Client are Client; any other value is Client too and valid is false (logged at the start).
-        /// </summary>
-        static bool IsTerminalServerMode(string value, out bool valid)
-        {
-            string text = (value ?? "").Trim();
-            bool terminalServer = string.Equals(text, "TerminalServer", StringComparison.OrdinalIgnoreCase);
-            valid = terminalServer || text.Length == 0 || string.Equals(text, "Client", StringComparison.OrdinalIgnoreCase);
-            return terminalServer;
-        }
-
-        /// <summary>
-        /// True when the product type and suite mask describe a session host for several users: Windows Enterprise multi-session
-        /// reports the product type of a server (3), and a Remote Desktop Session Host runs in application server mode
-        /// (VER_SUITE_TERMINAL without VER_SUITE_SINGLEUSERTS).
+        /// True when the product type and suite mask describe a terminal server or session host for several users: every product type
+        /// other than workstation (Windows Server reports 3, a domain controller 2, Windows Enterprise multi-session 3 as well), and a
+        /// workstation in application server mode (VER_SUITE_TERMINAL without VER_SUITE_SINGLEUSERTS).
         /// </summary>
         static bool IsSessionHostProduct(byte productType, ushort suiteMask)
         {
@@ -1092,39 +1077,42 @@ namespace SelfX
             catch { return null; }
         }
 
+        // Tests only (Test-ServicePipe.ps1 sets it through reflection on a test instance): the mode without asking Windows. No request,
+        // file, registry value or environment variable reaches this field; in the service it is always null.
+        bool? terminalServerForTest;
+
         /// <summary>
-        /// Logs the Environment_Mode at the start and warns (log and event 4009) when Windows is a session host but the mode is
-        /// Client. The service never switches the mode: the administrator decides (Tool_Config.xml, package wizard).
+        /// The mode of SelfX, from Windows and never from a setting: Client on Windows 11 (product type workstation), TerminalServer on
+        /// Windows Server and every other session host. Version data that cannot be read count as TerminalServer (fail closed).
         /// </summary>
-        void CheckEnvironmentMode()
+        bool IsTerminalServer()
+        {
+            if (terminalServerForTest.HasValue) return terminalServerForTest.Value;
+            bool? host = IsSessionHost();
+            return !host.HasValue || host.Value;
+        }
+
+        /// <summary>
+        /// Logs the mode at the start (it comes from Windows) and TerminalServer_Health. An Environment_Mode that is still in
+        /// Tool_Config.xml (configuration of an earlier build) is ignored and named in the log.
+        /// </summary>
+        void LogEnvironmentMode()
         {
             try
             {
-                string value = ReadToolConfigValue("Environment_Mode");
-                bool terminalServer = true;
-                if (value == null) Log("Environment_Mode: Tool_Config.xml cannot be read; requests are handled as in TerminalServer.");
-                else
-                {
-                    bool valid;
-                    terminalServer = IsTerminalServerMode(value, out valid);
-                    if (!valid) Log("Environment_Mode in Tool_Config.xml is not Client or TerminalServer; Client is used.");
-                    Log("Environment_Mode: " + (terminalServer ? "TerminalServer" : "Client") + ".");
-                }
-                if (terminalServer)
+                bool? host = IsSessionHost();
+                if (host == null) Log("Mode: the product type of Windows cannot be read; requests are handled as on a terminal server (TerminalServer).");
+                else Log("Mode: " + (host.Value ? "TerminalServer (Windows Server or another session host)" : "Client (Windows 11)") + ", from the product type of Windows.");
+                if (IsTerminalServer())
                 {
                     string health = ReadToolConfigValue("TerminalServer_Health");
                     if (health != null && !IsValidTerminalServerHealth(health)) Log("TerminalServer_Health in Tool_Config.xml is not Off or AdminOnly; Off is used.");
                     Log("TerminalServer_Health: " + (ReadHealthAccess() == HealthAccess.AdminOnly ? "AdminOnly" : "Off") + ".");
                 }
-                bool? host = IsSessionHost();
-                if (host == null) Log("The product type of Windows could not be read; the session host check was skipped.");
-                else if (host.Value && !terminalServer)
-                {
-                    Log("Warning: Windows is a session host for several users (Windows Enterprise multi-session or Remote Desktop Session Host), but Environment_Mode is Client. Set Environment_Mode to TerminalServer in Tool_Config.xml (package wizard: question \"Where does SelfX run?\"). The service does not switch the mode.");
-                    SecurityEvent(EventSessionHostClient, EventLogEntryType.Warning, "Windows is a session host for several users, but the SelfX setting Environment_Mode is Client. Actions that affect all users stay visible. Set Environment_Mode to TerminalServer. See the SelfX log.");
-                }
+                string old = ReadToolConfigValue("Environment_Mode");
+                if (!string.IsNullOrEmpty(old)) Log("Environment_Mode in Tool_Config.xml is not used any more and is ignored: the mode comes from Windows.");
             }
-            catch (Exception e) { Log("Environment_Mode check failed: " + e.Message); }
+            catch (Exception e) { Log("Mode check failed: " + e.Message); }
         }
 
         /// <summary>
@@ -1134,7 +1122,7 @@ namespace SelfX
         {
             timeoutSeconds = DefaultTimeoutSeconds;
             blockOtherSessions = false;
-            // Not classified = Hide (fail closed): only an explicit TerminalServer Show keeps an action in Environment_Mode TerminalServer.
+            // Not classified = Hide (fail closed): only an explicit TerminalServer Show keeps an action in the mode TerminalServer.
             hideOnTerminalServer = true;
             XmlReaderSettings settings = new XmlReaderSettings();
             // Catalog loading must not resolve external entities or fetch network resources.
@@ -2450,10 +2438,10 @@ namespace SelfX
                     backgroundInterval = settings.Enabled && !healthOff ? settings.IntervalMinutes : 0;
                     if (healthOff)
                     {
-                        // Environment_Mode TerminalServer with TerminalServer_Health Off: no checks and no status cache; Background Enabled
+                        // Mode TerminalServer with TerminalServer_Health Off: no checks and no status cache; Background Enabled
                         // is ignored. The housekeeping above still runs.
                         backgroundState = "Disabled";
-                        LogBackgroundNote("Background health checks are off: Environment_Mode TerminalServer with TerminalServer_Health Off.");
+                        LogBackgroundNote("Background health checks are off: terminal server (mode TerminalServer) with TerminalServer_Health Off.");
                     }
                     else if (!settings.Enabled)
                     {

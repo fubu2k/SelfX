@@ -7,7 +7,9 @@
 SelfX is a self-service troubleshooting tool for Windows 11 with Intune.
 Users fix common problems with Teams, Office, OneDrive, Outlook, Windows Update
 and the network themselves, before they call the support.
-It works fully offline and needs no backend.
+It works fully offline and needs no backend. Terminal servers with Windows Server
+2022 or 2025 are supported too; they are installed without Intune
+([Installation](docs/Installation.md#windows-server-terminal-server)).
 
 **SelfX Service** is installed machine-wide and works fully offline. It runs
 actions either as the signed-in user or, through the local **SelfXService**
@@ -256,9 +258,9 @@ November 2026 and hardened in versions 2.6.10 and 2.6.11; the details are in the
   data of the requesting user, unless an elevated administrator asks for it.
   Actions that would disturb others (restart, Windows updates, disk check,
   restart of the network adapters) are not available to a normal user while
-  another user is signed in (`OtherSessions`). On a terminal server or session host
-  (`Environment_Mode` = `TerminalServer`) actions that affect the whole device are
-  hidden, and the service refuses them.
+  another user is signed in (`OtherSessions`). On a terminal server (Windows Server; SelfX
+  takes this from Windows) actions that affect the whole device are hidden, and the
+  service refuses them.
 - **Careful file handling.** SYSTEM does not read logs from folders that users
   can change, and the uninstallation does not follow junctions.
 - **Controlled build and deployment.** The .NET 10 programs are built once

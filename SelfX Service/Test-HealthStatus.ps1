@@ -16,6 +16,8 @@
                                            missing or unreadable Tool_Config.xml); SelfXEnvironment.ps1; classification in the service whitelist.
         3.1.0  2026-11-28  fubu2k          TerminalServer_Health and the view of a user; system information without rows of the class Server
                                            and without the kinds of connection; answer UNAVAILABLE TerminalServer in the client.
+        3.1.0  2026-11-28  fubu2k          The mode comes from the product type of Windows (mocked: the CI runs on Windows Server); an old
+                                           Environment_Mode in Tool_Config.xml and an unreadable file do not change it.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -23,6 +25,11 @@ Import-Module Microsoft.PowerShell.Management
 $PSModuleAutoLoadingPreference = 'None'
 $sources = Join-Path $PSScriptRoot 'Sources'
 . "$sources\HealthStatus.ps1"
+# The mode comes from the product type of Windows (SelfXEnvironment.ps1). The tests set it: a developer PC runs Windows 11, the CI
+# Windows Server. The real registry read is checked once below.
+$script:productType = 'WinNT'
+$script:realProductType = Get-SelfXWindowsProductType
+function Get-SelfXWindowsProductType { $script:productType }
 . "$sources\SelfXServiceClient.ps1"
 . "$sources\SelfXNetwork.ps1"
 . "$sources\SystemInfo.ps1"
@@ -89,8 +96,8 @@ $originalRoot = $env:SystemRoot
 $env:SystemRoot = 'Z:\SelfX-Nonexistent-Test-Windows'
 $temp = Join-Path ([IO.Path]::GetTempPath()) ('SelfXHealthTests-' + [guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($temp)
-# Environment_Mode Client: the repairs are offered (a missing Tool_Config.xml counts as TerminalServer, see the tests below).
-[IO.File]::WriteAllText((Join-Path $temp 'Tool_Config.xml'), '<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>')
+# Mode Client (product type WinNT): the repairs are offered.
+[IO.File]::WriteAllText((Join-Path $temp 'Tool_Config.xml'), '<GUI_Config />')
 try {
     $script:serviceState = 'Running'
     Assert-Equal (Get-SelfXServiceHealth IME).Status OK 'Running service'
@@ -349,12 +356,14 @@ try {
     Assert-Equal (($diskRows | ForEach-Object { "$($_.Name)=$($_.Remediation)+$($_.UserRemediation)" }) -join ';') 'C:=SelfX_Device_FreeSpace.ps1+SelfX_Device_FreeSpaceUser.ps1;D:=+' 'Free up space offered on the full system drive only'
     $script:disks = @([pscustomobject]@{ DeviceID='C:'; Size=500GB; FreeSpace=100GB })
     Assert-Equal "$(@(Get-SelfXHealth -Root $temp -OnlyId Disk)[0].Remediation)/$(@(Get-SelfXHealth -Root $temp -OnlyId Disk)[0].UserRemediation)" '/' 'Free up space hidden while the disk is OK'
-    # Environment_Mode TerminalServer: a repair is offered only when it is classified TerminalServer="Show"; Hide, a missing or other
-    # value and a missing or unreadable Tool_Config.xml offer nothing (also no part of the user). Client offers every repair.
-    foreach ($case in @(@('TerminalServer','TerminalServer',$true), @(' terminalserver ','TerminalServer',$true), @('Client','Client',$true), @('','Client',$true), @($null,'Client',$true), @('Server','Client',$false))) {
+    # Mode TerminalServer (Windows Server): a repair is offered only when it is classified TerminalServer="Show"; Hide and a missing or
+    # other value offer nothing (also no part of the user). Client (Windows 11) offers every repair. The mode comes from the product type.
+    foreach ($case in @(@('WinNT','Client',$true), @(' winnt ','Client',$true), @('ServerNT','TerminalServer',$true), @('LanmanNT','TerminalServer',$true), @('','TerminalServer',$false), @($null,'TerminalServer',$false), @('Client','TerminalServer',$false), @('Other','TerminalServer',$false))) {
         $mode = ConvertTo-SelfXEnvironmentMode $case[0]
-        Assert-Equal "$($mode.Mode)/$($mode.Valid)" "$($case[1])/$($case[2])" "Environment_Mode '$($case[0])'"
+        Assert-Equal "$($mode.Mode)/$($mode.Valid)" "$($case[1])/$($case[2])" "Mode from the product type '$($case[0])' (unknown or empty = TerminalServer, fail closed)"
     }
+    Assert-Equal (@('WinNT', 'ServerNT', 'LanmanNT') -contains $script:realProductType) $true "Mode: the product type of this Windows is read from the registry ($script:realProductType)"
+    Assert-Equal (Get-Command Get-SelfXEnvironmentMode).Parameters.Count 0 'Mode: Get-SelfXEnvironmentMode takes no parameter (no path, no value)'
     Assert-Equal "$(Test-SelfXShownInEnvironment 'Client' 'Hide')/$(Test-SelfXShownInEnvironment 'Client' '')" 'True/True' 'Environment_Mode Client: every entry is shown'
     Assert-Equal "$(Test-SelfXShownInEnvironment 'TerminalServer' 'Show')/$(Test-SelfXShownInEnvironment 'TerminalServer' 'Hide')/$(Test-SelfXShownInEnvironment 'TerminalServer' '')/$(Test-SelfXShownInEnvironment 'TerminalServer' $null)/$(Test-SelfXShownInEnvironment 'TerminalServer' 'show')" 'True/False/False/False/False' 'Environment_Mode TerminalServer: only exactly Show is shown'
     [IO.File]::WriteAllText("$temp\Classify.xml", '<HealthConfig><Remediations><Remediation Id="Defender" Script="A.ps1" TerminalServer="Show"/><Remediation Id="Compliance" Script="A.ps1" TerminalServer="Hide"/><Remediation Id="Disk" Script="B.ps1" TerminalServer="Show"/></Remediations></HealthConfig>')
@@ -385,7 +394,9 @@ try {
         Assert-Equal "$($data.Ok)/$(@($data.Items).Count)" 'True/0' 'Status data: no rows while the device status is not available'
     }
     $script:disks = @([pscustomobject]@{ DeviceID='C:'; Size=500GB; FreeSpace=5GB })
-    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>')
+    $script:productType = 'ServerNT'
+    # An old Environment_Mode Client (earlier build) does not switch the mode.
+    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>')
     $tsDisk = @(Get-SelfXHealth -Root $temp -OnlyId Disk)[0]
     Assert-Equal "$($tsDisk.Status -ne 'OK')/$($tsDisk.Remediation)/$($tsDisk.UserRemediation)" 'True//' 'TerminalServer: the delivered Free up space (Hide) is not offered, also not its part of the user'
     Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'TerminalServer: a repair without classification is not offered'
@@ -393,13 +404,16 @@ try {
     $remConfig.Save("$temp\Health_Config.xml")
     Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) 'Repair-IME.ps1' 'TerminalServer: a repair classified Show is offered'
     [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>Client')
-    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) 'Repair-IME.ps1' 'TerminalServer: an unreadable Tool_Config.xml still offers a repair classified Show'
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) 'Repair-IME.ps1' 'TerminalServer: with an unreadable Tool_Config.xml a repair classified Show is still offered'
     $repair.SetAttribute('TerminalServer','Hide')
     $remConfig.Save("$temp\Health_Config.xml")
-    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'TerminalServer: an unreadable Tool_Config.xml offers no repair classified Hide (fail closed)'
-    [IO.File]::Delete("$temp\Tool_Config.xml")
-    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'TerminalServer: a missing Tool_Config.xml offers no repair classified Hide (fail closed)'
-    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>Client</Environment_Mode></GUI_Config>')
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'TerminalServer: with an unreadable Tool_Config.xml a repair classified Hide is not offered'
+    $script:productType = ''
+    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config />')
+    Assert-Equal (@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation) '' 'A product type that cannot be read offers no repair classified Hide (fail closed)'
+    $script:productType = 'WinNT'
+    # Windows 11 with an old Environment_Mode TerminalServer: still Client.
+    [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>')
     $clientDisk = @(Get-SelfXHealth -Root $temp -OnlyId Disk)[0]
     Assert-Equal "$(@(Get-SelfXHealth -Root $temp | Where-Object Id -eq IME)[0].Remediation)/$($clientDisk.Remediation)/$($clientDisk.UserRemediation)" 'Repair-IME.ps1/SelfX_Device_FreeSpace.ps1/SelfX_Device_FreeSpaceUser.ps1' 'Client: repairs classified Hide are offered'
     $repair.RemoveAttribute('TerminalServer')
