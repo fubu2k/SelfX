@@ -339,6 +339,24 @@ public static class SelfXTestReparse
             return handle.IsInvalid && Marshal.GetLastWin32Error() == 32;
         }
     }
+    // The attacker in native code (a PowerShell loop is far slower than the helper): wait until the helper has entered the decoy
+    // folder and left it again, delete the files of the target folder from the end (the helper works from the start), and turn
+    // the folder into a junction as soon as it is empty.
+    public static string Attack(string decoy, string folder, string target, int timeoutMs)
+    {
+        System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        // The probe itself opens with DELETE access: a short pause between probes keeps it from blocking the helper's own open.
+        while (!IsHeld(decoy)) { if (watch.ElapsedMilliseconds > 5000) return "decoy not seen"; System.Threading.Thread.SpinWait(2000); }
+        while (IsHeld(decoy)) { if (watch.ElapsedMilliseconds > timeoutMs) return "decoy not left"; System.Threading.Thread.SpinWait(2000); }
+        string[] names = System.IO.Directory.GetFiles(folder);
+        for (int i = names.Length - 1; i >= 0; i--) { try { System.IO.File.Delete(names[i]); } catch (Exception) { } }
+        while (watch.ElapsedMilliseconds < timeoutMs)
+        {
+            foreach (string name in System.IO.Directory.GetFiles(folder)) { try { System.IO.File.Delete(name); } catch (Exception) { } }
+            if (SetMountPoint(folder, target)) return "flipped";
+        }
+        return "not flipped";
+    }
     public static bool DeleteMountPoint(string folder)
     {
         byte[] buffer = new byte[8];
@@ -356,31 +374,21 @@ public static class SelfXTestReparse
 	Assert-Equal ([SelfXTestReparse]::DeleteMountPoint($probe)) $true 'in-place race: setup turns the junction back into a folder'
 	Assert-Equal ([bool]((Get-Item -LiteralPath $probe -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) $false 'in-place race: setup folder is a plain folder again'
 
-	# The attack, made reliable: the root holds a decoy folder A (processed first) and the target folder D with many new files.
+	# The attack, made reliable: the root holds a decoy folder A (processed first) and the target folder D with many files (old for
+	# /cleanold:, so that the helper deletes them as fast as the attacker does and both meet in the middle).
 	# The attacker waits until the helper has opened A and left it again (it is then in D: D is open and listed), deletes the
 	# files of D from the end, and turns the empty D into a junction to Outside2 while the helper still walks its list of D. The
 	# names the helper has not reached yet then lie in Outside2, which holds old files of the same names.
-	function Invoke-InPlaceAttack([string]$Root, [string[]]$HelperArguments, [string]$Target) {
+	function Invoke-InPlaceAttack([string]$Root, [string[]]$HelperArguments, [string]$Target, [switch]$OldFiles) {
 		$decoy = Join-Path $Root 'A'
 		$folder = Join-Path $Root 'D'
 		[void][IO.Directory]::CreateDirectory($decoy)
 		[void][IO.Directory]::CreateDirectory($folder)
-		1..1500 | ForEach-Object { [IO.File]::WriteAllText((Join-Path $decoy ('a{0:D5}.txt' -f $_)), 'x') }
+		1..4000 | ForEach-Object { [IO.File]::WriteAllText((Join-Path $decoy ('a{0:D5}.txt' -f $_)), 'x') }
 		1..$inPlaceFiles | ForEach-Object { [IO.File]::WriteAllText((Join-Path $folder ('b{0:D5}.txt' -f $_)), 'x') }
+		if ($OldFiles) { Set-TestOld @(Get-ChildItem -LiteralPath $folder -File | ForEach-Object { $_.FullName }) }
 		$shell = [powershell]::Create()
-		[void]$shell.AddScript({
-			param($decoy, $folder, $target)
-			$watch = [Diagnostics.Stopwatch]::StartNew()
-			while (-not [SelfXTestReparse]::IsHeld($decoy)) { if ($watch.ElapsedMilliseconds -gt 8000) { return 'decoy not seen' } }
-			while ([SelfXTestReparse]::IsHeld($decoy)) { if ($watch.ElapsedMilliseconds -gt 15000) { return 'decoy not left' } }
-			$names = [IO.Directory]::GetFiles($folder)
-			for ($i = $names.Length - 1; $i -ge 0; $i--) { try { [IO.File]::Delete($names[$i]) } catch {} }
-			while ($watch.ElapsedMilliseconds -lt 20000) {
-				foreach ($name in [IO.Directory]::GetFiles($folder)) { try { [IO.File]::Delete($name) } catch {} }
-				if ([SelfXTestReparse]::SetMountPoint($folder, $target)) { return 'flipped' }
-			}
-			'not flipped'
-		}).AddArgument($decoy).AddArgument($folder).AddArgument($Target)
+		[void]$shell.AddScript({ param($decoy, $folder, $target) [SelfXTestReparse]::Attack($decoy, $folder, $target, 20000) }).AddArgument($decoy).AddArgument($folder).AddArgument($Target)
 		$handle = $shell.BeginInvoke()
 		Start-Sleep -Milliseconds 200
 		$out = @(& $exe @HelperArguments 2>&1 | ForEach-Object { "$_" })
@@ -400,7 +408,7 @@ public static class SelfXTestReparse
 	$flips = 0
 	for ($run = 1; $run -le 3; $run++) {
 		$root = Join-Path $temp "InPlaceOld$run"
-		$attack = Invoke-InPlaceAttack -Root $root -HelperArguments @("/cleanoldpath:$root", '/minage:7') -Target $outside2
+		$attack = Invoke-InPlaceAttack -Root $root -HelperArguments @("/cleanoldpath:$root", '/minage:7') -Target $outside2 -OldFiles
 		if ($attack.State -eq 'flipped') { $flips++ }
 		$left = @($outside2Files | Where-Object { Test-Path -LiteralPath $_ }).Count
 		Assert-Equal $left $inPlaceFiles "in-place race: /cleanold: run $run deletes no old file of Outside2 (attacker: $($attack.State))"
