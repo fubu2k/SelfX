@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows verrà riavviato per completare gli aggiornamenti e le modifiche in sospeso.&#10;&#10;Salva prima il tuo lavoro e chiudi tutti i programmi. Il riavvio inizia circa 30 secondi dopo la conferma.&#10;&#10;Riavviare ora?</Health_Restart_Confirm>
 		<Button_Restart_Now>Riavvia ora</Button_Restart_Now>
 		<Health_Restart_Started>Windows si riavvia tra circa 30 secondi. Salva ora il tuo lavoro.</Health_Restart_Started>
+		<Disturb_Warning_Text>Sembra che lei sia in una riunione o in una presentazione. Questa azione può interromperla.</Disturb_Warning_Text>
 		<Health_Updates_Started>Gli aggiornamenti di Windows vengono cercati, scaricati e installati. Può richiedere alcuni minuti; puoi continuare a lavorare.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update ha terminato. Lo stato del dispositivo viene controllato di nuovo e indica se è necessario un riavvio.</Health_Updates_Done>
 		<Health_Apps_Button>Riprova</Health_Apps_Button>

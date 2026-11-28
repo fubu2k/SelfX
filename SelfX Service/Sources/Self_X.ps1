@@ -62,6 +62,8 @@
     3.1.0    2026-11-28  fubu2k               The mode comes from Windows (Get-SelfXEnvironmentMode), not from Environment_Mode of Tool_Config.xml
     3.1.0    2026-11-28  fubu2k               Terminal server: TerminalServer_Support_Mail is the support e-mail, the ticket recipient and the address in
                                               the help window; no ticket routing there (Get-SelfXSupportContact)
+    3.1.0    2026-11-28  fubu2k               Disturb_Warning (Tool_Config.xml): before an action marked <Disruptive> and before the restart the confirmation adds a
+                                              hint when the own session looks busy (presentation, full screen, quiet time; SelfXDisturb.ps1). Nothing is blocked
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -191,6 +193,7 @@ $Global:SelfXSupportReport_Script = Get-Content -LiteralPath "$Current_Folder\Su
 # Paths of the configuration (folder Config next to App), the images and the own scripts of the company
 . "$Current_Folder\SelfXPaths.ps1"
 . "$Current_Folder\SelfXEnvironment.ps1"
+. "$Current_Folder\SelfXDisturb.ps1"
 . "$Current_Folder\SelfXServiceClient.ps1"
 . "$Current_Folder\Branding.ps1"
 . "$Current_Folder\Localization.ps1"
@@ -341,6 +344,8 @@ If(-not $Tool_Version)
 	}
 Write-SelfXLog "SelfX $Tool_Version opened: language $($SelfX_UI_Language.Culture) (setting $Global:SelfX_Language_Setting), page '$Page'."
 $Tool_Name = Get-SelfXText "Tool_Name" "SelfX"
+# Hint before a disruptive action when the own session looks busy (presentation, full screen, quiet time); only a text, nothing is blocked.
+$Global:SelfX_DisturbWarning = (Get-SelfXText "Disturb_Warning" "True") -ne 'False'
 $Support_Phone_number = Get-SelfXText "Support_Phone_number" ""
 # Support e-mail and ticket recipient only from the configuration (TicketSend.ps1, Get-SelfXSupportContact): Ticket_Mail empty =
 # Support_Mail. On a terminal server TerminalServer_Support_Mail replaces both (also in the help window) and the ticket routing is not used.
@@ -1518,6 +1523,13 @@ Function Run_Remediation($rowObj)
 				$No_Text = Get-SelfXButtonText $(If($BTN_Split.Count -gt 1) { $BTN_Split[1] } Else { 'Cancel' })
 			}
 
+		# Disruptive action (<Disruptive>True</Disruptive>): add a hint when the own session looks busy. Only the state of the own session is read.
+		$Disturb_Text = Get-SelfXDisturbWarning -Enabled $Global:SelfX_DisturbWarning -Disruptive (([string]$rowObj.Disruptive).Trim() -eq 'True') -Text (Get-SelfXString 'Disturb_Warning_Text')
+		If($Disturb_Text)
+			{
+				$AlerteWarning = "$AlerteWarning`n`n$Disturb_Text"
+				Write-SelfXLog "Action '$($rowObj.Id)': disturbance hint added to the confirmation."
+			}
 		$result = Show-SelfXDialog -Title "$Run_Solution_Text" -Message "$AlerteWarning" -AffirmativeText $Yes_Text -NegativeText $No_Text -Kind Question
 		Write-SelfXLog "Action '$($rowObj.Name)' ($Script_Name, context $Action_Context): user answered $result."
 		If($result -eq "Affirmative")
@@ -2120,7 +2132,10 @@ $StatusCards.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEv
 			If($Card.Remediation -eq $Global:SelfX_RestartScript)
 				{
 					# Restart: own warning, the user must confirm explicitly (default button: cancel).
-					$Answer = Show-SelfXDialog -Title (Get-SelfXString 'Health_Restart_Title') -Message (Get-SelfXString 'Health_Restart_Confirm') `
+					$Restart_Text = Get-SelfXString 'Health_Restart_Confirm'
+					$Disturb_Text = Get-SelfXDisturbWarning -Enabled $Global:SelfX_DisturbWarning -Disruptive $True -Text (Get-SelfXString 'Disturb_Warning_Text')
+					If($Disturb_Text) { $Restart_Text = "$Restart_Text`n`n$Disturb_Text"; Write-SelfXLog 'Restart: disturbance hint added to the confirmation.' }
+					$Answer = Show-SelfXDialog -Title (Get-SelfXString 'Health_Restart_Title') -Message $Restart_Text `
 						-AffirmativeText (Get-SelfXString 'Button_Restart_Now') -NegativeText (Get-SelfXString 'Button_Cancel') -Kind Warning
 				}
 			Else

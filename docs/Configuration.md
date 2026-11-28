@@ -71,6 +71,7 @@ and changing the settings does not change the version.
 | `TerminalServer_Health` | `Off` | Only on Windows Server (mode `TerminalServer`, see [Terminal server](#terminal-server-windows-server)): who gets the device status. `Off`: nobody. `AdminOnly`: only administrators who started SelfX with elevated rights. Any other value counts as `Off`. |
 | `Tool_Theme` | `Auto` | Default color scheme: `Auto` (follows Windows), `Dark` or `Light`. |
 | `Show_Theme_Button` | `True` | Users can choose the design themselves. |
+| `Disturb_Warning` | `True` | Before an action that closes Teams or Office programs, restarts the network adapters or restarts the device, SelfX adds the hint *You appear to be in a meeting or presentation* to the confirmation when Windows reports presentation settings, a full-screen program or quiet time for the own session of the user. See [Hint before disruptive actions](#hint-before-disruptive-actions). `False`: no hint. |
 | `Default_Solution_Mode` | `Simplified` | Start view of troubleshooting: `Simplified` (easy) or `Detailed`. |
 | `Show_Status_Page` | `True` | Show the *Device status* page. |
 | `Show_SystemInfo_Tab` | `True` | Show the *System information* page. |
@@ -123,6 +124,7 @@ has a unique `Id`. The translations are linked through this `Id`.
 | `TimeoutSeconds` | Only for `System`: time limit from 1 to 7200 seconds, default 900. |
 | `OtherSessions` | Only for `System`: `Block` prevents the action for normal users while another user is signed in. Administrators are not affected. |
 | `TerminalServer` | Required. `Show`: the action only affects the own session or profile and is offered on a terminal server (Windows Server). `Hide`: it affects the whole device or all users and is hidden there. Use the same value on every entry of the same script. |
+| `Disruptive` | Optional. `True` marks an action that closes a program, restarts the network adapters or restarts the device and can therefore end a meeting. Only the value `True` is valid. Use the same value on every entry of a script (`Test-Catalog.ps1` checks this). See [Hint before disruptive actions](#hint-before-disruptive-actions). |
 | `Post_Action` | Only for `System`: `MailReport` opens an e-mail to support with the report after a successful run. |
 
 Example:
@@ -243,6 +245,26 @@ Bundled scripts for `System` actions:
 | `SelfX_Device_SyncTime.ps1` | Synchronize the clock with the time source (the time configuration stays unchanged) |
 | `SelfX_OneDrive_CHKDSK.ps1` | Schedule a disk check for the system drive at the next restart |
 | `SelfX_Device_CollectLogs.ps1` | Collect device logs and open an e-mail with the report |
+
+### Hint before disruptive actions
+
+Some actions can end a meeting or a presentation: they close Teams, Word, Excel or Outlook, restart the network
+adapters, or (as a repair of the device status) restart the device. These actions carry `<Disruptive>True</Disruptive>`
+in `Issues_List.xml`; the restart repair always has the hint.
+
+Before the confirmation SelfX reads the state of the own Windows session of the user
+(`SHQueryUserNotificationState`). It adds the sentence *You appear to be in a meeting or presentation. This action can
+interrupt it.* to the confirmation when Windows reports one of these states:
+
+- presentation settings are on (for example after `presentationsettings.exe`),
+- a program runs in full screen,
+- quiet time.
+
+This is a hint only. Nothing is switched off, blocked or sent to the service, other sessions are not looked at, no
+program name is read, and the log names only the action Id. Windows has no documented query for *Do not disturb*, for a
+screen share in Teams or for a microphone or camera in use; such a meeting is not recognised unless Windows reports one of
+the three states. If the state cannot be read, the confirmation is shown without the hint. `Disturb_Warning` = `False` in
+`Tool_Config.xml` switches the hint off.
 
 ### Own scripts of the company
 

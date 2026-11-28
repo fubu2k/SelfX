@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows буде перезапущено, щоб завершити очікувані оновлення та зміни.&#10;&#10;Спочатку збережіть свою роботу й закрийте всі програми. Перезапуск почнеться приблизно через 30 секунд після підтвердження.&#10;&#10;Перезапустити зараз?</Health_Restart_Confirm>
 		<Button_Restart_Now>Перезапустити зараз</Button_Restart_Now>
 		<Health_Restart_Started>Windows перезапуститься приблизно через 30 секунд. Збережіть свою роботу зараз.</Health_Restart_Started>
+		<Disturb_Warning_Text>Схоже, ви перебуваєте на нараді або презентації. Ця дія може її перервати.</Disturb_Warning_Text>
 		<Health_Updates_Started>Триває пошук, завантаження та інсталяція оновлень Windows. Це може тривати кілька хвилин; ви можете продовжувати роботу.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update завершив роботу. Стан пристрою перевіряється знову й показує, чи потрібен перезапуск.</Health_Updates_Done>
 		<Health_Apps_Button>Повторити</Health_Apps_Button>

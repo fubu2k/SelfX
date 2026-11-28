@@ -72,6 +72,7 @@ Marke: `SelfX.Config.json` enthält `ConfigRevision`, die UTC-Zeit des Paketlauf
 | `TerminalServer_Health` | `Off` | Nur auf Windows Server (Modus `TerminalServer`, siehe [Terminalserver](#terminalserver-windows-server)): wer den Gerätestatus bekommt. `Off`: niemand. `AdminOnly`: nur Administratoren, die SelfX mit erhöhten Rechten gestartet haben. Jeder andere Wert gilt als `Off`. |
 | `Tool_Theme` | `Auto` | Standardfarbe: `Auto` (folgt Windows), `Dark` oder `Light`. |
 | `Show_Theme_Button` | `True` | Nutzer können das Design selbst wählen. |
+| `Disturb_Warning` | `True` | Vor einer Aktion, die Teams oder Office-Programme schließt, die Netzwerkadapter neu startet oder das Gerät neu startet, ergänzt SelfX die Bestätigung um den Hinweis *Sie sind anscheinend in einer Besprechung oder Präsentation*, wenn Windows für die eigene Sitzung des Nutzers Präsentationseinstellungen, ein Vollbildprogramm oder die Ruhezeit meldet. Siehe [Hinweis vor störenden Aktionen](#hinweis-vor-störenden-aktionen). `False`: kein Hinweis. |
 | `Default_Solution_Mode` | `Simplified` | Startansicht der Fehlerbehebung: `Simplified` (einfach) oder `Detailed` (ausführlich). |
 | `Show_Status_Page` | `True` | Seite *Gerätestatus* anzeigen. |
 | `Show_SystemInfo_Tab` | `True` | Seite *Systeminformationen* anzeigen. |
@@ -124,6 +125,7 @@ Aktion hat eine eindeutige `Id`. Die Übersetzungen werden über diese `Id` zuge
 | `TimeoutSeconds` | Nur bei `System`: Zeitlimit von 1 bis 7200 Sekunden, Standard 900. |
 | `OtherSessions` | Nur bei `System`: `Block` verhindert die Aktion für normale Nutzer, solange ein anderer Nutzer angemeldet ist. Administratoren sind nicht betroffen. |
 | `TerminalServer` | Pflicht. `Show`: Die Aktion betrifft nur die eigene Sitzung oder das eigene Profil und wird auf einem Terminalserver (Windows Server) angeboten. `Hide`: Sie betrifft das ganze Gerät oder alle Nutzer und wird dort ausgeblendet. Verwenden Sie bei allen Einträgen desselben Skripts denselben Wert. |
+| `Disruptive` | Optional. `True` kennzeichnet eine Aktion, die ein Programm schließt, die Netzwerkadapter neu startet oder das Gerät neu startet und damit eine Besprechung beenden kann. Gültig ist nur der Wert `True`. Bei allen Einträgen eines Skripts derselbe Wert (`Test-Catalog.ps1` prüft das). Siehe [Hinweis vor störenden Aktionen](#hinweis-vor-störenden-aktionen). |
 | `Post_Action` | Nur bei `System`: `MailReport` öffnet nach einem erfolgreichen Lauf eine E-Mail an den Support mit dem Bericht. |
 
 Beispiel:
@@ -247,6 +249,26 @@ Mitgelieferte Skripte für `System`-Aktionen:
 | `SelfX_Device_SyncTime.ps1` | Uhr mit der Zeitquelle abgleichen (die Zeit-Konfiguration bleibt unverändert) |
 | `SelfX_OneDrive_CHKDSK.ps1` | Festplattenprüfung für das Systemlaufwerk beim nächsten Neustart planen |
 | `SelfX_Device_CollectLogs.ps1` | Geräteprotokolle sammeln und eine E-Mail mit dem Bericht öffnen |
+
+### Hinweis vor störenden Aktionen
+
+Manche Aktionen können eine Besprechung oder Präsentation beenden: Sie schließen Teams, Word, Excel oder Outlook, starten
+die Netzwerkadapter neu oder (als Reparatur im Gerätestatus) das Gerät. Diese Aktionen tragen
+`<Disruptive>True</Disruptive>` in `Issues_List.xml`; die Reparatur „Neustart“ hat den Hinweis immer.
+
+Vor der Bestätigung liest SelfX den Zustand der eigenen Windows-Sitzung des Nutzers
+(`SHQueryUserNotificationState`). Meldet Windows einen dieser Zustände, ergänzt SelfX die Bestätigung um den Satz
+*Sie sind anscheinend in einer Besprechung oder Präsentation. Diese Aktion kann sie unterbrechen.*:
+
+- Präsentationseinstellungen sind aktiv (zum Beispiel nach `presentationsettings.exe`),
+- ein Programm läuft im Vollbild,
+- Ruhezeit.
+
+Das ist nur ein Hinweis. Es wird nichts abgeschaltet, blockiert oder an den Dienst gesendet, andere Sitzungen werden nicht
+betrachtet, kein Programmname wird gelesen, und das Protokoll nennt nur die Aktions-Id. Für „Nicht stören“, eine
+Bildschirmfreigabe in Teams oder ein benutztes Mikrofon oder eine benutzte Kamera gibt es keine dokumentierte Abfrage; eine
+solche Besprechung wird nur erkannt, wenn Windows einen der drei Zustände meldet. Lässt sich der Zustand nicht lesen,
+erscheint die Bestätigung ohne Hinweis. `Disturb_Warning` = `False` in `Tool_Config.xml` schaltet den Hinweis ab.
 
 ### Eigene Skripte der Firma
 

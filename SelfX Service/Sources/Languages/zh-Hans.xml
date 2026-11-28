@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows 将重新启动以完成挂起的更新和更改。&#10;&#10;请先保存您的工作并关闭所有程序。确认后约 30 秒开始重新启动。&#10;&#10;现在重新启动吗？</Health_Restart_Confirm>
 		<Button_Restart_Now>立即重新启动</Button_Restart_Now>
 		<Health_Restart_Started>Windows 将在约 30 秒后重新启动。请立即保存您的工作。</Health_Restart_Started>
+		<Disturb_Warning_Text>您似乎正在开会或进行演示。此操作可能会将其中断。</Disturb_Warning_Text>
 		<Health_Updates_Started>正在搜索、下载并安装 Windows 更新。这可能需要几分钟；您可以继续工作。</Health_Updates_Started>
 		<Health_Updates_Done>Windows 更新已完成。将重新检查设备状态，并显示是否需要重新启动。</Health_Updates_Done>
 		<Health_Apps_Button>重试</Health_Apps_Button>

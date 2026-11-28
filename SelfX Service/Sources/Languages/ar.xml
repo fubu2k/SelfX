@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>ستتم إعادة تشغيل Windows لإكمال التحديثات والتغييرات المعلّقة.&#10;&#10;احفظ عملك أولاً وأغلق جميع البرامج. تبدأ إعادة التشغيل بعد نحو 30 ثانية من التأكيد.&#10;&#10;هل تريد إعادة التشغيل الآن؟</Health_Restart_Confirm>
 		<Button_Restart_Now>إعادة التشغيل الآن</Button_Restart_Now>
 		<Health_Restart_Started>ستتم إعادة تشغيل Windows خلال 30 ثانية تقريباً. احفظ عملك الآن.</Health_Restart_Started>
+		<Disturb_Warning_Text>يبدو أنك في اجتماع أو عرض تقديمي. قد يؤدي هذا الإجراء إلى مقاطعته.</Disturb_Warning_Text>
 		<Health_Updates_Started>يتم البحث عن تحديثات Windows وتنزيلها وتثبيتها. قد يستغرق ذلك عدة دقائق؛ يمكنك متابعة العمل.</Health_Updates_Started>
 		<Health_Updates_Done>انتهى Windows Update. يتم فحص حالة الجهاز مرة أخرى لتوضيح ما إذا كانت إعادة التشغيل مطلوبة.</Health_Updates_Done>
 		<Health_Apps_Button>إعادة المحاولة</Health_Apps_Button>

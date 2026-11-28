@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows จะรีสตาร์ตเพื่อทำการอัปเดตและการเปลี่ยนแปลงที่ค้างอยู่ให้เสร็จสมบูรณ์&#10;&#10;โปรดบันทึกงานและปิดโปรแกรมทั้งหมดก่อน การรีสตาร์ตจะเริ่มประมาณ 30 วินาทีหลังจากยืนยัน&#10;&#10;รีสตาร์ตตอนนี้หรือไม่</Health_Restart_Confirm>
 		<Button_Restart_Now>รีสตาร์ตตอนนี้</Button_Restart_Now>
 		<Health_Restart_Started>Windows จะรีสตาร์ตในอีกประมาณ 30 วินาที โปรดบันทึกงานของคุณตอนนี้</Health_Restart_Started>
+		<Disturb_Warning_Text>ดูเหมือนว่าคุณกำลังอยู่ในการประชุมหรือการนำเสนอ การดำเนินการนี้อาจขัดจังหวะได้</Disturb_Warning_Text>
 		<Health_Updates_Started>กำลังค้นหา ดาวน์โหลด และติดตั้งการอัปเดต Windows อาจใช้เวลาหลายนาที คุณสามารถทำงานต่อได้</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update เสร็จแล้ว สถานะอุปกรณ์จะถูกตรวจสอบอีกครั้งและแสดงว่าจำเป็นต้องรีสตาร์ตหรือไม่</Health_Updates_Done>
 		<Health_Apps_Button>ลองอีกครั้ง</Health_Apps_Button>

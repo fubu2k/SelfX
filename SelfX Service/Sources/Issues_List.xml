@@ -24,6 +24,11 @@
 	  OtherSessions  Only for Context System. Block = a normal user cannot start the action while another user has an
 	                 active session on the device (restart, network, disk check, ...). Elevated administrators are not
 	                 restricted. Default: no restriction. Set it on every entry of the same script (Test-Catalog.ps1 checks this).
+	  Disruptive     Optional. True = the action closes a program, restarts the network adapters or restarts the device, which can end a meeting or
+	                 a presentation. Before the confirmation SelfX reads the state of the own session of the user (SHQueryUserNotificationState:
+	                 presentation settings, full screen, quiet time) and adds the hint "You appear to be in a meeting or presentation". Only a hint:
+	                 nothing is switched, blocked or sent to the service. Switch it off with Disturb_Warning in Tool_Config.xml. Use the same value on
+	                 every entry of the same script (Test-Catalog.ps1 checks this). The restart repair of the device status always has the hint.
 	  TerminalServer Required for every action. Show = the action only affects the own session or profile and is offered with
 	                 on a terminal server (Windows Server: mode TerminalServer, taken from Windows); Hide = it affects the device, the
 	                 network or all users and is not shown there (System actions are also refused by the service, for every caller).
@@ -44,9 +49,10 @@
 	  2.4.11   2026-11-23  fubu2k               New optional field Requires (DomainJoined); D_Device_GpUpdate is hidden on devices that are not domain / hybrid joined
 	  2.4.12   2026-11-27  fubu2k               New required field TerminalServer (Show or Hide) on every action, for Environment_Mode TerminalServer
 	  2.4.13   2026-11-28  fubu2k               Description of TerminalServer: the mode comes from Windows (Windows Server = TerminalServer); no change of an action
+	  2.4.14   2026-11-28  fubu2k               New optional field Disruptive (True) on the actions that close Teams or Office programs or restart the network adapters
 -->
 <Actions>
-	<XML_Version>2.4.13</XML_Version>
+	<XML_Version>2.4.14</XML_Version>
 
 	<!-- Shared texts. Actions reference them with Ref="<Id>" so that a text is written and translated only once. -->
 	<Messages>
@@ -100,6 +106,7 @@ Do you want to continue?</Message>
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG>Teams will close and its local cache folders will be cleared. Save any open work before continuing. Teams will reopen if it was running.
 
@@ -113,6 +120,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Word_Reboot.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Office</Category>
 			<Alerte_MSG>Word will close and start again. Documents are not reopened automatically. Unsaved work is lost.
 
@@ -126,6 +134,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Excel_Reboot.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Office</Category>
 			<Alerte_MSG>Excel will close and start again. Workbooks are not reopened automatically. Unsaved work is lost.
 
@@ -139,6 +148,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Outlook_Reboot.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Outlook</Category>
 			<Alerte_MSG>Outlook will close and start again. Mails you are writing that are not saved as a draft are lost. After the start Outlook may need some time to check its data. Your profile and mailbox are not changed. The new Outlook is not affected.
 
@@ -191,6 +201,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Outlook_TeamsAddIn.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Outlook</Category>
 			<Alerte_MSG>The Teams meeting add-in will be enabled again. Outlook will close and reopen automatically. Unsaved work may be lost.
 
@@ -260,6 +271,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Device_AirePlaneMode.ps1</Script>
 			<Context>System</Context>
 			<TerminalServer>Hide</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<OtherSessions>Block</OtherSessions>
 			<TimeoutSeconds>300</TimeoutSeconds>
 			<Category>Device</Category>
@@ -342,6 +354,7 @@ Do you want to continue?</Alerte_MSG>
 			<Script>SelfX_Outlook_TeamsAddIn.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Outlook</Category>
 			<Alerte_MSG>Outlook will close and then open again automatically. Unsaved work may be lost.
 
@@ -570,6 +583,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -581,6 +595,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -603,6 +618,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -614,6 +630,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -625,6 +642,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -636,6 +654,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -647,6 +666,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart_Short"/>
 		</Action>
@@ -658,6 +678,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -669,6 +690,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -680,6 +702,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -691,6 +714,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -702,6 +726,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -713,6 +738,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -724,6 +750,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -735,6 +762,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -746,6 +774,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -757,6 +786,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -768,6 +798,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>
@@ -779,6 +810,7 @@ This step resets your OneDrive client. Resetting the OneDrive client does not ca
 			<Script>SelfX_Teams_ResetCache.ps1</Script>
 			<Context>User</Context>
 			<TerminalServer>Show</TerminalServer>
+			<Disruptive>True</Disruptive>
 			<Category>Teams</Category>
 			<Alerte_MSG Ref="Msg_Teams_Restart"/>
 		</Action>

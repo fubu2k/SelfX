@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows 將重新啟動以完成擱置的更新和變更。&#10;&#10;請先儲存您的工作並關閉所有程式。確認後約 30 秒開始重新啟動。&#10;&#10;要立即重新啟動嗎？</Health_Restart_Confirm>
 		<Button_Restart_Now>立即重新啟動</Button_Restart_Now>
 		<Health_Restart_Started>Windows 將在約 30 秒後重新啟動。請立即儲存您的工作。</Health_Restart_Started>
+		<Disturb_Warning_Text>您似乎正在開會或進行簡報。此操作可能會將其中斷。</Disturb_Warning_Text>
 		<Health_Updates_Started>正在搜尋、下載並安裝 Windows 更新。這可能需要幾分鐘；您可以繼續工作。</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update 已完成。將重新檢查裝置狀態，並顯示是否需要重新啟動。</Health_Updates_Done>
 		<Health_Apps_Button>重試</Health_Apps_Button>

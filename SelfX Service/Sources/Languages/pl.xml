@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>System Windows zostanie uruchomiony ponownie, aby dokończyć oczekujące aktualizacje i zmiany.&#10;&#10;Najpierw zapisz swoją pracę i zamknij wszystkie programy. Ponowne uruchomienie rozpocznie się około 30 sekund po potwierdzeniu.&#10;&#10;Uruchomić ponownie teraz?</Health_Restart_Confirm>
 		<Button_Restart_Now>Uruchom ponownie teraz</Button_Restart_Now>
 		<Health_Restart_Started>System Windows zostanie uruchomiony ponownie za około 30 sekund. Zapisz teraz swoją pracę.</Health_Restart_Started>
+		<Disturb_Warning_Text>Wygląda na to, że jesteś na spotkaniu lub prezentacji. Ta akcja może je przerwać.</Disturb_Warning_Text>
 		<Health_Updates_Started>Aktualizacje systemu Windows są wyszukiwane, pobierane i instalowane. Może to potrwać kilka minut; możesz dalej pracować.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update zakończył działanie. Stan urządzenia jest sprawdzany ponownie i pokazuje, czy potrzebne jest ponowne uruchomienie.</Health_Updates_Done>
 		<Health_Apps_Button>Spróbuj ponownie</Health_Apps_Button>

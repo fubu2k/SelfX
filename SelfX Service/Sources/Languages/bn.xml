@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>অপেক্ষমাণ আপডেট ও পরিবর্তন সম্পূর্ণ করতে Windows পুনরায় চালু হবে।&#10;&#10;প্রথমে আপনার কাজ সংরক্ষণ করুন এবং সব প্রোগ্রাম বন্ধ করুন। নিশ্চিত করার প্রায় 30 সেকেন্ড পরে পুনরায় চালু শুরু হবে।&#10;&#10;এখনই পুনরায় চালু করবেন?</Health_Restart_Confirm>
 		<Button_Restart_Now>এখনই পুনরায় চালু করুন</Button_Restart_Now>
 		<Health_Restart_Started>প্রায় 30 সেকেন্ডের মধ্যে Windows পুনরায় চালু হবে। এখনই আপনার কাজ সংরক্ষণ করুন।</Health_Restart_Started>
+		<Disturb_Warning_Text>মনে হচ্ছে আপনি একটি মিটিং বা প্রেজেন্টেশনে আছেন। এই কাজটি তা বিঘ্নিত করতে পারে।</Disturb_Warning_Text>
 		<Health_Updates_Started>Windows আপডেট খোঁজা, ডাউনলোড ও ইনস্টল করা হচ্ছে। এতে কয়েক মিনিট লাগতে পারে; আপনি কাজ চালিয়ে যেতে পারেন।</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update শেষ হয়েছে। ডিভাইসের অবস্থা আবার পরীক্ষা করা হচ্ছে এবং পুনরায় চালু করা দরকার কি না তা দেখায়।</Health_Updates_Done>
 		<Health_Apps_Button>আবার চেষ্টা করুন</Health_Apps_Button>

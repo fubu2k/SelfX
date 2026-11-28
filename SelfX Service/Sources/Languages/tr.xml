@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Bekleyen güncelleştirmeleri ve değişiklikleri tamamlamak için Windows yeniden başlatılacak.&#10;&#10;Önce çalışmanızı kaydedin ve tüm programları kapatın. Yeniden başlatma, onayınızdan yaklaşık 30 saniye sonra başlar.&#10;&#10;Şimdi yeniden başlatılsın mı?</Health_Restart_Confirm>
 		<Button_Restart_Now>Şimdi yeniden başlat</Button_Restart_Now>
 		<Health_Restart_Started>Windows yaklaşık 30 saniye içinde yeniden başlatılacak. Çalışmanızı şimdi kaydedin.</Health_Restart_Started>
+		<Disturb_Warning_Text>Bir toplantıda veya sunumda olduğunuz anlaşılıyor. Bu eylem onu kesintiye uğratabilir.</Disturb_Warning_Text>
 		<Health_Updates_Started>Windows güncelleştirmeleri aranıyor, indiriliyor ve yükleniyor. Bu birkaç dakika sürebilir; çalışmaya devam edebilirsiniz.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update tamamlandı. Cihaz durumu yeniden denetleniyor ve yeniden başlatma gerekip gerekmediğini gösteriyor.</Health_Updates_Done>
 		<Health_Apps_Button>Yeniden dene</Health_Apps_Button>

@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows va redémarrer pour terminer les mises à jour et modifications en attente.&#10;&#10;Enregistrez d’abord votre travail et fermez tous les programmes. Le redémarrage commence environ 30 secondes après votre confirmation.&#10;&#10;Redémarrer maintenant ?</Health_Restart_Confirm>
 		<Button_Restart_Now>Redémarrer maintenant</Button_Restart_Now>
 		<Health_Restart_Started>Windows redémarre dans environ 30 secondes. Enregistrez votre travail maintenant.</Health_Restart_Started>
+		<Disturb_Warning_Text>Vous semblez être en réunion ou en présentation. Cette action peut l'interrompre.</Disturb_Warning_Text>
 		<Health_Updates_Started>Les mises à jour Windows sont recherchées, téléchargées et installées. Cela peut prendre plusieurs minutes ; vous pouvez continuer à travailler.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update a terminé. L’état de l’appareil est vérifié à nouveau et indique si un redémarrage est nécessaire.</Health_Updates_Done>
 		<Health_Apps_Button>Réessayer</Health_Apps_Button>

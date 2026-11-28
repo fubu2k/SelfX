@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows wordt opnieuw opgestart om de openstaande updates en wijzigingen te voltooien.&#10;&#10;Sla eerst uw werk op en sluit alle programma’s. Het opnieuw opstarten begint ongeveer 30 seconden na uw bevestiging.&#10;&#10;Nu opnieuw opstarten?</Health_Restart_Confirm>
 		<Button_Restart_Now>Nu opnieuw opstarten</Button_Restart_Now>
 		<Health_Restart_Started>Windows wordt over ongeveer 30 seconden opnieuw opgestart. Sla nu uw werk op.</Health_Restart_Started>
+		<Disturb_Warning_Text>U lijkt in een vergadering of presentatie te zitten. Deze actie kan die onderbreken.</Disturb_Warning_Text>
 		<Health_Updates_Started>Windows-updates worden gezocht, gedownload en geïnstalleerd. Dit kan enkele minuten duren; u kunt doorwerken.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update is klaar. De apparaatstatus wordt opnieuw gecontroleerd en toont of opnieuw opstarten nodig is.</Health_Updates_Done>
 		<Health_Apps_Button>Opnieuw proberen</Health_Apps_Button>

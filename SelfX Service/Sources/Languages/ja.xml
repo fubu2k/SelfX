@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>保留中の更新と変更を完了するため、Windows を再起動します。&#10;&#10;先に作業内容を保存し、すべてのプログラムを閉じてください。確認から約 30 秒後に再起動が始まります。&#10;&#10;今すぐ再起動しますか？</Health_Restart_Confirm>
 		<Button_Restart_Now>今すぐ再起動</Button_Restart_Now>
 		<Health_Restart_Started>約 30 秒後に Windows が再起動します。今すぐ作業内容を保存してください。</Health_Restart_Started>
+		<Disturb_Warning_Text>会議またはプレゼンテーション中のようです。この操作を実行すると中断される可能性があります。</Disturb_Warning_Text>
 		<Health_Updates_Started>Windows の更新プログラムを検索、ダウンロード、インストールしています。数分かかることがありますが、作業を続けられます。</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update が完了しました。デバイスの状態を再確認し、再起動が必要かどうかを表示します。</Health_Updates_Done>
 		<Health_Apps_Button>再試行</Health_Apps_Button>

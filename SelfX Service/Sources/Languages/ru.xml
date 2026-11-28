@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows будет перезагружена, чтобы завершить ожидающие обновления и изменения.&#10;&#10;Сначала сохраните свою работу и закройте все программы. Перезагрузка начнётся примерно через 30 секунд после подтверждения.&#10;&#10;Перезагрузить сейчас?</Health_Restart_Confirm>
 		<Button_Restart_Now>Перезагрузить сейчас</Button_Restart_Now>
 		<Health_Restart_Started>Windows перезагрузится примерно через 30 секунд. Сохраните свою работу сейчас.</Health_Restart_Started>
+		<Disturb_Warning_Text>Похоже, вы находитесь на собрании или презентации. Это действие может прервать её.</Disturb_Warning_Text>
 		<Health_Updates_Started>Выполняется поиск, загрузка и установка обновлений Windows. Это может занять несколько минут; вы можете продолжать работу.</Health_Updates_Started>
 		<Health_Updates_Done>Центр обновления Windows завершил работу. Состояние устройства проверяется снова и показывает, нужна ли перезагрузка.</Health_Updates_Done>
 		<Health_Apps_Button>Повторить</Health_Apps_Button>
