@@ -24,12 +24,14 @@
     Name    : Test-SelfXWizardGui.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.3.0
+    Version : 1.4.0
     History : 1.0.0 (2026-11-27, fubu2k) Initial version
               1.1.0 (2026-11-27, fubu2k) Page Signature (store list without expired certificates, PFX file, password never in a text, the
                                          state, the answers or the window title; time stamp; additional signers), instructions as steps
               1.2.0 (2026-11-27, fubu2k) choice of the package kind (configuration package)
               1.3.0 (2026-11-28, fubu2k) package for Windows Server: no tool field, no step pack, no .intunewin file in the result
+              1.4.0 (2026-11-28, fubu2k) time stamp service: one field of the page Signature (300 characters), -NoTimestamp to the build, loaded from
+                                         and saved to selfx-answers.json, never in the answers of the settings
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -154,6 +156,11 @@ try {
     $consoleIds = @((Get-WizardQuestions) | ForEach-Object { $_.Id })
     Assert (@($consoleIds | Where-Object { @($onPages -eq $_).Count -ne 1 }).Count -eq 0) 'every question of the console is on exactly one page'
     Assert (@($onPages | Where-Object { $consoleIds -notcontains $_ }).Count -eq 0) 'the pages name only questions of the console'
+    # The time stamp service is a field of the page Signature only: no console question, no other page, one field of the signing list.
+    Assert ($consoleIds -notcontains 'Timestamp' -and $consoleIds -notcontains 'TimestampServer' -and $onPages -notcontains 'Timestamp') 'the time stamp service is no question of the settings pages'
+    $stampFields = @($script:WizardGuiSigningQuestions | Where-Object { $_.Id -eq 'Timestamp' })
+    Assert ($stampFields.Count -eq 1 -and $stampFields[0].Max -eq 300 -and $stampFields[0].Kind -eq 'timestamp') 'the time stamp service is one field of the page Signature (at most 300 characters)'
+    Assert (@($script:WizardGuiBuildQuestions | Where-Object { $_.Id -like '*Timestamp*' }).Count -eq 0) 'the time stamp service is not a build setting of the page Summary'
     Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false) -join ',') -eq 'check,copy,config,pack,detection,rules,guide,finish') 'progress list has the steps of Invoke-SelfXPackageBuild'
     Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind ConfigOnly) -join ',') -eq 'check,copy,config,sign,pack,detection,rules,guide,finish') 'progress list of the signed configuration package has no code catalog step'
     Assert (((Get-WizardGuiBuildSteps -ConfigureOnly $false -Signed $true -PackageKind Full) -join ',') -eq 'check,copy,config,sign,catalog,pack,detection,rules,guide,finish') 'progress list of the signed full package keeps the catalog step'
@@ -362,6 +369,14 @@ try {
             Set-Field 'Timestamp' $badUrl
             Assert ($context.Fields['Timestamp'].Error.Visibility -eq 'Visible') "time stamp service '$badUrl' is refused"
         }
+        Set-Field 'Timestamp' ('https://ts.example.com/' + ('a' * 278))
+        Assert ($context.Fields['Timestamp'].Error.Visibility -eq 'Visible') 'a time stamp address of 301 characters is refused at the field'
+        Set-Field 'Timestamp' ('https://ts.example.com/' + ('a' * 277))
+        Assert ($context.Fields['Timestamp'].Error.Visibility -eq 'Collapsed') 'a time stamp address of 300 characters is accepted'
+        Assert (@($context.Ui.Fields_signing.Children) -contains $context.Fields['Timestamp'].Row) 'the field of the time stamp service is on the page Signature'
+        $stampRows = 0
+        foreach ($page in $script:WizardGuiPages) { $panel = $context.Ui["Fields_$($page.Id)"]; if ($null -ne $panel -and @($panel.Children) -contains $context.Fields['Timestamp'].Row) { $stampRows++ } }
+        Assert ($stampRows -eq 1) 'the field of the time stamp service is on exactly one page'
         Set-Field 'Timestamp' 'http://timestamp.example.com'
         Assert ($context.Fields['Timestamp'].Error.Visibility -eq 'Collapsed') 'an http time stamp service is accepted'
         foreach ($badSigner in 'abc', ('AB' * 20 + ';calc'), (@(1..10 | ForEach-Object { 'AB' * 20 }) -join ',')) {
@@ -374,8 +389,12 @@ try {
         Set-Field 'Timestamp' ''
         Set-Field 'NoTimestamp' $true
         Assert ((Get-WizardGuiPageErrors -State $context.State -PageId 'signing').Count -eq 0 -and -not $context.Fields['Timestamp'].Control.IsEnabled) 'signing without a time stamp must be switched on explicitly'
+        $noStamp = Get-WizardGuiSigning -State $context.State
+        Assert ($noStamp.NoTimestamp -and $noStamp.TimestampServer -eq '') 'the switch reaches the build as -NoTimestamp, without an address'
+        Assert ((Get-WizardGuiSavedTimestamp -State $context.State) -eq '') 'with the switch no address is saved'
         Set-Field 'NoTimestamp' $false
         Set-Field 'Timestamp' 'http://timestamp.example.com'
+        Assert (-not (Get-WizardGuiSigning -State $context.State).NoTimestamp -and (Get-WizardGuiSavedTimestamp -State $context.State) -eq 'http://timestamp.example.com') 'with an address the build gets no -NoTimestamp and the address is saved'
         $context.State.Raw['OrgName'] = 'Contoso'
         Click $context.Ui.NextButton
         Assert ($context.Page -eq (Get-WizardGuiPageIndex 'summary') -and $context.Ui.SummaryBox.Text -match $valid.Thumbprint) 'with a certificate and a time stamp the summary names the certificate'
@@ -555,6 +574,23 @@ try {
     Assert-Throws { Import-WizardGuiAnswers -State $state -Path $bad } 'a file that is not JSON is refused'
     [IO.File]::WriteAllText($bad, ('{ "OrgName": "' + ('x' * 1100000) + '" }'))
     Assert-Throws { Import-WizardGuiAnswers -State $state -Path $bad } 'an answer file over 1 MB is refused'
+    # The time stamp service of an answer file goes to the page Signature, never into the answers of the settings.
+    $stampFile = Join-Path $work 'answers-stamp.json'
+    $stampJson = Get-Content -LiteralPath (Join-Path $work 'answers-0.json') -Raw | ConvertFrom-Json
+    $stampJson | Add-Member -NotePropertyName 'TimestampServer' -NotePropertyValue 'https://timestamp.contoso.example/tsa'
+    [IO.File]::WriteAllText($stampFile, ($stampJson | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
+    $stampState = New-WizardGuiState -ToolsFolder $ScriptFolder
+    $stampState.Signing.NoTimestamp = $true
+    $null = Import-WizardGuiAnswers -State $stampState -Path $stampFile
+    Assert ($stampState.Signing.Timestamp -eq 'https://timestamp.contoso.example/tsa' -and -not $stampState.Signing.NoTimestamp -and -not $stampState.Raw.ContainsKey('TimestampServer')) 'a loaded TimestampServer fills the field of the page Signature, not the answers'
+    Assert ((Get-WizardGuiSource -State $stampState).Keys -notcontains 'TimestampServer') 'the answers for the build do not carry the address'
+    $stampSaved = Join-Path $work 'answers-stamp-saved.json'
+    Save-WizardAnswers -Path $stampSaved -Answers (Get-WizardGuiAnswers -State $stampState) -Language 'de' -TimestampServer (Get-WizardGuiSavedTimestamp -State $stampState)
+    Assert ((Get-Content -LiteralPath $stampSaved -Raw | ConvertFrom-Json).TimestampServer -eq 'https://timestamp.contoso.example/tsa') 'saving from the window keeps the address in selfx-answers.json'
+    $stampJson.TimestampServer = 'https://admin:secret@timestamp.contoso.example/'
+    [IO.File]::WriteAllText($stampFile, ($stampJson | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
+    $thrown = $null; try { $null = Import-WizardGuiAnswers -State (New-WizardGuiState -ToolsFolder $ScriptFolder) -Path $stampFile } catch { $thrown = $_.Exception.Message }
+    Assert ($thrown -like "*TimestampServer*" -and $thrown -notmatch 'secret') 'an answer file with an address with user information is refused without repeating it'
     $state.Raw['SupportMail'] = 'not a mail'
     Assert-Throws { Get-WizardGuiAnswers -State $state } 'answers with an error are not given to the build'
 

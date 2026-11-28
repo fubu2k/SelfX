@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.9.0
+    Version : 1.10.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -52,6 +52,8 @@
     1.8.0    2026-11-28  fubu2k               Windows Server: no field for IntuneWinAppUtil.exe on the page Summary, no step 'pack' in the progress list,
                                               no .intunewin file on the result page
     1.9.0    2026-11-28  fubu2k               Page More settings: question DisturbWarning (hint before disruptive actions)
+    1.10.0   2026-11-28  fubu2k               Page Signature: time stamp service at most 300 characters, saved in and loaded from selfx-answers.json
+                                              (build setting TimestampServer); the switch "without time stamp" is passed to the build as -NoTimestamp
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -140,7 +142,7 @@ $script:WizardGuiBuildQuestions = @(
 
 # The fields of the page signing (time stamp service, without time stamp, additional signers); the texts are <Id>.ask and <Id>.rec.
 $script:WizardGuiSigningQuestions = @(
-    @{ Id = 'Timestamp'; Kind = 'text'; Max = 500 },
+    @{ Id = 'Timestamp'; Kind = 'timestamp'; Max = 300 },
     @{ Id = 'NoTimestamp'; Kind = 'bool' },
     @{ Id = 'Additional'; Kind = 'text'; Max = 500 }
 )
@@ -247,12 +249,24 @@ function Get-WizardGuiAdditionalSigners {
 function Get-WizardGuiSigning {
     param([Parameter(Mandatory = $true)]$State)
     $certificate = Get-WizardGuiCertificate -State $State
-    if ($null -eq $certificate) { return [pscustomobject]@{ Certificate = $null; TimestampServer = ''; AdditionalSigner = @() } }
+    if ($null -eq $certificate) { return [pscustomobject]@{ Certificate = $null; TimestampServer = ''; NoTimestamp = $false; AdditionalSigner = @() } }
     return [pscustomobject]@{
         Certificate      = $certificate
         TimestampServer  = $(if ($State.Signing.NoTimestamp) { '' } else { "$($State.Signing.Timestamp)".Trim() })
+        # The switch "without time stamp" is the explicit confirmation that Invoke-SelfXPackageBuild needs (-NoTimestamp).
+        NoTimestamp      = [bool]$State.Signing.NoTimestamp
         AdditionalSigner = (Get-WizardGuiAdditionalSigners -State $State)
     }
+}
+
+# The address of the time stamp service for selfx-answers.json: the typed address when it is valid and signing without a time stamp is off,
+# else ''. Also kept when no certificate is chosen, so a loaded answer file suggests it again.
+function Get-WizardGuiSavedTimestamp {
+    param([Parameter(Mandatory = $true)]$State)
+    if ($State.Signing.NoTimestamp) { return '' }
+    $text = "$($State.Signing.Timestamp)".Trim()
+    if (Test-SelfXTimestampUrl $text) { return $text }
+    return ''
 }
 
 # Disposes the certificates of the window (store selection and PFX file).
@@ -472,8 +486,11 @@ function Import-WizardGuiAnswers {
     if ($item.PSIsContainer -or $item.Length -gt 1MB) { throw 'The answer file must be a JSON file of at most 1 MB.' }
     $json = [IO.File]::ReadAllText($item.FullName, [Text.Encoding]::UTF8) | ConvertFrom-Json
     if ($null -eq $json -or $json -isnot [psobject]) { throw 'The answer file is not a JSON object.' }
-    $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'NetworkTargets', 'WizardLanguage')
+    $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + $script:WizardAnswerFileExtraKeys
     foreach ($property in $json.PSObject.Properties) { if ($known -notcontains $property.Name) { throw "Unknown answer '$($property.Name)' in the answer file." } }
+    # The time stamp service is a build setting of the page Signature (checked like the other answers before anything is changed).
+    $timestamp = $null
+    if ($null -ne $json.PSObject.Properties['TimestampServer']) { $timestamp = Get-WizardAnswerFileTimestamp -Source @{ TimestampServer = $json.TimestampServer } }
     $raw = @{}
     $units = New-Object System.Collections.Generic.List[hashtable]
     $targets = New-Object System.Collections.Generic.List[hashtable]
@@ -481,6 +498,7 @@ function Import-WizardGuiAnswers {
     $join = { param($v) if ($v -is [System.Collections.IEnumerable] -and $v -isnot [string]) { (@($v | ForEach-Object { "$_" }) -join ', ') } elseif ($null -eq $v) { '' } else { "$v" } }
     foreach ($property in $json.PSObject.Properties) {
         if ($property.Name -eq 'WizardLanguage') { $language = "$($property.Value)"; continue }
+        if ($property.Name -eq 'TimestampServer') { continue }
         if ($property.Name -eq 'Units') {
             foreach ($entry in @($property.Value)) {
                 if ($null -eq $entry) { continue }
@@ -508,6 +526,7 @@ function Import-WizardGuiAnswers {
     $State.Raw = $raw
     $State.Units = $units
     $State.Targets = $targets
+    if ($null -ne $timestamp) { $State.Signing.Timestamp = $timestamp; $State.Signing.NoTimestamp = $false }
     return $language
 }
 
@@ -1082,7 +1101,7 @@ function Set-WizardGuiStepState {
 # The script of the runspace. Every value is a parameter (nothing is put together as code); progress goes into a queue that the window reads.
 $script:WizardGuiBuildScript = {
     param([string]$WizardScript, [string]$Culture, [hashtable]$Source, [string]$PayloadFolder, [bool]$FromRepository, [string]$OutputFolder, [string]$ToolPath, [bool]$ConfigureOnly, [string]$PackageKind,
-        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate, [string]$TimestampServer, [string[]]$AdditionalSigner, $Sync)
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate, [string]$TimestampServer, [bool]$NoTimestamp, [string[]]$AdditionalSigner, $Sync)
     $ErrorActionPreference = 'Stop'
     try {
         . $WizardScript
@@ -1091,7 +1110,7 @@ $script:WizardGuiBuildScript = {
         $progress = { param($id, $text) $queue.Enqueue([string]$id) }.GetNewClosure()
         $Sync.Result = Invoke-SelfXWizardBuild -Answers $Source -PayloadFolder $PayloadFolder -FromRepository:$FromRepository -OutputFolder $OutputFolder `
             -ToolPath $ToolPath -Language $Culture -ConfigureOnly:$ConfigureOnly -PackageKind $PackageKind -Certificate $Certificate -TimestampServer $TimestampServer `
-            -AdditionalSigner $AdditionalSigner -OnProgress $progress
+            -NoTimestamp:$NoTimestamp -AdditionalSigner $AdditionalSigner -OnProgress $progress
     }
     catch { $Sync.Error = $_.Exception.Message }
 }
@@ -1113,7 +1132,7 @@ function Start-WizardGuiBuild {
             WizardScript = (Join-Path $script:GuiFolder 'SelfXWizard.ps1'); Culture = $State.Culture; Source = $source; PayloadFolder = $payload
             FromRepository = [bool]$fromRepository; OutputFolder = "$($State.Build.Output)".Trim(); ToolPath = "$($State.Build.Tool)".Trim()
             ConfigureOnly = [bool]$State.Build.ConfigureOnly; PackageKind = $(if (@('Full', 'FullSeparateConfig', 'ConfigOnly') -ccontains "$($State.Build.PackageKind)") { "$($State.Build.PackageKind)" } else { 'Full' }); Certificate = $signing.Certificate; TimestampServer = $signing.TimestampServer
-            AdditionalSigner = [string[]]$signing.AdditionalSigner; Sync = $sync
+            NoTimestamp = [bool]$signing.NoTimestamp; AdditionalSigner = [string[]]$signing.AdditionalSigner; Sync = $sync
         })
     $handle = $shell.BeginInvoke()
     return [pscustomobject]@{ Shell = $shell; Runspace = $runspace; Handle = $handle; Sync = $sync; Steps = (New-Object System.Collections.Generic.List[string]); Cancelled = $false }
@@ -1615,7 +1634,7 @@ function Invoke-WizardGuiSave {
     catch { $script:Gui.Ui.StatusText.Text = (Get-WText 'gui.answers.invalid'); return }
     $path = Select-WizardGuiFile -FilterTextId 'gui.answers.filter' -Current "$($script:Gui.State.Build.Output)\selfx-answers.json" -Save -FileName 'selfx-answers.json'
     if (-not $path) { return }
-    Save-WizardAnswers -Path $path -Answers $answers -Language $script:Gui.State.Culture
+    Save-WizardAnswers -Path $path -Answers $answers -Language $script:Gui.State.Culture -TimestampServer (Get-WizardGuiSavedTimestamp -State $script:Gui.State)
     $script:Gui.Ui.StatusText.Text = (Get-WText 'gui.answers.saved' @((Split-Path -Leaf $path)))
 }
 

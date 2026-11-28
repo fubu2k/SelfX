@@ -235,6 +235,10 @@ on the device is changed (also before the data folder is prepared) it checks the
 2. Every `.exe`, `.dll`, `.ps1`, `.psm1` and `.psd1` of the package has an Authenticode signature with
    the status `Valid` of a signer of the list. This includes `Install.ps1` itself and libraries of other
    publishers in `Bin` (for example `Microsoft.Windows.SDK.NET.dll`): the company signs them too.
+   The only exception is `Detection.ps1` at the top of the package (exactly this path, no name or
+   extension rule): `Install.ps1` never runs it and does not install it, and Intune gets the
+   detection script as a separate upload (the package wizard signs that copy). It stays covered by
+   `SelfX.Code.cat` (step 4). A `Detection.ps1` in another folder must be signed like every script.
 3. `Config\SelfX.Config.cat` is signed by a signer of the list, uses SHA256 and matches the folder
    `Config` exactly (no changed, missing or added file).
 4. `SelfX.Code.cat` at the top of the package is signed by a signer of the list, uses SHA256 and matches

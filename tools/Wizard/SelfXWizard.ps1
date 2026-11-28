@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.12
+    Version : 3.1.13
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -46,6 +46,10 @@
                                               on Windows Server); the instructions of the server package do not name the .intunewin file
     3.1.11   2026-11-28  fubu2k               Defender ASR exclusion: five files (SelfXDisturb.dll added, guide texts de and en)
     3.1.12   2026-11-28  fubu2k               Question DisturbWarning (hint before disruptive actions, default yes) writes Disturb_Warning
+    3.1.13   2026-11-28  fubu2k               Time stamp: kind 'timestamp' (at most 300 characters), build setting TimestampServer in selfx-answers.json
+                                              (Get-WizardAnswerFileTimestamp, Save-WizardAnswers -TimestampServer; never in a settings file),
+                                              -NoTimestamp (a signature without time stamp needs the explicit confirmation), test signature with the
+                                              service before the package is signed (Assert-SelfXTimestampService)
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -167,6 +171,12 @@ function ConvertTo-WizardValue {
             if ($text -eq '') { return '' }
             if ($text -match $script:MailPattern) { return $text }
             return (ConvertTo-WizardValue -Kind 'url' -Value $text)
+        }
+        'timestamp' {
+            # Address of a time stamp service (build setting only): empty, or what Test-SelfXTimestampUrl accepts.
+            if ($text -eq '') { return '' }
+            if (-not (Test-SelfXTimestampUrl $text)) { throw "an http:// or https:// address without user name, up to $($script:SelfXTimestampUrlMaxLength) characters" }
+            return $text
         }
         'guid' {
             if ($text -eq '') { return '' }
@@ -952,6 +962,7 @@ function ConvertTo-WizardAnswerSource {
 function Test-WizardAnswerSet {
     param([Parameter(Mandatory = $true)]$Answers)
     $source = ConvertTo-WizardAnswerSource -Answers $Answers
+    # TimestampServer is not an answer here: the build gets the address as the parameter -TimestampServer.
     $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'NetworkTargets', 'WizardLanguage')
     foreach ($key in $source.Keys) { if ($known -notcontains $key) { throw "Unknown answer '$key'. The answers contain no password and no key." } }
     $previous = $script:WizardInteractive
@@ -960,11 +971,29 @@ function Test-WizardAnswerSet {
     finally { $script:WizardInteractive = $previous }
 }
 
-# Writes the answers (without any secret) as selfx-answers.json.
+# The keys of selfx-answers.json besides the questions. TimestampServer is a build setting (Get-WizardAnswerFileTimestamp), not a setting
+# of the package.
+$script:WizardAnswerFileExtraKeys = @('Units', 'NetworkTargets', 'WizardLanguage', 'TimestampServer')
+
+# Takes the address of the time stamp service out of the answers of an answer file (Source of Read-WizardAnswers) and returns it, or ''.
+# The address is only used while the package is built: it never reaches Read-WizardAnswers, so no settings file of the package gets it.
+function Get-WizardAnswerFileTimestamp {
+    param([Parameter(Mandatory = $true)][hashtable]$Source)
+    if (-not $Source.ContainsKey('TimestampServer')) { return '' }
+    $raw = $Source['TimestampServer']
+    $Source.Remove('TimestampServer')
+    if ($null -ne $raw -and $raw -isnot [string]) { throw "Answer 'TimestampServer' is not valid: one address as text." }
+    try { return (ConvertTo-WizardValue -Kind 'timestamp' -Value $raw) }
+    catch { throw "Answer 'TimestampServer' is not valid: $($_.Exception.Message)" }
+}
+
+# Writes the answers (without any secret) as selfx-answers.json. -TimestampServer (optional) is saved as the build setting TimestampServer.
 function Save-WizardAnswers {
-    param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][hashtable]$Answers, [string]$Language = 'en')
+    param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][hashtable]$Answers, [string]$Language = 'en', [string]$TimestampServer)
+    $stamp = ConvertTo-WizardValue -Kind 'timestamp' -Value $TimestampServer
     $saved = [ordered]@{ WizardLanguage = $Language }
     foreach ($key in ($Answers.Keys | Where-Object { $_ -ne 'Units' -and $_ -ne 'NetworkTargets' } | Sort-Object)) { $saved[$key] = $Answers[$key] }
+    if ($stamp -ne '') { $saved['TimestampServer'] = $stamp }
     $saved['NetworkTargets'] = @($Answers.NetworkTargets | ForEach-Object { [ordered]@{ Label = $_.Label; Host = $_.Host; Port = $_.Port; Group = $_.Group; Kind = $_.Kind } })
     $saved['Units'] = @($Answers.Units | ForEach-Object { [ordered]@{ UnitId = $_.Id; UnitMail = $_.Mail; UnitCc = $_.Cc; UnitGroupTags = @($_.GroupTags); UnitOUs = @($_.OUs); UnitCategories = @($_.Categories) } })
     [IO.File]::WriteAllText($Path, ($saved | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
@@ -1069,6 +1098,12 @@ function Invoke-SelfXPackageBuild {
         Progress: -OnProgress is called as & $OnProgress <step id> <text>. Step ids: check, copy, config, sign, catalog, pack,
         detection, rules, guide, finish (pack not for a package for Windows Server).
 
+        Time stamp (trust mode Signature): -TimestampServer is the address of a time stamp service (http or https, no user information,
+        at most 300 characters). It is used only while the package is built (files and catalogs) and saved in selfx-answers.json as the
+        build setting TimestampServer, never in a settings file of the package. Before the first file is signed, one test signature
+        (Assert-SelfXTimestampService) checks the service: no time stamp = the run stops with a plain text. Without -TimestampServer the
+        run needs -NoTimestamp (explicit confirmation); -NoTimestamp without a certificate or together with -TimestampServer is an error.
+
         -AdditionalSigner: SHA1 thumbprints of further signers that the devices shall accept besides the certificate (change of the
         certificate: the new one is announced before the first package signed with it). They only go into -TrustedSigner of the install
         command; nothing is signed with them. At most 9 (Install.ps1 accepts 10 thumbprints). Needs -Certificate.
@@ -1086,6 +1121,7 @@ function Invoke-SelfXPackageBuild {
         [string]$ToolPath,
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
         [string]$TimestampServer,
+        [switch]$NoTimestamp,
         [string[]]$AdditionalSigner = @(),
         [scriptblock]$OnProgress,
         [string]$Language = 'en',
@@ -1102,13 +1138,19 @@ function Invoke-SelfXPackageBuild {
     $a = Test-WizardAnswerSet -Answers $Answers
     if ($ConfigureOnly -and $signed) { throw 'A package that is only configured is not signed: do not combine -ConfigureOnly with a certificate.' }
     if ($TimestampServer -and -not $signed) { throw 'A time stamp server needs a certificate.' }
+    if ($NoTimestamp -and -not $signed) { throw 'Signing without a time stamp (-NoTimestamp) needs a certificate.' }
+    if ($NoTimestamp -and $TimestampServer) { throw 'Give either a time stamp server or -NoTimestamp, not both.' }
+    # A signature without a time stamp becomes invalid when the certificate expires: it is only made when it was confirmed explicitly.
+    if ($signed -and -not $TimestampServer -and -not $NoTimestamp) {
+        throw 'No time stamp server was given. Without a time stamp the signatures become invalid when the certificate expires, and SelfX then starts nothing on the devices. Give a time stamp server, or confirm signing without a time stamp (-NoTimestamp).'
+    }
     # Intune cannot install apps on Windows Server: its package folder is installed by hand, so no .intunewin file and no packing tool.
     $serverPackage = ($a.TargetOS -eq 'WindowsServer')
     if (-not $ConfigureOnly -and -not $serverPackage) { Assert-SelfXIntuneWinTool -ToolPath $ToolPath }
     if ($signed) {
         $problem = Get-SelfXSigningCertificateProblem $Certificate
         if ($null -ne $problem) { throw "The certificate cannot be used for code signing: $problem." }
-        if ($TimestampServer -and -not (Test-SelfXTimestampUrl $TimestampServer)) { throw 'The time stamp server must be an absolute http or https address without user information.' }
+        if ($TimestampServer -and -not (Test-SelfXTimestampUrl $TimestampServer)) { throw "The time stamp server must be an absolute http or https address without user information, of at most $($script:SelfXTimestampUrlMaxLength) characters." }
     }
     # The signers of the install command: the certificate first, then the additional ones (normalized, duplicates removed, at most 10).
     if ($additional.Count -and -not $signed) { throw 'Additional signers need a certificate (trust mode Signature).' }
@@ -1129,6 +1171,9 @@ function Invoke-SelfXPackageBuild {
     try {
         New-Item -ItemType Directory -Path $out, $tmp -Force | Out-Null
         $package = Join-Path $out 'package'
+        # One test signature first: a time stamp service that does not answer stops the run at once with a plain text (instead of
+        # failing every file of the package after its own wait).
+        if ($signed -and $TimestampServer) { Assert-SelfXTimestampService -Certificate $Certificate -TimestampServer $TimestampServer -Folder $tmp }
 
         # ---- copy and check
         & $progress 'copy'
@@ -1234,7 +1279,7 @@ function Invoke-SelfXPackageBuild {
         & $progress 'guide'
         # The function returns one array (return , ...); @() around it would nest it and join the names into one line of the instructions.
         $scriptFiles = [string[]](Write-SelfXSupportUnitScripts -Answers $a -Folder $out)
-        Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language
+        Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language -TimestampServer $TimestampServer
         $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
         $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })
         $guideArguments = @{ Answers = $a; Version = $version; PackageFile = $packageName; DetectionFile = $detectionName; ScriptFiles = $scriptFiles
@@ -1374,6 +1419,7 @@ function Invoke-SelfXWizardBuild {
         [string]$ToolPath,
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
         [string]$TimestampServer,
+        [switch]$NoTimestamp,
         [string[]]$AdditionalSigner = @(),
         [scriptblock]$OnProgress,
         [string]$Language = 'en',
@@ -1389,7 +1435,7 @@ function Invoke-SelfXWizardBuild {
             $source = $temporaryPayload
         }
         return (Invoke-SelfXPackageBuild -Answers $Answers -PayloadFolder $source -OutputFolder $OutputFolder -ToolPath $ToolPath -Certificate $Certificate `
-                -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -OnProgress $OnProgress -Language $Language -ConfigureOnly:$ConfigureOnly -PackageKind $PackageKind)
+                -TimestampServer $TimestampServer -NoTimestamp:$NoTimestamp -AdditionalSigner $AdditionalSigner -OnProgress $OnProgress -Language $Language -ConfigureOnly:$ConfigureOnly -PackageKind $PackageKind)
     }
     finally {
         if ($temporaryPayload -and (Test-Path -LiteralPath $temporaryPayload)) { Remove-Item -LiteralPath $temporaryPayload -Recurse -Force -ErrorAction SilentlyContinue }

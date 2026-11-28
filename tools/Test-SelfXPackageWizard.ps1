@@ -17,7 +17,7 @@
     Name    : Test-SelfXPackageWizard.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 1.8.0
+    Version : 1.9.0
     History : 1.1.0 (2026-11-27, fubu2k) tests of Invoke-SelfXPackageBuild; the console tests use a fake payload (layout App/Config)
               1.2.0 (2026-11-27, fubu2k) configuration package and the full package of a setup with a configuration package (-PackageKind)
               1.3.0 (2026-11-27, fubu2k) question EnvironmentMode: default Client, TerminalServer written, other values refused
@@ -27,6 +27,8 @@
               1.6.0 (2026-11-28, fubu2k) question TerminalServerSupportMail: only for WindowsServer, required, default Support mail
               1.7.0 (2026-11-28, fubu2k) package for WindowsServer: no step pack, no .intunewin file, no tool needed; Windows11 unchanged
               1.8.0 (2026-11-28, fubu2k) question DisturbWarning: default yes, writes Disturb_Warning
+              1.9.0 (2026-11-28, fubu2k) time stamp: kind timestamp, TimestampServer in the answer file (console, saved, refused when invalid, in no
+                                         file of the package), -NoTimestamp needed without a service, test signature first, unreachable service
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -343,6 +345,39 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     $minimal.UseDeviceClass = $false
     $minimal.Units = @([ordered]@{ UnitId = 'IT1'; UnitMail = 'it1@contoso.example'; UnitGroupTags = @('DE-IT1-BER') })
     Assert ((Invoke-Wizard -Answers $minimal -Folder (Join-Path $work 'minimal')).Exit -eq 0) 'unit without OU and device class keys is accepted'
+
+    # ---- time stamp service: a build setting of the answer file, never a setting of the package
+    Write-Host 'Time stamp service in the answer file'
+    $stampUrl = 'https://timestamp.contoso.example/tsa'
+    Assert ((ConvertTo-WizardValue -Kind 'timestamp' -Value '') -eq '' -and (ConvertTo-WizardValue -Kind 'timestamp' -Value " $stampUrl ") -eq $stampUrl) 'kind timestamp: empty stays empty, an address is trimmed'
+    foreach ($bad in 'ftp://ts.example', 'https://user:pw@ts.example/', 'ts.example', 'file:///C:/ts', "https://ts.example/`r`nX: 1", ('https://ts.example/' + ('a' * 290))) {
+        Assert-Throws { ConvertTo-WizardValue -Kind 'timestamp' -Value $bad } "kind timestamp refuses '$(($bad -replace '[\x00-\x1F]', '?').Substring(0, [Math]::Min(30, $bad.Length)))'"
+    }
+    $stampSource = @{ OrgName = 'C'; TimestampServer = $stampUrl }
+    Assert ((Get-WizardAnswerFileTimestamp -Source $stampSource) -eq $stampUrl -and -not $stampSource.ContainsKey('TimestampServer')) 'the address is taken out of the answers before they are read'
+    Assert ((Get-WizardAnswerFileTimestamp -Source @{ OrgName = 'C' }) -eq '' -and (Get-WizardAnswerFileTimestamp -Source @{ TimestampServer = '' }) -eq '') 'no or an empty address: no time stamp service'
+    foreach ($bad in @('https://user:secret@ts.example/', 'ftp://ts.example', 42, @('https://a.example', 'https://b.example'))) {
+        $thrown = $null; try { $null = Get-WizardAnswerFileTimestamp -Source @{ TimestampServer = $bad } } catch { $thrown = $_.Exception.Message }
+        Assert ($thrown -like "Answer 'TimestampServer' is not valid*" -and $thrown -notmatch 'secret') "an invalid address in the answer file is refused without repeating it ($thrown)"
+    }
+    $savedFile = Join-Path $work 'saved-stamp.json'
+    Save-WizardAnswers -Path $savedFile -Answers @{ OrgName = 'C'; Units = @(); NetworkTargets = @() } -TimestampServer $stampUrl
+    Assert ((Get-Content -LiteralPath $savedFile -Raw | ConvertFrom-Json).TimestampServer -eq $stampUrl) 'Save-WizardAnswers writes the address as TimestampServer'
+    Save-WizardAnswers -Path $savedFile -Answers @{ OrgName = 'C'; Units = @(); NetworkTargets = @() }
+    Assert ($null -eq (Get-Content -LiteralPath $savedFile -Raw | ConvertFrom-Json).PSObject.Properties['TimestampServer']) 'without an address the answer file has no TimestampServer'
+    Assert-Throws { Save-WizardAnswers -Path $savedFile -Answers @{ OrgName = 'C'; Units = @(); NetworkTargets = @() } -TimestampServer 'http://u:p@ts.example/' } 'Save-WizardAnswers refuses an address with user information'
+    $thrown = $null; try { $null = Test-WizardAnswerSet -Answers @{ OrgName = 'C'; ToolName = 'SelfX'; TimestampServer = $stampUrl } } catch { $thrown = $_.Exception.Message }
+    Assert ($thrown -like "Unknown answer 'TimestampServer'*") 'the answers of the build do not carry the address (it is the parameter -TimestampServer)'
+    $withStamp = [ordered]@{} ; foreach ($key in $answers.Keys) { $withStamp[$key] = $answers[$key] }
+    $withStamp.TimestampServer = $stampUrl
+    $stampOut = Join-Path $work 'stamp-console'
+    $stampRun = Invoke-Wizard -Answers $withStamp -Folder $stampOut
+    Assert ($stampRun.Exit -eq 0) ('console: an answer file with TimestampServer is accepted' + $(if ($stampRun.Exit -ne 0) { ': ' + $stampRun.Output }))
+    $leaked = @(Get-ChildItem -LiteralPath (Join-Path $stampOut 'package') -Recurse -File | Where-Object { [IO.File]::ReadAllText($_.FullName).Contains('timestamp.contoso.example') })
+    Assert ($leaked.Count -eq 0) 'console: the address is in no file of the package (configuration folder included)'
+    $withStamp.TimestampServer = 'https://admin:secret@timestamp.contoso.example/'
+    $badStampRun = Invoke-Wizard -Answers $withStamp -Folder (Join-Path $work 'stamp-bad')
+    Assert ($badStampRun.Exit -eq 1 -and $badStampRun.Output -match 'TimestampServer' -and $badStampRun.Output -notmatch 'secret') 'console: an address with user information stops the run and is not repeated'
 
     # ---------------------------------------------------------- injection in text answers
     $evilAnswers = [ordered]@{} ; foreach ($key in $answers.Keys) { $evilAnswers[$key] = $answers[$key] }
@@ -690,7 +725,7 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
             $signedOut = Join-Path $work 'result\signed'
             $steps.Clear()
             $script:RuleCalls.Clear()
-            $signedResult = Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $realPayload -OutputFolder $signedOut -ToolPath $dummyTool -Certificate $testCertificate -OnProgress { param($id, $text) $steps.Add($id) }
+            $signedResult = Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $realPayload -OutputFolder $signedOut -ToolPath $dummyTool -Certificate $testCertificate -NoTimestamp -OnProgress { param($id, $text) $steps.Add($id) }
             Assert ($signedResult.Mode -eq 'Signature' -and (@($steps) -join ',') -eq 'check,copy,config,sign,catalog,pack,detection,rules,guide,finish') 'signed run: mode Signature, steps in order'
             $signedPackage = Join-Path $signedOut 'package'
             $bad = @(Get-ChildItem $signedPackage -Recurse -File | Where-Object { '.exe', '.dll', '.ps1' -contains $_.Extension } | Where-Object { $s = Get-AuthenticodeSignature -LiteralPath $_.FullName; $s.Status -ne 'Valid' -or $s.SignerCertificate.Thumbprint -ne $testCertificate.Thumbprint })
@@ -725,11 +760,14 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
         function Set-SelfXCodeSignature {
             param([string[]]$Path, $Certificate, [string]$TimestampServer)
             $script:StampSeen = $TimestampServer
+            if ($script:StampFails -and $TimestampServer) { throw 'time stamp server not reachable (test)' }
             foreach ($file in $Path) {
                 $script:SignedFiles.Add($file)
                 if ($file -like '*.ps1') { [IO.File]::AppendAllText($file, "`r`n# SIG # Begin signature block`r`n") } else { [IO.File]::AppendAllText($file, 'S') }
+                [pscustomobject]@{ Path = $file; Status = 'Valid'; Thumbprint = $Certificate.Thumbprint; TimeStamped = [bool]$TimestampServer }
             }
         }
+        $script:StampFails = $false
         function New-SelfXSignedCatalog {
             param([string]$Path, [string]$CatalogFilePath, $Certificate, [string]$TimestampServer)
             $names = @(Get-ChildItem -LiteralPath $Path -Recurse -File | ForEach-Object { $_.FullName.Substring($Path.TrimEnd('\').Length + 1) })
@@ -743,6 +781,12 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
         Assert ($orderResult.Mode -eq 'Signature' -and (@($steps) -join ',') -eq 'check,copy,config,sign,catalog,pack,detection,rules,guide,finish') 'signature mode: steps in order'
         $pkg = Join-Path $order 'package'
         Assert ($script:StampSeen -eq 'https://timestamp.example/ts') 'the time stamp server is passed on'
+        $probes = @($script:SignedFiles | Where-Object { (Split-Path -Leaf $_) -like 'SelfX-TimestampCheck-*.ps1' })
+        Assert ($probes.Count -eq 1 -and $script:SignedFiles[0] -eq $probes[0] -and -not $probes[0].Contains('\package\') -and -not (Test-Path -LiteralPath $probes[0])) 'one test signature with the service comes first, outside the package, and is removed'
+        $savedOrder = Get-Content -LiteralPath (Join-Path $order 'selfx-answers.json') -Raw | ConvertFrom-Json
+        Assert ($savedOrder.TimestampServer -eq 'https://timestamp.example/ts') 'selfx-answers.json keeps the time stamp service as a build setting'
+        $stampInPackage = @(Get-ChildItem -LiteralPath $pkg -Recurse -File | Where-Object { [IO.File]::ReadAllText($_.FullName).Contains('timestamp.example') })
+        Assert ($stampInPackage.Count -eq 0) 'the time stamp service is in no file of the package (not in Config, not in Tool_Config.xml)'
         $signedNames = @($script:SignedFiles | ForEach-Object { $_.Substring($_.IndexOf('\package\') + 9) -replace '^.*\\', '' })
         Assert (($signedNames -contains 'Install.ps1') -and ($signedNames -contains 'Detection.ps1') -and ($signedNames -contains 'Uninstall.ps1') -and ($signedNames -contains 'SelfXService.exe') -and ($signedNames -contains 'SelfXWinRT.dll') -and ($signedNames -contains 'SelfXAudio.dll') -and ($signedNames -contains 'SelfXDisturb.dll')) 'every program, library and script of the package is signed'
         Assert (@($script:SignedFiles | Where-Object { $_ -match '\.(xml|json|png|cs|cat)$' }).Count -eq 0) 'no data file is signed (they are covered by the catalogs)'
@@ -774,10 +818,25 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
         # Aborts in the signing steps leave nothing.
         $abortOut = Join-Path $work 'result\abort-sign'
         function New-SelfXSignedCatalog { param([string]$Path, [string]$CatalogFilePath, $Certificate, [string]$TimestampServer) throw 'catalog failed (test)' }
-        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate } 'a failing catalog stops the run'
+        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate -NoTimestamp } 'a failing catalog stops the run'
         Assert (-not (Test-Path -LiteralPath $abortOut) -and @(Get-ChildItem -LiteralPath (Join-Path $work 'result') -Force | Where-Object { $_.Name -like '.selfx-*' }).Count -eq 0) 'abort while signing: no output and no work folder'
         Assert ((Get-TreeDigest -Folder $payload) -eq $payloadBefore) 'the payload is still unchanged after the signing runs'
         Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate -TimestampServer 'ftp://timestamp.example' } 'a time stamp server that is no http or https address is refused'
+        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate -TimestampServer ('https://timestamp.example/' + ('a' * 280)) } 'a time stamp address of more than 300 characters is refused'
+        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate -TimestampServer 'https://u:p@timestamp.example/' } 'a time stamp address with user information is refused'
+        # Without a time stamp service the signature needs the explicit confirmation -NoTimestamp.
+        $script:SignedFiles.Clear()
+        $thrown = $null; try { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate } catch { $thrown = $_.Exception.Message }
+        Assert ($thrown -match 'No time stamp server' -and $thrown -match '-NoTimestamp' -and $script:SignedFiles.Count -eq 0) "signing without a time stamp service and without -NoTimestamp stops before anything is signed ($thrown)"
+        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate -TimestampServer 'https://timestamp.example/ts' -NoTimestamp } '-NoTimestamp together with a time stamp server is refused'
+        Assert-Throws { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -NoTimestamp } '-NoTimestamp without a certificate is refused'
+        # A time stamp service that gives no time stamp stops the run at the test signature: nothing of the package is signed, no output.
+        $script:StampFails = $true
+        $script:SignedFiles.Clear()
+        $thrown = $null; try { Invoke-SelfXPackageBuild -Answers $buildAnswers -PayloadFolder $payload -OutputFolder $abortOut -ToolPath $dummyTool -Certificate $stubCertificate -TimestampServer 'https://timestamp.example/ts' } catch { $thrown = $_.Exception.Message }
+        $script:StampFails = $false
+        Assert ($thrown -match 'gave no time stamp' -and $thrown -match 'timestamp\.example' -and $thrown -notmatch 'not reachable \(test\)') "an unreachable time stamp service stops with a plain text ($thrown)"
+        Assert ($script:SignedFiles.Count -eq 0 -and -not (Test-Path -LiteralPath $abortOut) -and @(Get-ChildItem -LiteralPath (Join-Path $work 'result') -Force | Where-Object { $_.Name -like '.selfx-*' }).Count -eq 0) 'unreachable time stamp service: nothing signed, no output, no work folder'
     }
     finally {
         if ($null -ne $stubCertificate) { Remove-SelfXTestCertificate -Thumbprint $stubCertificate.Thumbprint }
