@@ -41,7 +41,11 @@ Description:
     returning bounded JSON as UTF-8/base64. It shares the repair lock and has a 240-second
     limit. Optional checks are configured in the administrator-protected Health_Config.xml.
     Every health run also updates the status cache ProgramData\SelfX\Cache\Health.json
-    (readable by SYSTEM and administrators only). A background thread runs the full health
+    (readable by SYSTEM and administrators only). With <Inventory Enabled="true"> in Health_Config.xml (default off) every full
+    health run also appends one JSON line with a fixed schema (SchemaVersion, time, mode, status per check type, failed apps with
+    their error code; no names, no detail texts) to ProgramData\SelfX\Inventory\SelfX.Inventory.json (same rights as the cache;
+    rotated to SelfX.Inventory.json.old at MaxSizeKB), for a log collector such as the Azure Monitor Agent. Not written while
+    the device status is off (mode TerminalServer with TerminalServer_Health Off). A background thread runs the full health
     collection at the interval of <Background> in Health_Config.xml (default every 15 minutes,
     first run 120 seconds after the start). It pauses on battery power, postpones while the
     processor load is above MaxCpuPercent or a repair is running, and runs PowerShell with
@@ -135,6 +139,10 @@ Notes:
                                               repair SelfX_Apps_RetryInstall.ps1 gets it in SELFX_APP_ID (removed for every other start).
                                               Event 4014 (Intune app changed to failed: app ID, error code, previous state) after a health run,
                                               from the same reading; operational rate limit
+    3.1.0    2026-11-28  fubu2k               Inventory file (Health_Config.xml Inventory Enabled="true", default off): after every full health run
+                                              one JSON line with schema version 1 in ProgramData\SelfX\Inventory\SelfX.Inventory.json (status per
+                                              check type, failed apps with code, no names or detail texts), rotation at MaxSizeKB (64-10240, default
+                                              1024) to SelfX.Inventory.json.old, no link followed; nothing while TerminalServer_Health is Off
 */
 
 using System;
@@ -315,6 +323,17 @@ namespace SelfX
         readonly string catalogPath;
         readonly string logDirectory;
         readonly string cacheFile;
+        // Inventory file for a log collector (Health_Config.xml, element Inventory; default off): one JSON line per full health run.
+        readonly string inventoryFile;
+        readonly object inventoryLock = new object();
+        const int InventorySchemaVersion = 1;
+        const int DefaultInventoryMaxKB = 1024;
+        const int MinInventoryMaxKB = 64;
+        const int MaxInventoryMaxKB = 10240;
+        const int MaxInventoryApps = 20;
+        // The check types of HealthStatus.ps1 in the fixed order of the schema (Service and Custom can have several rows).
+        static readonly string[] InventoryTypes = { "IME", "Defender", "Compliance", "Applications", "Disk", "BitLocker", "PendingReboot", "Updates", "Service", "Custom" };
+        static readonly Regex InventoryAppCodePattern = new Regex(@"^0x[0-9A-F]{8}\z", RegexOptions.CultureInvariant);
         readonly string pipeName;
         readonly object logLock = new object();
         readonly SemaphoreSlim runLock = new SemaphoreSlim(1, 1);
@@ -447,6 +466,7 @@ namespace SelfX
             // The cache folder is a sibling of the log folder (default ProgramData\SelfX\Cache).
             string dataRoot = Path.GetDirectoryName(logDirectory.TrimEnd('\\'));
             cacheFile = Path.Combine(Path.Combine(string.IsNullOrEmpty(dataRoot) ? logDirectory : dataRoot, "Cache"), "Health.json");
+            inventoryFile = Path.Combine(Path.Combine(string.IsNullOrEmpty(dataRoot) ? logDirectory : dataRoot, "Inventory"), "SelfX.Inventory.json");
         }
 
         /// <summary>
@@ -2674,6 +2694,8 @@ namespace SelfX
                     ReportHealthChanges(text);
                     // Event 4014 from the own reading of the IME cache (not from the JSON of the script).
                     ReportAppFailures();
+                    // Only a full collection describes the whole device (a single check has only its own rows).
+                    if (string.IsNullOrEmpty(healthFilter)) WriteInventory(text);
                 }
             }
             else if (result == "DONE 0")
@@ -3244,7 +3266,7 @@ namespace SelfX
             reason = "";
             string dataRoot = Path.GetDirectoryName(logDirectory.TrimEnd('\\'));
             string current = WindowsIdentity.GetCurrent().User.Value;
-            foreach (string path in new string[] { dataRoot, logDirectory, Path.GetDirectoryName(cacheFile) })
+            foreach (string path in new string[] { dataRoot, logDirectory, Path.GetDirectoryName(cacheFile), Path.GetDirectoryName(inventoryFile) })
             {
                 if (string.IsNullOrEmpty(path)) continue;
                 try
@@ -3510,6 +3532,195 @@ namespace SelfX
             {
                 WriteEventRecord(EventHealthError, EventLogEntryType.Warning, new string[] {
                     "A SelfX health check changed to the status Error.", change[0], change[1], change[2] });
+            }
+        }
+
+        /// <summary>
+        /// MaxSizeKB of the inventory file in bytes, or 0 when the inventory is off. Health_Config.xml, element Inventory: only
+        /// Enabled="true" (case is ignored) switches it on; a missing element, any other value and an unreadable file mean off.
+        /// MaxSizeKB outside 64-10240 uses the default 1024.
+        /// </summary>
+        long ReadInventoryMaxBytes()
+        {
+            try
+            {
+                string healthConfig = GetConfigFilePath("Health_Config.xml");
+                if (!File.Exists(healthConfig)) return 0;
+                XmlReaderSettings settings = new XmlReaderSettings();
+                settings.DtdProcessing = DtdProcessing.Prohibit;
+                settings.XmlResolver = null;
+                XmlDocument document = new XmlDocument();
+                document.XmlResolver = null;
+                using (XmlReader reader = XmlReader.Create(healthConfig, settings)) { document.Load(reader); }
+                XmlElement node = document.SelectSingleNode("/HealthConfig/Inventory") as XmlElement;
+                if (node == null || !string.Equals(node.GetAttribute("Enabled").Trim(), "true", StringComparison.OrdinalIgnoreCase)) return 0;
+                int kb;
+                if (!int.TryParse(node.GetAttribute("MaxSizeKB"), NumberStyles.Integer, CultureInfo.InvariantCulture, out kb) || kb < MinInventoryMaxKB || kb > MaxInventoryMaxKB) kb = DefaultInventoryMaxKB;
+                return kb * 1024L;
+            }
+            catch (Exception ex)
+            {
+                // Fail closed: settings that cannot be read write nothing.
+                Log("Inventory settings not readable, the inventory file is not written (" + ex.GetType().Name + ").");
+                return 0;
+            }
+        }
+
+        /// <summary>Order of the status values for "worst of": OK, Unknown, Pending, Error; -1 for any other text.</summary>
+        static int InventoryStatusRank(string status)
+        {
+            switch (status)
+            {
+                case "OK": return 0;
+                case "Unknown": return 1;
+                case "Pending": return 2;
+                case "Error": return 3;
+                default: return -1;
+            }
+        }
+
+        static readonly string[] InventoryStatusNames = { "OK", "Unknown", "Pending", "Error" };
+
+        /// <summary>
+        /// One line of the inventory file from the JSON answer of HealthStatus.ps1, or null when the answer has no rows or is not JSON.
+        /// Fixed schema (version 1), always all fields in this order: SchemaVersion, TimeGenerated (UTC, ISO 8601), Mode (Client or
+        /// TerminalServer), Overall (worst status of all rows; a Collection row counts as Error), one field per check type of
+        /// InventoryTypes with the worst status of its rows ("" = not checked), FailedApps (app ID:error code, app ID:Stalled or
+        /// app ID:- without a valid code; separated by ";", at most MaxInventoryApps). Only Id, Status and the list Apps (Id, Problem,
+        /// Code) are read, never Name or Detail: no user name, no path and no app name reaches the file. A status other than OK, Pending,
+        /// Error or Unknown counts as Unknown; an app ID that is not a GUID and an unknown problem are left out.
+        /// </summary>
+        static string BuildInventoryLine(string json, bool terminalServer, DateTime utcNow)
+        {
+            if (string.IsNullOrEmpty(json)) return null;
+            Dictionary<string, int> worst = new Dictionary<string, int>(StringComparer.Ordinal);
+            List<string> apps = new List<string>();
+            int overall = -1;
+            try
+            {
+                using (JsonDocument document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 }))
+                {
+                    JsonElement top = document.RootElement;
+                    List<JsonElement> rows = new List<JsonElement>();
+                    // ConvertTo-Json writes a single row as an object, several rows as an array.
+                    if (top.ValueKind == JsonValueKind.Object) rows.Add(top);
+                    else if (top.ValueKind == JsonValueKind.Array) { foreach (JsonElement item in top.EnumerateArray()) rows.Add(item); }
+                    else return null;
+                    foreach (JsonElement row in rows)
+                    {
+                        if (row.ValueKind != JsonValueKind.Object) continue;
+                        string id = JsonText(row, "Id");
+                        int rank = InventoryStatusRank(JsonText(row, "Status"));
+                        if (rank < 0) rank = 1;
+                        if (id == "Collection") rank = 3;
+                        if (rank > overall) overall = rank;
+                        if (Array.IndexOf(InventoryTypes, id) < 0) continue;
+                        int known;
+                        if (!worst.TryGetValue(id, out known) || rank > known) worst[id] = rank;
+                        JsonElement list;
+                        if (id != "Applications" || !row.TryGetProperty("Apps", out list)) continue;
+                        List<JsonElement> entries = new List<JsonElement>();
+                        if (list.ValueKind == JsonValueKind.Object) entries.Add(list);
+                        else if (list.ValueKind == JsonValueKind.Array) { foreach (JsonElement item in list.EnumerateArray()) entries.Add(item); }
+                        foreach (JsonElement entry in entries)
+                        {
+                            if (apps.Count >= MaxInventoryApps) break;
+                            if (entry.ValueKind != JsonValueKind.Object) continue;
+                            string appId = JsonText(entry, "Id");
+                            if (!AppIdPattern.IsMatch(appId)) continue;
+                            string problem = JsonText(entry, "Problem");
+                            string value;
+                            if (problem == "Stalled") value = "Stalled";
+                            else if (problem == "Failed")
+                            {
+                                string code = JsonText(entry, "Code");
+                                value = InventoryAppCodePattern.IsMatch(code) ? code : EventNoValue;
+                            }
+                            else continue;
+                            string text = appId + ":" + value;
+                            if (!apps.Contains(text)) apps.Add(text);
+                        }
+                    }
+                }
+            }
+            catch (JsonException) { return null; }
+            if (overall < 0) return null;
+            using (MemoryStream stream = new MemoryStream())
+            {
+                using (Utf8JsonWriter writer = new Utf8JsonWriter(stream))
+                {
+                    writer.WriteStartObject();
+                    writer.WriteNumber("SchemaVersion", InventorySchemaVersion);
+                    writer.WriteString("TimeGenerated", utcNow.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture));
+                    writer.WriteString("Mode", terminalServer ? "TerminalServer" : "Client");
+                    writer.WriteString("Overall", InventoryStatusNames[overall]);
+                    foreach (string type in InventoryTypes)
+                    {
+                        int rank;
+                        writer.WriteString(type, worst.TryGetValue(type, out rank) ? InventoryStatusNames[rank] : "");
+                    }
+                    writer.WriteString("FailedApps", string.Join(";", apps));
+                    writer.WriteEndObject();
+                }
+                return Encoding.UTF8.GetString(stream.ToArray());
+            }
+        }
+
+        /// <summary>
+        /// Appends one line (BuildInventoryLine) to ProgramData\SelfX\Inventory\SelfX.Inventory.json after a full health run, when
+        /// Health_Config.xml switches the inventory on. Nothing is written while the data folder is not safe or the device status is
+        /// off (mode TerminalServer with TerminalServer_Health Off). The folder inherits the rights of ProgramData\SelfX (SYSTEM and
+        /// administrators), like the cache. A folder or file that is a link is not used. When the file would grow above MaxSizeKB,
+        /// it is renamed to SelfX.Inventory.json.old (an older .old is deleted first): the name does not match the file pattern
+        /// SelfX.Inventory.json of a collector, so no line is read twice. UTF-8 without byte order mark, one line per run.
+        /// </summary>
+        void WriteInventory(string json)
+        {
+            long maxBytes = ReadInventoryMaxBytes();
+            if (maxBytes <= 0 || !dataFolderSafe) return;
+            if (ReadHealthAccess() == HealthAccess.Off) return;
+            string line = BuildInventoryLine(json, IsTerminalServer(), DateTime.UtcNow);
+            if (line == null)
+            {
+                Log("Inventory file: the health answer has no rows; no line written.");
+                return;
+            }
+            byte[] bytes = new UTF8Encoding(false).GetBytes(line + "\n");
+            try
+            {
+                lock (inventoryLock)
+                {
+                    string folder = Path.GetDirectoryName(inventoryFile);
+                    Directory.CreateDirectory(folder);
+                    if ((File.GetAttributes(folder) & FileAttributes.ReparsePoint) != 0)
+                    {
+                        Log("Inventory folder is a link; the inventory file is not written.");
+                        return;
+                    }
+                    FileInfo info = new FileInfo(inventoryFile);
+                    if (info.Exists)
+                    {
+                        if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
+                        {
+                            Log("Inventory file is a link; it is not written.");
+                            return;
+                        }
+                        if (info.Length + bytes.Length > maxBytes)
+                        {
+                            string old = inventoryFile + ".old";
+                            if (File.Exists(old)) File.Delete(old);
+                            File.Move(inventoryFile, old);
+                        }
+                    }
+                    using (FileStream stream = new FileStream(inventoryFile, FileMode.Append, FileAccess.Write, FileShare.Read))
+                    {
+                        stream.Write(bytes, 0, bytes.Length);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Inventory file not written (" + ex.GetType().Name + ").");
             }
         }
 

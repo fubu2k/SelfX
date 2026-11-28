@@ -83,6 +83,7 @@ OneDrive, Outlook, Intune, Windows Update, network) and send device logs to the 
 | Starter `Service\SelfXLauncher.cs` (`SelfX.exe`), `SelfXSessionStarter.cs`, `SelfXWinRT.cs`, `SelfXAudio.cs`, `SelfXDisturb.cs` | C# / .NET 10 (session starter: netstandard2.0) | user / installer |
 | Action and check scripts `Sources\Scripts_to_run`, `Sources\HealthChecks` | PowerShell 7 | user or SYSTEM, per catalogue |
 | `Install.ps1`, `Uninstall.ps1`, `Detection.ps1`, `Scripts_to_run\Collect-DeviceLogs.ps1` | **Windows PowerShell 5.1** compatible (Intune and Autopilot start them there) | SYSTEM |
+| `tools\Intune\Detect-SelfXHealth.ps1` (detection script of Intune Remediations, uploaded by the administrator, not part of the package) | **Windows PowerShell 5.1**, plain ASCII, read only | SYSTEM (Intune Management Extension) |
 | `tools\*.ps1` | Windows PowerShell 5.1 and PowerShell 7 | build machine / CI |
 
 Flow of a System action: window -> named pipe `\\.\pipe\SelfX.Service` (local only) -> service checks the
@@ -96,7 +97,7 @@ installed catalogue and the files -> `pwsh.exe -File <script>.ps1` as SYSTEM. Pi
 | `SelfX Service\` | The package: `Install.ps1`, `Uninstall.ps1`, `Detection.ps1`, `Version.txt`, 35 `Test-*.ps1`, `Service\` (C# sources, `Service\Projects\` with the project files and `packages.lock.json`), `Sources\` |
 | `SelfX Service\Sources\` | Window, helpers (`SelfX*.ps1`, `Localization.ps1`, `SelfXPaths.ps1`), catalogue `Issues_List.xml`, `Health_Config.xml`, `Tool_Config.xml`, `Ticket_Config.xml`, `Network_Test_Config.xml`, `Languages\` (24 files), `Branding\`, `Scripts_to_run\` (33), `HealthChecks\` |
 | `SelfX Service\Bin\` | Not in Git. Output of `tools\Build-SelfXBinaries.ps1` with `SelfX.Binaries.json` |
-| `tools\` | Build (`Build-SelfXBinaries.ps1`), packaging (`New-SelfXIntuneWin.ps1`, `SelfXPackage.Common.ps1`), wizard (console `New-SelfXPackage.ps1`, window `Start-SelfXPackageWizard.cmd`, `Wizard\`), offline feed (`Export-SelfXOfflineFeed.ps1`, `SelfXOfflineFeed.Common.ps1`), release (`SelfXRelease.Common.ps1`), signing (`SelfXSigning.ps1`), AppLocker / WDAC / SBOM / ASR tools, and their tests |
+| `tools\` | Build (`Build-SelfXBinaries.ps1`), packaging (`New-SelfXIntuneWin.ps1`, `SelfXPackage.Common.ps1`), wizard (console `New-SelfXPackage.ps1`, window `Start-SelfXPackageWizard.cmd`, `Wizard\`), offline feed (`Export-SelfXOfflineFeed.ps1`, `SelfXOfflineFeed.Common.ps1`), release (`SelfXRelease.Common.ps1`), signing (`SelfXSigning.ps1`), AppLocker / WDAC / SBOM / ASR tools, monitoring (`Intune\Detect-SelfXHealth.ps1`, `Intune\SelfX-Inventory-DCR.json`, see `docs\Monitoring.md`), and their tests |
 | `offline-feed\` | NuGet packages of the build and `SelfX.OfflineFeed.json` (SHA512 of each file). `NuGet.config` allows only this folder. |
 | `docs\`, `docs\de\`, `docs\images\` | Installation, Configuration, Architecture, Guided-Setup, User-Manual (English; German in `docs\de`) |
 | `.github\` | `workflows\service-ci.yml`, `workflows\release.yml`, `CODEOWNERS`, `dependabot.yml`, `PSScriptAnalyzerSettings.psd1` |
@@ -156,8 +157,8 @@ pull request. They are constants in `SelfXService.cs`:
   `%LOCALAPPDATA%`, the profile). User logs are added to a report by the window with the rights of the user.
 - Delete code never follows junctions or symbolic links (`Uninstall.ps1`, `/removetree:` and `/cleandata:` of
   `SelfXService.exe`). `Test-Uninstall.ps1` and `Test-SafeDelete.ps1` must keep passing.
-- `%ProgramFiles%\SelfX`: SYSTEM and administrators write, users read and execute. `%ProgramData%\SelfX\Cache`:
-  SYSTEM and administrators only. `Reports\<SID>`: SYSTEM, administrators and that user.
+- `%ProgramFiles%\SelfX`: SYSTEM and administrators write, users read and execute. `%ProgramData%\SelfX\Cache` and
+  `Inventory`: SYSTEM and administrators only. `Reports\<SID>`: SYSTEM, administrators and that user.
 - Accounts and groups **always by SID**, never by name (names are localized: "Everyone" is "Jeder" on German
   Windows): `S-1-1-0`, `S-1-5-18`, `S-1-5-32-544`, `S-1-5-32-545`. This holds for ACLs, icacls, AppLocker, pipe
   rights and group comparisons, in PowerShell and in C#.
@@ -240,8 +241,8 @@ as done. A failing or skipped test is reported, never hidden.
 | Set | Files | Where |
 |---|---|---|
 | Package tests | all 35 `SelfX Service\Test-*.ps1` | PowerShell 7 (job "Tests in PowerShell 7") |
-| Tool tests | `tools\Test-SelfXPackageWizard.ps1`, `Test-SelfXOfflineFeed.ps1`, `Test-SelfXAppLockerRules.ps1`, `Test-SelfXAsrEvents.ps1`, `Test-SelfXRelease.ps1`, `Test-SelfXWizardGui.ps1` | PowerShell 7 and Windows PowerShell 5.1 |
-| Windows PowerShell 5.1 set (the CI expects exactly twelve) | `Test-Compat51.ps1`, `Test-Detection.ps1`, `Test-FileManifest.ps1`, `Test-InstallBinaries.ps1`, `Test-InstallConfigOnly.ps1`, `Test-Uninstall.ps1` and the six tool tests | job "Tests in Windows PowerShell 5.1" |
+| Tool tests | `tools\Test-SelfXPackageWizard.ps1`, `Test-SelfXOfflineFeed.ps1`, `Test-SelfXAppLockerRules.ps1`, `Test-SelfXAsrEvents.ps1`, `Test-SelfXRelease.ps1`, `Test-SelfXWizardGui.ps1`, `Test-SelfXHealthDetection.ps1` | PowerShell 7 and Windows PowerShell 5.1 |
+| Windows PowerShell 5.1 set (the CI expects exactly thirteen) | `Test-Compat51.ps1`, `Test-Detection.ps1`, `Test-FileManifest.ps1`, `Test-InstallBinaries.ps1`, `Test-InstallConfigOnly.ps1`, `Test-Uninstall.ps1` and the seven tool tests | job "Tests in Windows PowerShell 5.1" |
 | Signing | `tools\Test-SelfXSigning.ps1` | both editions (job "Signing library") |
 | Build | `tools\Build-SelfXBinaries.ps1` twice, SBOM, `Test-InstallBinaries.ps1` and `Test-SafeDelete.ps1` with the built `Bin` (`SELFX_REQUIRE_BIN=1`), DLL load, service in console mode | job "Build with .NET 10 (self-contained)" |
 | Script analysis | PSScriptAnalyzer 1.23.0 on `SelfX Service` and `tools` with `.github\PSScriptAnalyzerSettings.psd1`; zero findings | job "PSScriptAnalyzer (security rules)" |
@@ -253,7 +254,7 @@ Run locally (each test in its own process, so mocks of one test cannot affect th
 
 ```powershell
 $tests = @(Get-ChildItem '.\SelfX Service' -Filter 'Test-*.ps1') +
-         @(Get-Item .\tools\Test-SelfXPackageWizard.ps1, .\tools\Test-SelfXOfflineFeed.ps1, .\tools\Test-SelfXAppLockerRules.ps1, .\tools\Test-SelfXAsrEvents.ps1, .\tools\Test-SelfXRelease.ps1, .\tools\Test-SelfXWizardGui.ps1)
+         @(Get-Item .\tools\Test-SelfXPackageWizard.ps1, .\tools\Test-SelfXOfflineFeed.ps1, .\tools\Test-SelfXAppLockerRules.ps1, .\tools\Test-SelfXAsrEvents.ps1, .\tools\Test-SelfXRelease.ps1, .\tools\Test-SelfXWizardGui.ps1, .\tools\Test-SelfXHealthDetection.ps1)
 foreach ($t in $tests) { pwsh -NoProfile -ExecutionPolicy Bypass -File $t.FullName; if ($LASTEXITCODE -ne 0) { Write-Warning "$($t.Name) failed" } }
 ```
 

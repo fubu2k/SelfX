@@ -18,6 +18,7 @@
   Version 3.1.0 | 2026-11-28 | fubu2k         | Description of TerminalServer: the mode comes from Windows (Windows Server = TerminalServer).
   Version 3.1.0 | 2026-11-28 | fubu2k         | Applications StalledMinutes (download without progress); the app retry restarts the
                                                 Intune Management Extension and is OtherSessions="Block"; retry of one app.
+  Version 3.1.0 | 2026-11-28 | fubu2k         | Inventory: optional inventory file for a log collector (default off).
   -->
 <HealthConfig>
   <!-- Background checks: the service runs all checks regularly and keeps the result for SelfX and the tray icon.
@@ -27,6 +28,12 @@
        StartDelaySeconds : 0-3600, default 120. First check after the start of the service
        Enabled           : false = no background checks (SelfX then checks when it is opened) -->
   <Background Enabled="true" IntervalMinutes="15" PauseOnBattery="true" MaxCpuPercent="75" StartDelaySeconds="120" />
+  <!-- Inventory file for a log collector (for example the Azure Monitor Agent, docs\Monitoring.md):
+       Enabled   : true = after every full check the service appends one JSON line to %ProgramData%\SelfX\Inventory\SelfX.Inventory.json
+                   (status per check type and failed apps with their error code; no names, no detail texts). Default false.
+       MaxSizeKB : 64-10240, default 1024. A larger file is renamed to SelfX.Inventory.json.old (the older one is deleted).
+       On Windows Server nothing is written while TerminalServer_Health (Tool_Config.xml) is Off. -->
+  <Inventory Enabled="false" MaxSizeKB="1024" />
   <Disk UsedPercentError="90" MinimumFreeGB="20" />
   <!-- Free up space (Fix button of the disk row, SelfX_Device_FreeSpace.ps1 as SYSTEM):
        MinimumAgeDays  : 1-365, default 7. Only entries older than this are deleted in Windows\Temp and in the content

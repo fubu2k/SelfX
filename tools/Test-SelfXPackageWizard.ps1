@@ -30,6 +30,8 @@
               1.9.1 (2026-11-28, fubu2k) the configuration package of the wizard passes the layout rule of Install.ps1 -ConfigOnly
               1.9.0 (2026-11-28, fubu2k) time stamp: kind timestamp, TimestampServer in the answer file (console, saved, refused when invalid, in no
                                          file of the package), -NoTimestamp needed without a service, test signature first, unreachable service
+              1.10.0 (2026-11-28, fubu2k) monitoring: questions HealthRemediation and HealthInventory, Set-SelfXHealthInventory, files of
+                                         tools\Intune in the output folder, guide step (Windows 11 and Windows Server)
     Exit code: 0 = all tests passed, 1 = at least one failed
 #>
 $ErrorActionPreference = 'Stop'
@@ -564,6 +566,55 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
     $detectionArgument = $wdac[0].Arguments[$wdac[0].Arguments.IndexOf('-DetectionFile') + 1]
     Assert ($detectionArgument -like "$($work)*" -and $detectionArgument -like '*Detection.ps1') 'App Control scans the generated detection script'
 
+    # ---- monitoring: Set-SelfXHealthInventory, Intune Remediations (Windows 11 only) and the inventory file
+    $remQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'HealthRemediation' })
+    Assert ($remQuestion.Count -eq 1 -and $remQuestion[0].Kind -eq 'bool' -and $remQuestion[0].Default -eq $false -and ((& $remQuestion[0].When @{ TargetOS = 'Windows11' }) -eq $true) -and ((& $remQuestion[0].When @{ TargetOS = 'WindowsServer' }) -eq $false)) 'HealthRemediation: yes/no, default no, not asked for WindowsServer'
+    $invQuestion = @((Get-WizardQuestions) | Where-Object { $_.Id -eq 'HealthInventory' })
+    Assert ($invQuestion.Count -eq 1 -and $invQuestion[0].Kind -eq 'bool' -and $invQuestion[0].Default -eq $false -and $null -eq $invQuestion[0].When) 'HealthInventory: yes/no, default no, asked for both systems'
+    $healthFile = Join-Path $work 'Health_Config.test.xml'
+    Copy-Item -LiteralPath (Join-Path $RepositoryRoot 'SelfX Service\Sources\Health_Config.xml') -Destination $healthFile
+    $healthBefore = [IO.File]::ReadAllText($healthFile)
+    Set-SelfXHealthInventory -Path $healthFile -Enabled $true
+    $healthOn = [IO.File]::ReadAllText($healthFile)
+    Assert ($healthOn -match '<Inventory Enabled="true" MaxSizeKB="1024" />' -and $healthOn.Replace('<Inventory Enabled="true"', '<Inventory Enabled="false"') -eq $healthBefore) 'Set-SelfXHealthInventory: only the attribute Enabled changes, comments and MaxSizeKB stay'
+    Set-SelfXHealthInventory -Path $healthFile -Enabled $false
+    Assert ([IO.File]::ReadAllText($healthFile) -eq $healthBefore) 'Set-SelfXHealthInventory: false gives the delivered file back'
+    [IO.File]::WriteAllText($healthFile, '<HealthConfig><Background /></HealthConfig>')
+    Set-SelfXHealthInventory -Path $healthFile -Enabled $false
+    Assert ([IO.File]::ReadAllText($healthFile) -eq '<HealthConfig><Background /></HealthConfig>') 'Set-SelfXHealthInventory: a file without the element stays unchanged when the inventory is off'
+    Assert-Throws { Set-SelfXHealthInventory -Path $healthFile -Enabled $true } 'Set-SelfXHealthInventory: a file without the element cannot switch it on'
+    [IO.File]::WriteAllText($healthFile, '<HealthConfig><Inventory Enabled="false" /><Inventory Enabled="false" /></HealthConfig>')
+    Assert-Throws { Set-SelfXHealthInventory -Path $healthFile -Enabled $true } 'Set-SelfXHealthInventory: two elements are refused'
+    [IO.File]::WriteAllText($healthFile, '<!DOCTYPE HealthConfig [<!ENTITY e "x">]><HealthConfig><Inventory Enabled="false" /></HealthConfig>')
+    Assert-Throws { Set-SelfXHealthInventory -Path $healthFile -Enabled $true } 'Set-SelfXHealthInventory: a file with DTD is refused'
+
+    Assert ([IO.File]::ReadAllText((Join-Path $finalOut 'package\Config\Health_Config.xml')) -match '<Inventory Enabled="false"') 'monitoring: the inventory stays off without the answer'
+    Assert (@($result.MonitoringFiles).Count -eq 0 -and -not (Test-Path -LiteralPath (Join-Path $finalOut 'Detect-SelfXHealth.ps1'))) 'monitoring: no files without the answers'
+    $withMonitoring = [ordered]@{} ; foreach ($key in $buildAnswers.Keys) { $withMonitoring[$key] = $buildAnswers[$key] }
+    $withMonitoring.HealthRemediation = $true; $withMonitoring.HealthInventory = $true
+    $monOut = Join-Path $work 'result\monitoring'
+    $monResult = Invoke-SelfXPackageBuild -Answers $withMonitoring -PayloadFolder $payload -OutputFolder $monOut -ToolPath $dummyTool
+    Assert ((@($monResult.MonitoringFiles) -join ',') -eq 'Detect-SelfXHealth.ps1,SelfX-Inventory-DCR.json') 'monitoring: both files in the result'
+    Assert ((Get-FileHash (Join-Path $monOut 'Detect-SelfXHealth.ps1')).Hash -eq (Get-FileHash (Join-Path $ScriptFolder 'Intune\Detect-SelfXHealth.ps1')).Hash) 'monitoring: the detection script is the one of tools\Intune (not signed in the mode Hash)'
+    Assert ((Get-FileHash (Join-Path $monOut 'SelfX-Inventory-DCR.json')).Hash -eq (Get-FileHash (Join-Path $ScriptFolder 'Intune\SelfX-Inventory-DCR.json')).Hash) 'monitoring: the sample data collection rule is copied'
+    Assert ([IO.File]::ReadAllText((Join-Path $monOut 'package\Config\Health_Config.xml')) -match '<Inventory Enabled="true" MaxSizeKB="1024" />') 'monitoring: Health_Config.xml of the package switches the inventory on'
+    $monSteps = @($monResult.GuideSteps.Steps)
+    $monStep = @($monSteps | Where-Object { $_.Id -eq 'monitoring' })
+    Assert ($monStep.Count -eq 1 -and ($monStep[0].Lines -join ' ') -match 'Detect-SelfXHealth\.ps1' -and ($monStep[0].Lines -join ' ') -match 'SelfX-Inventory-DCR\.json' -and ($monStep[0].Lines -join ' ') -match 'Remediations') 'monitoring: one guide step names both files'
+    $numbers = @($monSteps | ForEach-Object { if ("$($_.Lines[0])" -match '^(\d+)\.') { [int]$Matches[1] } })
+    Assert ((($numbers | ForEach-Object { $_ }) -join ',') -eq ((1..$numbers.Count) -join ',')) "monitoring: the steps of the guide stay numbered 1..n ($($numbers -join ','))"
+    Assert ((Get-Content -LiteralPath (Join-Path $monOut 'SelfX-Intune-Guide.en.txt') -Raw) -match 'Detect-SelfXHealth\.ps1') 'monitoring: the text file of the guide names the detection script'
+    $serverMonitoring = [ordered]@{} ; foreach ($key in $withMonitoring.Keys) { $serverMonitoring[$key] = $withMonitoring[$key] }
+    $serverMonitoring.TargetOS = 'WindowsServer'; $serverMonitoring.TerminalServerSupportMail = 'ts@contoso.example'
+    $srvMonOut = Join-Path $work 'result\monitoring-server'
+    $srvMonResult = Invoke-SelfXPackageBuild -Answers $serverMonitoring -PayloadFolder $payload -OutputFolder $srvMonOut
+    Assert ((@($srvMonResult.MonitoringFiles) -join ',') -eq 'SelfX-Inventory-DCR.json' -and -not (Test-Path -LiteralPath (Join-Path $srvMonOut 'Detect-SelfXHealth.ps1'))) 'monitoring: WindowsServer gets no Intune Remediations, only the inventory file'
+    $srvMonStep = @($srvMonResult.GuideSteps.Steps | Where-Object { $_.Id -eq 'monitoring' })
+    Assert ($srvMonStep.Count -eq 1 -and ($srvMonStep[0].Lines -join ' ') -notmatch 'Remediations' -and ($srvMonStep[0].Lines -join ' ') -match 'SelfX-Inventory-DCR\.json') 'monitoring: the server guide names only the inventory file'
+    $srvNumbers = @($srvMonResult.GuideSteps.Steps | ForEach-Object { if ("$($_.Lines[0])" -match '^(\d+)\.') { [int]$Matches[1] } })
+    Assert ((($srvNumbers | ForEach-Object { $_ }) -join ',') -eq ((1..$srvNumbers.Count) -join ',')) "monitoring: the server guide stays numbered 1..n ($($srvNumbers -join ','))"
+    Assert ([IO.File]::ReadAllText((Join-Path $srvMonOut 'package\Config\Health_Config.xml')) -match '<Inventory Enabled="true"') 'monitoring: the server package switches the inventory on'
+
     # ---- abort in the middle: no half-finished output, an earlier result stays
     $guideBefore = (Get-FileHash (Join-Path $finalOut 'SelfX-Intune-Guide.en.txt')).Hash
     $treeBefore = Get-TreeDigest -Folder $finalOut
@@ -825,6 +876,12 @@ Assert-Throws { Test-WizardNetworkTargets -Targets @([pscustomobject]@{ Label = 
         $orderGuide = Get-Content -LiteralPath (Join-Path $order 'SelfX-Intune-Guide.en.txt') -Raw
         Assert ($orderGuide -match "Install\.ps1 -TrustedSigner $($stubCertificate.Thumbprint)") 'the guide has the install command with the thumbprint'
         Assert ((Get-Content -LiteralPath (Join-Path $order 'selfx-answers.json') -Raw) -notmatch $stubCertificate.Thumbprint) 'selfx-answers.json does not name the certificate'
+        # Monitoring in the mode Signature: the detection script of Intune Remediations in the output folder is signed too.
+        $script:SignedFiles.Clear()
+        $monSignedOut = Join-Path $work 'result\monitoring-signed'
+        $null = Invoke-SelfXPackageBuild -Answers $withMonitoring -PayloadFolder $payload -OutputFolder $monSignedOut -ToolPath $dummyTool -Certificate $stubCertificate -NoTimestamp
+        Assert (@($script:SignedFiles | Where-Object { (Split-Path -Leaf $_) -eq 'Detect-SelfXHealth.ps1' -and -not $_.Contains('\package\') }).Count -eq 1 -and (Get-Content -LiteralPath (Join-Path $monSignedOut 'Detect-SelfXHealth.ps1') -Raw).Contains('# SIG # Begin signature block')) 'signature mode: the detection script of Intune Remediations is signed'
+        Assert (@($script:SignedFiles | Where-Object { (Split-Path -Leaf $_) -eq 'SelfX-Inventory-DCR.json' }).Count -eq 0) 'signature mode: the sample data collection rule is not signed (data file)'
         # Aborts in the signing steps leave nothing.
         $abortOut = Join-Path $work 'result\abort-sign'
         function New-SelfXSignedCatalog { param([string]$Path, [string]$CatalogFilePath, $Certificate, [string]$TimestampServer) throw 'catalog failed (test)' }

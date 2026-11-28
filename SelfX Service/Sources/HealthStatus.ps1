@@ -30,6 +30,8 @@
                                        Content\Incoming has not changed for StalledMinutes (Health_Config.xml, 30-1440, default 120)
                                        is an error "download stalled since ..."; failed and stalled apps are listed in Apps (ID, name,
                                        problem; at most 20) for the retry of one app
+    3.1.0  2026-11-28  fubu2k          Apps: also Code (error code of a failed app, 0x........) for tools\Intune\Detect-SelfXHealth.ps1 and
+                                       the inventory file of the service
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -357,7 +359,7 @@ function Get-SelfXImeAppStates {
     # rules: names from Health_Config (Application Id/Name), otherwise from the cache, otherwise from the IME logs; Exclude entries
     # and "not applicable" (3000-3999) are left out. Status OK (1000), Error (5000-5999: Problem Failed) or Unknown; an Unknown app
     # whose content file in Content\Incoming has not changed for StalledMinutes is Error with Problem Stalled ("download stalled
-    # since ..."). Returns objects with Id (lower case), Name, Status, State (text) and Problem.
+    # since ..."). Returns objects with Id (lower case), Name, Status, State (text), Problem and Code (error code 0x........ or '').
     param([System.Xml.XmlElement]$Configuration)
     $stalledMinutes = Get-SelfXStalledMinutes -Configuration $Configuration
     $reports = @(Get-SelfXAppReports)
@@ -393,7 +395,7 @@ function Get-SelfXImeAppStates {
             $problem = 'Stalled'
             $text = 'download stalled since ' + (Format-SelfXHealthTime ([datetime]::SpecifyKind($downloads[$key], [DateTimeKind]::Utc)))
         }
-        [pscustomobject]@{ Id = $key; Name = $name; Status = $status; State = $text; Problem = $problem }
+        [pscustomobject]@{ Id = $key; Name = $name; Status = $status; State = $text; Problem = $problem; Code = $code }
     }
 }
 
@@ -429,10 +431,12 @@ function Get-SelfXApplicationHealth {
         }
         $result = New-SelfXHealthResult Applications $status $detail
         # The apps a retry of one app can help (failed or download stalled), for the window: ID, name (no control characters, at most
-        # 100 characters) and problem. The service accepts only IDs that its own reading of the IME cache lists (APPRETRY).
+        # 100 characters), problem and, for a failed app, the error code (0x........; tools\Intune\Detect-SelfXHealth.ps1 and the
+        # inventory file of the service report it). The service accepts only IDs that its own reading of the IME cache lists (APPRETRY).
         $apps = @($included | Where-Object { $_.Problem -in @('Failed', 'Stalled') -and $_.Id } | Select-Object -First 20 | ForEach-Object {
             $appName = ("$($_.Name)" -replace '[\x00-\x1F\x7F]', '').Trim()
-            [pscustomobject]@{ Id = $_.Id; Name = $appName.Substring(0, [Math]::Min(100, $appName.Length)); Problem = $_.Problem }
+            $appCode = $(if ($_.Problem -eq 'Failed' -and "$($_.Code)" -match '^0x[0-9A-F]{8}\z') { "$($_.Code)" } else { '' })
+            [pscustomobject]@{ Id = $_.Id; Name = $appName.Substring(0, [Math]::Min(100, $appName.Length)); Problem = $_.Problem; Code = $appCode }
         })
         if ($apps.Count) { $result | Add-Member -NotePropertyName Apps -NotePropertyValue @($apps) }
         $result

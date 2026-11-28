@@ -424,6 +424,21 @@ the element `Background` of `Health_Config.xml`:
 | `MaxCpuPercent` | `75` | If the load is higher, the check is postponed by 2 minutes (10 to 100; 100 = no limit). |
 | `StartDelaySeconds` | `120` | Waiting time after the service starts, so that sign-in is not slowed down (0 to 3600). |
 
+**Inventory file (optional):** With `<Inventory Enabled="true" />` the service appends one JSON line to
+`%ProgramData%\SelfX\Inventory\SelfX.Inventory.json` after every full check: status per check type and failed
+apps with their error code, without names and detail texts. A log collector such as the Azure Monitor Agent can
+send it to Log Analytics. The file has the same rights as the cache. On Windows Server nothing is written while
+`TerminalServer_Health` is `Off`. Details: [Monitoring](Monitoring.md).
+
+```xml
+<Inventory Enabled="false" MaxSizeKB="1024" />
+```
+
+| Attribute | Default | Meaning |
+|---|---|---|
+| `Enabled` | `false` | `true`: write the inventory file. Any other value or a missing element: no file. |
+| `MaxSizeKB` | `1024` | Size limit (64 to 10240). A larger file is renamed to `SelfX.Inventory.json.old`; an older `.old` is deleted. |
+
 **Own check scripts:** Store them in `Sources\HealthChecks` (installed into `Config\HealthChecks`,
 see [Own scripts](#own-scripts-of-the-company)). Only simple file names are allowed, no
 subfolders and no paths. Check scripts may **only read**. They must never restart, sign out, change

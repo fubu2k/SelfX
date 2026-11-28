@@ -7,7 +7,7 @@
 	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
 	the same placeholders.
 -->
-<Wizard_Language Culture="en" Name="English" Version="1.10.0">
+<Wizard_Language Culture="en" Name="English" Version="1.11.0">
 	<T Id="title">SelfX package wizard</T>
 	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
 	<T Id="rec">Recommendation: </T>
@@ -119,6 +119,10 @@
 	<T Id="TrayIcon.rec">Yes. Users see problems early and open SelfX with one click.</T>
 	<T Id="DisturbWarning.ask">Before an action that can interrupt a meeting (closing Teams or Office, restarting the network or the device): show a hint when the user appears to be presenting or in full screen?</T>
 	<T Id="DisturbWarning.rec">Yes. It is only a sentence in the confirmation; nothing is blocked or switched. Windows tells SelfX only about presentation mode, full screen and quiet time, so not every meeting is recognised.</T>
+	<T Id="HealthRemediation.ask">Intune Remediations: copy a detection script into the output folder that shows the SelfX device status of every Windows 11 device in Intune (one line per device, "with issues" on an error)?</T>
+	<T Id="HealthRemediation.rec">No, unless you use Intune Remediations (it needs Windows Enterprise E3 or E5 or a similar license). No remediation script is needed: the script only reads the status of SelfX and changes nothing.</T>
+	<T Id="HealthInventory.ask">Inventory file: shall the SelfX service write the device status after every check as one JSON line to %ProgramData%\SelfX\Inventory, for a log collector such as the Azure Monitor Agent?</T>
+	<T Id="HealthInventory.rec">No, unless a collector reads the file (Log Analytics, see docs\Monitoring.md). The file has no names and no detail texts; on Windows Server nothing is written while the device status is off.</T>
 	<T Id="ShortcutDesktop.ask">Create a shortcut on the public desktop?</T>
 	<T Id="ShortcutDesktop.rec">Yes for the start, so that users find SelfX. Switch it off later if desktops should stay empty.</T>
 	<T Id="ShortcutStartMenu.ask">Create a shortcut in the Start menu?</T>
@@ -181,6 +185,12 @@
 	<T Id="guide.asr2">   Set the rule to Audit mode first. If the events name SelfX files, add exactly these files (never more than the following five) to the setting "ASR Only Per Rule Exclusions" of this rule: Endpoint security > Attack surface reduction > your policy of the type Attack surface reduction rules.</T>
 	<T Id="guide.asr3">   Do not exclude the folder SelfX and do not use the global setting "Attack Surface Reduction Only Exclusions" (it applies to every ASR rule). An exclusion applies when the program starts: restart the service SelfXService or the device. Excluded files write no events. Signing the package is no guarantee that the rule lets the files pass. Details: docs\Installation.md, section "Defender ASR: rule for executable files".</T>
 	<T Id="guide.s8">{0}. Test on a pilot device: the Start menu shows SelfX, the service SelfXService runs, the logs are in %ProgramData%\SelfX\Logs. Then widen the assignment.</T>
+	<T Id="guide.mon">{0}. Monitoring (optional):</T>
+	<T Id="guide.mon.rem">   Intune Remediations: Devices &gt; Manage devices &gt; Scripts and remediations &gt; Create script package. Detection script file: {0}. No remediation script.</T>
+	<T Id="guide.mon.rem1">   Settings: Run this script using the logged-on credentials: No. Enforce script signature check: No (Yes only when the script is signed). Run script in 64-bit PowerShell: Yes. Schedule for example daily; assign the package to the same device groups as SelfX.</T>
+	<T Id="guide.mon.rem2">   The detection output shows one line per device: status per check and failed apps with their error code, no names. Exit code 1 (with issues) = an error or a status that cannot be read.</T>
+	<T Id="guide.mon.inv">   Inventory file: SelfX writes %ProgramData%\SelfX\Inventory\SelfX.Inventory.json. For Log Analytics create the table SelfXInventory_CL and a data collection rule from {0} (replace the values in angle brackets) and assign it to the Azure Monitor Agent of the devices.</T>
+	<T Id="guide.mon.inv1">   Details, sample queries and what was not tested: docs\Monitoring.md.</T>
 	<T Id="guide.c.intro">This is the configuration package. It replaces only the settings of a SelfX that is already installed (the full package must be installed first). Open the Microsoft Intune admin center (intune.microsoft.com). Start with a small pilot group.</T>
 	<T Id="guide.c1">1. Create the app: Apps &gt; Windows &gt; Add &gt; Windows app (Win32). Upload {0}. Name: {1}. Publisher: {2}. This is a second app next to the full SelfX app.</T>
 	<T Id="guide.c2">2. Program: install command: {0}</T>

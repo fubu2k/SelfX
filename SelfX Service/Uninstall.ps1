@@ -11,8 +11,8 @@
     ProgramData\SelfX logs are retained unless -RemoveLogs deletes that directory too. Folders in
     ProgramData\SelfX are deleted without following junctions or symbolic links (a link is removed,
     never the folder it points to), because users can create links in their own Logs\Users folder.
-    Device logs reports (ProgramData\SelfX\Reports) and the status cache (ProgramData\SelfX\Cache)
-    are always deleted (with Logs\Users on -RemoveLogs) by the helper of SelfXService.exe, which opens every entry
+    Device logs reports (ProgramData\SelfX\Reports), the status cache (ProgramData\SelfX\Cache) and the inventory file
+    (ProgramData\SelfX\Inventory) are always deleted (with Logs\Users on -RemoveLogs) by the helper of SelfXService.exe, which opens every entry
     without following links and deletes through that handle; without the helper nothing is deleted by path. The HKLM Run entry of the status icon is removed. Open SelfX windows
     and status icons of all signed-in users (powershell.exe or pwsh.exe running Self_X.ps1 or
     SelfX_Tray.ps1 from InstallFolder or InstallFolder\App) are closed first, because they keep the install
@@ -52,6 +52,7 @@
                                               Install.ps1 -ConfigOnly can leave next to the install folder (delete helper, no link is followed)
     3.1.0    2026-11-28  fubu2k               Removes the Windows event log SelfX and the source SelfXService (also a registration of an older version in
                                               the Application log; its old entries stay there)
+    3.1.0    2026-11-28  fubu2k               Also deletes ProgramData\SelfX\Inventory (inventory file of the service) with the delete helper
 #>
 
 [CmdletBinding()]
@@ -202,12 +203,12 @@ ForEach($Process in $SelfXProcesses)
 }
 If($SelfXProcesses.Count -gt 0) { Start-Sleep -Seconds 2 }
 
-# Data of the users: Reports, Cache and (with -RemoveLogs) Logs\Users are deleted by the handle-based helper while it still exists in
+# Data of the users: Reports, Cache, Inventory and (with -RemoveLogs) Logs\Users are deleted by the handle-based helper while it still exists in
 # the install folder. Users can create links in their own folders there; the helper never follows them (M1).
 $SafeDeleteExe = Join-Path $InstallFolder 'App\SelfXService.exe'
 If(-not (Test-Path -LiteralPath $SafeDeleteExe -PathType Leaf)) { $SafeDeleteExe = Join-Path $InstallFolder 'SelfXService.exe' }
 $DataFoldersSafe = $true
-$DataFolders = @((Join-Path $DataFolder 'Reports'), (Join-Path $DataFolder 'Cache'))
+$DataFolders = @((Join-Path $DataFolder 'Reports'), (Join-Path $DataFolder 'Cache'), (Join-Path $DataFolder 'Inventory'))
 If($RemoveLogs) { $DataFolders += (Join-Path $DataFolder 'Logs\Users') }
 ForEach($Folder in $DataFolders)
 {

@@ -299,6 +299,7 @@ beschrieben.
 - [Paketassistent](docs/de/Assistent.md): geführte Konfiguration bis zum Intune-Paket
 - [Installation](docs/de/Installation.md), mit der Release-Checkliste von SelfX Service
 - [Konfiguration](docs/de/Configuration.md)
+- [Überwachung](docs/de/Monitoring.md): Gerätestatus in Intune-Remediations und Log Analytics
 - [Architektur](docs/de/Architecture.md): Dateiklassen, Dateilisten, Vertrauensmodi und ihre Grenzen
 - [Benutzerhandbuch](docs/de/User-Manual.md)
 - [Pakethinweise zu SelfX Service](SelfX%20Service/README.md)
