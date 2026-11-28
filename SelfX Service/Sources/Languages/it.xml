@@ -102,6 +102,7 @@ La visualizzazione dettagliata elenca diversi problemi specifici per prodotto ch
 		<Service_Busy_Text>È in esecuzione un’altra azione. Attendi che sia terminata.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Questa azione non è possibile mentre un altro utente è connesso a questo dispositivo. Rivolgiti al supporto IT oppure riprova quando sei l’unico utente.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Questa azione non è disponibile su questo computer, perché più persone lo usano contemporaneamente. Rivolgiti al supporto IT.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>Il controllo è di nuovo a posto, quindi questa riparazione ora non serve. Ripeti il controllo se il problema persiste.</Service_NotNeeded_Text>
 		<Action_Running_Text>Azione in esecuzione: {0}</Action_Running_Text>
 		<Action_Running_Label>In esecuzione…</Action_Running_Label>
 		<Action_Success_Text>Azione completata: {0}</Action_Success_Text>

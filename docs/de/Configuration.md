@@ -481,7 +481,7 @@ es in `Health_Config.xml` ein:
 | `Id` | Art der Prüfung, zum Beispiel `IME`, `Defender`, `Disk`, `Updates`, `PendingReboot`. |
 | `Name` | Optional. Der genaue technische Name der Zeile. Ohne `Name` gilt die Reparatur für alle Zeilen dieser Art. |
 | `Script` | Skript in `Scripts_to_run`. |
-| `When` | `NotOK`: nur anbieten, solange die Zeile nicht in Ordnung ist. `Always` (Standard): immer anbieten. |
+| `When` | `NotOK`: nur anbieten, solange die Zeile nicht in Ordnung ist. `Always` (Standard): immer anbieten. Bei `NotOK` lehnt auch der Dienst die Reparatur für einen normalen Nutzer ab (Antwort `ERROR NotNeeded`, Hinweis im Fenster), außer der Status-Cache der letzten 60 Minuten führt die Zeile als nicht in Ordnung; Administratoren mit erhöhten Rechten und ein Skript, das zugleich `System`-Aktion des Katalogs ist, sind nicht eingeschränkt. |
 | `TimeoutSeconds` | Zeitlimit, 1 bis 7200 Sekunden. Standard 900. |
 | `OtherSessions` | `Block` wie bei Aktionen. Die mitgelieferte Konfiguration setzt es für `Updates` und `PendingReboot`. |
 | `TerminalServer` | Pflicht: `Show` oder `Hide` wie bei Aktionen. `Hide` blendet auch den Teil `UserScript` aus. Alle mitgelieferten Reparaturen sind `Hide`. |

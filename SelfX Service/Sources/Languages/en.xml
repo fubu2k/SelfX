@@ -102,6 +102,7 @@ We recommend the detailed view if the simplified view does not solve or include 
 		<Service_Busy_Text>Another action is still running. Please wait until it is finished.</Service_Busy_Text>
 		<Service_OtherSessions_Text>This action is not possible while another user is signed in to this device. Ask your IT support or try again when you are the only user.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>This action is not available on this computer, because several people use it at the same time. Ask your IT support.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>The check is OK again, so this repair is not needed now. Run the check again if the problem is still there.</Service_NotNeeded_Text>
 		<Action_Running_Text>Action running: {0}</Action_Running_Text>
 		<Action_Running_Label>Running…</Action_Running_Label>
 		<Action_Success_Text>Action completed: {0}</Action_Success_Text>

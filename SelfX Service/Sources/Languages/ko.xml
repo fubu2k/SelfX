@@ -102,6 +102,7 @@
 		<Service_Busy_Text>다른 작업이 아직 실행 중입니다. 완료될 때까지 기다려 주세요.</Service_Busy_Text>
 		<Service_OtherSessions_Text>다른 사용자가 이 장치에 로그인해 있는 동안에는 이 작업을 할 수 없습니다. IT 지원팀에 문의하거나 본인만 사용 중일 때 다시 시도하세요.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>이 컴퓨터는 여러 사람이 동시에 사용하므로 이 작업을 사용할 수 없습니다. IT 지원팀에 문의하세요.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>검사 결과가 다시 정상이므로 지금은 이 복구가 필요하지 않습니다. 문제가 계속되면 다시 검사하세요.</Service_NotNeeded_Text>
 		<Action_Running_Text>작업 실행 중: {0}</Action_Running_Text>
 		<Action_Running_Label>실행 중…</Action_Running_Label>
 		<Action_Success_Text>작업 완료: {0}</Action_Success_Text>

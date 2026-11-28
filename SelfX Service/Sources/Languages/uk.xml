@@ -102,6 +102,7 @@
 		<Service_Busy_Text>Виконується інша дія. Дочекайтеся її завершення.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Ця дія неможлива, поки на пристрої виконано вхід іншого користувача. Зверніться до ІТ-підтримки або повторіть спробу, коли ви будете єдиним користувачем.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Ця дія недоступна на цьому комп’ютері, бо ним одночасно користуються кілька людей. Зверніться до ІТ-підтримки.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>Перевірка знову в порядку, тому це виправлення зараз не потрібне. Запустіть перевірку ще раз, якщо проблема залишається.</Service_NotNeeded_Text>
 		<Action_Running_Text>Виконується дія: {0}</Action_Running_Text>
 		<Action_Running_Label>Виконується…</Action_Running_Label>
 		<Action_Success_Text>Дію завершено: {0}</Action_Success_Text>

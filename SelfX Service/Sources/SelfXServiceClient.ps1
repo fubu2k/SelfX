@@ -35,6 +35,7 @@
     3.1.0    2026-11-28  fubu2k               Invoke-SelfXAppRetry (APPRETRY <app id>, retry of one Intune app; only a GUID is sent; answer
                                               ERROR Unknown app = status AppGone). Health rows Applications may carry Apps (ID, name, problem),
                                               checked: at most 20, GUID, Failed or Stalled, name without control characters
+    3.1.0    2026-11-28  fubu2k               Answer ERROR NotNeeded (repair with When="NotOK" whose check is OK in the status cache) = status NotNeeded
 #>
 
 $Script:SelfXDefaultPipeName = 'SelfX.Service'
@@ -222,6 +223,8 @@ function ConvertFrom-SelfXActionResponse {
 		'^BUSY'    { return [pscustomobject]@{ Status = 'Busy'; ExitCode = $null; Message = $response } }
 		'^ERROR OtherSessions$' { return [pscustomobject]@{ Status = 'OtherSessions'; ExitCode = $null; Message = $response } }
 		'^ERROR TerminalServer$' { return [pscustomobject]@{ Status = 'TerminalServer'; ExitCode = $null; Message = $response } }
+		# A repair with When="NotOK" whose check the status cache of the service does not list as not OK (any more).
+		'^ERROR NotNeeded$' { return [pscustomobject]@{ Status = 'NotNeeded'; ExitCode = $null; Message = $response } }
 		# APPRETRY: the app is not (any more) in the IME cache of the service or does not need a retry.
 		'^ERROR Unknown app$' { return [pscustomobject]@{ Status = 'AppGone'; ExitCode = $null; Message = $response } }
 		'^TIMEOUT' { return [pscustomobject]@{ Status = 'Timeout'; ExitCode = $null; Message = $response } }

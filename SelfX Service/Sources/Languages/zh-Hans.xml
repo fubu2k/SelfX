@@ -102,6 +102,7 @@
 		<Service_Busy_Text>另一项操作仍在运行。请等待其完成。</Service_Busy_Text>
 		<Service_OtherSessions_Text>其他用户登录此设备时，无法执行此操作。请联系 IT 支持，或在您是唯一用户时重试。</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>此计算机由多人同时使用，因此无法使用此操作。请联系 IT 支持。</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>检查结果已恢复正常，因此现在不需要此修复。如果问题仍然存在，请重新检查。</Service_NotNeeded_Text>
 		<Action_Running_Text>正在运行操作：{0}</Action_Running_Text>
 		<Action_Running_Label>正在运行…</Action_Running_Label>
 		<Action_Success_Text>操作已完成：{0}</Action_Success_Text>

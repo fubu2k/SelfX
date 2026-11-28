@@ -20,6 +20,7 @@
                                        ticket.
     3.1.0  2026-11-28  fubu2k          The window and the status icon take the mode from Windows, not from Environment_Mode.
     3.1.0  2026-11-28  fubu2k          Terminal server: fixed support address (Get-SelfXSupportContact), no ticket routing.
+    3.1.0    2026-11-28  fubu2k               Answer NotNeeded of the service (When="NotOK") has its own message
     3.1.0  2026-11-28  fubu2k          Greeting: names with markup, braces, control and direction characters, empty name, 40 characters,
                                        hours of the day, Greeting_Name, Off, time limit, right to left, texts in all language files.
 #>
@@ -482,6 +483,8 @@ try {
     $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
     Assert-Equal ($clientText.Contains("'^ERROR TerminalServer`$' { return [pscustomobject]@{ Status = 'TerminalServer'") -and $guiText.Contains("'TerminalServer' { `$msgbar.SetWarningAlert((Get-SelfXString 'Service_TerminalServer_Text')) }")) $true 'Environment_Mode: the refusal of the service has its own message'
     Assert-Equal ([bool](Get-SelfXString 'Service_TerminalServer_Text')) $true 'Environment_Mode: the message exists in en.xml'
+    Assert-Equal ($clientText.Contains("'^ERROR NotNeeded`$' { return [pscustomobject]@{ Status = 'NotNeeded'") -and $guiText.Contains("'NotNeeded'   { `$msgbar.SetInformationAlert((Get-SelfXString 'Service_NotNeeded_Text')) }")) $true 'When: the answer NotNeeded of the service has its own message'
+    Assert-Equal ([bool](Get-SelfXString 'Service_NotNeeded_Text')) $true 'When: the message NotNeeded exists in en.xml'
     # The mode comes from Windows (19d): the window and the status icon do not read Environment_Mode of Tool_Config.xml.
     Assert-Equal ($guiText.Contains('$Global:SelfX_Environment = Get-SelfXEnvironmentMode') -and $trayText.Contains('$Tray_Environment = (Get-SelfXEnvironmentMode).Mode') -and $trayText.Contains('$Tray_Mode = $Tray_Environment')) $true 'Mode: the window and the status icon take the mode from Windows'
     Assert-Equal ($guiText -notmatch "Get-SelfXText 'Environment_Mode'" -and $trayText -notmatch "Get-TrayConfig 'Environment_Mode'") $true 'Mode: no setting Environment_Mode is read'

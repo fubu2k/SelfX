@@ -102,6 +102,7 @@ Recomendamos a vista detalhada se a vista simplificada não resolver ou não inc
 		<Service_Busy_Text>Outra ação ainda está em execução. Aguarde até terminar.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Esta ação não é possível enquanto outro utilizador tiver sessão iniciada neste dispositivo. Contacte o suporte de TI ou tente novamente quando for o único utilizador.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Esta ação não está disponível neste computador, porque várias pessoas o utilizam ao mesmo tempo. Contacte o suporte de TI.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>A verificação voltou a estar correta, por isso esta reparação não é necessária agora. Verifique novamente se o problema continuar.</Service_NotNeeded_Text>
 		<Action_Running_Text>Ação em execução: {0}</Action_Running_Text>
 		<Action_Running_Label>Em execução…</Action_Running_Label>
 		<Action_Success_Text>Ação concluída: {0}</Action_Success_Text>

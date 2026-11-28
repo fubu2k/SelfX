@@ -102,6 +102,7 @@ Nous recommandons la vue détaillée si la vue simplifiée ne résout pas votre 
 		<Service_Busy_Text>Une autre action est en cours. Veuillez attendre qu’elle se termine.</Service_Busy_Text>
 		<Service_OtherSessions_Text>Cette action est impossible tant qu’un autre utilisateur est connecté à cet appareil. Contactez le support informatique ou réessayez lorsque vous serez le seul utilisateur.</Service_OtherSessions_Text>
 		<Service_TerminalServer_Text>Cette action n’est pas disponible sur cet ordinateur, car plusieurs personnes l’utilisent en même temps. Contactez le support informatique.</Service_TerminalServer_Text>
+		<Service_NotNeeded_Text>La vérification est de nouveau correcte, cette réparation n’est donc pas nécessaire pour le moment. Relancez la vérification si le problème persiste.</Service_NotNeeded_Text>
 		<Action_Running_Text>Action en cours : {0}</Action_Running_Text>
 		<Action_Running_Label>En cours…</Action_Running_Label>
 		<Action_Success_Text>Action terminée : {0}</Action_Success_Text>
