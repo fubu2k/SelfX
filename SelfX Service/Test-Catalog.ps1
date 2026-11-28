@@ -45,6 +45,8 @@
     3.1.0    2026-11-28  fubu2k               Optional element Disruptive: exactly True, only with a script, the same for every entry of a script (negative examples)
     3.1.0    2026-11-28  fubu2k               Classification of Office licence reset, OneDrive reset and group policy update (Show) and of No sound (Hide) checked by name;
                                               what a terminal server offers is decided by Test-SelfXShownInEnvironment (the rule of the window)
+    3.1.0    2026-11-28  fubu2k               OtherSessions the same on every remediation and System action of a script (the service applies the
+                                              strictest entry)
 #>
 param(
 	[string]$SourcesFolder = (Join-Path $PSScriptRoot 'Sources')
@@ -159,6 +161,20 @@ foreach ($scriptKey in $sessionsByScript.Keys) {
 }
 foreach ($remediation in @($health.SelectNodes('//Remediation[@OtherSessions]'))) {
 	Assert-True ($remediation.GetAttribute('OtherSessions') -ceq 'Block') "Remediation $($remediation.GetAttribute('Script')) OtherSessions is Block (found '$($remediation.GetAttribute('OtherSessions'))')"
+}
+# The service applies Block when any entry of a script says Block (every remediation and every System action of the script): the
+# entries must agree, otherwise the window would offer what the service refuses.
+$remediationSessions = @{}
+foreach ($remediation in @($health.SelectNodes('//Remediation'))) {
+	$scriptKey = "$($remediation.GetAttribute('Script'))".Trim().ToLowerInvariant()
+	if (-not $remediationSessions.ContainsKey($scriptKey)) {
+		$remediationSessions[$scriptKey] = New-Object System.Collections.Generic.List[string]
+		if ($sessionsByScript.ContainsKey($scriptKey)) { foreach ($value in $sessionsByScript[$scriptKey]) { $remediationSessions[$scriptKey].Add($value) } }
+	}
+	$remediationSessions[$scriptKey].Add("$($remediation.GetAttribute('OtherSessions'))".Trim())
+}
+foreach ($scriptKey in $remediationSessions.Keys) {
+	Assert-True (@($remediationSessions[$scriptKey] | Sort-Object -Unique).Count -eq 1) "All remediations and System actions of $scriptKey have the same OtherSessions setting (found $(@($remediationSessions[$scriptKey] | Sort-Object -Unique) -join ', '))"
 }
 
 # TerminalServer (Environment_Mode TerminalServer) is required on every action (one element) and every remediation (attribute): exactly
