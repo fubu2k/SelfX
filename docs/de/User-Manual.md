@@ -112,8 +112,11 @@ Prüfung. Die Zeile unter dem Titel zeigt, wann zuletzt geprüft wurde.
   Bestätigung beginnt der Neustart nach etwa 30 Sekunden. **Abbrechen** ändert nichts. *Alle
   Probleme beheben* startet den Computer **nie** neu.
 - **Erneut versuchen** (bei **Unternehmens-Apps**): Eine App Ihres Unternehmens konnte nicht
-  installiert werden. SelfX startet die Installation sofort neu. Den Fortschritt sehen Sie im
-  Unternehmensportal. Schlägt sie wieder fehl, senden Sie die Protokolle an den Support.
+  installiert werden, oder ihr Download geht seit längerer Zeit nicht weiter. Wählen Sie die App; bei
+  nur einer App fragt SelfX einmal nach. SelfX startet die Installation dieser App sofort neu. Laufende
+  Installationen halten kurz an. Den Fortschritt sehen Sie im Unternehmensportal. Braucht die App keinen
+  neuen Versuch mehr (sie ist inzwischen installiert), sagt SelfX das und ändert nichts. Schlägt sie
+  wieder fehl, senden Sie die Protokolle an den Support.
   Bei bekannten Fehlercodes sagt die Karte in einem Satz, was schiefging und was Sie tun können
   (zum Beispiel das Gerät neu starten oder Speicherplatz freigeben).
 - **Pfeil** auf einer Karte: Prüft nur diesen Status erneut. Oben: prüft alles erneut.

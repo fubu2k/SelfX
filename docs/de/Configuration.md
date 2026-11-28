@@ -390,7 +390,7 @@ Stellen Sie `Sources\Health_Config.xml` vor dem Paketieren ein. Nutzer können s
 | IME | Läuft der Dienst `IntuneManagementExtension`? Fehlt er oder ist er gestoppt, ist das ein Fehler. |
 | Defender | Dienst, Virenschutz und Echtzeitschutz aktiv, Signaturen höchstens 7 Tage alt. Ein Drittanbieter-Virenschutz kann hier einen Fehler auslösen. |
 | Compliance | Intune bewertet Compliance in der Cloud. Mit `<Compliance Script="Check-Compliance.ps1" />` prüft SelfX die lokalen Kriterien einer typischen Richtlinie: Registrierung, BitLocker, Secure Boot, TPM, Firewall, Defender und optional eine Mindestversion von Windows. Gleichen Sie `$Require` im Skript mit Ihrer Richtlinie ab. Maßgeblich bleibt das Unternehmensportal. |
-| Anwendungen | Die Win32-Apps aus dem Intune-Bericht. Eine Installation mit Fehler zeigt den Fehlercode. Bei eigenen Prüfungen für Apps gilt: Ausgeschlossene Apps werden nicht geprüft. |
+| Anwendungen | Die Win32-Apps aus dem Intune-Bericht. Eine Installation mit Fehler zeigt den Fehlercode. Eine App, die noch nicht installiert ist und deren Download seit `StalledMinutes` (Standard 120) nicht weitergeht, ist ein Fehler *download stalled since ...* (hängt seit ...). Bei eigenen Prüfungen für Apps gilt: Ausgeschlossene Apps werden nicht geprüft. |
 | Datenträger | Je festes Laufwerk ein Fehler, wenn es zu 90 % belegt ist **oder** weniger als 20 GB frei sind. Beides ist einstellbar. |
 | BitLocker | Jedes Systemlaufwerk und jedes feste Datenlaufwerk muss verschlüsselt und geschützt sein. Schlüssel werden nicht erfasst. |
 | Neustart ausstehend | Fehler, wenn Windows einen Neustart verlangt. Die Ursache steht im Detail. |
@@ -404,7 +404,7 @@ Stellen Sie `Sources\Health_Config.xml` vor dem Paketieren ein. Nutzer können s
 <HealthConfig>
   <Disk UsedPercentError="90" MinimumFreeGB="20" />
   <Updates MaxSearchAgeDays="14" />
-  <Applications>
+  <Applications StalledMinutes="120">
     <Exclude Name="Test application*" />
     <Application Name="Business client" Script="Check-BusinessClient.ps1" TimeoutSeconds="15" />
   </Applications>
@@ -487,8 +487,18 @@ erneut. Das Ergebnis dieser Prüfung zählt, nicht der Exitcode des Skripts.
 - **Neustart** (`SelfX_Device_Restart.ps1`): Der Nutzer bekommt eine Warnung. Windows startet
   etwa 30 Sekunden nach der Bestätigung neu. Der Neustart ist nie Teil von *Alle Probleme
   beheben*.
-- **App-Wiederholung** (`SelfX_Apps_RetryInstall.ps1`): setzt den Wiederholungsplan einer
-  fehlgeschlagenen Intune-App zurück. Es wird keine App deinstalliert.
+- **App-Wiederholung** (`SelfX_Apps_RetryInstall.ps1`): setzt das gespeicherte Ergebnis und den
+  Wiederholungsplan einer fehlgeschlagenen Intune-App zurück und startet die Intune Management Extension
+  neu (`OtherSessions="Block"`). Es wird keine App deinstalliert. Auf der Karte kann der Nutzer **eine**
+  App erneut versuchen: eine fehlgeschlagene App oder eine App, deren Download hängt (`StalledMinutes`
+  von `<Applications>`, 30-1440, Standard 120; ein hängender Download ist eine Download-Datei
+  `Content\Incoming\<App-ID>_<Revision>.bin` der Intune Management Extension, die sich so lange nicht
+  geändert hat). Das Fenster schickt nur die ID der App (`APPRETRY <App-ID>`); der Dienst nimmt sie nur
+  an, wenn seine eigene Lesung des lokalen IME-Caches die App als nicht installiert führt, und das Skript
+  setzt nur die Einträge dieser App zurück, solange sie noch fehlgeschlagen ist oder hängt (sonst ändert
+  es nichts und startet die Intune Management Extension nicht neu). *Alle Probleme beheben* versucht
+  weiterhin alle fehlgeschlagenen Apps. `TerminalServer="Hide"`: Intune installiert auf Windows Server
+  keine Apps.
 - **Speicherplatz freigeben** (`SelfX_Device_FreeSpaceUser.ps1`, danach `SelfX_Device_FreeSpace.ps1`): in der
   Zeile von Laufwerk `C:`, solange sie nicht in Ordnung ist. Der Nutzer sieht eine Bestätigung, die
   aufzählt, was gelöscht wird. Dann:

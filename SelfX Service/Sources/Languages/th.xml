@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update เสร็จแล้ว สถานะอุปกรณ์จะถูกตรวจสอบอีกครั้งและแสดงว่าจำเป็นต้องรีสตาร์ตหรือไม่</Health_Updates_Done>
 		<Health_Apps_Button>ลองอีกครั้ง</Health_Apps_Button>
 		<Health_Apps_Started>เริ่มการติดตั้งแอปที่ล้มเหลวอีกครั้ง อาจใช้เวลาสักครู่ คุณสามารถติดตามได้ในพอร์ทัลบริษัท</Health_Apps_Started>
+		<Health_Apps_Choose_Title>ลองแอปเดียวอีกครั้ง</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>เลือกแอปที่ SelfX ควรติดตั้งอีกครั้ง SelfX จะรีเซ็ตเฉพาะผลลัพธ์ของแอปนี้และเริ่มบริการ Intune ใหม่ จากนั้นการติดตั้งจะเริ่มใหม่ภายในไม่กี่นาที</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – การติดตั้งล้มเหลว</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – การดาวน์โหลดหยุดค้าง</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX จะลองติดตั้ง {0} อีกครั้ง โดยรีเซ็ตเฉพาะผลลัพธ์ของแอปนี้ แล้วเริ่มบริการ Intune ใหม่ การติดตั้งที่กำลังทำงานอยู่จะหยุดชั่วครู่ การติดตั้งจะเริ่มใหม่ภายในไม่กี่นาที</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX เริ่มการติดตั้ง {0} อีกครั้ง อาจใช้เวลาสักครู่ คุณสามารถติดตามได้ในพอร์ทัลบริษัท</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} ไม่ต้องลองใหม่อีกแล้ว: แอปติดตั้งแล้วหรือสถานะเปลี่ยนไป SelfX จะตรวจสอบสถานะอีกครั้ง</Health_Apps_Gone>
 		<Health_FreeSpace_Button>เพิ่มพื้นที่ว่าง</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>เพิ่มพื้นที่ว่าง</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX เพิ่มพื้นที่ว่างบนไดรฟ์ {0} โดยจะลบ:&#10;• เนื้อหาในถังรีไซเคิลของคุณ (ยกเลิกไม่ได้)&#10;• ไฟล์ชั่วคราวของคุณ&#10;• แคชของ Teams เฉพาะเมื่อปิด Teams อยู่ (คุณอาจต้องลงชื่อเข้า Teams ใหม่)&#10;• ไฟล์ Windows ที่ไม่จำเป็นแล้ว: ส่วนประกอบการอัปเดตเก่า แคชการดาวน์โหลด ไฟล์ระบบชั่วคราวเก่า และไฟล์ติดตั้งเก่าของแอปบริษัท&#10;&#10;เอกสาร การตั้งค่า และโปรแกรมของคุณยังคงอยู่ อาจใช้เวลาถึงหนึ่งชั่วโมง คุณทำงานต่อได้&#10;&#10;เพิ่มพื้นที่ว่างตอนนี้หรือไม่</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@
 		<AppError_80070BC2>การติดตั้งต้องรีสตาร์ท โปรดรีสตาร์ทอุปกรณ์</AppError_80070BC2>
 		<AppError_80070070>พื้นที่ในดิสก์ไม่เพียงพอ เพิ่มพื้นที่ว่างในดิสก์แล้วลองอีกครั้ง</AppError_80070070>
 		<AppError_80070005>การเข้าถึงถูกปฏิเสธระหว่างการติดตั้ง โปรดติดต่อฝ่ายสนับสนุน</AppError_80070005>
+		<AppStalled_Note>การดาวน์โหลดไม่คืบหน้ามานานแล้ว "ลองอีกครั้ง" จะเริ่มการดาวน์โหลดใหม่สำหรับแอปนี้</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

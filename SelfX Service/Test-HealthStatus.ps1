@@ -20,6 +20,9 @@
                                            Environment_Mode in Tool_Config.xml and an unreadable file do not change it.
         3.1.0  2026-11-28  fubu2k          Row "Company apps": known error codes get an explanation in the language of the user
                                            (Add-SelfXAppErrorText); unknown codes, other rows and texts without a code stay unchanged.
+        3.1.0  2026-11-28  fubu2k          Row "Company apps": a download without progress for StalledMinutes (limits, default, invalid values,
+                                           installed, failed and not applicable apps), the reader of the download folder, the app list (at most
+                                           20, check in the client), APPRETRY in the client and the note in the language of the user.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -40,6 +43,7 @@ function Get-SelfXWindowsProductType { $script:productType }
 . "$sources\SelfXLog.ps1"
 $appReader = (Get-Command Get-SelfXAppReports).ScriptBlock
 $rebootReader = (Get-Command Get-SelfXPendingRebootMarkers).ScriptBlock
+$downloadReader = (Get-Command Get-SelfXAppDownloads).ScriptBlock
 
 # Makes the service type available: loads the program built from the real project file (same compiler settings and
 # packages as the release build). Runs in PowerShell 7 and needs the .NET SDK 10.
@@ -73,6 +77,8 @@ function Get-CimInstance { param($ClassName, $Filter, $ErrorAction) $script:disk
 function Get-SelfXDefenderStatus { if ($script:defenderMissing) { throw 'Mock access denied' }; $script:defender }
 function Get-SelfXBitLockerVolumes { $script:volumes }
 function Get-SelfXAppReports { $script:reports }
+$script:downloads = @{}
+function Get-SelfXAppDownloads { $script:downloads }
 function Get-SelfXPendingRebootMarkers { if ($script:rebootFails) { throw 'Mock registry denied' }; $script:rebootMarkers }
 function Get-SelfXUpdateSearchResult { if ($script:updateFails) { throw 'Mock WUA unavailable' }; $script:updateSearch }
 function Get-SelfXWuaRebootRequired { if ($script:wuaRebootFails) { throw 'Mock WUA denied' }; [bool]$script:wuaReboot }
@@ -88,7 +94,7 @@ function New-ScheduledTaskTrigger { throw 'Forbidden in tests' }
 function New-ScheduledTaskPrincipal { throw 'Forbidden in tests' }
 function New-ScheduledTaskSettingsSet { throw 'Forbidden in tests' }
 foreach ($name in @('Get-Service','Get-CimInstance','Get-SelfXDefenderStatus','Get-SelfXBitLockerVolumes',
-    'Get-SelfXAppReports','Get-SelfXPendingRebootMarkers','Get-SelfXUpdateSearchResult','Get-SelfXWuaRebootRequired','Get-SelfXOrchestratorRebootTitles','Get-SelfXRestartTimes',
+    'Get-SelfXAppReports','Get-SelfXAppDownloads','Get-SelfXPendingRebootMarkers','Get-SelfXUpdateSearchResult','Get-SelfXWuaRebootRequired','Get-SelfXOrchestratorRebootTitles','Get-SelfXRestartTimes',
     'Invoke-SelfXHealthScript','Start-Process','Invoke-CimMethod',
     'Register-ScheduledTask','New-ScheduledTask','New-ScheduledTaskAction','New-ScheduledTaskTrigger',
     'New-ScheduledTaskPrincipal','New-ScheduledTaskSettingsSet')) {
@@ -244,6 +250,72 @@ try {
     Assert-Equal (Get-SelfXApplicationHealth $apps.DocumentElement).Status Unknown 'Pending app is not OK'
     $script:reports = @()
     Assert-Equal (Get-SelfXApplicationHealth $apps.DocumentElement).Status Unknown 'No cache is not OK'
+    # Download without progress: an app that is not installed yet and whose content file has not changed for StalledMinutes.
+    $stallId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+    $failId = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff'
+    [xml]$stallConfig = '<Applications StalledMinutes="120"/>'
+    $script:reports = @([pscustomobject]@{ Id=$stallId.ToUpperInvariant(); Name='Slow app'; State=2000 }, [pscustomobject]@{ Id=$failId; Name="Bad`tapp"; State=5000; ErrorCode=-2147023293 })
+    $script:downloads = @{ $stallId = [datetime]::UtcNow.AddMinutes(-121) }
+    $row = Get-SelfXApplicationHealth $stallConfig.DocumentElement
+    Assert-Equal $row.Status Error 'Stalled: a download without progress for longer than StalledMinutes is an error'
+    Assert-Equal ($row.Detail -match 'app\(s\) stalled in the download: Slow app \(download stalled since \{utc:\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\}\)\.') $true "Stalled: the detail names the app and the time as a UTC marker ($($row.Detail))"
+    Assert-Equal ($row.Detail -match '1 of 2 app\(s\) could not be installed: Bad\tapp \(error 0x80070643\)\.') $true 'Stalled: a failed app is still listed as not installed'
+    Assert-Equal (@($row.Apps).Count) 2 'Stalled: failed and stalled apps are listed for the retry of one app'
+    Assert-Equal "$($row.Apps[0].Id)|$($row.Apps[0].Name)|$($row.Apps[0].Problem)" "$stallId|Slow app|Stalled" 'Stalled: ID in lower case, name, problem Stalled'
+    Assert-Equal "$($row.Apps[1].Id)|$($row.Apps[1].Name)|$($row.Apps[1].Problem)" "$failId|Badapp|Failed" 'Stalled: the name of the list has no control characters; problem Failed'
+    $script:downloads = @{ $stallId = [datetime]::UtcNow.AddMinutes(-119) }
+    $row = Get-SelfXApplicationHealth $stallConfig.DocumentElement
+    Assert-Equal "$($row.Status)|$(@($row.Apps).Count)|$($row.Apps[0].Problem)" 'Error|1|Failed' 'Stalled: a download younger than StalledMinutes is not stalled'
+    Assert-Equal ($row.Detail -match 'not installed yet or status unknown: Slow app \(state 2000\)') $true 'Stalled: the young download stays "not installed yet"'
+    $script:reports = @([pscustomobject]@{ Id=$stallId; Name='Slow app'; State=2000 })
+    $row = Get-SelfXApplicationHealth $stallConfig.DocumentElement
+    Assert-Equal "$($row.Status)|$($null -eq $row.PSObject.Properties['Apps'])" 'Unknown|True' 'Stalled: without a failed or stalled app there is no list'
+    foreach ($case in @(@('30', 31, 'Error'), @('30', 29, 'Unknown'), @('1440', 1441, 'Error'), @('1440', 1439, 'Unknown'))) {
+        [xml]$limitConfig = "<Applications StalledMinutes=`"$($case[0])`"/>"
+        $script:downloads = @{ $stallId = [datetime]::UtcNow.AddMinutes(-$case[1]) }
+        Assert-Equal (Get-SelfXApplicationHealth $limitConfig.DocumentElement).Status $case[2] "Stalled: StalledMinutes $($case[0]), $($case[1]) minutes old = $($case[2])"
+    }
+    [xml]$noLimit = '<Applications/>'
+    $script:downloads = @{ $stallId = [datetime]::UtcNow.AddMinutes(-121) }
+    Assert-Equal (Get-SelfXApplicationHealth $noLimit.DocumentElement).Status Error 'Stalled: without StalledMinutes the default is 120 minutes'
+    $script:downloads = @{ $stallId = [datetime]::UtcNow.AddMinutes(-119) }
+    Assert-Equal (Get-SelfXApplicationHealth $noLimit.DocumentElement).Status Unknown 'Stalled: default 120 minutes, 119 minutes old is not stalled'
+    foreach ($bad in @('29', '1441', '0', '-5', 'abc', '', '120.5', '1e3')) {
+        [xml]$badConfig = "<Applications StalledMinutes=`"$bad`"/>"
+        $row = Get-SelfXApplicationHealth $badConfig.DocumentElement
+        Assert-Equal "$($row.Status)|$($row.Detail)" 'Unknown|StalledMinutes must be between 30 and 1440.' "Stalled: StalledMinutes '$bad' is refused (row Unknown)"
+    }
+    # Installed, failed and not applicable apps are never "stalled", also with an old download file.
+    $script:downloads = @{ $stallId = [datetime]::UtcNow.AddDays(-3) }
+    foreach ($case in @(@(1000, 'OK', 0), @(5000, 'Error', 1), @(3000, 'Unknown', 0))) {
+        $script:reports = @([pscustomobject]@{ Id=$stallId; Name='Some app'; State=$case[0] })
+        $row = Get-SelfXApplicationHealth $stallConfig.DocumentElement
+        Assert-Equal "$($row.Status)|$(@($row.Apps | Where-Object { $_ -and $_.Problem -eq 'Stalled' }).Count)|$(@($row.Apps | Where-Object { $_ }).Count)" "$($case[1])|0|$($case[2])" "Stalled: state $($case[0]) with an old download file is not stalled"
+    }
+    # At most 20 apps in the list; the list survives the JSON of the service and the check of the client.
+    $script:downloads = @{}
+    $script:reports = @(1..25 | ForEach-Object { [pscustomobject]@{ Id=('{0:x8}-aaaa-4aaa-8aaa-aaaaaaaaaaaa' -f $_); Name="App $_"; State=5000 } })
+    $row = Get-SelfXApplicationHealth $stallConfig.DocumentElement
+    Assert-Equal (@($row.Apps).Count) 20 'Stalled: at most 20 apps in the list'
+    $roundTrip = @(ConvertFrom-SelfXHealthJson -Json (ConvertTo-Json -InputObject @($row) -Depth 4 -Compress))
+    Assert-Equal "$(@($roundTrip[0].Apps).Count)|$($roundTrip[0].Apps[0].Id)" "20|00000001-aaaa-4aaa-8aaa-aaaaaaaaaaaa" 'Stalled: the list passes the JSON of the service and the check of the client'
+    $script:reports = @()
+
+    # The reader of the download folder: only <app id>_<revision>.bin, the newest write time per app, no other files.
+    $downloadFolder = Join-Path $temp 'Incoming'
+    [void][IO.Directory]::CreateDirectory($downloadFolder)
+    $old = [datetime]::UtcNow.AddHours(-5)
+    $new = [datetime]::UtcNow.AddHours(-1)
+    foreach ($file in @(@("$($stallId)_1.bin", $old), @("$($stallId.ToUpperInvariant())_2.bin", $new), @("$($failId).bin", $old), @("$($failId)_1.txt", $old), @('notes_1.bin', $old), @("x$($failId)_1.bin", $old))) {
+        $path = Join-Path $downloadFolder $file[0]
+        [IO.File]::WriteAllText($path, 'x')
+        [IO.File]::SetLastWriteTimeUtc($path, $file[1])
+    }
+    $found = & $downloadReader -Folder $downloadFolder
+    Assert-Equal "$($found.Count)|$($found.ContainsKey($stallId))" '1|True' 'Downloads: only names <app id>_<revision>.bin count'
+    Assert-Equal ([math]::Abs(($found[$stallId] - $new).TotalSeconds) -lt 2) $true 'Downloads: the newest write time of an app counts (case of the ID does not matter)'
+    Assert-Equal (& $downloadReader -Folder (Join-Path $temp 'NoSuchFolder')).Count 0 'Downloads: a missing folder gives nothing'
+    Assert-Equal ($downloadReader.ToString() -match 'ReparsePoint' -and $downloadReader.ToString() -notmatch 'Remove-Item|Set-|New-Item|Move-Item') $true 'Downloads: links are ignored and the reader changes nothing'
     & {
         function Test-Path { param($LiteralPath) $true }
         function Get-ChildItem { param($LiteralPath, [switch]$Recurse, $ErrorAction)
@@ -521,6 +593,40 @@ try {
     Assert-Throws { ConvertFrom-SelfXHealthJson -Json '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"x","Remediation":"","UserRemediation":"B.ps1"}]' } 'Client rejects UserRemediation without Remediation'
     Assert-Throws { ConvertFrom-SelfXHealthJson -Json '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"x","Remediation":"A.ps1","UserRemediation":"..\\\\B.ps1"}]' } 'Client rejects a path as UserRemediation'
     Assert-Throws { ConvertFrom-SelfXHealthJson -Json '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"x","Remediation":"A.ps1","UserRemediation":"B.ps1 -x"}]' } 'Client rejects arguments in UserRemediation'
+    # Apps of the row "Company apps" (retry of one app): checked by the client before the window shows them.
+    $appsRow = '[{"Id":"Applications","Name":"","Status":"Error","Detail":"x","Remediation":"SelfX_Apps_RetryInstall.ps1","Apps":[{"Id":"046f98d8-667e-4463-b776-d69d48a632d3","Name":"Teams","Problem":"Failed"}]}]'
+    Assert-Equal (@(ConvertFrom-SelfXHealthJson -Json $appsRow)[0].Apps[0].Name) 'Teams' 'Client accepts the app list of the row Applications'
+    foreach ($bad in @(
+        @('"Id":"Disk"', 'on another row'), @('"Id":"..\\\\x"', 'an ID that is a path'), @('"Id":"046F98D8-667E-4463-B776-D69D48A632D3"', 'an ID in upper case'),
+        @('"Problem":"Other"', 'an unknown problem'), @('"Name":"Te\u0007ams"', 'a name with a control character'), @('"Name":5', 'a name that is no text'),
+        @(('"Name":"' + ('x' * 101) + '"'), 'a name longer than 100 characters'))) {
+        $json = $appsRow
+        if ($bad[0] -like '"Id":"Disk"') { $json = $json.Replace('"Id":"Applications"', '"Id":"Disk"') }
+        elseif ($bad[0] -like '"Id":*') { $json = $json.Replace('"Id":"046f98d8-667e-4463-b776-d69d48a632d3"', $bad[0]) }
+        elseif ($bad[0] -like '"Problem":*') { $json = $json.Replace('"Problem":"Failed"', $bad[0]) }
+        else { $json = $json.Replace('"Name":"Teams"', $bad[0]) }
+        Assert-Throws { ConvertFrom-SelfXHealthJson -Json $json } "Client rejects an app list with $($bad[1])"
+    }
+    $manyApps = '[{"Id":"Applications","Name":"","Status":"Error","Detail":"x","Apps":[' + ((1..21 | ForEach-Object { '{"Id":"' + ('{0:x8}-aaaa-4aaa-8aaa-aaaaaaaaaaaa' -f $_) + '","Name":"A","Problem":"Failed"}' }) -join ',') + ']}]'
+    Assert-Throws { ConvertFrom-SelfXHealthJson -Json $manyApps } 'Client rejects more than 20 apps'
+    # APPRETRY: only a GUID is sent, in lower case; the answers are mapped like RUN, ERROR Unknown app = AppGone.
+    & {
+        $script:sent = @()
+        function Invoke-SelfXServiceRequest { param($Request, $PipeName, $ConnectTimeoutMs) $script:sent += $Request; $script:answer }
+        $script:answer = 'DONE 0'
+        $result = Invoke-SelfXAppRetry -AppId '046F98D8-667E-4463-B776-D69D48A632D3'
+        Assert-Equal "$($script:sent[-1])|$($result.Status)" 'APPRETRY 046f98d8-667e-4463-b776-d69d48a632d3|Success' 'App retry: the request is APPRETRY and the ID in lower case'
+        foreach ($case in @(@('DONE 4', 'Failed', 4), @('ERROR Unknown app', 'AppGone', $null), @('ERROR TerminalServer', 'TerminalServer', $null), @('ERROR OtherSessions', 'OtherSessions', $null), @('BUSY', 'Busy', $null), @('ERROR Invalid app', 'Error', $null))) {
+            $script:answer = $case[0]
+            $result = Invoke-SelfXAppRetry -AppId '046f98d8-667e-4463-b776-d69d48a632d3'
+            Assert-Equal "$($result.Status)|$($result.ExitCode)" "$($case[1])|$($case[2])" "App retry: answer '$($case[0])' = $($case[1])"
+        }
+        $count = $script:sent.Count
+        foreach ($bad in @('..\x', '046f98d8-667e-4463-b776-d69d48a632d3 RUN x.ps1', '{046f98d8-667e-4463-b776-d69d48a632d3}', '', "046f98d8-667e-4463-b776-d69d48a632d3`n")) {
+            Assert-Throws { Invoke-SelfXAppRetry -AppId $bad } "App retry: '$($bad.Trim())' is not sent"
+        }
+        Assert-Equal $script:sent.Count $count 'App retry: nothing was sent for an invalid ID'
+    }
 
     $language = Initialize-SelfXLanguage -LanguageFolder "$sources\Languages" -Language de-CH
     $script:SelfXInfoText = Get-SelfXSystemInfoTexts
@@ -545,6 +651,16 @@ try {
     Assert-Equal (($codeKeys.Count -ge 10 -and $codeKeys.Count -le 20) -and -not @($codeKeys | Where-Object { $_ -notmatch '^AppError_[0-9A-F]{8}$' }).Count) $true "App error: 10 to 20 codes, each AppError_ and eight upper-case hex digits ($($codeKeys.Count))"
     $englishLanguage = [xml][IO.File]::ReadAllText("$sources\Languages\en.xml")
     Assert-Equal @($codeKeys | Where-Object { $englishLanguage.SelfX_Language.SystemInfo.$_ -ne $Script:SelfXInfoDefaultText[$_] }).Count 0 'App error: the English defaults are the texts of en.xml'
+    # Row "Company apps": a stalled download gets one note in the language of the user; the app list reaches the window.
+    $stalledNote = Get-SelfXInfoText 'AppStalled_Note'
+    Assert-Equal ($stalledNote -ne $Script:SelfXInfoDefaultText['AppStalled_Note'] -and $stalledNote.Length -gt 20) $true 'Stalled: the note comes from the language of the user'
+    Assert-Equal (Add-SelfXAppErrorText '1 app(s) stalled in the download: Slow (download stalled since x).') ('1 app(s) stalled in the download: Slow (download stalled since x). ' + $stalledNote) 'Stalled: the note is added once'
+    Assert-Equal (Add-SelfXAppErrorText 'A (download stalled since x). B (error 0x80070643).') ('A (download stalled since x). B (error 0x80070643). ' + $stalledNote + ' 0x80070643: ' + $germanText) 'Stalled: note and code explanation together'
+    $appsInfo = @(ConvertTo-SelfXHealthInfo @([pscustomobject]@{Id='Applications'; Name=''; Status='Error'; Detail='x'; Remediation='SelfX_Apps_RetryInstall.ps1'; Apps=@([pscustomobject]@{ Id='046f98d8-667e-4463-b776-d69d48a632d3'; Name='Teams'; Problem='Failed' })}))[0]
+    Assert-Equal "$(@($appsInfo.Apps).Count)|$($appsInfo.Apps[0].Name)" '1|Teams' 'Stalled: the app list is passed to the window'
+    $diskApps = @(ConvertTo-SelfXHealthInfo @([pscustomobject]@{Id='Disk'; Name='C:'; Status='Error'; Detail='x'; Remediation=''; Apps=@([pscustomobject]@{ Id='046f98d8-667e-4463-b776-d69d48a632d3'; Name='Teams'; Problem='Failed' })}))[0]
+    Assert-Equal @($diskApps.Apps).Count 0 'Stalled: another row never carries an app list'
+    Assert-Equal ($englishLanguage.SelfX_Language.SystemInfo.AppStalled_Note -ceq $Script:SelfXInfoDefaultText['AppStalled_Note']) $true 'Stalled: the English default is the text of en.xml'
     $infoSource = [IO.File]::ReadAllText("$sources\SystemInfo.ps1")
     $addStart = $infoSource.IndexOf('function Add-SelfXAppErrorText')
     $addBody = $infoSource.Substring($addStart, $infoSource.IndexOf('function ConvertTo-SelfXHealthInfo') - $addStart)

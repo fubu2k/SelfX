@@ -42,6 +42,8 @@
                                               not shown is not read. Status request answered UNAVAILABLE TerminalServer: no status rows
     3.1.0    2026-11-28  fubu2k               Row "Company apps": a known error code of an app gets a short explanation with a tip in the language of the
                                               user (texts AppError_<code>, Add-SelfXAppErrorText); unknown codes stay as they are
+    3.1.0    2026-11-28  fubu2k               Row "Company apps": a download stalled for a long time gets a short note (AppStalled_Note); the apps for the
+                                              retry of one app (Apps: ID, name, problem) are passed on to the window
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -99,6 +101,8 @@ $Script:SelfXInfoDefaultText = @{
 	AppError_80070BC2 = 'The installation needs a restart. Restart the device.'
 	AppError_80070070 = 'There is not enough space on the disk. Free up disk space and try again.'
 	AppError_80070005 = 'Access was denied during the installation. Contact the support.'
+	# Row "Company apps": HealthStatus.ps1 writes "download stalled since ..." for an app whose download has not continued for StalledMinutes.
+	AppStalled_Note = 'A download has not continued for a long time. "Try again" starts it again for this app.'
 }
 # Labels used by the current collection (defaults overlaid with the -Text hashtable of Get-SelfXSystemInfo).
 $Script:SelfXInfoText = $Script:SelfXInfoDefaultText.Clone()
@@ -248,9 +252,14 @@ function Add-SelfXAppErrorText {
 	# English default AppError_<8 hex digits> exists) the explanation in the language of the user is added once at the end. An exit
 	# code of an installer written as 0x0000XXXX is looked up as the Windows error 0x8007XXXX. Unknown codes stay as they are.
 	param([AllowEmptyString()][string]$Detail)
-	if ($Detail -notmatch 'error 0x[0-9A-Fa-f]{8}') { return $Detail }
 	$added = New-Object System.Collections.Generic.List[string]
 	$notes = New-Object System.Collections.Generic.List[string]
+	# A download without progress (HealthStatus.ps1: "download stalled since ..."): one note in the language of the user.
+	if ($Detail -match 'download stalled since') { $notes.Add((Get-SelfXInfoText 'AppStalled_Note')) }
+	if ($Detail -notmatch 'error 0x[0-9A-Fa-f]{8}') {
+		if (-not $notes.Count) { return $Detail }
+		return ($Detail + ' ' + ($notes -join ' '))
+	}
 	foreach ($match in [regex]::Matches($Detail, 'error 0x([0-9A-Fa-f]{8})')) {
 		$hex = $match.Groups[1].Value.ToUpperInvariant()
 		if ($hex -match '^0000([0-9A-F]{4})$') { $hex = '8007' + $Matches[1] }
@@ -280,6 +289,8 @@ function ConvertTo-SelfXHealthInfo {
         $item | Add-Member -NotePropertyName HealthName -NotePropertyValue "$($result.Name)"
         # Detail without the status prefix, shown on the status cards.
         $item | Add-Member -NotePropertyName Detail -NotePropertyValue $detailText
+        # Row "Company apps": the apps a retry of one app can help (checked by ConvertFrom-SelfXHealthJson; the service checks again).
+        $item | Add-Member -NotePropertyName Apps -NotePropertyValue @($(if ("$($result.Id)" -eq 'Applications' -and $result.PSObject.Properties['Apps']) { @($result.Apps) }))
         $item
     }
 }
@@ -307,6 +318,7 @@ function Get-SelfXHealthCheckInfo {
         $item | Add-Member -NotePropertyName HealthId -NotePropertyValue $Id
         $item | Add-Member -NotePropertyName HealthName -NotePropertyValue $Name
         $item | Add-Member -NotePropertyName Detail -NotePropertyValue (Get-SelfXInfoText 'Health_Unavailable' $_.Exception.Message)
+        $item | Add-Member -NotePropertyName Apps -NotePropertyValue @()
         $item
     }
 }

@@ -32,6 +32,11 @@ Description:
     RUN children receive the SID of the requesting pipe client in SELFX_CALLER_SID, read
     from the client token (identification level), so scripts can deliver results only to
     that user. The variable is absent when the caller cannot be identified.
+    APPRETRY <app id> retries one Intune app: the client sends only an ID in the form of a GUID. The service reads the
+    IME cache (HKLM\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps, 64-bit view, read only) itself and accepts the
+    ID only when that reading lists the app as not installed; it then starts the fixed repair SelfX_Apps_RetryInstall.ps1
+    (listed in Health_Config.xml, same checks as RUN: TerminalServer, OtherSessions, pause, run slot) and hands the ID that
+    it read itself to the script in SELFX_APP_ID. The ID is never used as a path or an argument.
     HEALTH accepts no arguments and invokes only the installed HealthStatus.ps1 collector,
     returning bounded JSON as UTF-8/base64. It shares the repair lock and has a 240-second
     limit. Optional checks are configured in the administrator-protected Health_Config.xml.
@@ -63,7 +68,7 @@ Description:
     Windows event log: own classic log SelfX (Applications and Services Logs), source SelfXService, created by Install.ps1.
     Every entry carries its fields as separate insertion strings in a fixed order (field 1 = fixed English text): security
     events 4001-4008 (at most 10 per ID in 10 minutes), System action started/succeeded/failed 4010-4012 and a health row that
-    changed to Error 4013 (at most 20 per ID and minute), 4099 = entries left out. No user names, no paths, no detail texts; the
+    changed to Error 4013 and an Intune app that changed to failed 4014 (at most 20 per ID and minute), 4099 = entries left out. No user names, no paths, no detail texts; the
     SID of the caller only with EventLog_CallerSid = True in Tool_Config.xml. Fields are cleaned (control characters) and shortened.
     Built with the .NET 10 SDK (Projects\SelfXService\SelfXService.csproj); no remote API is used.
 
@@ -125,6 +130,11 @@ Notes:
                                               new events 4010-4012 (System action started, succeeded, failed: script, result, exit code,
                                               duration, SID only with EventLog_CallerSid = True) and 4013 (health row changed to Error: type,
                                               name, previous status); own rate limit of 20 per ID and minute for them; 4099 with fields
+    3.1.0    2026-11-28  fubu2k               APPRETRY <app id> (protocol 1.2.0): retry of one Intune app. The ID must be a GUID and must be
+                                              listed as not installed in the own reading of the IME cache (Win32Apps, read only); the fixed
+                                              repair SelfX_Apps_RetryInstall.ps1 gets it in SELFX_APP_ID (removed for every other start).
+                                              Event 4014 (Intune app changed to failed: app ID, error code, previous state) after a health run,
+                                              from the same reading; operational rate limit
 */
 
 using System;
@@ -156,7 +166,7 @@ namespace SelfX
     {
         public const string DefaultServiceName = "SelfXService";
         public const string DefaultPipeName = "SelfX.Service";
-        public const string Version = "1.1.0";
+        public const string Version = "1.2.0";
 
         const int DefaultTimeoutSeconds = 900;
         const int MaxTimeoutSeconds = 7200;
@@ -270,6 +280,34 @@ namespace SelfX
             @"^HEALTH(?: (IME|Defender|Compliance|Applications|Disk|BitLocker|PendingReboot|Updates|Service|Custom)(?: ([A-Za-z0-9+/]{2,400}={0,2}))?)?\z",
             RegexOptions.CultureInvariant);
 
+        // APPRETRY <app id>: retry of one Intune app (Win32 app of the Intune Management Extension). The client sends nothing but an
+        // ID in the form of a GUID. The service accepts it only when its own reading of the IME cache lists the app as not installed,
+        // and hands the ID it read itself to the fixed repair script (environment variable, never a path or an argument).
+        const string AppRetryScript = "SelfX_Apps_RetryInstall.ps1";
+        const string AppIdVariable = "SELFX_APP_ID";
+        static readonly Regex AppRetryRequestPattern = new Regex(
+            @"^APPRETRY ([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\z", RegexOptions.CultureInvariant);
+        static readonly Regex AppIdPattern = new Regex(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z", RegexOptions.CultureInvariant);
+        // A key of the IME cache that stands for an app: <app id> or <app id>_<revision> (HealthStatus.ps1 reads the same form).
+        static readonly Regex AppKeyPattern = new Regex(
+            @"^([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})(?:_[0-9]{1,9})?\z", RegexOptions.CultureInvariant);
+        const string Win32AppsKeyPath = @"SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps";
+        // Bounds of one reading of the IME cache: keys visited, depth below Win32Apps (user key, app key, older layouts below it),
+        // length of one EnforcementStateMessage, apps remembered for event 4014.
+        const int MaxAppKeysRead = 2000;
+        const int MaxAppKeyDepth = 4;
+        const int MaxAppStateLength = 8192;
+        const int MaxAppsTracked = 200;
+        // Tests only (Test-ServicePipe.ps1 sets it through reflection on a test instance): a key below HKCU read instead of the IME
+        // cache. No request, file or environment variable reaches this field; in the service it is always null.
+        string win32AppsKeyForTest;
+        // Last state per app ID seen by this service process, for event 4014 (change to failed).
+        readonly Dictionary<string, int> appStates = new Dictionary<string, int>(StringComparer.Ordinal);
+        readonly object appStateLock = new object();
+
+        /// <summary>One entry of the IME cache: app ID (lower case), EnforcementState and ErrorCode of its EnforcementStateMessage.</summary>
+        sealed class AppState { public string Id; public int State; public long ErrorCode; }
+
         // installRoot is the code folder (App on a device), configRoot the configuration folder (Config next to App).
         readonly string installRoot;
         readonly string configRoot;
@@ -309,7 +347,7 @@ namespace SelfX
         bool eventLogWriteFailed;
         readonly object eventLock = new object();
         readonly Dictionary<int, EventWindow> eventWindows = new Dictionary<int, EventWindow>();
-        // Security events (4001-4008): at most 10 per event ID in 10 minutes. Operational events (4010-4013): at most 20 per
+        // Security events (4001-4008): at most 10 per event ID in 10 minutes. Operational events (4010-4014): at most 20 per
         // event ID and minute, so a busy device (several users, terminal server) does not lose them after a few actions.
         const int MaxSecurityEventsPerWindow = 10;
         static readonly TimeSpan SecurityEventWindow = TimeSpan.FromMinutes(10);
@@ -338,6 +376,8 @@ namespace SelfX
         const int EventActionSucceeded = 4011;
         const int EventActionFailed = 4012;
         const int EventHealthError = 4013;
+        // An Intune app changed to failed (EnforcementState 5000-5999) in the own reading of the IME cache after a health run.
+        const int EventAppInstallFailed = 4014;
         // Tool_Config.xml: EventLog_CallerSid = True adds the SID of the requesting user to 4010-4012; anything else = no SID.
         const string EventCallerSidSetting = "EventLog_CallerSid";
         const string EventNoValue = "-";
@@ -982,6 +1022,17 @@ namespace SelfX
             {
                 return "ERROR Invalid health request";
             }
+            Match appMatch = AppRetryRequestPattern.Match(request);
+            if (appMatch.Success)
+            {
+                return ProcessAppRetry(appMatch.Groups[1].Value.ToLowerInvariant(), user, callerSid, callerIsAdmin, callerSession);
+            }
+            if (request.StartsWith("APPRETRY", StringComparison.Ordinal))
+            {
+                // The request text is not logged: it is not a GUID and may carry anything.
+                LogRejected("Rejected invalid app retry request from " + user + ".");
+                return "ERROR Invalid app";
+            }
             if (!request.StartsWith("RUN ", StringComparison.Ordinal))
             {
                 return "ERROR Unknown command";
@@ -1056,6 +1107,253 @@ namespace SelfX
             {
                 runLock.Release();
                 StartCooldown(runKey, RunCooldownSeconds);
+            }
+        }
+
+        /// <summary>
+        /// APPRETRY: retry of one Intune app through the fixed repair AppRetryScript. The same checks as RUN (whitelist through
+        /// Health_Config.xml or the catalog, TerminalServer before anything else, other sessions, pause per user, one action at a time);
+        /// in addition the ID must be listed as not installed in the own reading of the IME cache, read right before the start.
+        /// The script gets the ID of that reading in SELFX_APP_ID; it reads the cache again and changes only the entries of this app.
+        /// </summary>
+        string ProcessAppRetry(string requestedId, string user, string callerSid, bool callerIsAdmin, long callerSession)
+        {
+            int timeoutSeconds;
+            bool blockOtherSessions;
+            bool hideOnTerminalServer;
+            if (!TryGetSystemAction(AppRetryScript, out timeoutSeconds, out blockOtherSessions, out hideOnTerminalServer))
+            {
+                LogRejected("Rejected app retry from " + user + ": '" + AppRetryScript + "' is not a System action or remediation.");
+                return "ERROR Action is not allowed";
+            }
+            // Intune installs no apps on Windows Server; the repair is classified Hide there and refused for every caller.
+            if (hideOnTerminalServer && IsTerminalServer())
+            {
+                LogRejected("App retry from " + user + " refused: the action is not available on a terminal server (mode TerminalServer).",
+                    EventTerminalServerRefused, "A SelfX action that is not available on a terminal server or session host (mode TerminalServer) was requested and refused. Details are in SelfXService.log in the protected log folder.");
+                return "ERROR TerminalServer";
+            }
+            string scriptPath = ResolveScriptPath(installRoot, configRoot, "Scripts_to_run", AppRetryScript);
+            if (scriptPath == null)
+            {
+                LogRejected("Rejected app retry from " + user + ": script '" + AppRetryScript + "' not found.");
+                return "ERROR Script not found";
+            }
+            // The repair restarts the Intune Management Extension (OtherSessions = Block in Health_Config.xml).
+            if (blockOtherSessions && !callerIsAdmin)
+            {
+                int others = CountOtherUserSessions(callerSid, callerSession);
+                if (others != 0)
+                {
+                    LogRejected("App retry from " + user + " refused: " + (others < 0 ? "sessions could not be checked" : "another user is signed in") + ".");
+                    return "ERROR OtherSessions";
+                }
+            }
+            // Same pause key as RUN of this script: a user cannot restart the IME every few seconds through the other request.
+            string runKey = "RUN|" + LimitKey(user, callerSid) + "|" + AppRetryScript.ToLowerInvariant();
+            if (InCooldown(runKey))
+            {
+                LogRejected("Rate limit: app retry from " + user + " refused.");
+                return "BUSY";
+            }
+            // Only an ID that the service itself reads from the IME cache reaches the script.
+            string appId = FindRetryableApp(requestedId);
+            if (appId == null)
+            {
+                LogRejected("App retry from " + user + " refused: app " + requestedId + " is not in the IME cache or does not need a retry.");
+                return "ERROR Unknown app";
+            }
+            if (!runLock.Wait(0))
+            {
+                Log("Busy: app retry from " + user + " refused.");
+                return "BUSY";
+            }
+            try
+            {
+                Log("App retry for " + appId + " requested by " + user + ".");
+                return RunScript(scriptPath, AppRetryScript, timeoutSeconds, user, false, "", callerSid, false, callerIsAdmin, appId);
+            }
+            finally
+            {
+                runLock.Release();
+                StartCooldown(runKey, RunCooldownSeconds);
+            }
+        }
+
+        /// <summary>
+        /// True for a state that a retry can help: readable (above 0), not installed (1000) and not "not applicable" (3000-3999).
+        /// The script decides with its own reading whether the app failed or its download stalled; anything else changes nothing there.
+        /// </summary>
+        static bool IsRetryableAppState(int state)
+        {
+            return state > 0 && state != 1000 && !(state >= 3000 && state < 4000);
+        }
+
+        /// <summary>Failed installation in the IME cache (EnforcementState 5000-5999).</summary>
+        static bool IsFailedAppState(int state)
+        {
+            return state >= 5000 && state < 6000;
+        }
+
+        /// <summary>
+        /// The ID as read from the IME cache when the app is listed there with a state that a retry can help, otherwise null.
+        /// A cache that cannot be read gives null (fail closed).
+        /// </summary>
+        string FindRetryableApp(string requestedId)
+        {
+            if (requestedId == null || !AppIdPattern.IsMatch(requestedId)) return null;
+            List<AppState> apps;
+            try { apps = ReadAppStates(); }
+            catch (Exception ex)
+            {
+                Log("The IME app cache could not be read (" + ex.GetType().Name + ").");
+                return null;
+            }
+            foreach (AppState app in apps)
+            {
+                if (string.Equals(app.Id, requestedId, StringComparison.Ordinal) && IsRetryableAppState(app.State)) return app.Id;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Reads the IME cache Win32Apps\&lt;user&gt;\&lt;app id&gt;[_&lt;revision&gt;] (64-bit view; in tests a key below HKCU), only reading.
+        /// An app is the nearest key at or above the entry whose name has the form of an app key and that lies below the user key;
+        /// the user key itself is never taken as an app. At most MaxAppKeysRead keys and MaxAppKeyDepth levels are visited.
+        /// </summary>
+        List<AppState> ReadAppStates()
+        {
+            List<AppState> apps = new List<AppState>();
+            RegistryKey hive = null;
+            RegistryKey root = null;
+            try
+            {
+                if (win32AppsKeyForTest != null) root = Registry.CurrentUser.OpenSubKey(win32AppsKeyForTest, false);
+                else
+                {
+                    hive = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+                    root = hive.OpenSubKey(Win32AppsKeyPath, false);
+                }
+                if (root == null) return apps;
+                int budget = MaxAppKeysRead;
+                ReadAppStates(root, 0, null, apps, ref budget);
+            }
+            finally
+            {
+                if (root != null) root.Dispose();
+                if (hive != null) hive.Dispose();
+            }
+            return apps;
+        }
+
+        static void ReadAppStates(RegistryKey key, int depth, string appId, List<AppState> apps, ref int budget)
+        {
+            foreach (string name in key.GetSubKeyNames())
+            {
+                if (budget <= 0) return;
+                budget--;
+                using (RegistryKey child = key.OpenSubKey(name, false))
+                {
+                    if (child == null) continue;
+                    string id = appId;
+                    // depth 0 = the user key (object ID of the user or 00000000-...): never an app.
+                    if (depth >= 1)
+                    {
+                        Match match = AppKeyPattern.Match(name);
+                        if (match.Success) id = match.Groups[1].Value.ToLowerInvariant();
+                    }
+                    if (id != null)
+                    {
+                        AppState state = ReadAppState(child, id);
+                        if (state != null) apps.Add(state);
+                    }
+                    if (depth + 1 < MaxAppKeyDepth) ReadAppStates(child, depth + 1, id, apps, ref budget);
+                }
+            }
+        }
+
+        /// <summary>EnforcementState and ErrorCode of the value EnforcementStateMessage (JSON of the IME), or null without a usable value.</summary>
+        static AppState ReadAppState(RegistryKey key, string appId)
+        {
+            string text = key.GetValue("EnforcementStateMessage", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
+            if (string.IsNullOrEmpty(text) || text.Length > MaxAppStateLength) return null;
+            try
+            {
+                using (JsonDocument document = JsonDocument.Parse(text, new JsonDocumentOptions { MaxDepth = 4 }))
+                {
+                    JsonElement top = document.RootElement;
+                    if (top.ValueKind != JsonValueKind.Object) return null;
+                    JsonElement value;
+                    int state = 0;
+                    if (top.TryGetProperty("EnforcementState", out value) && value.ValueKind == JsonValueKind.Number) value.TryGetInt32(out state);
+                    long code = 0;
+                    if (top.TryGetProperty("ErrorCode", out value) && value.ValueKind == JsonValueKind.Number) value.TryGetInt64(out code);
+                    return new AppState { Id = appId, State = state, ErrorCode = code };
+                }
+            }
+            catch (JsonException) { return null; }
+        }
+
+        /// <summary>An error code of the IME as 0x and eight hex digits (signed 32-bit values as HRESULT), or null for 0 or a value out of range.</summary>
+        static string FormatAppErrorCode(long code)
+        {
+            if (code == 0 || code < int.MinValue || code > uint.MaxValue) return null;
+            uint value = unchecked((uint)code);
+            return "0x" + value.ToString("X8", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// The apps that changed to failed since the last reading of this service process, as {app ID, error code, previous state}.
+        /// Per app ID a failed entry wins over the others (an app can have entries of several users or revisions). An app seen for the
+        /// first time as failed counts as a change (previous state "-"), so the state after a restart is reported once. An entry with an
+        /// ID that is not a GUID or without a valid error code is not reported. At most MaxAppsTracked apps are remembered.
+        /// </summary>
+        static List<string[]> FindAppFailureChanges(List<AppState> apps, Dictionary<string, int> lastState)
+        {
+            List<string[]> changes = new List<string[]>();
+            Dictionary<string, AppState> current = new Dictionary<string, AppState>(StringComparer.Ordinal);
+            List<string> order = new List<string>();
+            foreach (AppState app in apps)
+            {
+                if (app == null || app.Id == null || !AppIdPattern.IsMatch(app.Id)) continue;
+                AppState known;
+                if (!current.TryGetValue(app.Id, out known)) { current[app.Id] = app; order.Add(app.Id); }
+                else if (IsFailedAppState(app.State) && !IsFailedAppState(known.State)) current[app.Id] = app;
+            }
+            foreach (string id in order)
+            {
+                AppState app = current[id];
+                int previous;
+                bool seen = lastState.TryGetValue(id, out previous);
+                if (!seen && lastState.Count >= MaxAppsTracked) continue;
+                lastState[id] = app.State;
+                if (!IsFailedAppState(app.State) || (seen && IsFailedAppState(previous))) continue;
+                string code = FormatAppErrorCode(app.ErrorCode);
+                if (code == null) continue;
+                changes.Add(new string[] { id, code, seen ? previous.ToString(CultureInfo.InvariantCulture) : EventNoValue });
+            }
+            return changes;
+        }
+
+        /// <summary>
+        /// Writes event 4014 (fields: message, app ID, error code, previous state) for every app that changed to failed. The values come
+        /// only from the own reading of the IME cache: no app name, no detail text, nothing from a client.
+        /// </summary>
+        void ReportAppFailures()
+        {
+            List<AppState> apps;
+            try { apps = ReadAppStates(); }
+            catch (Exception ex)
+            {
+                Log("The IME app cache could not be read for the event log (" + ex.GetType().Name + ").");
+                return;
+            }
+            List<string[]> changes;
+            lock (appStateLock) { changes = FindAppFailureChanges(apps, appStates); }
+            foreach (string[] change in changes)
+            {
+                WriteEventRecord(EventAppInstallFailed, EventLogEntryType.Warning, new string[] {
+                    "An Intune app installation failed (local cache of the Intune Management Extension).", change[0], change[1], change[2] });
             }
         }
 
@@ -2195,7 +2493,7 @@ namespace SelfX
         /// <summary>
         /// Run PowerShell under the service identity and log bounded output and completion.
         /// </summary>
-        string RunScript(string scriptPath, string scriptName, int timeoutSeconds, string user, bool health = false, string healthFilter = "", string callerSid = null, bool background = false, bool callerIsAdmin = false)
+        string RunScript(string scriptPath, string scriptName, int timeoutSeconds, string user, bool health = false, string healthFilter = "", string callerSid = null, bool background = false, bool callerIsAdmin = false, string appId = null)
         {
             // N6: no new process while the service stops (it would outlive the job object that was just ended).
             if (stopping)
@@ -2236,7 +2534,7 @@ namespace SelfX
             }
             try
             {
-                return StartScript(powershell, scriptPath, scriptName, timeoutSeconds, user, health, healthFilter, callerSid, background, callerIsAdmin);
+                return StartScript(powershell, scriptPath, scriptName, timeoutSeconds, user, health, healthFilter, callerSid, background, callerIsAdmin, appId);
             }
             finally
             {
@@ -2248,7 +2546,7 @@ namespace SelfX
         /// The second half of RunScript: starts PowerShell with the checked script, waits for the end or the timeout and
         /// returns the protocol answer.
         /// </summary>
-        string StartScript(string powershell, string scriptPath, string scriptName, int timeoutSeconds, string user, bool health, string healthFilter, string callerSid, bool background, bool callerIsAdmin)
+        string StartScript(string powershell, string scriptPath, string scriptName, int timeoutSeconds, string user, bool health, string healthFilter, string callerSid, bool background, bool callerIsAdmin, string appId)
         {
             // Health runs also update the status cache; the path contains no quotes.
             ProcessStartInfo startInfo = new ProcessStartInfo(powershell,
@@ -2272,6 +2570,13 @@ namespace SelfX
             startInfo.EnvironmentVariables["POWERSHELL_UPDATECHECK"] = "Off";
             startInfo.EnvironmentVariables.Remove("SELFX_CALLER_SID");
             startInfo.EnvironmentVariables.Remove("SELFX_CALLER_ADMIN");
+            // The app of APPRETRY: only the ID that the service read itself from the IME cache, and only for an action; every other start
+            // (RUN, health, background) has no value, also not an inherited one.
+            startInfo.EnvironmentVariables.Remove(AppIdVariable);
+            if (!health && appId != null && AppIdPattern.IsMatch(appId))
+            {
+                startInfo.EnvironmentVariables[AppIdVariable] = appId;
+            }
             if (!health && callerSid != null)
             {
                 startInfo.EnvironmentVariables["SELFX_CALLER_SID"] = callerSid;
@@ -2364,7 +2669,12 @@ namespace SelfX
             long seconds = (long)watch.Elapsed.TotalSeconds;
             if (health)
             {
-                if (result == "DONE 0" && !outputOverflow) ReportHealthChanges(text);
+                if (result == "DONE 0" && !outputOverflow)
+                {
+                    ReportHealthChanges(text);
+                    // Event 4014 from the own reading of the IME cache (not from the JSON of the script).
+                    ReportAppFailures();
+                }
             }
             else if (result == "DONE 0")
             {
@@ -2997,10 +3307,10 @@ namespace SelfX
             WriteEventRecord(id, type, new string[] { message });
         }
 
-        /// <summary>True for the operational events 4010-4013 (own rate limit), false for the security events.</summary>
+        /// <summary>True for the operational events 4010-4014 (own rate limit), false for the security events.</summary>
         static bool IsOperationalEvent(int id)
         {
-            return id >= EventActionStarted && id <= EventHealthError;
+            return id >= EventActionStarted && id <= EventAppInstallFailed;
         }
 
         /// <summary>

@@ -59,6 +59,12 @@
     3.1.0    2026-11-28  fubu2k               Event log SelfX: fields per event ID (4002, 4010-4013, 4099), cleaning of fields, EventLog_CallerSid, health
                                               rows that change to Error, rate limits of security and operational events; actions run through the real
                                               start path with small scripts in a temporary folder (exit 0, exit 3, timeout, start error).
+    3.1.0    2026-11-28  fubu2k               APPRETRY (retry of one Intune app) through ProcessRequest of a test instance with an IME cache in a key of
+                                              the current user: invalid forms (path, braces, extra text, special characters), a foreign ID, an installed or
+                                              not applicable app, the user key, broken JSON, an app removed between display and request, mode
+                                              TerminalServer, missing remediation, other sessions, the shared pause with RUN; SELFX_APP_ID only for the app
+                                              of the service (an inherited value is removed); event 4014 (fields, only on a change, invalid ID or code not
+                                              written, rate limit).
 #>
 $ErrorActionPreference = 'Stop'
 $script:checks = 0
@@ -1209,7 +1215,7 @@ $pwshPath = [string](Get-Process -Id $PID).Path
 # The working directory of an action is the scripts folder of the instance.
 [SelfX.SelfXService].GetField('scriptsRoot', $instanceFlags).SetValue($evService, [string]$evScripts)
 function Invoke-EventScript([string]$Name, [int]$Timeout = 60, [string]$Sid = 'S-1-5-21-1-2-3-1001', [bool]$Admin = $false) {
-	return [string]$startScript.Invoke($evService, [object[]]@($pwshPath, [string](Join-Path $evScripts $Name), $Name, [int]$Timeout, 'TEST\user', $false, '', $Sid, $false, $Admin))
+	return [string]$startScript.Invoke($evService, [object[]]@($pwshPath, [string](Join-Path $evScripts $Name), $Name, [int]$Timeout, 'TEST\user', $false, '', $Sid, $false, $Admin, $null))
 }
 Set-EventConfig '<GUI_Config />'
 Clear-TestEvents
@@ -1233,7 +1239,7 @@ $failed = @(Get-TestEvents 4012)
 Assert-True ($answer -ceq 'TIMEOUT' -and $failed.Count -eq 1 -and "$($failed[0][1])" -eq 'Error' -and [string]$failed[0][2][2] -ceq 'Timeout' -and [string]$failed[0][2][3] -ceq '-') 'Event log: 4012 for a timeout = Error, result Timeout, no exit code'
 Clear-TestEvents
 $startError = $null
-try { [void]$startScript.Invoke($evService, [object[]]@([string](Join-Path $evScripts 'missing-pwsh.exe'), [string](Join-Path $evScripts 'Ev_Ok.ps1'), 'Ev_Ok.ps1', 60, 'TEST\user', $false, '', 'S-1-5-21-1-2-3-1001', $false, $false)) } catch { $startError = $_ }
+try { [void]$startScript.Invoke($evService, [object[]]@([string](Join-Path $evScripts 'missing-pwsh.exe'), [string](Join-Path $evScripts 'Ev_Ok.ps1'), 'Ev_Ok.ps1', 60, 'TEST\user', $false, '', 'S-1-5-21-1-2-3-1001', $false, $false, $null)) } catch { $startError = $_ }
 $failed = @(Get-TestEvents 4012)
 Assert-True ($null -ne $startError -and $failed.Count -eq 1 -and [string]$failed[0][2][2] -ceq 'StartError') 'Event log: 4012 with StartError when PowerShell cannot be started (the error is passed on)'
 
@@ -1310,6 +1316,169 @@ $evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddMinutes(11))
 [void]$securityEvent.Invoke($evService, [object[]]@(4005, [Diagnostics.EventLogEntryType]::Error, 'Files changed.'))
 $suppressed = @(Get-TestEvents 4099 | Where-Object { [string]$_[2][1] -ceq '4005' })
 Assert-True ($suppressed.Count -eq 1 -and [string]$suppressed[0][2][2] -ceq '3' -and (Get-TestEvents 4005).Count -eq 11) 'Rate limit: 10 minutes after the first of them 4099 reports 3 left-out security events, then the event is written'
+
+# --- APPRETRY: retry of one Intune app; the ID must be listed as not installed in the own reading of the IME cache -----------------
+# The IME cache of a test instance is a key of the current user (field win32AppsKeyForTest); nothing below HKLM is read or changed.
+# Every refusal ends before a script could start; a request that passes all checks ends at the file check of the test folder
+# ("Installed files are not intact" or a PowerShell 7 check), so no script runs.
+Assert-True ($sourceText -match 'AppRetryRequestPattern = new Regex\(\s*@"\^APPRETRY \(\[0-9A-Fa-f\]\{8\}-') 'APPRETRY: the request carries only a GUID'
+Assert-True ($sourceText.Contains('const string AppRetryScript = "SelfX_Apps_RetryInstall.ps1";')) 'APPRETRY: the script is a fixed name of the service, not from the request'
+$retryStart = $sourceText.IndexOf('string ProcessAppRetry(')
+$retryBody = $sourceText.Substring($retryStart, $sourceText.IndexOf('static bool IsRetryableAppState(') - $retryStart)
+Assert-True ($retryBody.IndexOf('return "ERROR TerminalServer"') -lt $retryBody.IndexOf('ResolveScriptPath(') -and $retryBody.IndexOf('ResolveScriptPath(') -lt $retryBody.IndexOf('FindRetryableApp(requestedId)')) 'APPRETRY: TerminalServer is checked first, the IME cache last, right before the start'
+Assert-True ($retryBody.Contains('RunScript(scriptPath, AppRetryScript, timeoutSeconds, user, false, "", callerSid, false, callerIsAdmin, appId)') -and $retryBody -notmatch 'RunScript\([^;]*requestedId') 'APPRETRY: the script gets the ID of the own reading, never the text of the request'
+Assert-True ($sourceText.Contains('startInfo.EnvironmentVariables.Remove(AppIdVariable);') -and $sourceText.IndexOf('startInfo.EnvironmentVariables.Remove(AppIdVariable);') -lt $sourceText.IndexOf('startInfo.EnvironmentVariables[AppIdVariable] = appId;')) 'APPRETRY: an inherited SELFX_APP_ID is removed before the own value is set'
+Assert-True ($sourceText -match 'RegistryKey\.OpenBaseKey\(RegistryHive\.LocalMachine, RegistryView\.Registry64\)' -and $sourceText -match 'OpenSubKey\(Win32AppsKeyPath, false\)' -and $sourceText -notmatch 'OpenSubKey\([^)]*, true\)') 'APPRETRY: the IME cache is opened only for reading (64-bit view)'
+
+$appRoot = Join-Path $dataRoot 'AppRetry'
+$appApp = Join-Path $appRoot 'App'
+$appConfig = Join-Path $appRoot 'Config'
+New-Item -ItemType Directory -Path (Join-Path $appApp 'Scripts_to_run'), $appConfig -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $appApp 'Scripts_to_run\SelfX_Apps_RetryInstall.ps1') -Value 'exit 0'
+Set-Content -LiteralPath (Join-Path $appConfig 'Issues_List.xml') -Value '<Actions><Quick_Solution/></Actions>'
+$appHealth = Join-Path $appConfig 'Health_Config.xml'
+$appHealthText = '<HealthConfig><Remediations><Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" OtherSessions="Block" TerminalServer="Hide" /></Remediations></HealthConfig>'
+Set-Content -LiteralPath $appHealth -Value $appHealthText
+$appKeyName = 'Software\SelfXTest_' + [guid]::NewGuid().ToString('N') + '\Win32Apps'
+$userId = '57f4b2f0-0ef4-4927-ab53-d91d54f4a5fd'
+$failedId = '046f98d8-667e-4463-b776-d69d48a632d3'
+$progressId = '0675cabb-3d3d-4c3f-abfd-349fb022d5cc'
+$installedId = '11111111-2222-4333-8444-555555555555'
+$naId = '22222222-3333-4444-8555-666666666666'
+$brokenId = '33333333-4444-4555-8666-777777777777'
+$goneId = '44444444-5555-4666-8777-888888888888'
+function Set-TestApp([string]$User, [string]$Key, [string]$Message) {
+	$path = "HKCU:\$appKeyName\$User\$Key"
+	New-Item -Path $path -Force | Out-Null
+	if ($Message) { New-ItemProperty -LiteralPath $path -Name 'EnforcementStateMessage' -Value $Message -PropertyType String -Force | Out-Null }
+}
+try {
+	Set-TestApp $userId "$($failedId)_7" '{"EnforcementState":5000,"ErrorCode":-2016345060}'
+	Set-TestApp $userId "$($progressId)_2" '{"EnforcementState":2000,"ErrorCode":0}'
+	Set-TestApp $userId "$($installedId)_1" '{"EnforcementState":1000,"ErrorCode":0}'
+	Set-TestApp $userId "$($naId)_1" '{"EnforcementState":3000,"ErrorCode":0}'
+	Set-TestApp $userId "$($brokenId)_1" 'not json'
+	Set-TestApp $userId "$($goneId)_1" '{"EnforcementState":5000,"ErrorCode":-2147023293}'
+	Set-TestApp $userId 'GRS\a1b2c3' ''
+	# The user key itself carries a message: it must never count as an app.
+	New-ItemProperty -LiteralPath "HKCU:\$appKeyName\$userId" -Name 'EnforcementStateMessage' -Value '{"EnforcementState":5000,"ErrorCode":1}' -PropertyType String -Force | Out-Null
+
+	$appService = New-Object SelfX.SelfXService(('SelfX.AppTest.' + [guid]::NewGuid().ToString('N')), $logDirectory)
+	[SelfX.SelfXService].GetField('installRoot', $instanceFlags).SetValue($appService, $appApp)
+	[SelfX.SelfXService].GetField('configRoot', $instanceFlags).SetValue($appService, $appConfig)
+	[SelfX.SelfXService].GetField('catalogPath', $instanceFlags).SetValue($appService, (Join-Path $appConfig 'Issues_List.xml'))
+	$appKeyField = [SelfX.SelfXService].GetField('win32AppsKeyForTest', $instanceFlags)
+	Assert-True ($null -ne $appKeyField -and $null -eq $appKeyField.GetValue($appService)) 'APPRETRY: a new service instance reads the real IME cache (no test key)'
+	$appKeyField.SetValue($appService, $appKeyName)
+	$terminalField.SetValue($appService, [Nullable[bool]]$false)
+	function Invoke-AppRequest([string]$Request, [bool]$Admin = $true, [string]$User = 'TEST\user', [string]$Sid = 'S-1-5-21-1-2-3-1001') {
+		return [string]$processMethod.Invoke($appService, [object[]]@($Request, $User, $Sid, $Admin, [long]-1))
+	}
+	$notStarted = @('ERROR Unknown app', 'ERROR Invalid app', 'ERROR TerminalServer', 'ERROR Action is not allowed', 'ERROR OtherSessions', 'ERROR Unknown command', 'ERROR Script not found', 'BUSY')
+
+	# Invalid forms: only "APPRETRY <GUID>" is accepted; nothing of the text is used as a path.
+	foreach ($bad in @('APPRETRY', 'APPRETRY ', 'APPRETRY not-a-guid', "APPRETRY {$failedId}", "APPRETRY $failedId extra", "APPRETRY $($failedId);RUN x.ps1",
+		"APPRETRY ..\..\$failedId", "APPRETRY C:\Windows\$failedId", "APPRETRY $($failedId)_7", "APPRETRY $($failedId.Substring(0, 35))", "APPRETRY  $failedId",
+		"APPRETRY $($failedId.Replace('a', 'g'))", "APPRETRY $($failedId)%00", "APPRETRY $($failedId)$([char]0)")) {
+		$answer = Invoke-AppRequest $bad
+		Assert-True ($answer -ceq 'ERROR Invalid app') "APPRETRY: '$($bad -replace '[\x00-\x1F]', '?')' is refused as invalid (got '$answer')"
+	}
+	Assert-True ((Invoke-AppRequest "appretry $failedId") -ceq 'ERROR Unknown command') 'APPRETRY: the command word is case-sensitive like the other requests'
+	Assert-True ((Invoke-AppRequest "RUN SelfX_Apps_RetryInstall.ps1 $failedId") -ceq 'ERROR Invalid action') 'APPRETRY: RUN still accepts no argument'
+	# IDs that the own reading does not list as not installed.
+	foreach ($case in @(
+		@('ffffffff-0000-4000-8000-000000000000', 'a foreign ID'), @($installedId, 'an installed app'), @($naId, 'a not applicable app'),
+		@($userId, 'the user key (never an app)'), @($brokenId, 'an entry with broken JSON'), @('00000000-0000-0000-0000-000000000000', 'the empty GUID'))) {
+		$answer = Invoke-AppRequest "APPRETRY $($case[0])"
+		Assert-True ($answer -ceq 'ERROR Unknown app') "APPRETRY: $($case[1]) is refused (got '$answer')"
+	}
+	# The app disappears between the display in the window and the request.
+	Remove-Item -LiteralPath "HKCU:\$appKeyName\$userId\$($goneId)_1" -Recurse -Force
+	Assert-True ((Invoke-AppRequest "APPRETRY $goneId") -ceq 'ERROR Unknown app') 'APPRETRY: an app that was removed from the cache after the display is refused'
+	# Mode TerminalServer: refused before anything else, also for an elevated administrator and a failed app.
+	$terminalField.SetValue($appService, [Nullable[bool]]$true)
+	Assert-True ((Invoke-AppRequest "APPRETRY $failedId" $true) -ceq 'ERROR TerminalServer') 'APPRETRY: mode TerminalServer refuses, also for an administrator'
+	Assert-True ((Invoke-AppRequest "APPRETRY $failedId" $false) -ceq 'ERROR TerminalServer') 'APPRETRY: mode TerminalServer refuses a normal user'
+	$terminalField.SetValue($appService, [Nullable[bool]]$false)
+	# The repair must be listed; OtherSessions = Block applies to a normal user (unknown session = fail closed).
+	Set-Content -LiteralPath $appHealth -Value '<HealthConfig><Remediations /></HealthConfig>'
+	Assert-True ((Invoke-AppRequest "APPRETRY $failedId") -ceq 'ERROR Action is not allowed') 'APPRETRY: without the remediation in Health_Config.xml nothing is allowed'
+	Set-Content -LiteralPath $appHealth -Value $appHealthText
+	Assert-True ((Invoke-AppRequest "APPRETRY $failedId" $false) -ceq 'ERROR OtherSessions') 'APPRETRY: a normal user is blocked when the other sessions cannot be checked'
+	# Without the IME cache nothing is accepted.
+	$appKeyField.SetValue($appService, ($appKeyName + '_missing'))
+	Assert-True ((Invoke-AppRequest "APPRETRY $failedId") -ceq 'ERROR Unknown app') 'APPRETRY: without an IME cache every ID is refused'
+	$appKeyField.SetValue($appService, $appKeyName)
+	# A failed app (upper case in the request) and an app in progress pass the checks; the file check of the test folder ends them.
+	$answer = Invoke-AppRequest "APPRETRY $($failedId.ToUpperInvariant())"
+	Assert-True ($answer -cnotin $notStarted -and $answer -notlike 'DONE*') "APPRETRY: a failed app passes the checks and ends at the file check (got '$answer')"
+	$answer = Invoke-AppRequest "APPRETRY $progressId" $true 'TEST\other' 'S-1-5-21-1-2-3-1002'
+	Assert-True ($answer -cnotin $notStarted -and $answer -notlike 'DONE*') "APPRETRY: an app that is not installed yet passes the checks (got '$answer')"
+	# The pause per user is shared with RUN of the same script.
+	Assert-True ((Invoke-AppRequest "APPRETRY $failedId") -ceq 'BUSY') 'APPRETRY: the same user must wait before the next retry'
+	Assert-True ((Invoke-AppRequest 'RUN SelfX_Apps_RetryInstall.ps1') -ceq 'BUSY') 'APPRETRY: the pause also applies to RUN of the script'
+
+	# SELFX_APP_ID reaches the script only from the service, and only for an action with a valid ID; an inherited value is removed.
+	$appScript = 'if ("$env:SELFX_APP_ID" -ceq ''' + $failedId + ''') { exit 7 } elseif ("$env:SELFX_APP_ID") { exit 8 } else { exit 0 }'
+	Set-Content -LiteralPath (Join-Path $evScripts 'Ev_App.ps1') -Value $appScript
+	function Invoke-AppScript($AppId) {
+		return [string]$startScript.Invoke($evService, [object[]]@($pwshPath, [string](Join-Path $evScripts 'Ev_App.ps1'), 'Ev_App.ps1', 60, 'TEST\user', $false, '', 'S-1-5-21-1-2-3-1001', $false, $false, $AppId))
+	}
+	$env:SELFX_APP_ID = 'inherited-value'
+	try {
+		$withId = Invoke-AppScript $failedId
+		$without = Invoke-AppScript $null
+		$invalid = Invoke-AppScript "..\$failedId"
+	}
+	finally { Remove-Item Env:\SELFX_APP_ID -ErrorAction SilentlyContinue }
+	Assert-True ($withId -ceq 'DONE 7') "APPRETRY: the script gets the app ID of the service in SELFX_APP_ID (got '$withId')"
+	Assert-True ($without -ceq 'DONE 0') "APPRETRY: without an app the variable is removed, also an inherited value (got '$without')"
+	Assert-True ($invalid -ceq 'DONE 0') "APPRETRY: a value that is not a GUID is never passed (got '$invalid')"
+
+	# --- Event 4014: an app that changed to failed, from the own reading of the IME cache ---
+	$reportApps = [SelfX.SelfXService].GetMethod('ReportAppFailures', $instanceFlags)
+	Assert-True ($null -ne $reportApps -and $sourceText -match 'ReportHealthChanges\(text\);\s*// Event 4014[^\n]*\n\s*ReportAppFailures\(\);') 'Event 4014: written after a successful health run'
+	$appKeyField.SetValue($evService, $appKeyName)
+	$evNow = $evNow.AddHours(2)
+	$evClock.SetValue($evService, [Nullable[datetime]]$evNow)
+	Clear-TestEvents
+	[void]$reportApps.Invoke($evService, @())
+	$failedEvents = @(Get-TestEvents 4014)
+	Assert-True ($failedEvents.Count -eq 1 -and @($failedEvents[0][2]).Count -eq 4 -and "$($failedEvents[0][1])" -eq 'Warning') "Event 4014: one entry with 4 fields for the failed app (got $($failedEvents.Count))"
+	Assert-True ($failedEvents.Count -eq 1 -and [string]$failedEvents[0][2][1] -ceq $failedId -and [string]$failedEvents[0][2][2] -ceq '0x87D1041C' -and [string]$failedEvents[0][2][3] -ceq '-') 'Event 4014: app ID, error code as 0x and 8 hex digits, previous state - (first reading)'
+	Assert-True (-not ((@($failedEvents | ForEach-Object { @($_[2]) }) -join '|') -match [regex]::Escape($userId))) 'Event 4014: the user key is not written and not taken as an app'
+	Clear-TestEvents
+	[void]$reportApps.Invoke($evService, @())
+	Assert-True ((Get-TestEvents 4014).Count -eq 0) 'Event 4014: the same failed app is not written again'
+	# The app in progress fails now: written with the previous state; a failed app without an error code is not written.
+	Set-TestApp $userId "$($progressId)_2" '{"EnforcementState":5003,"ErrorCode":1603}'
+	Set-TestApp $userId "$($installedId)_1" '{"EnforcementState":5000,"ErrorCode":0}'
+	Clear-TestEvents
+	[void]$reportApps.Invoke($evService, @())
+	$failedEvents = @(Get-TestEvents 4014)
+	Assert-True ($failedEvents.Count -eq 1 -and [string]$failedEvents[0][2][1] -ceq $progressId -and [string]$failedEvents[0][2][2] -ceq '0x00000643' -and [string]$failedEvents[0][2][3] -ceq '2000') "Event 4014: a change 2000 -> 5003 is written with the previous state; no entry without an error code (got $($failedEvents.Count))"
+	# Error codes: 0 and values outside the 32-bit range are never written.
+	$formatCode = [SelfX.SelfXService].GetMethod('FormatAppErrorCode', $staticFlags)
+	foreach ($case in @(@([long]0, $null), @([long]-2016345060, '0x87D1041C'), @([long]1603, '0x00000643'), @([long]4294967295, '0xFFFFFFFF'), @([long]4294967296, $null), @([long]-2147483649, $null))) {
+		$result = $formatCode.Invoke($null, [object[]]@($case[0]))
+		Assert-True ($result -ceq $case[1]) "Event 4014: error code $($case[0]) = '$($case[1])' (got '$result')"
+	}
+	# Rate limit: at most 20 entries of 4014 per minute, the rest in 4099 (in a new window, the two entries above are in the last one).
+	$evNow = $evNow.AddMinutes(5)
+	$evClock.SetValue($evService, [Nullable[datetime]]$evNow)
+	1..25 | ForEach-Object { Set-TestApp $userId (('{0:x8}-aaaa-4aaa-8aaa-aaaaaaaaaaaa' -f $_) + '_1') '{"EnforcementState":5000,"ErrorCode":-2147023293}' }
+	Clear-TestEvents
+	[void]$reportApps.Invoke($evService, @())
+	Assert-True ((Get-TestEvents 4014).Count -eq 20) "Event 4014: 20 of 25 new failed apps in one minute are written (got $((Get-TestEvents 4014).Count))"
+	$evClock.SetValue($evService, [Nullable[datetime]]$evNow.AddSeconds(61))
+	Set-TestApp $userId "$($naId)_1" '{"EnforcementState":5000,"ErrorCode":-2147023293}'
+	[void]$reportApps.Invoke($evService, @())
+	$suppressed = @(Get-TestEvents 4099 | Where-Object { [string]$_[2][1] -ceq '4014' })
+	Assert-True ($suppressed.Count -eq 1 -and [string]$suppressed[0][2][2] -ceq '5') 'Event 4014: 4099 reports the 5 left-out entries of the minute before'
+}
+finally {
+	Remove-Item -LiteralPath ('HKCU:\' + ($appKeyName -replace '\\Win32Apps$', '')) -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 # --- N5 (pass 2): an unexpected exception while a request is processed gets the fixed answer, not a timeout ---
 Assert-True ($sourceText -match 'response = "ERROR Internal error";') 'N5: the service answers an unexpected exception with the fixed text ERROR Internal error'

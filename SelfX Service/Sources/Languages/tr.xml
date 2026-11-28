@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update tamamlandı. Cihaz durumu yeniden denetleniyor ve yeniden başlatma gerekip gerekmediğini gösteriyor.</Health_Updates_Done>
 		<Health_Apps_Button>Yeniden dene</Health_Apps_Button>
 		<Health_Apps_Started>Yüklenemeyen uygulamaların yüklemesi yeniden başlatılıyor. Bu birkaç dakika sürebilir; Şirket Portalı’nda izleyebilirsiniz.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Bir uygulamayı yeniden dene</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>SelfX’in yeniden yüklemesi gereken uygulamayı seçin. SelfX yalnızca bu uygulamanın sonucunu sıfırlar ve Intune hizmetini yeniden başlatır. Yükleme birkaç dakika içinde yeniden başlar.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – yükleme başarısız oldu</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – indirme takıldı</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX, {0} uygulamasını yeniden yüklemeyi deneyecek. Yalnızca bu uygulamanın sonucu sıfırlanır, ardından Intune hizmeti yeniden başlar. Devam eden yüklemeler kısa bir süre durur. Yükleme birkaç dakika içinde yeniden başlar.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX, {0} yüklemesini yeniden başlatıyor. Bu birkaç dakika sürebilir; Şirket Portalı’nda izleyebilirsiniz.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} için yeni bir denemeye gerek yok: uygulama yüklü veya durumu değişti. SelfX durumu yeniden denetliyor.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Yer aç</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Yer aç</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX {0} sürücüsünde yer açar. Şunlar silinir:&#10;• Geri Dönüşüm Kutunuzun içeriği (geri alınamaz)&#10;• geçici dosyalarınız&#10;• Teams önbelleği, yalnızca Teams kapalıysa (Teams'e yeniden oturum açmanız gerekebilir)&#10;• artık gerekmeyen Windows dosyaları: eski güncelleme bileşenleri, indirme önbelleği, eski geçici sistem dosyaları ve şirket uygulamalarının eski kurulum dosyaları&#10;&#10;Belgeleriniz, ayarlarınız ve programlarınız korunur. Bu işlem bir saate kadar sürebilir; çalışmaya devam edebilirsiniz.&#10;&#10;Şimdi yer açılsın mı?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Sorunun açıklaması:</Report_Mail_Body>
 		<AppError_80070BC2>Yükleme için yeniden başlatma gerekiyor. Cihazı yeniden başlatın.</AppError_80070BC2>
 		<AppError_80070070>Diskte yeterli alan yok. Disk alanı boşaltın ve tekrar deneyin.</AppError_80070070>
 		<AppError_80070005>Yükleme sırasında erişim reddedildi. Desteğe başvurun.</AppError_80070005>
+		<AppStalled_Note>Bir indirme uzun süredir ilerlemiyor. “Yeniden dene” bu uygulama için indirmeyi yeniden başlatır.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

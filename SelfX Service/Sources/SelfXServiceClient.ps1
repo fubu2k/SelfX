@@ -32,6 +32,9 @@
                                               checked with the same name rule and only together with a Remediation
     3.1.0    2026-11-27  fubu2k               Answer ERROR TerminalServer (action refused in Environment_Mode TerminalServer) = status TerminalServer
     3.1.0    2026-11-28  fubu2k               Answer UNAVAILABLE TerminalServer to STATUS (state Unavailable, no rows) and HEALTH (clear error)
+    3.1.0    2026-11-28  fubu2k               Invoke-SelfXAppRetry (APPRETRY <app id>, retry of one Intune app; only a GUID is sent; answer
+                                              ERROR Unknown app = status AppGone). Health rows Applications may carry Apps (ID, name, problem),
+                                              checked: at most 20, GUID, Failed or Stalled, name without control characters
 #>
 
 $Script:SelfXDefaultPipeName = 'SelfX.Service'
@@ -187,7 +190,28 @@ function Invoke-SelfXSystemAction {
 	catch {
 		return [pscustomobject]@{ Status = 'Unavailable'; ExitCode = $null; Message = $_.Exception.Message }
 	}
+	return (ConvertFrom-SelfXActionResponse -Response $response)
+}
 
+function Invoke-SelfXAppRetry {
+	# Retry of one Intune app (APPRETRY): only the ID of the app is sent, as a GUID. The service accepts it only when its own reading of
+	# the IME cache lists the app as not installed, and starts the fixed repair SelfX_Apps_RetryInstall.ps1 for this app.
+	param(
+		[Parameter(Mandatory = $true)][ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\z')][string]$AppId,
+		[string]$PipeName = $Script:SelfXDefaultPipeName
+	)
+	try {
+		$response = Invoke-SelfXServiceRequest -Request ('APPRETRY ' + $AppId.ToLowerInvariant()) -PipeName $PipeName
+	}
+	catch {
+		return [pscustomobject]@{ Status = 'Unavailable'; ExitCode = $null; Message = $_.Exception.Message }
+	}
+	return (ConvertFrom-SelfXActionResponse -Response $response)
+}
+
+function ConvertFrom-SelfXActionResponse {
+	param([AllowNull()][AllowEmptyString()][string]$Response)
+	$response = $Response
 	# Only DONE carries a process exit code; transport and scheduling failures do not.
 	if ($response -match '^DONE (-?\d+)$') {
 		$exitCode = [int]$Matches[1]
@@ -198,6 +222,8 @@ function Invoke-SelfXSystemAction {
 		'^BUSY'    { return [pscustomobject]@{ Status = 'Busy'; ExitCode = $null; Message = $response } }
 		'^ERROR OtherSessions$' { return [pscustomobject]@{ Status = 'OtherSessions'; ExitCode = $null; Message = $response } }
 		'^ERROR TerminalServer$' { return [pscustomobject]@{ Status = 'TerminalServer'; ExitCode = $null; Message = $response } }
+		# APPRETRY: the app is not (any more) in the IME cache of the service or does not need a retry.
+		'^ERROR Unknown app$' { return [pscustomobject]@{ Status = 'AppGone'; ExitCode = $null; Message = $response } }
 		'^TIMEOUT' { return [pscustomobject]@{ Status = 'Timeout'; ExitCode = $null; Message = $response } }
 		default    { return [pscustomobject]@{ Status = 'Error'; ExitCode = $null; Message = "$response" } }
 	}
@@ -245,6 +271,16 @@ function ConvertFrom-SelfXHealthJson {
             "$($item.Remediation)".Contains('..'))) { throw 'Invalid health remediation filename.' }
         if ($item.UserRemediation -and ("$($item.UserRemediation)" -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,90}\.ps1$' -or
             "$($item.UserRemediation)".Contains('..') -or -not $item.Remediation)) { throw 'Invalid health remediation filename.' }
+        # Apps of the row Applications for the retry of one app (the service checks the ID again against its own reading).
+        if ($null -ne $item.PSObject.Properties['Apps']) {
+            $apps = @($item.Apps)
+            if ("$($item.Id)" -ne 'Applications' -or $apps.Count -gt 20) { throw 'Invalid health app list.' }
+            foreach ($app in $apps) {
+                if ("$($app.Id)" -cnotmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' -or
+                    "$($app.Problem)" -cnotin @('Failed', 'Stalled') -or $app.Name -isnot [string] -or $app.Name.Length -gt 100 -or
+                    $app.Name -match '[\x00-\x1F\x7F]') { throw 'Invalid health app list.' }
+            }
+        }
     }
     return $items
 }

@@ -16,6 +16,8 @@
   Version 3.1.0 | 2026-11-27 | fubu2k         | Required Remediation attribute TerminalServer (Show or Hide) for Environment_Mode TerminalServer;
                                                 all delivered repairs are Hide (they affect the whole device).
   Version 3.1.0 | 2026-11-28 | fubu2k         | Description of TerminalServer: the mode comes from Windows (Windows Server = TerminalServer).
+  Version 3.1.0 | 2026-11-28 | fubu2k         | Applications StalledMinutes (download without progress); the app retry restarts the
+                                                Intune Management Extension and is OtherSessions="Block"; retry of one app.
   -->
 <HealthConfig>
   <!-- Background checks: the service runs all checks regularly and keeps the result for SelfX and the tray icon.
@@ -37,7 +39,10 @@
        cache whose last successful scan is older than MaxSearchAgeDays (1-365, default 14) is Unknown.
   <Updates MaxSearchAgeDays="14" />
   -->
-  <Applications>
+  <!-- StalledMinutes: 30-1440, default 120. An app that is not installed yet and whose download file of the Intune Management
+       Extension (Content\Incoming\<app id>_<revision>.bin) has not changed for this time is shown as "download stalled since ..."
+       (an error of the row; the Fix button offers a retry of this app). Any other value makes the row Unknown. -->
+  <Applications StalledMinutes="120">
     <!-- Wildcards match resolved application names, case-insensitively. IDs also work as exclusions. -->
     <!-- <Exclude Name="Example excluded application*" /> -->
     <!-- Optional names for Intune app IDs whose local cache contains no display name:
@@ -94,8 +99,10 @@
     <!-- Restart Windows to complete a pending restart, only after the user confirmed the restart warning. -->
     <Remediation Id="PendingReboot" Script="SelfX_Device_Restart.ps1" When="NotOK" OtherSessions="Block" TerminalServer="Hide" />
     <!-- Retry failed Intune app installations now (instead of after the IME retry schedule of 24 hours):
-         resets the cached error of the failed apps and restarts the Intune Management Extension. -->
-    <Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" TerminalServer="Hide" />
+         resets the cached error of the failed apps and restarts the Intune Management Extension. The window can also retry one
+         app (failed or download stalled): the service then accepts only an app that its own reading of the IME cache lists.
+         The restart of the Intune Management Extension also stops installations of other users: OtherSessions="Block". -->
+    <Remediation Id="Applications" Script="SelfX_Apps_RetryInstall.ps1" When="NotOK" TimeoutSeconds="300" OtherSessions="Block" TerminalServer="Hide" />
     <!-- Free up space on the system drive while the disk row is not OK. SelfX asks once, lists what is deleted, then runs
          UserScript as the signed-in user (own recycle bin, own TEMP, own Teams cache only while Teams is closed) and after
          it Script as SYSTEM (component store cleanup with DISM, Delivery Optimization cache, old files in Windows\Temp, old

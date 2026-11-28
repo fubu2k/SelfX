@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update imemaliza. Hali ya kifaa inakaguliwa tena na inaonyesha kama kuanzisha upya kunahitajika.</Health_Updates_Done>
 		<Health_Apps_Button>Jaribu tena</Health_Apps_Button>
 		<Health_Apps_Started>Usakinishaji wa programu zilizoshindwa unaanza tena. Hii inaweza kuchukua dakika chache; unaweza kuufuatilia katika Lango la Kampuni.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Jaribu tena programu moja</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Chagua programu ambayo SelfX inapaswa kusakinisha tena. SelfX inaweka upya matokeo ya programu hii pekee na kuanzisha upya huduma ya Intune. Usakinishaji kisha unaanza tena ndani ya dakika chache.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – usakinishaji umeshindwa</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – upakuaji umekwama</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX itajaribu kusakinisha {0} tena. Matokeo ya programu hii pekee yanawekwa upya, kisha huduma ya Intune inaanza upya. Usakinishaji unaoendelea unasimama kwa muda mfupi. Usakinishaji unaanza tena ndani ya dakika chache.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX inaanzisha tena usakinishaji wa {0}. Hii inaweza kuchukua dakika chache; unaweza kuufuatilia katika Lango la Kampuni.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} haihitaji jaribio jipya: imesakinishwa au hali yake imebadilika. SelfX inakagua hali tena.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Futa nafasi</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Futa nafasi</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX inaongeza nafasi kwenye diski {0}. Vitu hivi vinafutwa:&#10;• yaliyomo kwenye Pipa la Kuchakata (haiwezi kurejeshwa)&#10;• faili zako za muda&#10;• kache ya Teams, tu wakati Teams imefungwa (huenda ukahitaji kuingia tena kwenye Teams)&#10;• faili za Windows zisizohitajika tena: vipengele vya zamani vya masasisho, kache ya vipakuliwa, faili za zamani za muda za mfumo na faili za zamani za usakinishaji za programu za kampuni&#10;&#10;Hati, mipangilio na programu zako zinabaki. Hii inaweza kuchukua hadi saa moja; unaweza kuendelea kufanya kazi.&#10;&#10;Ongeza nafasi sasa?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Maelezo ya tatizo:</Report_Mail_Body>
 		<AppError_80070BC2>Usakinishaji unahitaji kuwasha upya. Washa upya kifaa.</AppError_80070BC2>
 		<AppError_80070070>Hakuna nafasi ya kutosha kwenye diski. Futa nafasi kwenye diski na ujaribu tena.</AppError_80070070>
 		<AppError_80070005>Ufikiaji ulikataliwa wakati wa usakinishaji. Wasiliana na usaidizi.</AppError_80070005>
+		<AppStalled_Note>Upakuaji haujaendelea kwa muda mrefu. "Jaribu tena" unauanzisha upya kwa programu hii.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

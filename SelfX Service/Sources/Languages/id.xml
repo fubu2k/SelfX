@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update telah selesai. Status perangkat diperiksa lagi dan menunjukkan apakah perlu dimulai ulang.</Health_Updates_Done>
 		<Health_Apps_Button>Coba lagi</Health_Apps_Button>
 		<Health_Apps_Started>Pemasangan aplikasi yang gagal dimulai lagi. Ini dapat memakan waktu beberapa menit; Anda dapat mengikutinya di Portal Perusahaan.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Coba lagi untuk satu aplikasi</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Pilih aplikasi yang harus dipasang ulang oleh SelfX. SelfX hanya mengatur ulang hasil aplikasi ini dan memulai ulang layanan Intune. Pemasangan lalu dimulai lagi dalam beberapa menit.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – pemasangan gagal</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – unduhan macet</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX akan mencoba memasang {0} lagi. Hanya hasil aplikasi ini yang diatur ulang, lalu layanan Intune dimulai ulang. Pemasangan yang sedang berjalan berhenti sebentar. Pemasangan dimulai lagi dalam beberapa menit.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX memulai lagi pemasangan {0}. Ini dapat memakan waktu beberapa menit; Anda dapat mengikutinya di Portal Perusahaan.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} tidak memerlukan percobaan baru: aplikasi sudah terpasang atau statusnya berubah. SelfX memeriksa status lagi.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Kosongkan ruang</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Kosongkan ruang</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX mengosongkan ruang di drive {0}. Yang dihapus:&#10;• isi Recycle Bin Anda (tidak dapat dibatalkan)&#10;• file sementara Anda&#10;• cache Teams, hanya saat Teams ditutup (Anda mungkin perlu masuk lagi ke Teams)&#10;• file Windows yang tidak diperlukan lagi: komponen pembaruan lama, cache unduhan, file sistem sementara lama, dan file instalasi lama aplikasi perusahaan&#10;&#10;Dokumen, pengaturan, dan program Anda tetap ada. Ini dapat memakan waktu hingga satu jam; Anda dapat terus bekerja.&#10;&#10;Kosongkan ruang sekarang?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Deskripsi masalah:</Report_Mail_Body>
 		<AppError_80070BC2>Instalasi memerlukan mulai ulang. Mulai ulang perangkat.</AppError_80070BC2>
 		<AppError_80070070>Ruang disk tidak cukup. Kosongkan ruang disk dan coba lagi.</AppError_80070070>
 		<AppError_80070005>Akses ditolak saat instalasi. Hubungi dukungan.</AppError_80070005>
+		<AppStalled_Note>Sebuah unduhan sudah lama tidak berlanjut. "Coba lagi" memulainya lagi untuk aplikasi ini.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

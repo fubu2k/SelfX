@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update が完了しました。デバイスの状態を再確認し、再起動が必要かどうかを表示します。</Health_Updates_Done>
 		<Health_Apps_Button>再試行</Health_Apps_Button>
 		<Health_Apps_Started>失敗したアプリのインストールを再度開始します。数分かかることがあります。進行状況はポータル サイトで確認できます。</Health_Apps_Started>
+		<Health_Apps_Choose_Title>1 つのアプリを再試行</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>SelfX でもう一度インストールするアプリを選んでください。SelfX はこのアプリの結果だけをリセットし、Intune サービスを再起動します。インストールは数分以内にもう一度始まります。</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – インストールに失敗しました</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – ダウンロードが止まっています</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX は {0} をもう一度インストールします。このアプリの結果だけをリセットし、その後 Intune サービスを再起動します。実行中のインストールは少しの間止まります。インストールは数分以内にもう一度始まります。</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX は {0} のインストールをもう一度開始します。数分かかることがあります。進行状況はポータル サイトで確認できます。</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} はもう再試行の必要がありません。インストール済みか、状態が変わりました。SelfX が状態をもう一度確認します。</Health_Apps_Gone>
 		<Health_FreeSpace_Button>空き領域を増やす</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>空き領域を増やす</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX はドライブ {0} の空き領域を増やします。次のものが削除されます:&#10;• ごみ箱の中身 (元に戻せません)&#10;• あなたの一時ファイル&#10;• Teams のキャッシュ (Teams を閉じているときのみ。Teams に再度サインインが必要になる場合があります)&#10;• 不要になった Windows ファイル: 古い更新コンポーネント、ダウンロード キャッシュ、古い一時システム ファイル、会社のアプリの古いインストール ファイル&#10;&#10;ドキュメント、設定、プログラムはそのまま残ります。最大 1 時間かかることがあります。作業は続けられます。&#10;&#10;今すぐ空き領域を増やしますか?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ SelfX が {1} に収集した {0} のデバイス ログを添付します。
 		<AppError_80070BC2>インストールには再起動が必要です。デバイスを再起動してください。</AppError_80070BC2>
 		<AppError_80070070>ディスクの空き領域が不足しています。空き領域を増やして、もう一度お試しください。</AppError_80070070>
 		<AppError_80070005>インストール中にアクセスが拒否されました。サポートに連絡してください。</AppError_80070005>
+		<AppStalled_Note>ダウンロードが長い間進んでいません。「再試行」でこのアプリのダウンロードをもう一度開始します。</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

@@ -126,7 +126,10 @@ Nutzer ──► Self_X.ps1 (Nutzersitzung)
 Der Dienst akzeptiert `PING` zur Erreichbarkeit, `HEALTH [<Id> [<Base64-Name>]]` für
 den festen lokalen Status-Collector (optional eine validierte Prüfung), `STATUS`
 für das zwischengespeicherte Ergebnis der Hintergrundprüfungen (antwortet sofort,
-führt nichts aus) und `RUN <Skript>.ps1` für Reparaturen. Eine Reparatur wird nur
+führt nichts aus), `RUN <Skript>.ps1` für Reparaturen und `APPRETRY <App-ID>` für den
+erneuten Versuch einer Intune-App (nur eine GUID; der Dienst nimmt sie nur an, wenn seine eigene
+Lesung des lokalen IME-Caches die App als nicht installiert führt, und gibt sie dem festen
+`SelfX_Apps_RetryInstall.ps1` in `SELFX_APP_ID`). Eine Reparatur wird nur
 angenommen, wenn
 
 - der Skriptname ein reiner Dateiname ohne Pfad ist,

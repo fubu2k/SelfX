@@ -64,6 +64,9 @@
                                               the help window; no ticket routing there (Get-SelfXSupportContact)
     3.1.0    2026-11-28  fubu2k               Disturb_Warning (Tool_Config.xml): before an action marked <Disruptive> and before the restart the confirmation adds a
                                               hint when the own session looks busy (presentation, full screen, quiet time; SelfXDisturb.ps1). Nothing is blocked
+    3.1.0    2026-11-28  fubu2k               Card "Company apps": "Try again" offers the failed apps and the apps with a stalled download one by one (one app:
+                                              confirmation; several: a choice). Only the ID of the chosen app goes to the service (APPRETRY), which checks it
+                                              against its own reading of the IME cache. "Fix all problems" still retries all failed apps
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -1371,6 +1374,55 @@ Function Show-SelfXDialog
 		return $Global:SelfX_DialogResult
 	}
 
+# Retry of one Intune app (card "Company apps"): returns the chosen entry of Apps (Id, Name, Problem) or $null.
+# One app: a confirmation; several: one button per app. Names are set only as text, never into the XAML.
+Function Select-SelfXRetryApp
+	{
+		param([object[]]$Apps)
+		$Apps = @($Apps | Where-Object { "$($_.Id)" -cmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } | Select-Object -First 20)
+		If(-not $Apps.Count) { return $null }
+		If($Apps.Count -eq 1)
+			{
+				$Answer = Show-SelfXDialog -Title (Get-SelfXString 'Health_Apps_Choose_Title') -Message (Get-SelfXString 'Health_Apps_One_Confirm' "$($Apps[0].Name)") `
+					-AffirmativeText (Get-SelfXString 'Health_Apps_Button') -NegativeText (Get-SelfXString 'Button_Cancel') -Kind Question
+				If($Answer -eq 'Affirmative') { return $Apps[0] }
+				return $null
+			}
+		$Content = @'
+      <TextBlock Name="DialogText" TextWrapping="Wrap" LineHeight="20"/>
+      <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto" Margin="0,14,0,0"><StackPanel Name="DialogApps"/></ScrollViewer>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+        <Button Name="DialogNo" Style="{StaticResource BaseButton}" MinWidth="110" IsCancel="True"/>
+      </StackPanel>
+'@
+		$Dialog = New-SelfXDialog -Title (Get-SelfXString 'Health_Apps_Choose_Title') -ContentXaml $Content
+		$Dialog.FindName('DialogText').Text = Get-SelfXString 'Health_Apps_Choose_Text'
+		$List = $Dialog.FindName('DialogApps')
+		$Global:SelfX_RetryChoice = -1
+		For($Number = 0; $Number -lt $Apps.Count; $Number++)
+			{
+				$Label = New-Object System.Windows.Controls.TextBlock
+				$Label.TextWrapping = 'Wrap'
+				$Label.Text = Get-SelfXString $(If("$($Apps[$Number].Problem)" -eq 'Stalled') { 'Health_Apps_Stalled_Label' } Else { 'Health_Apps_Failed_Label' }) "$($Apps[$Number].Name)"
+				$Choice = New-Object System.Windows.Controls.Button
+				$Choice.Style = $Dialog.FindResource('BaseButton')
+				$Choice.HorizontalAlignment = 'Stretch'
+				$Choice.HorizontalContentAlignment = 'Left'
+				$Choice.Margin = '0,0,0,6'
+				$Choice.Content = $Label
+				$Choice.Tag = $Number
+				[System.Windows.Automation.AutomationProperties]::SetName($Choice, $Label.Text)
+				$Choice.Add_Click({ $Global:SelfX_RetryChoice = [int]$this.Tag; [System.Windows.Window]::GetWindow($this).Close() })
+				[void]$List.Children.Add($Choice)
+			}
+		$No = $Dialog.FindName('DialogNo')
+		$No.Content = Get-SelfXString 'Button_Cancel'
+		$No.Add_Click({ [System.Windows.Window]::GetWindow($this).Close() })
+		[void]$Dialog.ShowDialog()
+		If($Global:SelfX_RetryChoice -ge 0 -and $Global:SelfX_RetryChoice -lt $Apps.Count) { return $Apps[$Global:SelfX_RetryChoice] }
+		return $null
+	}
+
 #******************************************************************************
 # Troubleshooting page: view (simplified/detailed), category filter and search
 #******************************************************************************
@@ -1717,6 +1769,7 @@ $SvcAction_Timer.Add_Tick({
 				ElseIf($Global:SvcAction_PostAction -eq 'MailReport') { Show-SelfXReportMailResult -Report $Result.Report }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_RestartScript)) { $msgbar.SetWarningAlert((Get-SelfXString 'Health_Restart_Started')) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_UpdatesScript) -and -not $Global:FixAll_Active) { $msgbar.SetSuccessAlert((Get-SelfXString 'Health_Updates_Done')) }
+				ElseIf($Global:SvcAction_AppId) { $msgbar.SetSuccessAlert((Get-SelfXString 'Health_Apps_One_Started' "$Global:SvcAction_AppName")) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_AppsScript) -and -not $Global:FixAll_Active) { $msgbar.SetSuccessAlert((Get-SelfXString 'Health_Apps_Started')) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_ScanScript)) { $msgbar.SetSuccessAlert((Get-SelfXString 'Defender_Scan_Clean_Text')) }
 				Else { $msgbar.SetSuccessAlert((Get-SelfXString 'Action_Success_Text' $Global:SvcAction_Name)) }
@@ -1724,16 +1777,22 @@ $SvcAction_Timer.Add_Tick({
 			'Failed'      {
 				If($Global:FreeSpace_Pending) { $msgbar.SetWarningAlert((Get-SelfXFreeSpaceResultText 'Health_FreeSpace_Partial')) }
 				ElseIf($Global:SvcAction_Script -and ($Global:SvcAction_Script -eq $Global:SelfX_ScanScript) -and ($Result.ExitCode -eq 2)) { $msgbar.SetWarningAlert((Get-SelfXString 'Defender_Scan_Threats_Text')) }
+				# Retry of one app, exit code 4: the app needs no retry any more (nothing was changed).
+				ElseIf($Global:SvcAction_AppId -and ($Result.ExitCode -eq 4)) { $msgbar.SetInformationAlert((Get-SelfXString 'Health_Apps_Gone' "$Global:SvcAction_AppName")) }
 				Else { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_ExitCode_Text' $Global:SvcAction_Name $Result.ExitCode)) }
 			}
 			'Busy'        { $msgbar.SetWarningAlert($Service_Busy_Text) }
 			'OtherSessions' { $msgbar.SetWarningAlert($Service_OtherSessions_Text) }
 			'TerminalServer' { $msgbar.SetWarningAlert((Get-SelfXString 'Service_TerminalServer_Text')) }
+			# APPRETRY: the service does not list the app (any more) as not installed.
+			'AppGone'     { $msgbar.SetInformationAlert((Get-SelfXString 'Health_Apps_Gone' "$Global:SvcAction_AppName")) }
 			'Timeout'     { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Timeout_Text' $Global:SvcAction_Name)) }
 			'Unavailable' { $msgbar.SetDangerAlert($Service_Unavailable_Text); Update-SelfXServiceStatus }
 			Default       { $msgbar.SetDangerAlert((Get-SelfXString 'Action_Failed_Text' "$Global:SvcAction_Name ($($Result.Message))")) }
 		}
 	$Global:FreeSpace_Pending = $False
+	$Global:SvcAction_AppId = ''
+	$Global:SvcAction_AppName = ''
 	if ($Global:FixAll_Active) {
 		# "Fix all problems": count the result, stop when the service is gone or busy, then run the next repair.
 		If($Result.Status -eq 'Success') { $Global:FixAll_Success++ } Else { $Global:FixAll_Failed.Add($Global:FixAll_Current) }
@@ -1765,9 +1824,15 @@ Function Start-SelfXSystemAction
 		[string]$HealthId = '',
 		[string]$HealthName = '',
 		[string]$PostAction = '',
-		$Row = $null
+		$Row = $null,
+		# Retry of one Intune app: the ID (GUID) goes to the service as APPRETRY, the name is only shown in the messages.
+		[string]$AppId = '',
+		[string]$AppName = ''
 		)
 		if ($Global:SvcAction_Running) { $msgbar.SetWarningAlert($Service_Busy_Text); return }
+		If($AppId -and $AppId -cnotmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') { Write-SelfXLog "Retry of one app refused: invalid app ID." 'Warning'; return }
+		$Global:SvcAction_AppId = $AppId
+		$Global:SvcAction_AppName = $AppName
 		$Global:SvcAction_RefreshHealth = [bool]$RefreshHealth
 		$Global:SvcAction_HealthId = $HealthId
 		$Global:SvcAction_HealthName = $HealthName
@@ -1781,6 +1846,13 @@ Function Start-SelfXSystemAction
 		$Global:SvcAction_Runspace.ApartmentState = 'STA'
 		$Global:SvcAction_Runspace.Open()
 		$Run_Command = "Invoke-SelfXSystemAction -Script '$($Script -replace "'", "''")'"
+		# The ID (checked above) goes into the background runspace as a variable, not as text of the command.
+		If($AppId)
+			{
+				$Global:SvcAction_Runspace.SessionStateProxy.SetVariable('SelfXRetryAppId', $AppId)
+				$Run_Command = 'Invoke-SelfXAppRetry -AppId $SelfXRetryAppId'
+				Write-SelfXLog "Retry of one app requested: $AppId"
+			}
 		If($PostAction -eq 'MailReport')
 			{
 				# Texts are prepared here in the language of the user; the background runspace only opens the e-mail.
@@ -2042,6 +2114,8 @@ Function Update-SelfXStatusView
 			[pscustomobject]@{
 				Property = $_.Property; Detail = $(If("$($_.Detail)") { "$($_.Detail)" } Else { "$($_.Value)" }); Status = "$($_.Status)"
 				Remediation = $Remediation; UserRemediation = $UserRemediation; HasFix = [bool]$Remediation; HealthId = "$($_.HealthId)"; HealthName = "$($_.HealthName)"
+				# Card "Company apps": failed apps and apps with a stalled download, for the retry of one app.
+				Apps = @($(If("$($_.HealthId)" -eq 'Applications' -and $_.PSObject.Properties['Apps']) { @($_.Apps) }))
 				FixText = $Fix_Text; FixGlyph = [string][char]$Fix_Glyph; Running = $Fix_Running
 				Glyph = [string][char]$Glyph; Rank = $Order["$($_.Status)"]; Index = $Index++
 			}
@@ -2125,6 +2199,18 @@ $StatusCards.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEv
 				}
 			Write-SelfXLog "Fix '$($Card.Property)' ($($Card.UserRemediation), then $($Card.Remediation)): user answered $Answer."
 			If($Answer -eq 'Affirmative') { Start-SelfXTwoPartRepair $Card }
+			return
+		}
+	If(("$($Button.Tag)" -eq 'Fix') -and $Card.Remediation -and ($Card.Remediation -eq $Global:SelfX_AppsScript) -and @($Card.Apps).Count)
+		{
+			# Company apps: the user chooses the app; only its ID goes to the service, which checks it against its own reading.
+			$App = Select-SelfXRetryApp -Apps @($Card.Apps)
+			Write-SelfXLog "Fix '$($Card.Property)' ($($Card.Remediation)): $(If($App) { "retry of app $($App.Id) chosen" } Else { 'cancelled' })."
+			If($App)
+				{
+					Start-SelfXSystemAction -Script $Card.Remediation -ActionName $Card.Property -RefreshHealth -HealthId "$($Card.HealthId)" -HealthName "$($Card.HealthName)" `
+						-AppId "$($App.Id)" -AppName "$($App.Name)"
+				}
 			return
 		}
 	If(("$($Button.Tag)" -eq 'Fix') -and $Card.Remediation)

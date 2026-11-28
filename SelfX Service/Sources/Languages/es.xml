@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update ha terminado. Se vuelve a comprobar el estado del dispositivo, que indica si hace falta reiniciar.</Health_Updates_Done>
 		<Health_Apps_Button>Reintentar</Health_Apps_Button>
 		<Health_Apps_Started>La instalación de las aplicaciones con error se inicia de nuevo. Puede tardar unos minutos; puede seguirla en el Portal de empresa.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Reintentar una aplicación</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Elija la aplicación que SelfX debe instalar de nuevo. SelfX restablece solo el resultado de esta aplicación y reinicia el servicio de Intune. La instalación vuelve a empezar en pocos minutos.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0}: la instalación falló</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0}: la descarga está detenida</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX intentará instalar {0} de nuevo. Solo se restablece el resultado de esta aplicación y después se reinicia el servicio de Intune. Las instalaciones en curso se detienen un momento. La instalación vuelve a empezar en pocos minutos.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX inicia de nuevo la instalación de {0}. Puede tardar unos minutos; puede seguirla en el Portal de empresa.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} ya no necesita otro intento: está instalada o su estado ha cambiado. SelfX vuelve a comprobar el estado.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Liberar espacio</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Liberar espacio</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX libera espacio en la unidad {0}. Se eliminan:&#10;• el contenido de su papelera de reciclaje (no se puede deshacer)&#10;• sus archivos temporales&#10;• la caché de Teams, solo si Teams está cerrado (puede que tenga que volver a iniciar sesión en Teams)&#10;• archivos de Windows que ya no se necesitan: componentes antiguos de actualizaciones, la caché de descargas, archivos temporales antiguos del sistema y archivos de instalación antiguos de aplicaciones de la empresa&#10;&#10;Sus documentos, ajustes y programas se conservan. Puede tardar hasta una hora; puede seguir trabajando.&#10;&#10;¿Liberar espacio ahora?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Descripción del problema:</Report_Mail_Body>
 		<AppError_80070BC2>La instalación necesita un reinicio. Reinicie el dispositivo.</AppError_80070BC2>
 		<AppError_80070070>No hay espacio suficiente en el disco. Libere espacio en disco e inténtelo de nuevo.</AppError_80070070>
 		<AppError_80070005>Se denegó el acceso durante la instalación. Póngase en contacto con soporte.</AppError_80070005>
+		<AppStalled_Note>Una descarga no avanza desde hace mucho tiempo. «Reintentar» la vuelve a iniciar para esta aplicación.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

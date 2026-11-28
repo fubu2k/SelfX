@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update đã hoàn tất. Trạng thái thiết bị được kiểm tra lại và cho biết có cần khởi động lại hay không.</Health_Updates_Done>
 		<Health_Apps_Button>Thử lại</Health_Apps_Button>
 		<Health_Apps_Started>Việc cài đặt các ứng dụng bị lỗi đang được bắt đầu lại. Việc này có thể mất vài phút; bạn có thể theo dõi trong Cổng thông tin công ty.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Thử lại một ứng dụng</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Chọn ứng dụng mà SelfX cần cài đặt lại. SelfX chỉ đặt lại kết quả của ứng dụng này và khởi động lại dịch vụ Intune. Sau đó việc cài đặt sẽ bắt đầu lại trong vài phút.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – cài đặt không thành công</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – tải xuống bị dừng</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX sẽ thử cài đặt lại {0}. Chỉ kết quả của ứng dụng này được đặt lại, sau đó dịch vụ Intune khởi động lại. Các bản cài đặt đang chạy sẽ tạm dừng một chút. Việc cài đặt sẽ bắt đầu lại trong vài phút.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX bắt đầu lại việc cài đặt {0}. Việc này có thể mất vài phút; bạn có thể theo dõi trong Cổng thông tin công ty.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} không cần thử lại nữa: ứng dụng đã được cài đặt hoặc trạng thái đã thay đổi. SelfX kiểm tra lại trạng thái.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Giải phóng dung lượng</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Giải phóng dung lượng</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX giải phóng dung lượng trên ổ {0}. Sẽ xóa:&#10;• nội dung Thùng rác của bạn (không thể hoàn tác)&#10;• các tệp tạm của bạn&#10;• bộ nhớ đệm Teams, chỉ khi Teams đã đóng (bạn có thể phải đăng nhập lại Teams)&#10;• các tệp Windows không còn cần: thành phần cập nhật cũ, bộ nhớ đệm tải xuống, tệp hệ thống tạm cũ và tệp cài đặt cũ của ứng dụng công ty&#10;&#10;Tài liệu, cài đặt và chương trình của bạn được giữ nguyên. Việc này có thể mất đến một giờ; bạn có thể tiếp tục làm việc.&#10;&#10;Giải phóng dung lượng ngay?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Mô tả sự cố:</Report_Mail_Body>
 		<AppError_80070BC2>Quá trình cài đặt cần khởi động lại. Hãy khởi động lại thiết bị.</AppError_80070BC2>
 		<AppError_80070070>Không đủ dung lượng trên đĩa. Hãy giải phóng dung lượng đĩa và thử lại.</AppError_80070070>
 		<AppError_80070005>Quyền truy cập bị từ chối khi cài đặt. Hãy liên hệ bộ phận hỗ trợ.</AppError_80070005>
+		<AppStalled_Note>Một lượt tải xuống đã lâu không tiếp tục. "Thử lại" sẽ bắt đầu lại cho ứng dụng này.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

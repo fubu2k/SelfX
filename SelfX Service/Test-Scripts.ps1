@@ -21,6 +21,8 @@
                                        Intune check, thresholds); header versions 2.x.y or 3.x.y; UserScript of Health_Config.xml.
     3.1.0  2026-11-28  fubu2k          Detection.ps1: "not detected" is exit code 0 without output.
     3.1.0  2026-11-28  fubu2k          GPUpdate on Windows Server: only "/target:user /force" (mode from the mocked product type of Windows).
+    3.1.0  2026-11-28  fubu2k          App retry of one app (SELFX_APP_ID): only the entries of this app while it failed or its download
+                                       stalled; nothing for an app that changed or disappeared; no IME restart then; OtherSessions Block.
 #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -891,6 +893,34 @@ try {
 	}
 	$script:removed.Clear()
 	Microsoft.PowerShell.Management\Remove-Item Function:\Test-Path, Function:\Remove-Item, Function:\Get-ChildItem, Function:\Get-ItemProperty
+
+	# Retry of one app (SELFX_APP_ID from the service): only the entries of this app, only while it failed or its download stalled.
+	$oneId = '0675cabb-3d3d-4c3f-abfd-349fb022d5cc'
+	$otherId = 'ffffffff-0000-4000-8000-000000000000'
+	$retryReports = @(
+		[pscustomobject]@{ Id = $appId; State = 5000 }, [pscustomobject]@{ Id = $oneId.ToUpperInvariant(); State = 2000 },
+		[pscustomobject]@{ Id = $oneId; State = 1000 }, [pscustomobject]@{ Id = $oneId; State = 3000 }, [pscustomobject]@{ Id = $otherId; State = 5001 })
+	Assert-Equal ((Select-SelfXRetryReports -Reports $retryReports | ForEach-Object { $_.Id }) -join ',') "$appId,$otherId" 'App retry: without an app every failed entry is reset'
+	$picked = @(Select-SelfXRetryReports -Reports $retryReports -AppId $oneId -States @([pscustomobject]@{ Id = $oneId; Problem = 'Stalled' }))
+	Assert-Equal "$($picked.Count)|$($picked[0].State)" '1|2000' 'App retry of one app: only the entry of this app that is not installed and not "not applicable"'
+	$picked = @(Select-SelfXRetryReports -Reports $retryReports -AppId $appId -States @([pscustomobject]@{ Id = $appId; Problem = 'Failed' }))
+	Assert-Equal "$($picked.Count)|$($picked[0].Id)" "1|$appId" 'App retry of one app: a failed app'
+	foreach ($case in @(
+		@($oneId, @([pscustomobject]@{ Id = $oneId; Problem = '' }), 'neither failed nor stalled any more'),
+		@($oneId, @(), 'not listed by the status row any more (installed, excluded or removed)'),
+		@($oneId, @([pscustomobject]@{ Id = $oneId.ToUpperInvariant(); Problem = 'Stalled' }), 'listed with another spelling of the ID'),
+		@('eeeeeeee-0000-4000-8000-000000000000', @([pscustomobject]@{ Id = 'eeeeeeee-0000-4000-8000-000000000000'; Problem = 'Failed' }), 'listed but without an entry in the cache'),
+		@($otherId, @([pscustomobject]@{ Id = $appId; Problem = 'Failed' }), 'another app is failed'))) {
+		Assert-Equal @(Select-SelfXRetryReports -Reports $retryReports -AppId $case[0] -States $case[1]).Count 0 "App retry of one app: nothing is reset when the app is $($case[2])"
+	}
+	$retryCode = Get-Content -LiteralPath (Join-Path $scripts 'SelfX_Apps_RetryInstall.ps1') -Raw
+	Assert-Equal ($retryCode.Contains('$target = "$env:SELFX_APP_ID"') -and $retryCode.Contains("-cnotmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'")) $true 'App retry of one app: the ID comes from SELFX_APP_ID and is checked again'
+	Assert-Equal ($retryCode.IndexOf('exit 4') -gt 0 -and $retryCode.IndexOf('exit 4') -lt $retryCode.IndexOf('Restart-Service')) $true 'App retry of one app: no restart of the IME when nothing is reset (exit 4)'
+	Assert-Equal ($retryCode -notmatch '(?m)^\s*\[CmdletBinding|(?m)^param\(') $true 'App retry: the script has no parameter'
+	[xml]$healthConfig = Get-Content -LiteralPath (Join-Path $sources 'Health_Config.xml') -Raw
+	$appsRemediation = $healthConfig.SelectSingleNode("/HealthConfig/Remediations/Remediation[@Script='SelfX_Apps_RetryInstall.ps1']")
+	Assert-Equal "$($appsRemediation.OtherSessions)|$($appsRemediation.TerminalServer)" 'Block|Hide' 'App retry: OtherSessions Block (restart of the IME) and TerminalServer Hide'
+	Assert-Equal $healthConfig.HealthConfig.Applications.StalledMinutes '120' 'App retry: the delivered StalledMinutes is 120'
 
 	# App status: app id from the key <app id>_<revision> (not the user id), names from the IME logs, error codes.
 	function Get-ChildItem { param([string]$LiteralPath, [switch]$Recurse, $ErrorAction, [switch]$File)

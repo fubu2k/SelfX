@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update শেষ হয়েছে। ডিভাইসের অবস্থা আবার পরীক্ষা করা হচ্ছে এবং পুনরায় চালু করা দরকার কি না তা দেখায়।</Health_Updates_Done>
 		<Health_Apps_Button>আবার চেষ্টা করুন</Health_Apps_Button>
 		<Health_Apps_Started>ব্যর্থ অ্যাপগুলোর ইনস্টলেশন আবার শুরু হচ্ছে। এতে কয়েক মিনিট লাগতে পারে; আপনি কোম্পানি পোর্টালে তা দেখতে পারবেন।</Health_Apps_Started>
+		<Health_Apps_Choose_Title>একটি অ্যাপের জন্য আবার চেষ্টা করুন</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>SelfX কোন অ্যাপটি আবার ইনস্টল করবে তা বেছে নিন। SelfX শুধু এই অ্যাপের ফলাফল রিসেট করে এবং Intune পরিষেবা আবার চালু করে। এরপর কয়েক মিনিটের মধ্যে ইনস্টলেশন আবার শুরু হয়।</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – ইনস্টলেশন ব্যর্থ হয়েছে</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – ডাউনলোড আটকে আছে</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX আবার {0} ইনস্টল করার চেষ্টা করবে। শুধু এই অ্যাপের ফলাফল রিসেট হয়, তারপর Intune পরিষেবা আবার চালু হয়। চলমান ইনস্টলেশনগুলো অল্প সময়ের জন্য থামে। কয়েক মিনিটের মধ্যে ইনস্টলেশন আবার শুরু হয়।</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX আবার {0}-এর ইনস্টলেশন শুরু করছে। এতে কয়েক মিনিট লাগতে পারে; আপনি কোম্পানি পোর্টালে তা দেখতে পারবেন।</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0}-এর জন্য আর নতুন চেষ্টার দরকার নেই: এটি ইনস্টল আছে অথবা এর অবস্থা বদলেছে। SelfX আবার অবস্থা পরীক্ষা করছে।</Health_Apps_Gone>
 		<Health_FreeSpace_Button>জায়গা খালি করুন</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>জায়গা খালি করুন</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX ড্রাইভ {0}-এ জায়গা খালি করে। যা মুছে ফেলা হয়:&#10;• আপনার রিসাইকেল বিনের বিষয়বস্তু (ফেরানো যাবে না)&#10;• আপনার অস্থায়ী ফাইল&#10;• Teams ক্যাশ, শুধু Teams বন্ধ থাকলে (আপনাকে আবার Teams-এ সাইন ইন করতে হতে পারে)&#10;• আর প্রয়োজন নেই এমন Windows ফাইল: পুরনো আপডেট উপাদান, ডাউনলোড ক্যাশ, পুরনো অস্থায়ী সিস্টেম ফাইল এবং কোম্পানির অ্যাপের পুরনো ইনস্টলেশন ফাইল&#10;&#10;আপনার নথি, সেটিংস ও প্রোগ্রাম থেকে যায়। এতে এক ঘণ্টা পর্যন্ত লাগতে পারে; আপনি কাজ চালিয়ে যেতে পারেন।&#10;&#10;এখনই জায়গা খালি করবেন?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ SelfX দ্বারা {1} তারিখে সংগৃহীত {0}-এর
 		<AppError_80070BC2>ইনস্টলেশনের জন্য রিস্টার্ট প্রয়োজন। ডিভাইসটি রিস্টার্ট করুন।</AppError_80070BC2>
 		<AppError_80070070>ডিস্কে যথেষ্ট জায়গা নেই। ডিস্কে জায়গা খালি করে আবার চেষ্টা করুন।</AppError_80070070>
 		<AppError_80070005>ইনস্টলেশনের সময় অ্যাক্সেস প্রত্যাখ্যান করা হয়েছে। সাপোর্টে যোগাযোগ করুন।</AppError_80070005>
+		<AppStalled_Note>একটি ডাউনলোড অনেকক্ষণ ধরে এগোচ্ছে না। "আবার চেষ্টা করুন" এই অ্যাপের জন্য এটি আবার শুরু করে।</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

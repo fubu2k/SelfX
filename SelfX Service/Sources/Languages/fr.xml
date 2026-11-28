@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update a terminé. L’état de l’appareil est vérifié à nouveau et indique si un redémarrage est nécessaire.</Health_Updates_Done>
 		<Health_Apps_Button>Réessayer</Health_Apps_Button>
 		<Health_Apps_Started>L’installation des applications en échec redémarre. Cela peut prendre quelques minutes ; vous pouvez la suivre dans le Portail d’entreprise.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Réessayer une application</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Choisissez l’application que SelfX doit installer à nouveau. SelfX réinitialise uniquement le résultat de cette application et redémarre le service Intune. L’installation redémarre ensuite en quelques minutes.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – échec de l’installation</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – téléchargement bloqué</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX va essayer d’installer à nouveau {0}. Seul le résultat de cette application est réinitialisé, puis le service Intune redémarre. Les installations en cours s’interrompent brièvement. L’installation redémarre en quelques minutes.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX relance l’installation de {0}. Cela peut prendre quelques minutes ; vous pouvez la suivre dans le Portail d’entreprise.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} n’a plus besoin d’un nouvel essai : l’application est installée ou son état a changé. SelfX vérifie à nouveau l’état.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Libérer de l'espace</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Libérer de l'espace</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX libère de l'espace sur le lecteur {0}. Sont supprimés :&#10;• le contenu de votre corbeille (irréversible)&#10;• vos fichiers temporaires&#10;• le cache de Teams, seulement si Teams est fermé (vous devrez peut-être vous reconnecter à Teams)&#10;• les fichiers Windows devenus inutiles : anciens composants de mise à jour, cache de téléchargement, anciens fichiers système temporaires et anciens fichiers d'installation des applications de l'entreprise&#10;&#10;Vos documents, paramètres et programmes sont conservés. Cela peut durer jusqu'à une heure ; vous pouvez continuer à travailler.&#10;&#10;Libérer de l'espace maintenant ?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Description du problème :</Report_Mail_Body>
 		<AppError_80070BC2>L'installation nécessite un redémarrage. Redémarrez l'appareil.</AppError_80070BC2>
 		<AppError_80070070>L'espace disque est insuffisant. Libérez de l'espace disque et réessayez.</AppError_80070070>
 		<AppError_80070005>L'accès a été refusé pendant l'installation. Contactez le support.</AppError_80070005>
+		<AppStalled_Note>Un téléchargement n’avance plus depuis longtemps. « Réessayer » le relance pour cette application.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

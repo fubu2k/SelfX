@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update ist fertig. SelfX prüft den Gerätestatus erneut. Dort sehen Sie, ob ein Neustart nötig ist.</Health_Updates_Done>
 		<Health_Apps_Button>Erneut versuchen</Health_Apps_Button>
 		<Health_Apps_Started>SelfX startet die Installation der fehlgeschlagenen Apps noch einmal. Das kann einige Minuten dauern. Den Fortschritt sehen Sie im Unternehmensportal.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Eine App erneut versuchen</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Wählen Sie die App, die SelfX noch einmal installieren soll. SelfX setzt nur das Ergebnis dieser App zurück und startet den Intune-Dienst neu. Die Installation beginnt dann in wenigen Minuten neu.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – Installation fehlgeschlagen</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – Download hängt</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX versucht, {0} noch einmal zu installieren. Nur das Ergebnis dieser App wird zurückgesetzt, danach startet der Intune-Dienst neu. Laufende Installationen halten kurz an. Die Installation beginnt in wenigen Minuten neu.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX startet die Installation von {0} noch einmal. Das kann einige Minuten dauern. Den Fortschritt sehen Sie im Unternehmensportal.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} braucht keinen neuen Versuch: Die App ist installiert oder ihr Zustand hat sich geändert. SelfX prüft den Status erneut.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Speicherplatz freigeben</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Speicherplatz freigeben</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX gibt Speicherplatz auf Laufwerk {0} frei. Gelöscht werden:&#10;• der Inhalt Ihres Papierkorbs (kann nicht rückgängig gemacht werden)&#10;• Ihre temporären Dateien&#10;• der Teams-Cache, nur wenn Teams geschlossen ist (eventuell müssen Sie sich in Teams neu anmelden)&#10;• Windows-Dateien, die nicht mehr gebraucht werden: alte Update-Bestandteile, der Download-Cache, alte temporäre Systemdateien und alte Installationsdateien von Firmen-Apps&#10;&#10;Ihre Dokumente, Einstellungen und Programme bleiben erhalten. Das kann bis zu einer Stunde dauern; Sie können weiterarbeiten.&#10;&#10;Jetzt Speicherplatz freigeben?</Health_FreeSpace_Confirm>
@@ -385,6 +392,7 @@ Die Daten stammen vom Diagnose-Werkzeug SelfX. Namen und Adressen sind absichtli
 		<AppError_80070BC2>Die Installation braucht einen Neustart. Starten Sie das Gerät neu.</AppError_80070BC2>
 		<AppError_80070070>Auf dem Datenträger ist nicht genug Platz. Geben Sie Speicherplatz frei und versuchen Sie es erneut.</AppError_80070070>
 		<AppError_80070005>Bei der Installation wurde der Zugriff verweigert. Wenden Sie sich an den Support.</AppError_80070005>
+		<AppStalled_Note>Ein Download geht seit längerer Zeit nicht weiter. „Erneut versuchen“ startet ihn für diese App neu.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
