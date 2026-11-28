@@ -1161,7 +1161,7 @@ $evService = New-Object SelfX.SelfXService(('SelfX.EventTest.' + [guid]::NewGuid
 $evConfig = Join-Path $dataRoot 'EventConfig'
 New-Item -ItemType Directory -Path $evConfig -Force | Out-Null
 [SelfX.SelfXService].GetField('configRoot', $instanceFlags).SetValue($evService, $evConfig)
-$evList = New-Object 'System.Collections.Generic.List[object[]]'
+$evList = [System.Collections.Generic.List[object[]]]::new()
 [SelfX.SelfXService].GetField('eventsForTest', $instanceFlags).SetValue($evService, $evList)
 $evClock = [SelfX.SelfXService].GetField('eventClockForTest', $instanceFlags)
 $evNow = [datetime]::new(2026, 11, 28, 10, 0, 0, [DateTimeKind]::Utc)
@@ -1257,8 +1257,8 @@ foreach ($case in @(
 Assert-True ($sourceText.Contains('if (health)') -and $sourceText.Contains('ReportHealthChanges(text)')) 'Event log: a health run reports rows that changed to Error, no action events'
 
 # Health rows: only a change to Error, Detail is never read; invalid JSON and the placeholder Collection change nothing.
-$state = New-Object 'System.Collections.Generic.Dictionary[string,string]'
-function Get-Changes([string]$Json) { return @($findChanges.Invoke($null, [object[]]@($Json, $state))) }
+$state = [System.Collections.Generic.Dictionary[string, string]]::new()
+function Get-Changes([string]$Json) { return @($findChanges.Invoke($null, [object[]]@($Json, $state.psobject.BaseObject))) }
 $rows = '[{"Id":"Disk","Name":"C:","Status":"Error","Detail":"C:\\Users\\someone\\secret"},{"Id":"Defender","Name":"","Status":"OK","Detail":"ok"}]'
 $c = Get-Changes $rows
 Assert-True ($c.Count -eq 1 -and [string]$c[0][0] -ceq 'Disk' -and [string]$c[0][1] -ceq 'C:' -and [string]$c[0][2] -ceq '-') 'Health: a row seen first with Error is reported once (previous status -)'
