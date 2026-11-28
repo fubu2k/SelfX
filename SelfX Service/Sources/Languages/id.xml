@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows akan dimulai ulang untuk menyelesaikan pembaruan dan perubahan yang tertunda.&#10;&#10;Simpan pekerjaan Anda terlebih dahulu dan tutup semua program. Mulai ulang dimulai sekitar 30 detik setelah Anda mengonfirmasi.&#10;&#10;Mulai ulang sekarang?</Health_Restart_Confirm>
 		<Button_Restart_Now>Mulai ulang sekarang</Button_Restart_Now>
 		<Health_Restart_Started>Windows dimulai ulang dalam sekitar 30 detik. Simpan pekerjaan Anda sekarang.</Health_Restart_Started>
+		<Disturb_Warning_Text>Anda tampaknya sedang dalam rapat atau presentasi. Tindakan ini dapat menghentikannya.</Disturb_Warning_Text>
 		<Health_Updates_Started>Pembaruan Windows sedang dicari, diunduh, dan dipasang. Ini dapat memakan waktu beberapa menit; Anda dapat terus bekerja.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update telah selesai. Status perangkat diperiksa lagi dan menunjukkan apakah perlu dimulai ulang.</Health_Updates_Done>
 		<Health_Apps_Button>Coba lagi</Health_Apps_Button>

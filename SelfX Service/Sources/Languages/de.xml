@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows muss neu starten, damit Updates und Änderungen fertig werden.&#10;&#10;Speichern Sie Ihre Arbeit und schließen Sie alle Programme. Der Neustart beginnt etwa 30 Sekunden nach Ihrer Bestätigung. Nicht gespeicherte Arbeit geht verloren.&#10;&#10;Jetzt neu starten?</Health_Restart_Confirm>
 		<Button_Restart_Now>Jetzt neu starten</Button_Restart_Now>
 		<Health_Restart_Started>Windows startet in etwa 30 Sekunden neu. Speichern Sie jetzt Ihre Arbeit.</Health_Restart_Started>
+		<Disturb_Warning_Text>Sie sind anscheinend in einer Besprechung oder Präsentation. Diese Aktion kann sie unterbrechen.</Disturb_Warning_Text>
 		<Health_Updates_Started>SelfX sucht, lädt und installiert jetzt Windows-Updates. Das kann einige Minuten dauern. Sie können weiterarbeiten.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update ist fertig. SelfX prüft den Gerätestatus erneut. Dort sehen Sie, ob ein Neustart nötig ist.</Health_Updates_Done>
 		<Health_Apps_Button>Erneut versuchen</Health_Apps_Button>

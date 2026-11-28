@@ -47,6 +47,7 @@
     3.1.0    2026-11-27  fubu2k               Text overrides: Config\Texts\<culture>.xml replaces single texts after the bundled file is loaded
                                               (Initialize-SelfXLanguage -TextOverrideFolder, Read-SelfXTextOverride, Set-SelfXTextOverride)
     3.1.0    2026-11-27  fubu2k               Catalogue field TerminalServer is passed on with each action (Environment_Mode, SelfXEnvironment.ps1)
+    3.1.0    2026-11-28  fubu2k               Catalogue field Disruptive is passed on with each action (SelfXDisturb.ps1)
 #>
 
 $Script:SelfX_Language = $null
@@ -705,7 +706,7 @@ Function Get-SelfXLocalizedActions
 		Converts the actions of one catalogue section into objects with localized texts.
 	.DESCRIPTION
 		Category contains the localized display name (used in the list and the filter), CategoryId the
-		original Id. Script, Link, Context, Requires, TerminalServer, Post_Action and Buttons are taken unchanged from the catalogue.
+		original Id. Script, Link, Context, Requires, TerminalServer, Disruptive, Post_Action and Buttons are taken unchanged from the catalogue.
 	.PARAMETER Section
 		Quick_Solution (simplified view) or Detailed_Solution (detailed view).
 	#>
@@ -729,6 +730,7 @@ Function Get-SelfXLocalizedActions
 				Context     = ([string]$Action.Context).Trim()
 				Requires    = ([string]$Action.Requires).Trim()
 				TerminalServer = ([string]$Action.TerminalServer).Trim()
+				Disruptive  = ([string]$Action.Disruptive).Trim()
 				Post_Action = ([string]$Action.Post_Action).Trim()
 				CategoryId  = $Category_Id
 				Id          = $Action.GetAttribute('Id')

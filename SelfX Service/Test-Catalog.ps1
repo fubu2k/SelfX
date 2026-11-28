@@ -18,6 +18,8 @@
       - user scripts do not declare "Context : System" in their header;
       - every action (element TerminalServer) and every remediation (attribute TerminalServer) is classified Show or Hide,
         the same on every entry of a script (Environment_Mode TerminalServer); negative examples prove the rule.
+      - the optional element Disruptive of an action is exactly True, only on an action with a script, and the same on every entry
+        of a script (hint before disruptive actions); negative examples prove the rule.
 
     Nothing is executed and nothing is changed: the files are only read and parsed.
     Run in Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-Catalog.ps1
@@ -40,6 +42,7 @@
                                               script of the catalogue or of another remediation and has no mandatory parameter.
     3.1.0    2026-11-27  fubu2k               Required classification TerminalServer (Show or Hide) on every action and remediation, the same
                                               for every entry of a script, with negative examples
+    3.1.0    2026-11-28  fubu2k               Optional element Disruptive: exactly True, only with a script, the same for every entry of a script (negative examples)
 #>
 param(
 	[string]$SourcesFolder = (Join-Path $PSScriptRoot 'Sources')
@@ -218,6 +221,52 @@ foreach ($name in $examples.Keys) {
 	$example = $examples[$name][0]
 	$found = @(Get-TerminalServerProblems $example.Catalog $example.Health)
 	Assert-True ($found.Count -eq $examples[$name][1]) "TerminalServer rule: $name gives $($examples[$name][1]) problem(s) (found $($found.Count): $($found -join '; '))"
+}
+
+# Disruptive (hint before disruptive actions) is optional. When it is there it is exactly True (never False, never empty, one element),
+# belongs to an action with a script and is the same on every entry of that script: the window decides per entry, so different
+# values would warn for one entry of a script and not for another.
+function Get-DisruptiveProblems {
+	param([xml]$Catalog)
+	$problems = New-Object System.Collections.Generic.List[string]
+	$byScript = @{}
+	foreach ($action in @($Catalog.SelectNodes('//Action'))) {
+		$nodes = @($action.SelectNodes('Disruptive'))
+		$value = if ($nodes.Count -eq 1) { "$($nodes[0].InnerText)" } else { '' }
+		$scriptKey = "$($action.Script)".Trim().ToLowerInvariant()
+		if ($nodes.Count -gt 1 -or ($nodes.Count -eq 1 -and $value -cne 'True')) {
+			$problems.Add("Action $($action.GetAttribute('Id')) has at most one Disruptive and it is exactly True (found $($nodes.Count) element(s), '$value')")
+			continue
+		}
+		if ($nodes.Count -eq 1 -and -not $scriptKey) {
+			$problems.Add("Action $($action.GetAttribute('Id')) is Disruptive but has no script")
+			continue
+		}
+		if (-not $scriptKey) { continue }
+		if (-not $byScript.ContainsKey($scriptKey)) { $byScript[$scriptKey] = New-Object System.Collections.Generic.List[string] }
+		$byScript[$scriptKey].Add($(if ($nodes.Count -eq 1) { 'True' } else { '' }))
+	}
+	foreach ($scriptKey in $byScript.Keys) {
+		if (@($byScript[$scriptKey] | Sort-Object -Unique).Count -ne 1) { $problems.Add("All entries of $scriptKey have the same Disruptive value") }
+	}
+	return $problems.ToArray()
+}
+$disruptiveProblems = @(Get-DisruptiveProblems $catalog)
+Assert-True ($disruptiveProblems.Count -eq 0) ("Disruptive is True or absent, the same for every entry of a script" + $(if ($disruptiveProblems.Count) { ": $($disruptiveProblems -join '; ')" } else { '' }))
+Assert-True (@($catalog.SelectNodes('//Action[Disruptive]')).Count -gt 0) 'The delivered catalogue marks at least one action Disruptive'
+Assert-True (@($health.SelectNodes('//Remediation[@Disruptive]')).Count -eq 0) 'Remediations of Health_Config.xml have no Disruptive attribute (the restart repair has the hint without it)'
+$disruptiveExamples = [ordered]@{
+	'a valid example'                       = @('<Action Id="A"><Script>A.ps1</Script><Disruptive>True</Disruptive></Action><Action Id="A2"><Script>a.ps1</Script><Disruptive>True</Disruptive></Action><Action Id="B"><Script>B.ps1</Script></Action>', 0)
+	'False'                                 = @('<Action Id="A"><Script>A.ps1</Script><Disruptive>False</Disruptive></Action>', 1)
+	'lower case'                            = @('<Action Id="A"><Script>A.ps1</Script><Disruptive>true</Disruptive></Action>', 1)
+	'empty'                                 = @('<Action Id="A"><Script>A.ps1</Script><Disruptive></Disruptive></Action>', 1)
+	'two elements'                          = @('<Action Id="A"><Script>A.ps1</Script><Disruptive>True</Disruptive><Disruptive>True</Disruptive></Action>', 1)
+	'True on one entry of a script only'    = @('<Action Id="A"><Script>A.ps1</Script><Disruptive>True</Disruptive></Action><Action Id="A2"><Script>a.ps1</Script></Action>', 1)
+	'a link action'                         = @('<Action Id="L"><Link>Link_X</Link><Context>Link</Context><Disruptive>True</Disruptive></Action>', 1)
+}
+foreach ($name in $disruptiveExamples.Keys) {
+	$found = @(Get-DisruptiveProblems ([xml]"<Actions><Quick_Solution>$($disruptiveExamples[$name][0])</Quick_Solution></Actions>"))
+	Assert-True ($found.Count -eq $disruptiveExamples[$name][1]) "Disruptive rule: $name gives $($disruptiveExamples[$name][1]) problem(s) (found $($found.Count): $($found -join '; '))"
 }
 
 # --- Remediations of Health_Config.xml -------------------------------------------------------------

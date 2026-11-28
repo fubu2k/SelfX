@@ -55,6 +55,7 @@
                                               FullWithoutConfig, ConfigOnly)
     3.1.0    2026-11-27  fubu2k               Code files SelfX_Device_FreeSpace.ps1 and SelfX_Device_FreeSpaceUser.ps1 (free up space)
     3.1.0    2026-11-27  fubu2k               Code file SelfXEnvironment.ps1 (Environment_Mode)
+    3.1.0    2026-11-28  fubu2k               Code file SelfXDisturb.ps1 (warning before disruptive actions)
 #>
 
 # Names (relative to the installation folder, '/' as separator) of the settings files.
@@ -89,7 +90,7 @@ $script:SelfXCodeFileNames = @(
     'Scripts_to_run/SelfX_Poste_WSReset.ps1', 'Scripts_to_run/SelfX_Teams_Reboot.ps1',
     'Scripts_to_run/SelfX_Teams_ResetCache.ps1', 'Scripts_to_run/SelfX_Updates_Install.ps1',
     'Scripts_to_run/SelfX_Word_Reboot.ps1', 'SelfX.exe', 'SelfXAudio.ps1', 'SelfXDefender.ps1',
-    'SelfXDeviceSecurity.ps1', 'SelfXEnvironment.ps1', 'SelfXLog.ps1', 'SelfXNetwork.ps1', 'SelfXOffice.ps1', 'SelfXPaths.ps1', 'SelfXService.exe',
+    'SelfXDeviceSecurity.ps1', 'SelfXDisturb.ps1', 'SelfXEnvironment.ps1', 'SelfXLog.ps1', 'SelfXNetwork.ps1', 'SelfXOffice.ps1', 'SelfXPaths.ps1', 'SelfXService.exe',
     'SelfXServiceClient.ps1', 'SelfXWinRT.ps1', 'SelfXWindows.ps1', 'SelfX_Tray.ps1', 'Self_X.ps1',
     'SupportLinks.ps1', 'SupportReport.ps1', 'SystemInfo.ps1', 'TicketMail.ps1', 'TicketSend.ps1', 'Uninstall.ps1',
     'icon_systray.ico', 'logo.png'

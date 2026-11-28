@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>زیر التواء اپ ڈیٹس اور تبدیلیاں مکمل کرنے کے لیے Windows دوبارہ شروع ہوگا۔&#10;&#10;پہلے اپنا کام محفوظ کریں اور تمام پروگرام بند کریں۔ تصدیق کے تقریباً 30 سیکنڈ بعد دوبارہ شروع ہوگا۔&#10;&#10;ابھی دوبارہ شروع کریں؟</Health_Restart_Confirm>
 		<Button_Restart_Now>ابھی دوبارہ شروع کریں</Button_Restart_Now>
 		<Health_Restart_Started>Windows تقریباً 30 سیکنڈ میں دوبارہ شروع ہوگا۔ ابھی اپنا کام محفوظ کریں۔</Health_Restart_Started>
+		<Disturb_Warning_Text>ایسا لگتا ہے کہ آپ کسی میٹنگ یا پریزنٹیشن میں ہیں۔ یہ عمل اسے منقطع کر سکتا ہے۔</Disturb_Warning_Text>
 		<Health_Updates_Started>Windows اپ ڈیٹس تلاش، ڈاؤن لوڈ اور انسٹال کی جا رہی ہیں۔ اس میں کئی منٹ لگ سکتے ہیں؛ آپ کام جاری رکھ سکتے ہیں۔</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update مکمل ہو گیا۔ ڈیوائس کی حالت دوبارہ جانچی جا رہی ہے اور دکھاتی ہے کہ آیا دوبارہ شروع کرنا ضروری ہے۔</Health_Updates_Done>
 		<Health_Apps_Button>دوبارہ کوشش کریں</Health_Apps_Button>

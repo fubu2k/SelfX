@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>보류 중인 업데이트와 변경 내용을 완료하기 위해 Windows가 다시 시작됩니다.&#10;&#10;먼저 작업을 저장하고 모든 프로그램을 닫으세요. 확인 후 약 30초 뒤에 다시 시작됩니다.&#10;&#10;지금 다시 시작하시겠습니까?</Health_Restart_Confirm>
 		<Button_Restart_Now>지금 다시 시작</Button_Restart_Now>
 		<Health_Restart_Started>약 30초 후에 Windows가 다시 시작됩니다. 지금 작업을 저장하세요.</Health_Restart_Started>
+		<Disturb_Warning_Text>회의 또는 프레젠테이션 중인 것으로 보입니다. 이 작업은 이를 중단시킬 수 있습니다.</Disturb_Warning_Text>
 		<Health_Updates_Started>Windows 업데이트를 검색, 다운로드 및 설치하고 있습니다. 몇 분 정도 걸릴 수 있으며 계속 작업할 수 있습니다.</Health_Updates_Started>
 		<Health_Updates_Done>Windows 업데이트가 완료되었습니다. 디바이스 상태를 다시 확인하여 다시 시작이 필요한지 표시합니다.</Health_Updates_Done>
 		<Health_Apps_Button>다시 시도</Health_Apps_Button>

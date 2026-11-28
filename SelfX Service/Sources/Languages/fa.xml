@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows برای تکمیل به‌روزرسانی‌ها و تغییرات در انتظار، دوباره راه‌اندازی می‌شود.&#10;&#10;ابتدا کار خود را ذخیره کنید و همه برنامه‌ها را ببندید. راه‌اندازی مجدد حدود ۳۰ ثانیه پس از تأیید شروع می‌شود.&#10;&#10;اکنون راه‌اندازی مجدد شود؟</Health_Restart_Confirm>
 		<Button_Restart_Now>اکنون راه‌اندازی مجدد</Button_Restart_Now>
 		<Health_Restart_Started>Windows حدود ۳۰ ثانیه دیگر دوباره راه‌اندازی می‌شود. اکنون کار خود را ذخیره کنید.</Health_Restart_Started>
+		<Disturb_Warning_Text>به نظر می‌رسد در یک جلسه یا ارائه هستید. این اقدام ممکن است آن را قطع کند.</Disturb_Warning_Text>
 		<Health_Updates_Started>به‌روزرسانی‌های Windows در حال جستجو، دانلود و نصب هستند. این کار ممکن است چند دقیقه طول بکشد؛ می‌توانید به کار ادامه دهید.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update به پایان رسید. وضعیت دستگاه دوباره بررسی می‌شود و نشان می‌دهد آیا راه‌اندازی مجدد لازم است.</Health_Updates_Done>
 		<Health_Apps_Button>تلاش دوباره</Health_Apps_Button>

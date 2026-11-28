@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>Windows itaanzishwa upya ili kukamilisha masasisho na mabadiliko yanayosubiri.&#10;&#10;Hifadhi kazi yako kwanza na ufunge programu zote. Kuanzisha upya kunaanza takriban sekunde 30 baada ya kuthibitisha.&#10;&#10;Anzisha upya sasa?</Health_Restart_Confirm>
 		<Button_Restart_Now>Anzisha upya sasa</Button_Restart_Now>
 		<Health_Restart_Started>Windows itaanzishwa upya baada ya takriban sekunde 30. Hifadhi kazi yako sasa.</Health_Restart_Started>
+		<Disturb_Warning_Text>Inaonekana uko katika mkutano au wasilisho. Kitendo hiki kinaweza kuukatiza.</Disturb_Warning_Text>
 		<Health_Updates_Started>Masasisho ya Windows yanatafutwa, kupakuliwa na kusakinishwa. Hii inaweza kuchukua dakika kadhaa; unaweza kuendelea kufanya kazi.</Health_Updates_Started>
 		<Health_Updates_Done>Windows Update imemaliza. Hali ya kifaa inakaguliwa tena na inaonyesha kama kuanzisha upya kunahitajika.</Health_Updates_Done>
 		<Health_Apps_Button>Jaribu tena</Health_Apps_Button>

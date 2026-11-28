@@ -29,6 +29,7 @@
 		<Health_Restart_Confirm>O Windows vai reiniciar para concluir as atualizações e alterações pendentes.&#10;&#10;Guarde primeiro o seu trabalho e feche todos os programas. O reinício começa cerca de 30 segundos após a confirmação.&#10;&#10;Reiniciar agora?</Health_Restart_Confirm>
 		<Button_Restart_Now>Reiniciar agora</Button_Restart_Now>
 		<Health_Restart_Started>O Windows reinicia dentro de cerca de 30 segundos. Guarde agora o seu trabalho.</Health_Restart_Started>
+		<Disturb_Warning_Text>Parece que você está em uma reunião ou apresentação. Esta ação pode interrompê-la.</Disturb_Warning_Text>
 		<Health_Updates_Started>As atualizações do Windows estão a ser procuradas, transferidas e instaladas. Pode demorar vários minutos; pode continuar a trabalhar.</Health_Updates_Started>
 		<Health_Updates_Done>O Windows Update terminou. O estado do dispositivo é verificado novamente e indica se é necessário reiniciar.</Health_Updates_Done>
 		<Health_Apps_Button>Tentar novamente</Health_Apps_Button>
