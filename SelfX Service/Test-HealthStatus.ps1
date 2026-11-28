@@ -25,6 +25,7 @@
                                            20, check in the client), APPRETRY in the client and the note in the language of the user.
         3.1.0  2026-11-28  fubu2k          Apps carry the error code of a failed app; inventory file of the service (line with fixed schema,
                                            no names or detail texts, off by default, DTD, rotation, terminal server Off, no link followed).
+        3.1.0  2026-11-28  fubu2k          Pipe server check: RUN and APPRETRY require a confirmed server (undetermined, failed and foreign refused).
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -1151,10 +1152,18 @@ try {
         $script:pipeState = 1; $script:pipeStateFails = $true
         Test-SelfXPipeServer -Pipe 'pipe'
         $script:pipeStateFails = $false
-        Assert-Equal $true $true 'Pipe server check: undetermined state and errors do not stop the request'
+        Assert-Equal $true $true 'Pipe server check: undetermined state and errors do not stop a reading request'
+        # An action (RUN, APPRETRY) needs a confirmed server: undetermined or failed = refused, confirmed = sent.
+        $script:pipeState = 1
+        Test-SelfXPipeServer -Pipe 'pipe' -RequireConfirmed
+        Assert-Throws { $script:pipeState = -1; Test-SelfXPipeServer -Pipe 'pipe' -RequireConfirmed } 'Pipe server check: an action is not sent when the server is undetermined'
+        Assert-Throws { $script:pipeState = 1; $script:pipeStateFails = $true; Test-SelfXPipeServer -Pipe 'pipe' -RequireConfirmed } 'Pipe server check: an action is not sent when the check fails'
+        $script:pipeStateFails = $false
+        Assert-Throws { $script:pipeState = 0; Test-SelfXPipeServer -Pipe 'pipe' -RequireConfirmed } 'Pipe server check: an action is not sent to another process'
         $clientText = [IO.File]::ReadAllText("$sources\SelfXServiceClient.ps1")
         Assert-Equal ($clientText.IndexOf('Test-SelfXPipeServer -Pipe $pipe') -gt 0 -and $clientText.IndexOf('Test-SelfXPipeServer -Pipe $pipe') -lt $clientText.IndexOf('$writer.WriteLine($Request)')) $true 'Pipe server check runs before the request is written'
         Assert-Equal ($clientText.Contains('GetNamedPipeServerProcessId') -and $clientText.Contains('QueryServiceStatusEx')) $true 'Pipe server check compares the pipe server and service process IDs'
+        Assert-Equal ($clientText.Contains("Test-SelfXPipeServer -Pipe `$pipe -RequireConfirmed:(`$Request -match '^(RUN|APPRETRY) ')")) $true 'Pipe server check: RUN and APPRETRY require a confirmed server'
         Remove-Item Function:\Get-SelfXPipeServerState
 
         # STATUS client: validated cache answer of the service, no request reaches a real pipe.
