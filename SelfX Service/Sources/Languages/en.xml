@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update has finished. The device status is checked again and shows whether a restart is needed.</Health_Updates_Done>
 		<Health_Apps_Button>Try again</Health_Apps_Button>
 		<Health_Apps_Started>The installation of the failed apps starts again. This can take a few minutes; you can follow it in the Company Portal.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Try one app again</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Choose the app that SelfX should install again. SelfX resets only the result of this app and restarts the Intune service. The installation then starts again within a few minutes.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – installation failed</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – download stalled</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX tries to install {0} again. Only the result of this app is reset, then the Intune service restarts. Installations that are running pause briefly. The installation starts again within a few minutes.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX starts the installation of {0} again. This can take a few minutes; you can follow it in the Company Portal.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} needs no new attempt: it is installed or its status has changed. SelfX checks the status again.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Free up space</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Free up space</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX frees up space on drive {0}. It deletes:&#10;• the content of your recycle bin (cannot be undone)&#10;• your temporary files&#10;• the Teams cache, only when Teams is closed (you may have to sign in to Teams again)&#10;• Windows files that are no longer needed: old update components, the download cache, old temporary system files and old installation files of company apps&#10;&#10;Your documents, settings and programs stay. This can take up to an hour; you can keep working.&#10;&#10;Free up space now?</Health_FreeSpace_Confirm>
@@ -387,6 +394,7 @@ The data comes from the diagnostic tool SelfX. Names and addresses are replaced 
 		<AppError_80070BC2>The installation needs a restart. Restart the device.</AppError_80070BC2>
 		<AppError_80070070>There is not enough space on the disk. Free up disk space and try again.</AppError_80070070>
 		<AppError_80070005>Access was denied during the installation. Contact the support.</AppError_80070005>
+		<AppStalled_Note>A download has not continued for a long time. "Try again" starts it again for this app.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

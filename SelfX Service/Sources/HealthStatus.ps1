@@ -26,6 +26,10 @@
     3.1.0  2026-11-27  fubu2k          Environment_Mode TerminalServer (Tool_Config.xml): a repair not classified TerminalServer="Show"
                                        is returned without Remediation and UserRemediation (SelfXEnvironment.ps1)
     3.1.0  2026-11-28  fubu2k          The mode comes from Windows (Get-SelfXEnvironmentMode), not from Tool_Config.xml
+    3.1.0  2026-11-28  fubu2k          Row Applications: an app that is not installed yet and whose content file in
+                                       Content\Incoming has not changed for StalledMinutes (Health_Config.xml, 30-1440, default 120)
+                                       is an error "download stalled since ..."; failed and stalled apps are listed in Apps (ID, name,
+                                       problem; at most 20) for the retry of one app
 #>
     param([switch]$Collect, [string]$OnlyId = '', [string]$OnlyName = '', [string]$CacheFile = '')
 
@@ -283,6 +287,24 @@ function Get-SelfXAppReports {
     }
 }
 
+function Get-SelfXAppDownloads {
+    # Content that the IME is downloading: Content\Incoming\<app id>_<revision>.bin below the folder of the Intune Management
+    # Extension (Microsoft Learn: "Understanding the flow behind deployment, delivery, and processing of a Win32 application
+    # through Intune", step 15). Returns a hashtable app id (lower case) -> newest write time (UTC) of such a file. The time is
+    # the last progress of the download. Links and other names are ignored; at most 500 files are looked at. Only reads.
+    param([string]$Folder = (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Microsoft Intune Management Extension\Content\Incoming'))
+    $downloads = @{}
+    if (-not $Folder -or -not (Test-Path -LiteralPath $Folder -PathType Container)) { return $downloads }
+    foreach ($file in @(Get-ChildItem -LiteralPath $Folder -File -Force -ErrorAction Stop | Select-Object -First 500)) {
+        if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
+        if ($file.Name -notmatch '^([0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})_\d{1,9}\.bin$') { continue }
+        $id = $Matches[1].ToLowerInvariant()
+        $time = $file.LastWriteTimeUtc
+        if (-not $downloads.ContainsKey($id) -or $downloads[$id] -lt $time) { $downloads[$id] = $time }
+    }
+    return $downloads
+}
+
 function Get-SelfXImeAppNames {
     # The IME registry cache contains no app names; the app policies in the IME logs do ("Id":"..","Name":"..").
     # Only the newest logs are read, only for the requested IDs. Returns a hashtable id (lower case) -> name.
@@ -319,36 +341,66 @@ function Format-SelfXAppError {
     return ('0x{0:X8}' -f $value)
 }
 
+function Get-SelfXStalledMinutes {
+    # StalledMinutes of <Applications> in Health_Config.xml: 30-1440, default 120. Any other value is an error.
+    param([System.Xml.XmlElement]$Configuration)
+    $minutes = 120
+    if ($Configuration.HasAttribute('StalledMinutes') -and
+        (-not [int]::TryParse($Configuration.GetAttribute('StalledMinutes'), [ref]$minutes) -or $minutes -lt 30 -or $minutes -gt 1440)) {
+        throw 'StalledMinutes must be between 30 and 1440.'
+    }
+    return $minutes
+}
+
+function Get-SelfXImeAppStates {
+    # The apps of the IME cache for the row Applications and for the retry of one app (SelfX_Apps_RetryInstall.ps1), with the same
+    # rules: names from Health_Config (Application Id/Name), otherwise from the cache, otherwise from the IME logs; Exclude entries
+    # and "not applicable" (3000-3999) are left out. Status OK (1000), Error (5000-5999: Problem Failed) or Unknown; an Unknown app
+    # whose content file in Content\Incoming has not changed for StalledMinutes is Error with Problem Stalled ("download stalled
+    # since ..."). Returns objects with Id (lower case), Name, Status, State (text) and Problem.
+    param([System.Xml.XmlElement]$Configuration)
+    $stalledMinutes = Get-SelfXStalledMinutes -Configuration $Configuration
+    $reports = @(Get-SelfXAppReports)
+    $downloads = Get-SelfXAppDownloads
+    $configured = @($Configuration.SelectNodes('Application') | ForEach-Object { $_.GetAttribute('Id') } | Where-Object { $_ })
+    $missing = @(foreach ($report in $reports) { if (-not $report.Name -and $configured -notcontains $report.Id) { $report.Id } })
+    $logNames = @{}
+    if ($missing.Count) { $logNames = Get-SelfXImeAppNames -Ids $missing }
+    foreach ($report in $reports) {
+        $name = $report.Name
+        $mapping = @($Configuration.SelectNodes('Application') | Where-Object { $_.GetAttribute('Id') -eq $report.Id })
+        if ($mapping.Count) { $name = $mapping[0].GetAttribute('Name') }
+        if (-not $name -and $logNames.ContainsKey("$($report.Id)".ToLowerInvariant())) { $name = $logNames["$($report.Id)".ToLowerInvariant()] }
+        if (-not $name) { $name = $report.Id }
+        $excluded = $false
+        foreach ($entry in $Configuration.SelectNodes('Exclude')) {
+            if ($name -like $entry.GetAttribute('Name') -or $report.Id -like $entry.GetAttribute('Name')) { $excluded = $true }
+        }
+        if ($excluded) { continue }
+        $state = 0
+        if (-not [int]::TryParse("$($report.State)", [ref]$state)) { $state = 0 }
+        # 3000-3999: the app does not apply to this device (requirements not met); it is not counted.
+        if ($state -ge 3000 -and $state -lt 4000) { continue }
+        # Only known success is OK. In-progress, absent and unsupported cache states remain Unknown.
+        $status = if ($state -eq 1000) { 'OK' } elseif ($state -ge 5000 -and $state -lt 6000) { 'Error' } else { 'Unknown' }
+        $code = Format-SelfXAppError $report.ErrorCode
+        $text = $(if ($code) { "error $code" } else { "state $state" })
+        $problem = $(if ($status -eq 'Error') { 'Failed' } else { '' })
+        $key = "$($report.Id)".ToLowerInvariant()
+        # The write time of the content file is the last progress of the download (Get-SelfXAppDownloads).
+        if ($status -eq 'Unknown' -and $downloads.ContainsKey($key) -and ([datetime]::UtcNow - $downloads[$key]).TotalMinutes -ge $stalledMinutes) {
+            $status = 'Error'
+            $problem = 'Stalled'
+            $text = 'download stalled since ' + (Format-SelfXHealthTime ([datetime]::SpecifyKind($downloads[$key], [DateTimeKind]::Utc)))
+        }
+        [pscustomobject]@{ Id = $key; Name = $name; Status = $status; State = $text; Problem = $problem }
+    }
+}
+
 function Get-SelfXApplicationHealth {
     param([System.Xml.XmlElement]$Configuration, [string]$Root = $PSScriptRoot)
     try {
-        $reports = @(Get-SelfXAppReports)
-        # Names from Health_Config (Application Id/Name), otherwise from the cache, otherwise from the IME logs.
-        $configured = @($Configuration.SelectNodes('Application') | ForEach-Object { $_.GetAttribute('Id') } | Where-Object { $_ })
-        $missing = @(foreach ($report in $reports) { if (-not $report.Name -and $configured -notcontains $report.Id) { $report.Id } })
-        $logNames = @{}
-        if ($missing.Count) { $logNames = Get-SelfXImeAppNames -Ids $missing }
-        $included = @()
-        foreach ($report in $reports) {
-            $name = $report.Name
-            $mapping = @($Configuration.SelectNodes('Application') | Where-Object { $_.GetAttribute('Id') -eq $report.Id })
-            if ($mapping.Count) { $name = $mapping[0].GetAttribute('Name') }
-            if (-not $name -and $logNames.ContainsKey("$($report.Id)".ToLowerInvariant())) { $name = $logNames["$($report.Id)".ToLowerInvariant()] }
-            if (-not $name) { $name = $report.Id }
-            $excluded = $false
-            foreach ($entry in $Configuration.SelectNodes('Exclude')) {
-                if ($name -like $entry.GetAttribute('Name') -or $report.Id -like $entry.GetAttribute('Name')) { $excluded = $true }
-            }
-            if ($excluded) { continue }
-            $state = 0
-            if (-not [int]::TryParse("$($report.State)", [ref]$state)) { $state = 0 }
-            # 3000-3999: the app does not apply to this device (requirements not met); it is not counted.
-            if ($state -ge 3000 -and $state -lt 4000) { continue }
-            # Only known success is OK. In-progress, absent and unsupported cache states remain Unknown.
-            $status = if ($state -eq 1000) { 'OK' } elseif ($state -ge 5000 -and $state -lt 6000) { 'Error' } else { 'Unknown' }
-            $code = Format-SelfXAppError $report.ErrorCode
-            $included += [pscustomobject]@{ Name = $name; Status = $status; State = $(if ($code) { "error $code" } else { "state $state" }) }
-        }
+        $included = @(Get-SelfXImeAppStates -Configuration $Configuration)
         foreach ($app in $Configuration.SelectNodes('Application[@Script]')) {
             $excluded = $false
             foreach ($entry in $Configuration.SelectNodes('Exclude')) {
@@ -357,7 +409,7 @@ function Get-SelfXApplicationHealth {
             }
             if ($excluded) { continue }
             $check = Get-SelfXCustomHealth -Check $app -Root $Root -Id Applications
-            $included += [pscustomobject]@{ Name = $check.Name; Status = $check.Status; State = $check.Detail }
+            $included += [pscustomobject]@{ Id = ''; Name = $check.Name; Status = $check.Status; State = $check.Detail; Problem = '' }
         }
         $errors = @($included | Where-Object Status -eq 'Error')
         $unknown = @($included | Where-Object Status -eq 'Unknown')
@@ -368,11 +420,22 @@ function Get-SelfXApplicationHealth {
             $detail = "All $($included.Count) app(s) installed."
         } else {
             $parts = @()
-            if ($errors.Count) { $parts += "$($errors.Count) of $($included.Count) app(s) could not be installed: " + (($errors | ForEach-Object { "$($_.Name) ($($_.State))" }) -join '; ') + '.' }
+            $failed = @($errors | Where-Object { $_.Problem -ne 'Stalled' })
+            $stalled = @($errors | Where-Object { $_.Problem -eq 'Stalled' })
+            if ($failed.Count) { $parts += "$($failed.Count) of $($included.Count) app(s) could not be installed: " + (($failed | ForEach-Object { "$($_.Name) ($($_.State))" }) -join '; ') + '.' }
+            if ($stalled.Count) { $parts += "$($stalled.Count) app(s) stalled in the download: " + (($stalled | ForEach-Object { "$($_.Name) ($($_.State))" }) -join '; ') + '.' }
             if ($unknown.Count) { $parts += "$($unknown.Count) app(s) not installed yet or status unknown: " + (($unknown | ForEach-Object { "$($_.Name) ($($_.State))" }) -join '; ') + '.' }
             $detail = $parts -join ' '
         }
-        New-SelfXHealthResult Applications $status $detail
+        $result = New-SelfXHealthResult Applications $status $detail
+        # The apps a retry of one app can help (failed or download stalled), for the window: ID, name (no control characters, at most
+        # 100 characters) and problem. The service accepts only IDs that its own reading of the IME cache lists (APPRETRY).
+        $apps = @($included | Where-Object { $_.Problem -in @('Failed', 'Stalled') -and $_.Id } | Select-Object -First 20 | ForEach-Object {
+            $appName = ("$($_.Name)" -replace '[\x00-\x1F\x7F]', '').Trim()
+            [pscustomobject]@{ Id = $_.Id; Name = $appName.Substring(0, [Math]::Min(100, $appName.Length)); Problem = $_.Problem }
+        })
+        if ($apps.Count) { $result | Add-Member -NotePropertyName Apps -NotePropertyValue @($apps) }
+        $result
     } catch { New-SelfXHealthResult Applications Unknown $_.Exception.Message }
 }
 
@@ -445,20 +508,28 @@ function Get-SelfXCustomHealth {
     } catch { New-SelfXHealthResult $Id Error $_.Exception.Message $name }
 }
 
+function Read-SelfXHealthConfig {
+    # Health_Config.xml of the configuration folder, read once without DTD; the root and <Applications> must exist.
+    param([string]$Root = $PSScriptRoot)
+    $config = New-Object System.Xml.XmlDocument
+    $config.XmlResolver = $null
+    $XmlSettings = New-Object System.Xml.XmlReaderSettings
+    $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+    $XmlSettings.XmlResolver = $null
+    $XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Health_Config.xml' -CodeRoot $Root), $XmlSettings)
+    Try { $config.Load($XmlReader) } Finally { $XmlReader.Dispose() }
+    if ($config.DocumentElement.LocalName -ne 'HealthConfig') { throw 'Invalid Health_Config.xml root.' }
+    if (-not $config.SelectSingleNode('/HealthConfig/Applications')) { throw 'Applications configuration is missing.' }
+    # The comma keeps the document as one object (PowerShell would enumerate its child nodes).
+    return , $config
+}
+
 function Get-SelfXHealth {
     # OnlyId/OnlyName restrict collection to one check (used by the per-row OK/recheck button).
     param([string]$Root = $PSScriptRoot, [string]$OnlyId = '', [string]$OnlyName = '')
     $want = { param($id, $name = $null) (-not $OnlyId -or $OnlyId -eq $id) -and ($null -eq $name -or -not $OnlyName -or $OnlyName -eq $name) }
     try {
-        $config = New-Object System.Xml.XmlDocument
-        $config.XmlResolver = $null
-        $XmlSettings = New-Object System.Xml.XmlReaderSettings
-        $XmlSettings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
-        $XmlSettings.XmlResolver = $null
-        $XmlReader = [System.Xml.XmlReader]::Create((Get-SelfXConfigPath -Name 'Health_Config.xml' -CodeRoot $Root), $XmlSettings)
-        Try { $config.Load($XmlReader) } Finally { $XmlReader.Dispose() }
-        if ($config.DocumentElement.LocalName -ne 'HealthConfig') { throw 'Invalid Health_Config.xml root.' }
-        if (-not $config.SelectSingleNode('/HealthConfig/Applications')) { throw 'Applications configuration is missing.' }
+        $config = Read-SelfXHealthConfig -Root $Root
         $disk = $config.SelectSingleNode('/HealthConfig/Disk')
         if (-not $disk) { throw 'Disk configuration is missing.' }
         $used = 0.0; $free = 0.0

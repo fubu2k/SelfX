@@ -120,7 +120,10 @@ User ──► Self_X.ps1 (user session)
 
 The service accepts `PING` for availability, `HEALTH [<Id> [<base64 name>]]` for the fixed local status
 collector (optionally one validated check), `STATUS` for the cached result of the background checks
-(answers immediately, runs nothing) and `RUN <script>.ps1` for repairs. A repair is accepted only when:
+(answers immediately, runs nothing), `RUN <script>.ps1` for repairs and `APPRETRY <app id>` for the retry of
+one Intune app (only a GUID; the service accepts it only when its own reading of the local IME cache lists
+the app as not installed, and passes it to the fixed `SelfX_Apps_RetryInstall.ps1` in `SELFX_APP_ID`).
+A repair is accepted only when:
 
 - the script name is a plain file name with no path,
 - the installed `Issues_List.xml` (`%ProgramFiles%\SelfX\Config`) contains an action with that

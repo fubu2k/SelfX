@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update zakończył działanie. Stan urządzenia jest sprawdzany ponownie i pokazuje, czy potrzebne jest ponowne uruchomienie.</Health_Updates_Done>
 		<Health_Apps_Button>Spróbuj ponownie</Health_Apps_Button>
 		<Health_Apps_Started>Instalacja aplikacji, których nie udało się zainstalować, rozpoczyna się ponownie. Może to potrwać kilka minut; postęp widać w Portalu firmy.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Spróbuj ponownie dla jednej aplikacji</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Wybierz aplikację, którą SelfX ma zainstalować ponownie. SelfX resetuje tylko wynik tej aplikacji i uruchamia ponownie usługę Intune. Instalacja zaczyna się wtedy od nowa w ciągu kilku minut.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – instalacja nie powiodła się</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – pobieranie zatrzymane</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX spróbuje ponownie zainstalować {0}. Resetowany jest tylko wynik tej aplikacji, potem usługa Intune uruchamia się ponownie. Trwające instalacje na chwilę się zatrzymają. Instalacja zacznie się od nowa w ciągu kilku minut.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX ponownie uruchamia instalację {0}. Może to potrwać kilka minut; postęp widać w Portalu firmy.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} nie wymaga już nowej próby: aplikacja jest zainstalowana albo jej stan się zmienił. SelfX ponownie sprawdza stan.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Zwolnij miejsce</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Zwolnij miejsce</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX zwalnia miejsce na dysku {0}. Usuwane są:&#10;• zawartość Kosza (nie można tego cofnąć)&#10;• Twoje pliki tymczasowe&#10;• pamięć podręczna Teams, tylko gdy Teams jest zamknięty (może być konieczne ponowne zalogowanie się do Teams)&#10;• niepotrzebne już pliki Windows: stare składniki aktualizacji, pamięć podręczna pobierania, stare tymczasowe pliki systemowe i stare pliki instalacyjne aplikacji firmowych&#10;&#10;Dokumenty, ustawienia i programy pozostają bez zmian. Może to potrwać do godziny; możesz dalej pracować.&#10;&#10;Zwolnić miejsce teraz?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Opis problemu:</Report_Mail_Body>
 		<AppError_80070BC2>Instalacja wymaga ponownego uruchomienia. Uruchom ponownie urządzenie.</AppError_80070BC2>
 		<AppError_80070070>Na dysku jest za mało miejsca. Zwolnij miejsce na dysku i spróbuj ponownie.</AppError_80070070>
 		<AppError_80070005>Podczas instalacji odmówiono dostępu. Skontaktuj się z pomocą techniczną.</AppError_80070005>
+		<AppStalled_Note>Pobieranie od dłuższego czasu nie postępuje. „Spróbuj ponownie” uruchamia je od nowa dla tej aplikacji.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

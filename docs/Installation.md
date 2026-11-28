@@ -743,7 +743,7 @@ removed, `%` becomes `_`) and shortened (field 1 to 800, the other fields to 256
 empty field is `-`.
 
 Rate limit per event ID: security events (4001-4008) at most 10 entries in 10 minutes,
-operational events (4010-4013) at most 20 entries per minute. After that, 4099 reports the
+operational events (4010-4014) at most 20 entries per minute. After that, 4099 reports the
 number of entries that were left out. The same events are written on Windows 11 and on a terminal
 server.
 
@@ -762,6 +762,7 @@ server.
 | 4011 | Information | An action as SYSTEM ended with exit code 0. |
 | 4012 | Warning / Error | An action as SYSTEM failed: Warning for an exit code other than 0, Error for a timeout or when PowerShell 7 could not be started. |
 | 4013 | Warning | A row of the health checks changed to the status *Error*. Also written for a row that is in *Error* at the first check after the service has started. |
+| 4014 | Warning | An Intune app (Win32 app of the Intune Management Extension) changed to *failed* in the local cache of the Intune Management Extension. Written after a health check, only when the app was not failed before (and once for an app that is failed at the first check after the service has started). |
 | 4099 | Warning | Further events of one ID were not written (rate limit). |
 
 #### Fields for a SIEM
@@ -778,14 +779,17 @@ description.
 | 4011 | fixed text | script | result: `ExitCode` | exit code: `0` | duration in seconds | SID of the caller or `-` |
 | 4012 | fixed text | script | result: `ExitCode`, `Timeout` or `StartError` | exit code, `-` without one | duration in seconds | SID of the caller or `-` |
 | 4013 | fixed text | type of the check (`Id` in `Health_Config.xml`, for example `Disk`, `Services`) | name of the row (for example the drive or the service, can be empty = `-`) | previous status (`OK`, `Pending`, `Unknown` or `-` at the first check) | - | - |
+| 4014 | fixed text | app ID (GUID of the Intune app, lower case) | error code as `0x` and eight hex digits (for example `0x87D1041C`) | previous state (`EnforcementState` of the cache, for example `2000`, or `-` at the first check) | - | - |
 | 4099 | fixed text | event ID that was limited | number of entries left out | - | - | - |
 
 Example (PowerShell, as administrator or user):
 `Get-WinEvent -FilterHashtable @{ LogName = 'SelfX'; Id = 4012 } | ForEach-Object { $_.Properties[1].Value }`
 lists the scripts of the failed actions.
 
-A failed installation of a company app does not get an event of its own: it shows up as event
-4013 for the row `Applications`.
+Event 4014 takes its values only from the service's own reading of the local cache of the Intune
+Management Extension (`HKLM\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps`, read only): no
+app name, no user, no detail text, nothing that a client sent. An entry without a valid error code
+or with an ID that is not a GUID is not written. The row `Applications` itself still gets 4013.
 
 ### The file lists `SelfX.Code.json` and `SelfX.Config.json`
 

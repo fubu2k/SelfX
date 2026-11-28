@@ -380,7 +380,7 @@ Set `Sources\Health_Config.xml` before packaging. Users cannot change it.
 | IME | Is the service `IntuneManagementExtension` running? If it is missing or stopped, that is an error. |
 | Defender | Service, antivirus and real-time protection active, signatures at most 7 days old. A third-party antivirus can cause an error here. |
 | Compliance | Intune evaluates compliance in the cloud. With `<Compliance Script="Check-Compliance.ps1" />` SelfX checks the local criteria of a typical policy: registration, BitLocker, Secure Boot, TPM, firewall, Defender and optionally a minimum Windows version. Align `$Require` in the script with your policy. The company portal remains authoritative. |
-| Applications | The Win32 apps from the Intune report. A failed installation shows the error code. Excluded apps are not checked. |
+| Applications | The Win32 apps from the Intune report. A failed installation shows the error code. An app that is not installed yet and whose download has not continued for `StalledMinutes` (default 120) is an error *download stalled since ...*. Excluded apps are not checked. |
 | Disks | Each fixed drive is an error if it is 90 % used **or** has less than 20 GB free. Both values are adjustable. |
 | BitLocker | Every system drive and every fixed data drive must be encrypted and protected. Keys are not collected. |
 | Pending restart | Error when Windows requires a restart. The detail names the cause. |
@@ -394,7 +394,7 @@ Set `Sources\Health_Config.xml` before packaging. Users cannot change it.
 <HealthConfig>
   <Disk UsedPercentError="90" MinimumFreeGB="20" />
   <Updates MaxSearchAgeDays="14" />
-  <Applications>
+  <Applications StalledMinutes="120">
     <Exclude Name="Test application*" />
     <Application Name="Business client" Script="Check-BusinessClient.ps1" TimeoutSeconds="15" />
   </Applications>
@@ -472,8 +472,16 @@ checks only the affected row again. The result of that check counts, not the exi
   the row *Pending restart*. The logs are in `%ProgramData%\SelfX\Logs`.
 - **Restart** (`SelfX_Device_Restart.ps1`): the user gets a warning. Windows restarts about 30 seconds
   after confirmation. The restart is never part of *Fix all problems*.
-- **App retry** (`SelfX_Apps_RetryInstall.ps1`): resets the retry plan of a failed Intune app. No app is
-  uninstalled.
+- **App retry** (`SelfX_Apps_RetryInstall.ps1`): resets the cached result and the retry plan of a failed
+  Intune app and restarts the Intune Management Extension (`OtherSessions="Block"`). No app is uninstalled.
+  The card lets the user retry **one** app: a failed app or an app whose download is stalled
+  (`StalledMinutes` of `<Applications>`, 30-1440, default 120; a stalled download is a download file
+  `Content\Incoming\<app id>_<revision>.bin` of the Intune Management Extension that has not changed for
+  that time). The window sends only the ID of the app (`APPRETRY <app id>`); the service accepts it only
+  when its own reading of the local IME cache lists the app as not installed, and the script resets only
+  the entries of this app while it is still failed or stalled (otherwise it changes nothing and does not
+  restart the Intune Management Extension). *Fix all problems* still retries all failed apps.
+  `TerminalServer="Hide"`: Intune installs no apps on Windows Server.
 - **Free up space** (`SelfX_Device_FreeSpaceUser.ps1`, then `SelfX_Device_FreeSpace.ps1`): on the row of drive
   `C:` while it is not OK. The user sees one confirmation that lists what is deleted. Then:
   1. As the user: empties the own recycle bin (cannot be undone), deletes the own temporary files, and deletes

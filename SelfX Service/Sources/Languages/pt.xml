@@ -34,6 +34,13 @@
 		<Health_Updates_Done>O Windows Update terminou. O estado do dispositivo é verificado novamente e indica se é necessário reiniciar.</Health_Updates_Done>
 		<Health_Apps_Button>Tentar novamente</Health_Apps_Button>
 		<Health_Apps_Started>A instalação das aplicações com falha é iniciada novamente. Pode demorar alguns minutos; pode acompanhá-la no Portal da Empresa.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Tentar novamente uma aplicação</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Escolha a aplicação que o SelfX deve instalar novamente. O SelfX repõe apenas o resultado desta aplicação e reinicia o serviço do Intune. A instalação recomeça em poucos minutos.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – a instalação falhou</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – a transferência parou</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>O SelfX vai tentar instalar {0} novamente. Apenas o resultado desta aplicação é reposto e depois o serviço do Intune reinicia. As instalações em curso param por um momento. A instalação recomeça em poucos minutos.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>O SelfX inicia novamente a instalação de {0}. Pode demorar alguns minutos; pode acompanhá-la no Portal da Empresa.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} já não precisa de uma nova tentativa: está instalada ou o seu estado mudou. O SelfX verifica o estado novamente.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Libertar espaço</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Libertar espaço</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>O SelfX liberta espaço na unidade {0}. São eliminados:&#10;• o conteúdo da sua Reciclagem (não pode ser anulado)&#10;• os seus ficheiros temporários&#10;• a cache do Teams, apenas se o Teams estiver fechado (poderá ter de iniciar sessão novamente no Teams)&#10;• ficheiros do Windows que já não são necessários: componentes antigos de atualizações, a cache de transferências, ficheiros temporários antigos do sistema e ficheiros de instalação antigos de aplicações da empresa&#10;&#10;Os seus documentos, definições e programas mantêm-se. Pode demorar até uma hora; pode continuar a trabalhar.&#10;&#10;Libertar espaço agora?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Descrição do problema:</Report_Mail_Body>
 		<AppError_80070BC2>A instalação precisa de um reinício. Reinicie o dispositivo.</AppError_80070BC2>
 		<AppError_80070070>Não há espaço suficiente no disco. Liberte espaço em disco e tente novamente.</AppError_80070070>
 		<AppError_80070005>O acesso foi negado durante a instalação. Contacte o suporte.</AppError_80070005>
+		<AppStalled_Note>Uma transferência não avança há muito tempo. «Tentar novamente» volta a iniciá-la para esta aplicação.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

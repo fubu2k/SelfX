@@ -87,7 +87,7 @@ OneDrive, Outlook, Intune, Windows Update, network) and send device logs to the 
 
 Flow of a System action: window -> named pipe `\\.\pipe\SelfX.Service` (local only) -> service checks the
 installed catalogue and the files -> `pwsh.exe -File <script>.ps1` as SYSTEM. Pipe requests: `PING`, `STATUS`,
-`HEALTH [<Id> [<base64 name>]]`, `RUN <script>.ps1`.
+`HEALTH [<Id> [<base64 name>]]`, `RUN <script>.ps1`, `APPRETRY <app id>` (retry of one Intune app).
 
 ### Layout
 
@@ -118,6 +118,10 @@ file a user can write and every environment variable as hostile.
 - `RUN` accepts a plain file name only (letters, digits, `_`, `-`, `.`, ending in `.ps1`; no path, no `..`).
   Never add a request, a field or a parameter that carries a path, an argument, script text or code. System
   scripts have no mandatory parameters; the service starts them without parameters.
+- `APPRETRY <app id>` is the one request with a value: a GUID that the service accepts only when its own read-only
+  reading of the IME cache (`Win32Apps`) lists the app as not installed. The service passes the ID it read itself to
+  the fixed `SelfX_Apps_RetryInstall.ps1` in `SELFX_APP_ID` (removed for every other start); it is never a path, an
+  argument or a registry path built from the request.
 - `SELFX_CALLER_SID` and `SELFX_CALLER_ADMIN` are set by the service from the pipe client token. A script may use
   the SID to hand a result to that user, never to decide whether something is allowed.
 - Every System action can be started by every user. Add one only when it is safe for everyone and on devices

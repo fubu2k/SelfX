@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update مکمل ہو گیا۔ ڈیوائس کی حالت دوبارہ جانچی جا رہی ہے اور دکھاتی ہے کہ آیا دوبارہ شروع کرنا ضروری ہے۔</Health_Updates_Done>
 		<Health_Apps_Button>دوبارہ کوشش کریں</Health_Apps_Button>
 		<Health_Apps_Started>ناکام ایپس کی انسٹالیشن دوبارہ شروع ہو رہی ہے۔ اس میں چند منٹ لگ سکتے ہیں؛ آپ اسے کمپنی پورٹل میں دیکھ سکتے ہیں۔</Health_Apps_Started>
+		<Health_Apps_Choose_Title>ایک ایپ کے لیے دوبارہ کوشش کریں</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>وہ ایپ منتخب کریں جسے SelfX دوبارہ انسٹال کرے۔ SelfX صرف اس ایپ کا نتیجہ ری سیٹ کرتا ہے اور Intune سروس دوبارہ شروع کرتا ہے۔ اس کے بعد چند منٹ میں انسٹالیشن دوبارہ شروع ہوتی ہے۔</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – انسٹالیشن ناکام ہو گئی</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – ڈاؤن لوڈ رکا ہوا ہے</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX {0} کو دوبارہ انسٹال کرنے کی کوشش کرے گا۔ صرف اس ایپ کا نتیجہ ری سیٹ ہوتا ہے، پھر Intune سروس دوبارہ شروع ہوتی ہے۔ جاری انسٹالیشنز تھوڑی دیر کے لیے رکتی ہیں۔ چند منٹ میں انسٹالیشن دوبارہ شروع ہوتی ہے۔</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX {0} کی انسٹالیشن دوبارہ شروع کر رہا ہے۔ اس میں چند منٹ لگ سکتے ہیں؛ آپ اسے کمپنی پورٹل میں دیکھ سکتے ہیں۔</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} کو اب نئی کوشش کی ضرورت نہیں: یہ انسٹال ہے یا اس کی حالت بدل گئی ہے۔ SelfX حالت دوبارہ جانچتا ہے۔</Health_Apps_Gone>
 		<Health_FreeSpace_Button>جگہ خالی کریں</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>جگہ خالی کریں</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX ڈرائیو {0} پر جگہ خالی کرتا ہے۔ یہ حذف کیا جاتا ہے:&#10;• آپ کی ری سائیکل بن کا مواد (واپس نہیں ہو سکتا)&#10;• آپ کی عارضی فائلیں&#10;• Teams کیش، صرف جب Teams بند ہو (ہو سکتا ہے آپ کو Teams میں دوبارہ سائن ان کرنا پڑے)&#10;• Windows کی غیر ضروری فائلیں: پرانے اپڈیٹ اجزاء، ڈاؤن لوڈ کیش، پرانی عارضی سسٹم فائلیں اور کمپنی ایپس کی پرانی انسٹالیشن فائلیں&#10;&#10;آپ کی دستاویزات، ترتیبات اور پروگرام برقرار رہتے ہیں۔ اس میں ایک گھنٹے تک لگ سکتا ہے؛ آپ کام جاری رکھ سکتے ہیں۔&#10;&#10;کیا ابھی جگہ خالی کریں؟</Health_FreeSpace_Confirm>
@@ -342,6 +349,7 @@ SelfX کے ذریعے {1} کو جمع کیے گئے {0} کے ڈیوائس لاگ
 		<AppError_80070BC2>انسٹالیشن کے لیے دوبارہ شروع کرنا ضروری ہے۔ ڈیوائس دوبارہ شروع کریں۔</AppError_80070BC2>
 		<AppError_80070070>ڈسک پر کافی جگہ نہیں ہے۔ ڈسک پر جگہ خالی کریں اور دوبارہ کوشش کریں۔</AppError_80070070>
 		<AppError_80070005>انسٹالیشن کے دوران رسائی سے انکار کر دیا گیا۔ سپورٹ سے رابطہ کریں۔</AppError_80070005>
+		<AppStalled_Note>ایک ڈاؤن لوڈ کافی دیر سے آگے نہیں بڑھا۔ "دوبارہ کوشش کریں" اس ایپ کے لیے اسے دوبارہ شروع کرتا ہے۔</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

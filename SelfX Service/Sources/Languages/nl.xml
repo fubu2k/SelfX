@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update is klaar. De apparaatstatus wordt opnieuw gecontroleerd en toont of opnieuw opstarten nodig is.</Health_Updates_Done>
 		<Health_Apps_Button>Opnieuw proberen</Health_Apps_Button>
 		<Health_Apps_Started>De installatie van de mislukte apps wordt opnieuw gestart. Dit kan enkele minuten duren; u kunt het volgen in de Bedrijfsportal.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Eén app opnieuw proberen</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Kies de app die SelfX opnieuw moet installeren. SelfX zet alleen het resultaat van deze app terug en start de Intune-service opnieuw. De installatie begint dan binnen enkele minuten opnieuw.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – installatie mislukt</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – download loopt vast</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX probeert {0} opnieuw te installeren. Alleen het resultaat van deze app wordt teruggezet, daarna start de Intune-service opnieuw. Lopende installaties pauzeren kort. De installatie begint binnen enkele minuten opnieuw.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX start de installatie van {0} opnieuw. Dit kan enkele minuten duren; u kunt het volgen in de Bedrijfsportal.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} heeft geen nieuwe poging meer nodig: de app is geïnstalleerd of de status is veranderd. SelfX controleert de status opnieuw.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Ruimte vrijmaken</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Ruimte vrijmaken</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX maakt ruimte vrij op station {0}. Verwijderd worden:&#10;• de inhoud van uw prullenbak (kan niet ongedaan worden gemaakt)&#10;• uw tijdelijke bestanden&#10;• de Teams-cache, alleen als Teams gesloten is (mogelijk moet u zich opnieuw aanmelden bij Teams)&#10;• Windows-bestanden die niet meer nodig zijn: oude updateonderdelen, de downloadcache, oude tijdelijke systeembestanden en oude installatiebestanden van bedrijfsapps&#10;&#10;Uw documenten, instellingen en programma's blijven behouden. Dit kan tot een uur duren; u kunt blijven werken.&#10;&#10;Nu ruimte vrijmaken?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@ Beschrijving van het probleem:</Report_Mail_Body>
 		<AppError_80070BC2>De installatie vereist een herstart. Start het apparaat opnieuw op.</AppError_80070BC2>
 		<AppError_80070070>Er is niet genoeg ruimte op de schijf. Maak schijfruimte vrij en probeer het opnieuw.</AppError_80070070>
 		<AppError_80070005>Toegang is geweigerd tijdens de installatie. Neem contact op met de support.</AppError_80070005>
+		<AppStalled_Note>Een download gaat al lange tijd niet verder. ‘Opnieuw proberen’ start hem voor deze app opnieuw.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

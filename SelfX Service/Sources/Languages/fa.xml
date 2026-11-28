@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update به پایان رسید. وضعیت دستگاه دوباره بررسی می‌شود و نشان می‌دهد آیا راه‌اندازی مجدد لازم است.</Health_Updates_Done>
 		<Health_Apps_Button>تلاش دوباره</Health_Apps_Button>
 		<Health_Apps_Started>نصب برنامه‌هایی که نصب نشده بودند دوباره آغاز می‌شود. این کار ممکن است چند دقیقه طول بکشد؛ می‌توانید آن را در پورتال شرکت دنبال کنید.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>تلاش دوباره برای یک برنامه</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>برنامه‌ای را که SelfX باید دوباره نصب کند انتخاب کنید. SelfX فقط نتیجهٔ این برنامه را بازنشانی می‌کند و سرویس Intune را دوباره راه‌اندازی می‌کند. سپس نصب در چند دقیقه دوباره آغاز می‌شود.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – نصب ناموفق بود</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – بارگیری متوقف شده است</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX تلاش می‌کند {0} را دوباره نصب کند. فقط نتیجهٔ این برنامه بازنشانی می‌شود و سپس سرویس Intune دوباره راه‌اندازی می‌شود. نصب‌های در حال اجرا مدت کوتاهی متوقف می‌شوند. نصب در چند دقیقه دوباره آغاز می‌شود.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX نصب {0} را دوباره آغاز می‌کند. این کار ممکن است چند دقیقه طول بکشد؛ می‌توانید آن را در پورتال شرکت دنبال کنید.</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} دیگر به تلاش دوباره نیاز ندارد: نصب شده است یا وضعیتش تغییر کرده است. SelfX وضعیت را دوباره بررسی می‌کند.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>آزادسازی فضا</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>آزادسازی فضا</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX فضای درایو {0} را آزاد می‌کند. موارد زیر حذف می‌شوند:&#10;• محتوای سطل بازیافت شما (قابل بازگشت نیست)&#10;• فایل‌های موقت شما&#10;• حافظهٔ پنهان Teams، فقط وقتی Teams بسته است (ممکن است لازم باشد دوباره به Teams وارد شوید)&#10;• فایل‌های غیرضروری Windows: اجزای قدیمی به‌روزرسانی، حافظهٔ پنهان دانلود، فایل‌های موقت قدیمی سیستم و فایل‌های نصب قدیمی برنامه‌های شرکت&#10;&#10;اسناد، تنظیمات و برنامه‌های شما باقی می‌مانند. این کار ممکن است تا یک ساعت طول بکشد؛ می‌توانید به کار ادامه دهید.&#10;&#10;اکنون فضا آزاد شود؟</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@
 		<AppError_80070BC2>نصب به راه‌اندازی مجدد نیاز دارد. دستگاه را دوباره راه‌اندازی کنید.</AppError_80070BC2>
 		<AppError_80070070>فضای کافی روی دیسک نیست. فضای دیسک را آزاد کنید و دوباره امتحان کنید.</AppError_80070070>
 		<AppError_80070005>هنگام نصب دسترسی رد شد. با پشتیبانی تماس بگیرید.</AppError_80070005>
+		<AppStalled_Note>یک بارگیری مدت زیادی است که پیش نمی‌رود. «تلاش دوباره» آن را برای این برنامه دوباره آغاز می‌کند.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

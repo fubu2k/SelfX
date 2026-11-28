@@ -782,7 +782,7 @@ siehe [Konfiguration](Configuration.md#protokolle-und-aufbewahrung)). Jedes Feld
 Zeichen); ein leeres Feld ist `-`.
 
 Begrenzung je Ereignis-ID: Sicherheitsereignisse (4001-4008) höchstens 10 Einträge in 10 Minuten,
-Betriebsereignisse (4010-4013) höchstens 20 Einträge je Minute. Danach meldet 4099 die Zahl der
+Betriebsereignisse (4010-4014) höchstens 20 Einträge je Minute. Danach meldet 4099 die Zahl der
 ausgelassenen Einträge. Auf Windows 11 und auf einem Terminalserver entstehen dieselben Ereignisse.
 
 | ID | Stufe | Bedeutung |
@@ -800,6 +800,7 @@ ausgelassenen Einträge. Auf Windows 11 und auf einem Terminalserver entstehen d
 | 4011 | Information | Eine Aktion als SYSTEM endete mit Exitcode 0. |
 | 4012 | Warnung / Fehler | Eine Aktion als SYSTEM ist fehlgeschlagen: Warnung bei einem Exitcode ungleich 0, Fehler bei Zeitüberschreitung oder wenn PowerShell 7 nicht gestartet werden konnte. |
 | 4013 | Warnung | Eine Zeile des Gerätestatus hat auf *Fehler* gewechselt. Auch für eine Zeile, die bei der ersten Prüfung nach dem Start des Dienstes auf *Fehler* steht. |
+| 4014 | Warnung | Eine Intune-App (Win32-App der Intune Management Extension) hat im lokalen Cache der Intune Management Extension auf *fehlgeschlagen* gewechselt. Geschrieben nach einer Prüfung des Gerätestatus, nur wenn die App vorher nicht fehlgeschlagen war (und einmal für eine App, die bei der ersten Prüfung nach dem Start des Dienstes fehlgeschlagen ist). |
 | 4099 | Warnung | Weitere Ereignisse einer ID wurden nicht geschrieben (Begrenzung). |
 
 #### Felder für ein SIEM
@@ -816,14 +817,18 @@ Ereignisanzeige zeigt Feld 1 als Beschreibung.
 | 4011 | fester Text | Skript | Ergebnis: `ExitCode` | Exitcode: `0` | Dauer in Sekunden | SID des Aufrufers oder `-` |
 | 4012 | fester Text | Skript | Ergebnis: `ExitCode`, `Timeout` oder `StartError` | Exitcode, `-` ohne | Dauer in Sekunden | SID des Aufrufers oder `-` |
 | 4013 | fester Text | Art der Prüfung (`Id` in `Health_Config.xml`, zum Beispiel `Disk`, `Services`) | Name der Zeile (zum Beispiel Laufwerk oder Dienst, kann leer sein = `-`) | vorheriger Status (`OK`, `Pending`, `Unknown` oder `-` bei der ersten Prüfung) | - | - |
+| 4014 | fester Text | App-ID (GUID der Intune-App, Kleinbuchstaben) | Fehlercode als `0x` und acht Hexadezimalziffern (zum Beispiel `0x87D1041C`) | vorheriger Zustand (`EnforcementState` des Caches, zum Beispiel `2000`, oder `-` bei der ersten Prüfung) | - | - |
 | 4099 | fester Text | begrenzte Ereignis-ID | Zahl der ausgelassenen Einträge | - | - | - |
 
 Beispiel (PowerShell, als Administrator oder Nutzer):
 `Get-WinEvent -FilterHashtable @{ LogName = 'SelfX'; Id = 4012 } | ForEach-Object { $_.Properties[1].Value }`
 listet die Skripte der fehlgeschlagenen Aktionen.
 
-Eine fehlgeschlagene Installation einer Unternehmens-App bekommt kein eigenes Ereignis: Sie
-erscheint als Ereignis 4013 für die Zeile `Applications`.
+Ereignis 4014 nimmt seine Werte nur aus der eigenen Lesung des Dienstes im lokalen Cache der
+Intune Management Extension (`HKLM\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps`, nur
+lesend): kein App-Name, kein Nutzer, kein Detailtext, nichts, was ein Client geschickt hat. Ein
+Eintrag ohne gültigen Fehlercode oder mit einer ID, die keine GUID ist, wird nicht geschrieben. Die
+Zeile `Applications` selbst bekommt weiterhin 4013.
 
 ### Die Dateilisten `SelfX.Code.json` und `SelfX.Config.json`
 

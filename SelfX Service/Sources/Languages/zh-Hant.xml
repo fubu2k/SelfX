@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update 已完成。將重新檢查裝置狀態，並顯示是否需要重新啟動。</Health_Updates_Done>
 		<Health_Apps_Button>重試</Health_Apps_Button>
 		<Health_Apps_Started>正在重新開始安裝失敗的應用程式。這可能需要幾分鐘；您可以在公司入口網站中查看進度。</Health_Apps_Started>
+		<Health_Apps_Choose_Title>重試單一應用程式</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>請選擇 SelfX 需要重新安裝的應用程式。SelfX 只會重設此應用程式的結果，並重新啟動 Intune 服務。幾分鐘內安裝會重新開始。</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – 安裝失敗</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – 下載停滯</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX 將嘗試重新安裝 {0}。只會重設此應用程式的結果，然後重新啟動 Intune 服務。正在進行的安裝會短暫暫停。幾分鐘內安裝會重新開始。</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX 正在重新開始安裝 {0}。這可能需要幾分鐘；您可以在公司入口網站中查看進度。</Health_Apps_One_Started>
+		<Health_Apps_Gone>{0} 不再需要重試：它已安裝，或其狀態已變更。SelfX 將再次檢查狀態。</Health_Apps_Gone>
 		<Health_FreeSpace_Button>釋放空間</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>釋放空間</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX 會釋放磁碟機 {0} 上的空間。將會刪除:&#10;• 資源回收筒中的內容 (無法復原)&#10;• 您的暫存檔案&#10;• Teams 快取,僅在 Teams 關閉時 (可能需要重新登入 Teams)&#10;• 不再需要的 Windows 檔案:舊的更新元件、下載快取、舊的暫存系統檔案以及公司應用程式的舊安裝檔案&#10;&#10;您的文件、設定和程式會保留。這可能需要長達一小時;您可以繼續工作。&#10;&#10;現在釋放空間?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@
 		<AppError_80070BC2>安裝需要重新啟動。請重新啟動裝置。</AppError_80070BC2>
 		<AppError_80070070>磁碟空間不足。請釋放磁碟空間後再試一次。</AppError_80070070>
 		<AppError_80070005>安裝期間存取遭拒。請聯絡支援人員。</AppError_80070005>
+		<AppStalled_Note>某個下載已長時間沒有進展。「重試」會為此應用程式重新開始下載。</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->

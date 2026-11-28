@@ -34,6 +34,13 @@
 		<Health_Updates_Done>Windows Update завершив роботу. Стан пристрою перевіряється знову й показує, чи потрібен перезапуск.</Health_Updates_Done>
 		<Health_Apps_Button>Повторити</Health_Apps_Button>
 		<Health_Apps_Started>Інсталяцію програм, які не вдалося інсталювати, запущено знову. Це може тривати кілька хвилин; перебіг видно на корпоративному порталі.</Health_Apps_Started>
+		<Health_Apps_Choose_Title>Повторити для однієї програми</Health_Apps_Choose_Title>
+		<Health_Apps_Choose_Text>Виберіть програму, яку SelfX має інсталювати знову. SelfX скидає лише результат цієї програми й перезапускає службу Intune. Потім інсталяція почнеться знову за кілька хвилин.</Health_Apps_Choose_Text>
+		<Health_Apps_Failed_Label>{0} – інсталяція не вдалася</Health_Apps_Failed_Label>
+		<Health_Apps_Stalled_Label>{0} – завантаження зупинилося</Health_Apps_Stalled_Label>
+		<Health_Apps_One_Confirm>SelfX спробує знову інсталювати {0}. Скидається лише результат цієї програми, потім служба Intune перезапускається. Поточні інсталяції ненадовго призупиняться. Інсталяція почнеться знову за кілька хвилин.</Health_Apps_One_Confirm>
+		<Health_Apps_One_Started>SelfX знову запускає інсталяцію {0}. Це може тривати кілька хвилин; перебіг видно на корпоративному порталі.</Health_Apps_One_Started>
+		<Health_Apps_Gone>Для {0} нова спроба більше не потрібна: програму інстальовано або її стан змінився. SelfX знову перевіряє стан.</Health_Apps_Gone>
 		<Health_FreeSpace_Button>Звільнити місце</Health_FreeSpace_Button>
 		<Health_FreeSpace_Title>Звільнити місце</Health_FreeSpace_Title>
 		<Health_FreeSpace_Confirm>SelfX звільняє місце на диску {0}. Буде видалено:&#10;• вміст вашого кошика (скасувати неможливо)&#10;• ваші тимчасові файли&#10;• кеш Teams, лише якщо Teams закрито (можливо, доведеться знову увійти в Teams)&#10;• непотрібні файли Windows: старі компоненти оновлень, кеш завантажень, старі тимчасові системні файли та старі інсталяційні файли корпоративних програм&#10;&#10;Ваші документи, налаштування й програми залишаються. Це може тривати до години; ви можете працювати далі.&#10;&#10;Звільнити місце зараз?</Health_FreeSpace_Confirm>
@@ -344,6 +351,7 @@
 		<AppError_80070BC2>Для встановлення потрібне перезавантаження. Перезавантажте пристрій.</AppError_80070BC2>
 		<AppError_80070070>На диску недостатньо місця. Звільніть місце на диску й спробуйте ще раз.</AppError_80070070>
 		<AppError_80070005>Під час встановлення доступ було заборонено. Зверніться до служби підтримки.</AppError_80070005>
+		<AppStalled_Note>Завантаження вже довго не просувається. «Повторити» запускає його знову для цієї програми.</AppStalled_Note>
 	</SystemInfo>
 
 	<!-- Action catalogue (Issues_List.xml). The English base texts are in Issues_List.xml, so en.xml only lists the categories. -->
