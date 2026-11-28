@@ -177,7 +177,8 @@ nach ihrer `TimeoutSeconds` gestoppt: Standard ist 900, Maximum 7200. Der Dienst
 - Gesperrte Aktionen auf Geräten mit mehreren Nutzern (2.6.10): Bei Aktionen mit
   `OtherSessions=Block` (Neustart, Windows-Updates, Datenträgerprüfung, Neustart der
   Netzwerkadapter und des Intune-Dienstes) erhält ein normaler Nutzer einen Hinweis
-  statt der Aktion, solange ein anderer Nutzer eine aktive Sitzung hat.
+  statt der Aktion, solange ein anderer Nutzer angemeldet ist (aktive oder getrennte
+  Sitzung, zum Beispiel nach einem schnellen Benutzerwechsel).
   Administratoren mit erhöhten Rechten sind nicht eingeschränkt. Lassen sich die
   Sitzungen nicht lesen, wird die Aktion blockiert.
 - Pipe-Limits (2.6.10): Eine Verbindung muss ihre Anfrage innerhalb von 5 Sekunden

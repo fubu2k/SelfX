@@ -123,7 +123,7 @@ has a unique `Id`. The translations are linked through this `Id`.
 | `Script` | Name of the script in `Scripts_to_run`. Not needed for `Link`. |
 | `Link` | Only for `Link`: name of the setting (`Link_<Name>`) in `Tool_Config.xml`. |
 | `TimeoutSeconds` | Only for `System`: time limit from 1 to 7200 seconds, default 900. |
-| `OtherSessions` | Only for `System`: `Block` prevents the action for normal users while another user is signed in. Administrators are not affected. |
+| `OtherSessions` | Only for `System`: `Block` prevents the action for normal users while another user is signed in. An active and a disconnected session both count (with fast user switching the session of the other user is disconnected, its programs keep running). Administrators are not affected. |
 | `TerminalServer` | Required. `Show`: the action only affects the own session or profile and is offered on a terminal server (Windows Server). `Hide`: it affects the whole device or all users and is hidden there. Use the same value on every entry of the same script. |
 | `Disruptive` | Optional. `True` marks an action that closes a program, restarts the network adapters or restarts the device and can therefore end a meeting. Only the value `True` is valid. Use the same value on every entry of a script (`Test-Catalog.ps1` checks this). See [Hint before disruptive actions](#hint-before-disruptive-actions). |
 | `Post_Action` | Only for `System`: `MailReport` opens an e-mail to support with the report after a successful run. |
@@ -182,7 +182,7 @@ On a terminal server the service also refuses every `System` action and repair t
 `Show`, also for administrators (event 4008). Hiding them in the window is not enough, because the
 window is not a security boundary. An action without a classification counts as `Hide`.
 
-The check of other active sessions (`OtherSessions`) works the same in both modes.
+The check of other signed-in sessions (`OtherSessions`, active or disconnected) works the same in both modes.
 
 **Support address on a terminal server.** `TerminalServer_Support_Mail` in `Tool_Config.xml` is one
 fixed e-mail address of the team that supports the terminal server. On Windows Server it is the support
