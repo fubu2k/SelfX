@@ -7,7 +7,7 @@
     Name    : SelfXWizard.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed, not shipped)
-    Version : 3.1.13
+    Version : 3.1.14
     Works in Windows PowerShell 5.1 and PowerShell 7. The file only defines functions; it changes nothing when it is
     dot-sourced. Test-SelfXPackageWizard.ps1 tests it.
 
@@ -50,6 +50,10 @@
                                               (Get-WizardAnswerFileTimestamp, Save-WizardAnswers -TimestampServer; never in a settings file),
                                               -NoTimestamp (a signature without time stamp needs the explicit confirmation), test signature with the
                                               service before the package is signed (Assert-SelfXTimestampService)
+    3.1.14   2026-11-28  fubu2k               Monitoring: question HealthRemediation (not for WindowsServer) copies tools\Intune\Detect-SelfXHealth.ps1
+                                              into the output folder (signed in the mode Signature); question HealthInventory writes Inventory
+                                              Enabled into Health_Config.xml (Set-SelfXHealthInventory) and copies SelfX-Inventory-DCR.json; guide
+                                              step 'monitoring'; result MonitoringFiles
 #>
 
 $script:WizardFolder = $(if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path })
@@ -315,6 +319,46 @@ function Set-SelfXTicketConfig {
     Write-WizardFileText -Path $Path -Text $text -Bom $file.Bom
 }
 
+# Switches the inventory file of the service on or off: the attribute Enabled of the element Inventory in Health_Config.xml, without
+# touching the comments or the other attributes (MaxSizeKB stays). The element must exist (the delivered file has it).
+function Set-SelfXHealthInventory {
+    param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][bool]$Enabled)
+    $file = Read-WizardFileText -Path $Path
+    $text = $file.Text
+    $found = [regex]::Matches($text, '<Inventory\s[^>]*/>|<Inventory\s*/>')
+    # An older settings file without the element stays as it is when the inventory is not switched on.
+    if ($found.Count -eq 0 -and -not $Enabled) { return }
+    if ($found.Count -ne 1) { throw "The element Inventory must exist exactly once in Health_Config.xml (found $($found.Count))." }
+    $element = $found[0].Value
+    $value = $(if ($Enabled) { 'true' } else { 'false' })
+    if ([regex]::IsMatch($element, '\bEnabled="[^"]*"')) { $element = [regex]::Replace($element, '\bEnabled="[^"]*"', "Enabled=`"$value`"") }
+    else { $element = $element -replace '\s*/>\z', " Enabled=`"$value`" />" }
+    $text = $text.Substring(0, $found[0].Index) + $element + $text.Substring($found[0].Index + $found[0].Length)
+    $settings = New-Object System.Xml.XmlReaderSettings
+    $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+    $settings.XmlResolver = $null
+    $reader = [System.Xml.XmlReader]::Create((New-Object IO.StringReader($text)), $settings)
+    try { $check = New-Object System.Xml.XmlDocument; $check.XmlResolver = $null; $check.Load($reader) } finally { $reader.Dispose() }
+    if ("$($check.SelectSingleNode('/HealthConfig/Inventory').GetAttribute('Enabled'))" -ne $value) { throw 'The element Inventory of Health_Config.xml could not be set.' }
+    Write-WizardFileText -Path $Path -Text $text -Bom $file.Bom
+}
+
+# The files of the monitoring for the output folder (tools\Intune): the detection script of Intune Remediations (HealthRemediation, Windows 11
+# only) and the sample data collection rule of the inventory file (HealthInventory). Fixed names, copied from the folder of the tools.
+function Copy-SelfXMonitoringFiles {
+    param([Parameter(Mandatory = $true)][hashtable]$Answers, [Parameter(Mandatory = $true)][string]$Folder)
+    $names = New-Object System.Collections.Generic.List[string]
+    $source = Join-Path $script:WizardToolsFolder 'Intune'
+    if ($Answers.HealthRemediation -and $Answers.TargetOS -ne 'WindowsServer') { $names.Add('Detect-SelfXHealth.ps1') }
+    if ($Answers.HealthInventory) { $names.Add('SelfX-Inventory-DCR.json') }
+    foreach ($name in $names) {
+        $from = Join-Path $source $name
+        if (-not (Test-Path -LiteralPath $from -PathType Leaf)) { throw "The file tools\Intune\$name is missing." }
+        Copy-Item -LiteralPath $from -Destination (Join-Path $Folder $name)
+    }
+    return , $names.ToArray()
+}
+
 # At most NetMaxTargets targets in the file in total (Existing = targets already in the file) and no label twice (upper and lower case count as equal,
 # like in Read-SelfXNetworkTestConfig).
 function Test-WizardNetworkTargets {
@@ -428,7 +472,8 @@ function Get-SelfXIntuneGuideSteps {
         [string[]]$TrustedSigner = @(),
         [string[]]$RuleFiles = @(),
         [string]$OutputFolder = '',
-        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full'
+        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full',
+        [string[]]$MonitoringFiles = @()
     )
     $ps = '%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File'
     # Trust mode Signature: the install command names the signers (SHA1 thumbprints, 40 hex characters, separated by commas without a space).
@@ -465,6 +510,20 @@ function Get-SelfXIntuneGuideSteps {
         & $add 'asr' $asrLines @((& $copy 'gui.copy.asr' ($script:SelfXAsrExclusionFiles -join "`r`n")))
         return $Step
     }
+    # Monitoring (files of tools\Intune in the output folder): Intune Remediations (Windows 11) and the inventory file. Takes the number of
+    # the step and returns the number of the next one.
+    $addMonitoring = {
+        param([int]$Step)
+        $monitoring = @($MonitoringFiles | Where-Object { $_ })
+        if (-not $monitoring.Count) { return $Step }
+        $lines = New-Object System.Collections.Generic.List[string]
+        $lines.Add((Get-WText 'guide.mon' @($Step)))
+        if ($monitoring -contains 'Detect-SelfXHealth.ps1') { foreach ($id in 'guide.mon.rem', 'guide.mon.rem1', 'guide.mon.rem2') { $lines.Add((Get-WText $id @('Detect-SelfXHealth.ps1'))) } }
+        if ($monitoring -contains 'SelfX-Inventory-DCR.json') { foreach ($id in 'guide.mon.inv', 'guide.mon.inv1') { $lines.Add((Get-WText $id @('SelfX-Inventory-DCR.json'))) } }
+        foreach ($file in $monitoring) { $lines.Add("   - $file") }
+        & $add 'monitoring' $lines.ToArray() @((& $copy 'gui.copy.folder' $OutputFolder))
+        return ($Step + 1)
+    }
 
     if ($Answers.TargetOS -eq 'WindowsServer') {
         # Windows Server: Intune cannot install apps there (only Windows Server Insider Preview builds can be enrolled in Intune), so the
@@ -481,7 +540,7 @@ function Get-SelfXIntuneGuideSteps {
             & $add 'program' @((Get-WText 'guide.srv3' @($serverInstall)), (Get-WText 'guide.srv3b' @($serverUninstall))) @((& $copy 'gui.copy.install' $serverInstall), (& $copy 'gui.copy.uninstall' $serverUninstall))
         }
         & $add 'configmgr' @((Get-WText 'guide.srv4'), (Get-WText 'guide.srv4b' @($DetectionFile))) @((& $copy 'gui.copy.detection' (& $inOutput $DetectionFile)))
-        $step = 5
+        $step = & $addMonitoring 5
         if ($PackageKind -ne 'ConfigOnly') { $step = (& $addSecurity $step) + 1 }
         & $add 'test' @((Get-WText 'guide.srv5' @($step)))
         if ($PackageKind -eq 'FullSeparateConfig') { & $add 'separate' @((Get-WText 'guide.sep' @($step + 1)), (Get-WText 'guide.sep1')) }
@@ -507,6 +566,7 @@ function Get-SelfXIntuneGuideSteps {
         & $add 'assignment' @((Get-WText 'guide.c6'))
         & $add 'supersedence' @((Get-WText 'guide.c7'), (Get-WText 'guide.c7a'), (Get-WText 'guide.c7b'))
         & $add 'test' @((Get-WText 'guide.c8'))
+        $null = & $addMonitoring 9
         $configFooter = @()
         if ($AnswersFile) { $configFooter = @((Get-WText 'guide.answers' @($AnswersFile))) }
         return [pscustomobject]@{
@@ -535,6 +595,7 @@ function Get-SelfXIntuneGuideSteps {
         & $add 'routing' $lines.ToArray() @((& $copy 'gui.copy.folder' $OutputFolder))
     }
     $step = if ($ScriptFiles.Count -gt 0) { 8 } else { 7 }
+    $step = & $addMonitoring $step
     $step = & $addSecurity $step
     & $add 'test' @((Get-WText 'guide.s8' @($step + 1)))
     if ($PackageKind -eq 'FullSeparateConfig') { & $add 'separate' @((Get-WText 'guide.sep' @($step + 2)), (Get-WText 'guide.sep1')) }
@@ -559,7 +620,8 @@ function New-SelfXIntuneGuide {
         [string]$AnswersFile = '',
         [string[]]$TrustedSigner = @(),
         [string[]]$RuleFiles = @(),
-        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full'
+        [ValidateSet('Full', 'FullSeparateConfig', 'ConfigOnly')][string]$PackageKind = 'Full',
+        [string[]]$MonitoringFiles = @()
     )
     $guide = Get-SelfXIntuneGuideSteps @PSBoundParameters
     $lines = New-Object System.Collections.Generic.List[string]
@@ -611,6 +673,9 @@ function Get-WizardQuestions {
     & $add @{ Id = 'WikiName'; Kind = 'text'; Max = 40; When = { param($a) $a.WikiEnabled }; Default = '' }
     & $add @{ Section = 'behavior'; Id = 'TrayIcon'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'DisturbWarning'; Kind = 'bool'; Default = $true }
+    # Monitoring: Intune Remediations only for Windows 11 (Intune does not manage Windows Server), the inventory file on both.
+    & $add @{ Id = 'HealthRemediation'; Kind = 'bool'; When = { param($a) $a.TargetOS -ne 'WindowsServer' }; Default = $false }
+    & $add @{ Id = 'HealthInventory'; Kind = 'bool'; Default = $false }
     & $add @{ Id = 'ShortcutDesktop'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'ShortcutStartMenu'; Kind = 'bool'; Default = $true }
     & $add @{ Id = 'Expert'; Kind = 'bool'; Default = $false }
@@ -915,6 +980,8 @@ function Set-WizardPackageConfiguration {
     if ($Answers.NetworkEnabled) {
         Set-SelfXNetworkTestConfig -Path (Join-Path $sources 'Network_Test_Config.xml') -Enabled $true -Microsoft ([bool]$Answers.NetworkMicrosoft) -HostNames ([bool]$Answers.NetworkHostNames) -Targets @($Answers.NetworkTargets)
     }
+    # The inventory file of the service (Health_Config.xml, element Inventory); an answer file without the answer keeps it off.
+    Set-SelfXHealthInventory -Path (Join-Path $sources 'Health_Config.xml') -Enabled ([bool]$Answers.HealthInventory)
 }
 
 function Get-WizardSummary {
@@ -1085,7 +1152,8 @@ function Invoke-SelfXPackageBuild {
         rewrite Bin\SelfX.Binaries.json and App\SelfX.Code.json, write SelfX.Code.cat from the package without Config; then
         Config\SelfX.Config.json (and in the mode Signature Config\SelfX.Config.cat); pack with IntuneWinAppUtil.exe (Microsoft signature
         checked; omitted for a package for Windows Server: TargetOS = WindowsServer builds no .intunewin file and needs no tool); write Detection.ps1 with the digests (signed in the mode Signature); AppLocker and App Control files for the mode;
-        platform scripts, instructions and selfx-answers.json.
+        platform scripts, the files of the monitoring (tools\Intune: detection script of Intune Remediations, sample data collection rule of the
+        inventory file), instructions and selfx-answers.json.
 
         -PackageKind: Full (default), FullSeparateConfig (the full package for a setup with a separate configuration package: its
         detection script does not compare the configuration) or ConfigOnly (the configuration package: Install.ps1, Detection.ps1 and
@@ -1109,7 +1177,8 @@ function Invoke-SelfXPackageBuild {
         command; nothing is signed with them. At most 9 (Install.ps1 accepts 10 thumbprints). Needs -Certificate.
 
     .OUTPUTS
-        An object with OutputFolder, Version, Mode (Hash or Signature), PackageFile, DetectionFile, RuleFiles, ScriptFiles, GuideFile, GuideText,
+        An object with OutputFolder, Version, Mode (Hash or Signature), PackageFile, DetectionFile, RuleFiles, ScriptFiles, MonitoringFiles
+        (Detect-SelfXHealth.ps1 and SelfX-Inventory-DCR.json when chosen), GuideFile, GuideText,
         TrustedSigner (the thumbprints of the install command) and GuideSteps (Get-SelfXIntuneGuideSteps: the same instructions as steps with
         the values to copy). PackageFile is empty for a package for Windows Server (no .intunewin file).
     #>
@@ -1279,11 +1348,19 @@ function Invoke-SelfXPackageBuild {
         & $progress 'guide'
         # The function returns one array (return , ...); @() around it would nest it and join the names into one line of the instructions.
         $scriptFiles = [string[]](Write-SelfXSupportUnitScripts -Answers $a -Folder $out)
+        # Monitoring (Intune Remediations, inventory file): fixed files of tools\Intune. In the mode Signature the detection script is signed
+        # too, so the script package can enforce the signature check.
+        $monitoringFiles = [string[]](Copy-SelfXMonitoringFiles -Answers $a -Folder $out)
+        if ($signed -and $monitoringFiles -contains 'Detect-SelfXHealth.ps1') {
+            $monitorSign = @{ Path = @((Join-Path $out 'Detect-SelfXHealth.ps1')); Certificate = $Certificate }
+            if ($TimestampServer) { $monitorSign.TimestampServer = $TimestampServer }
+            $null = Set-SelfXCodeSignature @monitorSign
+        }
         Save-WizardAnswers -Path (Join-Path $out 'selfx-answers.json') -Answers $a -Language $Language -TimestampServer $TimestampServer
         $available = @(Get-WizardLanguages -Folder $script:WizardFolder | ForEach-Object { $_.Culture })
         $guideLanguage = $(if ($available -contains $Language) { $Language } elseif ($Language.Contains('-') -and $available -contains $Language.Split('-')[0]) { $Language.Split('-')[0] } else { 'en' })
         $guideArguments = @{ Answers = $a; Version = $version; PackageFile = $packageName; DetectionFile = $detectionName; ScriptFiles = $scriptFiles
-            AnswersFile = 'selfx-answers.json'; TrustedSigner = $trustedSigners; RuleFiles = @($ruleFiles); PackageKind = $PackageKind }
+            AnswersFile = 'selfx-answers.json'; TrustedSigner = $trustedSigners; RuleFiles = @($ruleFiles); PackageKind = $PackageKind; MonitoringFiles = $monitoringFiles }
         $guideText = New-SelfXIntuneGuide @guideArguments
         $guideSteps = Get-SelfXIntuneGuideSteps @guideArguments -OutputFolder $final
         $guideFile = $(if ($a.TargetOS -eq 'WindowsServer') { "SelfX-Server-Guide.$guideLanguage.txt" } else { "SelfX-Intune-Guide.$guideLanguage.txt" })
@@ -1309,6 +1386,7 @@ function Invoke-SelfXPackageBuild {
             DetectionFile = $detectionFile
             RuleFiles     = @($ruleFiles)
             ScriptFiles   = $scriptFiles
+            MonitoringFiles = $monitoringFiles
             GuideFile     = $guideFile
             TargetOS      = $(if ($a.TargetOS -eq 'WindowsServer') { 'WindowsServer' } else { 'Windows11' })
             GuideText     = $guideText

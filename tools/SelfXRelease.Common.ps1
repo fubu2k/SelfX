@@ -31,7 +31,7 @@
     Name    : SelfXRelease.Common.ps1
     Package : tools
     Context : Build machine / CI (any user; not installed, not shipped)
-    Version : 3.1.1
+    Version : 3.1.2
     Works in Windows PowerShell 5.1 and PowerShell 7.
 
     History:
@@ -39,6 +39,7 @@
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version: release notes from CHANGELOG.en.md, payload archive, checksum file
     3.1.1    2026-11-27  fubu2k               tools\Start-SelfXPackageWizard.cmd (window of the package wizard) in the payload archive
+    3.1.2    2026-11-28  fubu2k               tools\Intune (detection script of Intune Remediations, sample data collection rule) in the payload archive
 #>
 
 # A release version: <major>.<minor>.<patch> (the release workflow checks the tag against Version.txt with the same rule).
@@ -59,14 +60,15 @@ $script:SelfXPayloadToolFiles = @(
     'tools/SelfXSigning.ps1', 'tools/Start-SelfXPackageWizard.cmd'
 )
 # Every file below these folders of the repository is part of the payload.
-$script:SelfXPayloadToolFolders = @('tools/Wizard')
+$script:SelfXPayloadToolFolders = @('tools/Wizard', 'tools/Intune')
 # Files of the repository root.
 $script:SelfXPayloadRootFiles = @('LICENSE.md', 'NOTICE.md', 'NOTICE.en.md')
 # Files that must be in the payload besides the tool files and the root files.
 $script:SelfXPayloadRequired = @(
     'Install.ps1', 'Uninstall.ps1', 'Detection.ps1', 'Bin/SelfX.Binaries.json', 'Bin/SelfXService.exe', 'Bin/SelfX.exe',
     'App/SelfX.Code.json', 'Config/SelfX.Config.json', 'Config/Tool_Config.xml', 'Config/Issues_List.xml',
-    'tools/Wizard/SelfXWizard.ps1', 'tools/Wizard/Wizard.de.xml', 'tools/Wizard/Wizard.en.xml'
+    'tools/Wizard/SelfXWizard.ps1', 'tools/Wizard/Wizard.de.xml', 'tools/Wizard/Wizard.en.xml',
+    'tools/Intune/Detect-SelfXHealth.ps1', 'tools/Intune/SelfX-Inventory-DCR.json'
 )
 # The names at the top of the archive: the package folder as it is packed, tools and the files of the root.
 $script:SelfXPayloadTopLevel = @(

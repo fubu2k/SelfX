@@ -5,7 +5,7 @@
 	Neue Sprache: Datei nach Wizard.<Kultur>.xml kopieren (fr, pt-BR ...), Culture und Name setzen, Texte uebersetzen.
 	Id-Attribute nicht aendern. Platzhalter wie {0} und {1} behalten. Fehlende Texte kommen aus Wizard.en.xml.
 -->
-<Wizard_Language Culture="de" Name="Deutsch" Version="1.10.0">
+<Wizard_Language Culture="de" Name="Deutsch" Version="1.11.0">
 	<T Id="title">SelfX-Paketassistent</T>
 	<T Id="intro">Der Assistent stellt einige Fragen, schreibt Ihre Einstellungen in eine Kopie des Pakets und baut das Intune-Paket. Ihre Dateien im Repository werden nicht verändert. Mit Enter übernehmen Sie den Wert in Klammern. Zu jeder Frage gibt es eine Empfehlung.</T>
 	<T Id="rec">Empfehlung: </T>
@@ -117,6 +117,10 @@
 	<T Id="TrayIcon.rec">Ja. Nutzer sehen Probleme früh und öffnen SelfX mit einem Klick.</T>
 	<T Id="DisturbWarning.ask">Vor einer Aktion, die eine Besprechung unterbrechen kann (Teams oder Office schließen, Netzwerk oder Gerät neu starten): Hinweis anzeigen, wenn der Nutzer anscheinend präsentiert oder im Vollbild arbeitet?</T>
 	<T Id="DisturbWarning.rec">Ja. Es ist nur ein Satz in der Bestätigung; nichts wird blockiert oder umgeschaltet. Windows meldet SelfX nur Präsentationsmodus, Vollbild und Ruhezeit, deshalb wird nicht jede Besprechung erkannt.</T>
+	<T Id="HealthRemediation.ask">Intune-Remediations: Ein Erkennungsskript in den Ausgabeordner legen, das den SelfX-Gerätestatus jedes Windows-11-Geräts in Intune zeigt (eine Zeile je Gerät, „Mit Problemen“ bei einem Fehler)?</T>
+	<T Id="HealthRemediation.rec">Nein, außer Sie nutzen Intune-Remediations (dafür ist Windows Enterprise E3 oder E5 oder eine ähnliche Lizenz nötig). Ein Wartungsskript ist nicht nötig: Das Skript liest nur den Status von SelfX und ändert nichts.</T>
+	<T Id="HealthInventory.ask">Inventardatei: Soll der SelfX-Dienst den Gerätestatus nach jeder Prüfung als eine JSON-Zeile nach %ProgramData%\SelfX\Inventory schreiben, für einen Protokoll-Sammler wie den Azure Monitor Agent?</T>
+	<T Id="HealthInventory.rec">Nein, außer ein Sammler liest die Datei (Log Analytics, siehe docs\de\Monitoring.md). Die Datei enthält keine Namen und keine Detailtexte; auf Windows Server wird nichts geschrieben, solange der Gerätestatus aus ist.</T>
 	<T Id="ShortcutDesktop.ask">Verknüpfung auf dem öffentlichen Desktop anlegen?</T>
 	<T Id="ShortcutDesktop.rec">Ja zum Start, damit Nutzer SelfX finden. Später abschalten, wenn der Desktop leer bleiben soll.</T>
 	<T Id="ShortcutStartMenu.ask">Verknüpfung im Startmenü anlegen?</T>
@@ -179,6 +183,12 @@
 	<T Id="guide.asr2">   Stellen Sie die Regel zuerst auf den Überwachungsmodus (Audit). Nennen die Ereignisse SelfX-Dateien, tragen Sie genau diese Dateien (nie mehr als die folgenden fünf) in die Einstellung "ASR Only Per Rule Exclusions" dieser Regel ein (Name der englischen Oberfläche): Endpoint Security > Verringerung der Angriffsfläche > Ihre Richtlinie vom Typ "Attack surface reduction rules".</T>
 	<T Id="guide.asr3">   Schließen Sie nicht den Ordner SelfX aus und nutzen Sie nicht die globale Einstellung "Attack Surface Reduction Only Exclusions" (sie gilt für jede ASR-Regel). Ein Ausschluss gilt erst, wenn das Programm startet: starten Sie den Dienst SelfXService oder das Gerät neu. Ausgeschlossene Dateien schreiben keine Ereignisse. Das Signieren des Pakets ist keine Zusage, dass die Regel die Dateien durchlässt. Einzelheiten: docs\de\Installation.md, Abschnitt "Defender ASR: Regel für ausführbare Dateien".</T>
 	<T Id="guide.s8">{0}. Auf einem Pilotgerät testen: Das Startmenü zeigt SelfX, der Dienst SelfXService läuft, die Protokolle liegen in %ProgramData%\SelfX\Logs. Danach die Zuweisung erweitern.</T>
+	<T Id="guide.mon">{0}. Überwachung (optional):</T>
+	<T Id="guide.mon.rem">   Intune-Remediations: Geräte &gt; Geräte verwalten &gt; Skripts und Wartungen &gt; Skriptpaket erstellen. Erkennungsskriptdatei: {0}. Kein Wartungsskript.</T>
+	<T Id="guide.mon.rem1">   Einstellungen: Dieses Skript mit den Anmeldeinformationen des angemeldeten Benutzers ausführen: Nein. Skriptsignaturprüfung erzwingen: Nein (Ja nur, wenn das Skript signiert ist). Skript in 64-Bit-PowerShell ausführen: Ja. Zeitplan zum Beispiel täglich; das Paket denselben Gerätegruppen wie SelfX zuweisen.</T>
+	<T Id="guide.mon.rem2">   Die Erkennungsausgabe zeigt eine Zeile je Gerät: Status je Prüfung und fehlgeschlagene Apps mit Fehlercode, keine Namen. Exitcode 1 (mit Problemen) = ein Fehler oder ein Status, der nicht gelesen werden kann.</T>
+	<T Id="guide.mon.inv">   Inventardatei: SelfX schreibt %ProgramData%\SelfX\Inventory\SelfX.Inventory.json. Für Log Analytics die Tabelle SelfXInventory_CL und eine Datensammlungsregel aus {0} anlegen (die Werte in spitzen Klammern ersetzen) und sie dem Azure Monitor Agent der Geräte zuweisen.</T>
+	<T Id="guide.mon.inv1">   Einzelheiten, Beispielabfragen und was nicht getestet wurde: docs\de\Monitoring.md.</T>
 	<T Id="guide.c.intro">Das ist das Konfigurationspaket. Es ersetzt nur die Einstellungen eines bereits installierten SelfX (das vollständige Paket muss vorher installiert sein). Öffnen Sie das Microsoft Intune Admin Center (intune.microsoft.com). Beginnen Sie mit einer kleinen Pilotgruppe.</T>
 	<T Id="guide.c1">1. App anlegen: Apps &gt; Windows &gt; Hinzufügen &gt; Windows-App (Win32). {0} hochladen. Name: {1}. Herausgeber: {2}. Das ist eine zweite App neben der vollständigen SelfX-App.</T>
 	<T Id="guide.c2">2. Programm: Installationsbefehl: {0}</T>

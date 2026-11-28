@@ -29,7 +29,7 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 | Branding | Logo (Dateiauswahl, Vorschau) und Firmenfarbe; das Fenster zeigt die Farbe sofort |
 | Ticket | Ticket-E-Mail und, bei mehreren Organisationen, ein Postfach je Organisation, zugeordnet über Gruppentag, OU oder Geräteklasse |
 | Verbindungstest | Verbindungstest einschalten, die mitgelieferten Microsoft-Ziele ein oder aus, Hostnamen im Bericht ein oder aus und eigene Ziele (Name, Host, Port, Gruppe, Art; bis zu 8 eigene Ziele). Siehe [Netzwerk-Messungen](Configuration.md#netzwerk-messungen) |
-| Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Hinweis vor störenden Aktionen, Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
+| Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Hinweis vor störenden Aktionen, Überwachung (Intune-Remediations, Inventardatei), Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
 | Signatur | Kein Zertifikat (Vertrauensmodus Hash), Zertifikat aus dem Speicher (nur geeignete, gültige) oder PFX-Datei mit Kennwort; Zeitstempeldienst; weitere Signierer für einen Zertifikatswechsel. Zeigt Antragsteller, Aussteller, Ablauf, Fingerabdruck und die Sperrlisten-Adressen mit Warnungen. Siehe [Codesignatur-Zertifikat](Zertifikat.md) |
 | Zusammenfassung | Ihre Antworten, Paketordner, Ausgabeordner, `IntuneWinAppUtil.exe` (nicht für Windows Server), „Nur die Konfiguration schreiben“ |
 | Intune-Paket bauen | Ein Klick; eine Liste zeigt jeden Schritt; **Abbrechen** beendet den Bau, der Ausgabeordner bleibt unverändert |
@@ -112,6 +112,10 @@ Wichtige Parameter:
    Antwort, Zwischenablage leeren. Optional eine Wiki-Schaltfläche mit `https://`-Adresse und Namen.
 7. **Verhalten auf dem Gerät:** Statussymbol, Hinweis vor störenden Aktionen (`Disturb_Warning`), Verknüpfungen. Im Expertenmodus: Protokoll-Aufbewahrung,
    Dateiprüfung (`Enforce` oder `Audit`) und Rechte des Dienstes. Ohne Expertenmodus bleiben die sicheren Standardwerte.
+   Überwachung (beides Standard nein): *Intune-Remediations* legt `Detect-SelfXHealth.ps1` in den Ausgabeordner (nur Windows 11; im
+   Vertrauensmodus Signatur signiert); *Inventardatei* schaltet `Inventory` in `Health_Config.xml` ein und legt die
+   Beispiel-Datensammlungsregel `SelfX-Inventory-DCR.json` in den Ausgabeordner. Die Anleitung bekommt dafür einen Schritt. Siehe
+   [Überwachung](Monitoring.md).
 8. **AppLocker und App Control:** ob AppLocker-Regeln erzeugt werden (Standard ja) und, wenn Sie App Control for Business (WDAC)
    einsetzen, die ID Ihrer Basisrichtlinie. Ohne ID entsteht keine App-Control-Datei. Die Regelskripte brauchen Windows PowerShell 5.1;
    AppLocker zusätzlich die AppLocker-Cmdlets, App Control das Modul ConfigCI. Fehlen sie, endet der Lauf mit einem klaren Text:

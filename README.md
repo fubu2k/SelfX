@@ -277,6 +277,7 @@ Report vulnerabilities privately as described in [security policy](SECURITY.en.m
 - [Package wizard](docs/Guided-Setup.md): guided configuration up to the Intune package
 - [Installation](docs/Installation.md), including the release checklist of SelfX Service
 - [Configuration](docs/Configuration.md)
+- [Monitoring](docs/Monitoring.md): device status in Intune Remediations and Log Analytics
 - [Architecture](docs/Architecture.md): file classes, file lists, trust modes and their limits
 - [User manual](docs/User-Manual.md)
 - [Package notes of SelfX Service](SelfX%20Service/README.en.md)

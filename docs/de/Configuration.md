@@ -434,6 +434,21 @@ können diese Datei lesen. Einstellungen im Element `Background` von `Health_Con
 | `MaxCpuPercent` | `75` | Ist die Last höher, wird die Prüfung um 2 Minuten verschoben (10 bis 100; 100 = kein Limit). |
 | `StartDelaySeconds` | `120` | Wartezeit nach dem Start des Dienstes, damit die Anmeldung nicht langsamer wird (0 bis 3600). |
 
+**Inventardatei (optional):** Mit `<Inventory Enabled="true" />` hängt der Dienst nach jeder vollständigen
+Prüfung eine JSON-Zeile an `%ProgramData%\SelfX\Inventory\SelfX.Inventory.json` an: Status je Prüfungsart und
+fehlgeschlagene Apps mit Fehlercode, ohne Namen und Detailtexte. Ein Protokoll-Sammler wie der Azure Monitor
+Agent kann sie an Log Analytics senden. Die Datei hat dieselben Rechte wie der Cache. Auf Windows Server wird
+nichts geschrieben, solange `TerminalServer_Health` auf `Off` steht. Einzelheiten: [Überwachung](Monitoring.md).
+
+```xml
+<Inventory Enabled="false" MaxSizeKB="1024" />
+```
+
+| Attribut | Standard | Bedeutung |
+|---|---|---|
+| `Enabled` | `false` | `true`: Inventardatei schreiben. Jeder andere Wert oder ein fehlendes Element: keine Datei. |
+| `MaxSizeKB` | `1024` | Größengrenze (64 bis 10240). Eine größere Datei wird in `SelfX.Inventory.json.old` umbenannt; eine ältere `.old` wird gelöscht. |
+
 **Eigene Prüfskripte:** Legen Sie sie in `Sources\HealthChecks` ab (installiert nach
 `Config\HealthChecks`, siehe [Eigene Skripte](#eigene-skripte-der-firma)). Erlaubt sind nur einfache
 Dateinamen, keine Unterordner und keine Pfade. Prüfskripte dürfen **nur lesen**. Sie dürfen nie

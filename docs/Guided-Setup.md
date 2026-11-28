@@ -28,7 +28,7 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 | Branding | Logo (file dialog, preview) and company color; the window shows the color at once |
 | Ticket | Ticket e-mail and, for several organisations, one mailbox per organisation, chosen by group tag, OU or device class |
 | Connection check | Switch the connection check on, the delivered Microsoft targets on or off, host names in the report on or off, and your own targets (name, host, port, group, kind; up to 8 own targets). See [Network measurements](Configuration.md#network-measurements) |
-| Further settings | Copilot Chat, company wiki, status icon, hint before disruptive actions, shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
+| Further settings | Copilot Chat, company wiki, status icon, hint before disruptive actions, monitoring (Intune Remediations, inventory file), shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
 | Signature | No certificate (trust mode Hash), a certificate from the store (only suitable, valid ones) or a PFX file with its password; time stamp service; additional signers for a change of the certificate. Shows subject, issuer, end of validity, thumbprint and the revocation list addresses with warnings. See [Code signing certificate](Certificate-Guide.md) |
 | Summary | Your answers, the package folder, the output folder, `IntuneWinAppUtil.exe` (not for Windows Server), "only write the configuration" |
 | Build the Intune package | One click; a list shows every step; **Cancel** stops the build, the output folder stays unchanged |
@@ -106,6 +106,9 @@ preferably from the latest release tag). The wizard asks for the path of the fil
    the clipboard. Optionally a wiki button with an `https://` address and a name.
 7. **Behavior on the device:** status icon, hint before disruptive actions (`Disturb_Warning`), shortcuts. In expert mode: log retention, file check
    (`Enforce` or `Audit`) and service rights. Without expert mode the secure defaults stay.
+   Monitoring (both default no): *Intune Remediations* puts `Detect-SelfXHealth.ps1` into the output folder (Windows 11 only; signed in the
+   trust mode Signature); *Inventory file* switches on `Inventory` in `Health_Config.xml` and puts the sample data collection rule
+   `SelfX-Inventory-DCR.json` into the output folder. The guide gets a step for it. See [Monitoring](Monitoring.md).
 8. **AppLocker and App Control:** whether to create AppLocker rules (default yes) and, if you use App Control for Business (WDAC), the
    ID of your base policy. Without an ID no App Control file is written. The rule scripts need Windows PowerShell 5.1; AppLocker also the
    AppLocker cmdlets, App Control the module ConfigCI. Without them the run stops with a clear text: answer *no* or create the files on

@@ -23,6 +23,8 @@
         3.1.0  2026-11-28  fubu2k          Row "Company apps": a download without progress for StalledMinutes (limits, default, invalid values,
                                            installed, failed and not applicable apps), the reader of the download folder, the app list (at most
                                            20, check in the client), APPRETRY in the client and the note in the language of the user.
+        3.1.0  2026-11-28  fubu2k          Apps carry the error code of a failed app; inventory file of the service (line with fixed schema,
+                                           no names or detail texts, off by default, DTD, rotation, terminal server Off, no link followed).
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -263,6 +265,7 @@ try {
     Assert-Equal (@($row.Apps).Count) 2 'Stalled: failed and stalled apps are listed for the retry of one app'
     Assert-Equal "$($row.Apps[0].Id)|$($row.Apps[0].Name)|$($row.Apps[0].Problem)" "$stallId|Slow app|Stalled" 'Stalled: ID in lower case, name, problem Stalled'
     Assert-Equal "$($row.Apps[1].Id)|$($row.Apps[1].Name)|$($row.Apps[1].Problem)" "$failId|Badapp|Failed" 'Stalled: the name of the list has no control characters; problem Failed'
+    Assert-Equal "$($row.Apps[0].Code)|$($row.Apps[1].Code)" '|0x80070643' 'Apps: a failed app carries its error code, a stalled app none'
     $script:downloads = @{ $stallId = [datetime]::UtcNow.AddMinutes(-119) }
     $row = Get-SelfXApplicationHealth $stallConfig.DocumentElement
     Assert-Equal "$($row.Status)|$(@($row.Apps).Count)|$($row.Apps[0].Problem)" 'Error|1|Failed' 'Stalled: a download younger than StalledMinutes is not stalled'
@@ -1218,6 +1221,105 @@ try {
             Assert-Equal ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Matches[1])).Contains('"IME"')) $true 'STATUS carries the cache content'
             Assert-Equal ($type.GetMethod('ProcessRequest', $flags).Invoke($instance, @('STATUS', 'test', $null, $false, [long]0)) -like 'STATUS 2026-11-04T09:30:05Z*') $true 'STATUS request is answered without running a script'
             [IO.Directory]::Delete((Split-Path $cacheFile), $true)
+
+            # Inventory file (Health_Config.xml Inventory): the line of a health answer and the file of the service, only in the temp folder.
+            $build = $type.GetMethod('BuildInventoryLine', [Reflection.BindingFlags]'Static,NonPublic')
+            $when = [datetime]::new(2026, 11, 28, 8, 0, 0, [DateTimeKind]::Utc)
+            $appA = '0a1b2c3d-0000-4000-8000-00000000000a'
+            $answer = ConvertTo-Json -Compress -Depth 5 -InputObject @(
+                [ordered]@{ Id = 'IME'; Name = ''; Status = 'OK'; Detail = 'running' },
+                [ordered]@{ Id = 'Disk'; Name = 'C:'; Status = 'OK'; Detail = 'C:\Users\jdoe' },
+                [ordered]@{ Id = 'Disk'; Name = 'D:'; Status = 'Pending'; Detail = 'x' },
+                [ordered]@{ Id = 'Custom'; Name = 'Check of jdoe'; Status = 'Evil'; Detail = 'jdoe@contoso.com' },
+                [ordered]@{ Id = 'Other'; Name = ''; Status = 'Error'; Detail = 'x' },
+                [ordered]@{ Id = 'Applications'; Name = ''; Status = 'Error'; Detail = 'App of jdoe'; Apps = @(
+                        [ordered]@{ Id = $appA; Name = 'Tool of jdoe'; Problem = 'Failed'; Code = '0x87D1041C' },
+                        [ordered]@{ Id = '0a1b2c3d-0000-4000-8000-00000000000b'; Name = 'B'; Problem = 'Stalled'; Code = '' },
+                        [ordered]@{ Id = '0a1b2c3d-0000-4000-8000-00000000000c'; Name = 'C'; Problem = 'Failed'; Code = 'C:\Users\jdoe' },
+                        [ordered]@{ Id = '..\..\x'; Name = 'D'; Problem = 'Failed'; Code = '0x80070643' },
+                        [ordered]@{ Id = '0a1b2c3d-0000-4000-8000-00000000000e'; Name = 'E'; Problem = 'Other'; Code = '0x80070643' }) })
+            $line = $build.Invoke($null, @([string]$answer, $false, $when))
+            $expected = '{"SchemaVersion":1,"TimeGenerated":"2026-11-28T08:00:00Z","Mode":"Client","Overall":"Error","IME":"OK","Defender":"","Compliance":"","Applications":"Error","Disk":"Pending","BitLocker":"","PendingReboot":"","Updates":"","Service":"","Custom":"Unknown","FailedApps":"' + $appA + ':0x87D1041C;0a1b2c3d-0000-4000-8000-00000000000b:Stalled;0a1b2c3d-0000-4000-8000-00000000000c:-"}'
+            Assert-Equal $line $expected 'Inventory: fixed schema, worst status per type, failed apps with code'
+            Assert-Equal ($line -cmatch 'jdoe|contoso|Users|Tool|running') $false 'Inventory: no name, no detail text, no user name, no path'
+            Assert-Equal ($line.Contains("`n")) $false 'Inventory: one line'
+            Assert-Equal (($build.Invoke($null, @('[{"Id":"IME","Status":"OK"}]', $true, $when)) | ConvertFrom-Json).Mode) 'TerminalServer' 'Inventory: mode TerminalServer'
+            Assert-Equal (($build.Invoke($null, @('{"Id":"Collection","Status":"Unknown","Detail":"x"}', $false, $when)) | ConvertFrom-Json).Overall) 'Error' 'Inventory: a failed collection is Error (single row as object)'
+            foreach ($bad in @('', 'not json', '[]', '"text"', '[1,2]')) {
+                Assert-Equal $build.Invoke($null, @($bad, $false, $when)) $null "Inventory: no line for '$bad'"
+            }
+            $manyApps = '[{"Id":"Applications","Status":"Error","Apps":[' + ((1..50 | ForEach-Object { '{"Id":"' + ('0a1b2c3d-0000-4000-8000-{0:x12}' -f $_) + '","Problem":"Failed","Code":"0x80070643"}' }) -join ',') + ']}]'
+            Assert-Equal (@((($build.Invoke($null, @([string]$manyApps, $false, $when)) | ConvertFrom-Json).FailedApps) -split ';').Count) 20 'Inventory: at most 20 apps'
+
+            $write = $type.GetMethod('WriteInventory', $flags)
+            $inventory = Join-Path $temp 'Inventory\SelfX.Inventory.json'
+            Assert-Equal $type.GetField('inventoryFile', $flags).GetValue($instance) $inventory 'Inventory: the file is next to the cache'
+            $valid = '[{"Id":"IME","Status":"OK"},{"Id":"Updates","Status":"Pending"}]'
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig/>')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal ([IO.File]::Exists($inventory)) $false 'Inventory: off without the element (default)'
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Inventory Enabled="false"/></HealthConfig>')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal ([IO.File]::Exists($inventory)) $false 'Inventory: Enabled="false" writes nothing'
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Inventory Enabled="yes"/></HealthConfig>')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal ([IO.File]::Exists($inventory)) $false 'Inventory: any other value than true writes nothing'
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<?xml version="1.0"?><!DOCTYPE HealthConfig [<!ENTITY e "true">]><HealthConfig><Inventory Enabled="&e;"/></HealthConfig>')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal ([IO.File]::Exists($inventory)) $false 'Inventory: Health_Config.xml with DTD writes nothing (fail closed)'
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Inventory Enabled="true" MaxSizeKB="64"/></HealthConfig>')
+            $write.Invoke($instance, @($valid))
+            $write.Invoke($instance, @($valid))
+            $lines = @([IO.File]::ReadAllLines($inventory))
+            Assert-Equal $lines.Count 2 'Inventory: one line per run, appended'
+            Assert-Equal "$(($lines[1] | ConvertFrom-Json).SchemaVersion)|$(($lines[1] | ConvertFrom-Json).Overall)|$(($lines[1] | ConvertFrom-Json).Updates)" '1|Pending|Pending' 'Inventory: the line of the run'
+            $bytes = [IO.File]::ReadAllBytes($inventory)
+            Assert-Equal ($bytes[0] -eq 0xEF) $false 'Inventory: UTF-8 without byte order mark'
+            $write.Invoke($instance, @('not json'))
+            Assert-Equal @([IO.File]::ReadAllLines($inventory)).Count 2 'Inventory: no line for an answer without rows'
+            # Rotation at MaxSizeKB: the file is renamed to .old (a name outside the file pattern of a collector).
+            [IO.File]::WriteAllText($inventory, ('x' * (64 * 1024 - 10)) + "`n")
+            [IO.File]::WriteAllText("$inventory.old", 'older')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal @([IO.File]::ReadAllLines($inventory)).Count 1 'Inventory: rotation starts a new file'
+            Assert-Equal ([IO.File]::ReadAllText("$inventory.old").StartsWith('xxx')) $true 'Inventory: the full file becomes .old, the older .old is replaced'
+            [IO.File]::WriteAllText("$temp\Health_Config.xml", '<HealthConfig><Inventory Enabled="true" MaxSizeKB="999999"/></HealthConfig>')
+            Assert-Equal $type.GetMethod('ReadInventoryMaxBytes', $flags).Invoke($instance, @()) ([long](1024 * 1024)) 'Inventory: MaxSizeKB out of range uses 1024'
+            # Mode TerminalServer: TerminalServer_Health Off (also a missing value) writes nothing; AdminOnly writes.
+            [IO.File]::Delete($inventory)
+            $type.GetField('terminalServerForTest', $flags).SetValue($instance, [Nullable[bool]]$true)
+            [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><TerminalServer_Health>Off</TerminalServer_Health></GUI_Config>')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal ([IO.File]::Exists($inventory)) $false 'Inventory: terminal server with TerminalServer_Health Off writes nothing'
+            [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config/>')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal ([IO.File]::Exists($inventory)) $false 'Inventory: terminal server without TerminalServer_Health writes nothing'
+            [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><TerminalServer_Health>AdminOnly</TerminalServer_Health></GUI_Config>')
+            $write.Invoke($instance, @($valid))
+            Assert-Equal ((Get-Content -LiteralPath $inventory | ConvertFrom-Json).Mode) 'TerminalServer' 'Inventory: terminal server with AdminOnly writes, mode TerminalServer'
+            $type.GetField('terminalServerForTest', $flags).SetValue($instance, [Nullable[bool]]$false)
+            # A link instead of the file: nothing is written through it.
+            [IO.File]::Delete($inventory)
+            $linkTarget = Join-Path $temp 'linktarget.txt'
+            [IO.File]::WriteAllText($linkTarget, 'target')
+            $linked = $true
+            try { New-Item -ItemType SymbolicLink -Path $inventory -Target $linkTarget -ErrorAction Stop | Out-Null } catch { $linked = $false }
+            if ($linked) {
+                $write.Invoke($instance, @($valid))
+                Assert-Equal ([IO.File]::ReadAllText($linkTarget)) 'target' 'Inventory: a link instead of the file is not followed'
+                [IO.File]::Delete($inventory)
+            } else { Write-Output 'SKIP inventory link test (no right to create a symbolic link)' }
+            [IO.File]::Delete($linkTarget)
+            # A junction instead of the folder Inventory (needs no special right): nothing is written below its target.
+            [IO.Directory]::Delete((Join-Path $temp 'Inventory'), $true)
+            $junctionTarget = Join-Path $temp 'junctiontarget'
+            [void][IO.Directory]::CreateDirectory($junctionTarget)
+            New-Item -ItemType Junction -Path (Join-Path $temp 'Inventory') -Target $junctionTarget | Out-Null
+            $write.Invoke($instance, @($valid))
+            Assert-Equal @([IO.Directory]::GetFiles($junctionTarget)).Count 0 'Inventory: a junction instead of the folder is not followed'
+            [IO.Directory]::Delete((Join-Path $temp 'Inventory'))
+            [IO.Directory]::Delete($junctionTarget, $true)
+            [IO.File]::Delete("$temp\Tool_Config.xml")
         } finally { $instance.Dispose() }
     }
     Write-Output "PASS: $script:assertions assertions. System probes and script execution mocked; service whitelist tested without starting the service."

@@ -1,0 +1,57 @@
+{
+    "location": "<region of the workspace>",
+    "kind": "Windows",
+    "properties": {
+        "description": "SelfX inventory file (schema version 1): one JSON line per full health check of the SelfX service. See docs/Monitoring.md.",
+        "dataCollectionEndpointId": "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Insights/dataCollectionEndpoints/<dce-name>",
+        "streamDeclarations": {
+            "Custom-SelfXInventory": {
+                "columns": [
+                    { "name": "TimeGenerated", "type": "datetime" },
+                    { "name": "Computer", "type": "string" },
+                    { "name": "FilePath", "type": "string" },
+                    { "name": "SchemaVersion", "type": "int" },
+                    { "name": "Mode", "type": "string" },
+                    { "name": "Overall", "type": "string" },
+                    { "name": "IME", "type": "string" },
+                    { "name": "Defender", "type": "string" },
+                    { "name": "Compliance", "type": "string" },
+                    { "name": "Applications", "type": "string" },
+                    { "name": "Disk", "type": "string" },
+                    { "name": "BitLocker", "type": "string" },
+                    { "name": "PendingReboot", "type": "string" },
+                    { "name": "Updates", "type": "string" },
+                    { "name": "Service", "type": "string" },
+                    { "name": "Custom", "type": "string" },
+                    { "name": "FailedApps", "type": "string" }
+                ]
+            }
+        },
+        "dataSources": {
+            "logFiles": [
+                {
+                    "name": "SelfXInventory",
+                    "streams": [ "Custom-SelfXInventory" ],
+                    "filePatterns": [ "C:\\ProgramData\\SelfX\\Inventory\\SelfX.Inventory.json" ],
+                    "format": "json"
+                }
+            ]
+        },
+        "destinations": {
+            "logAnalytics": [
+                {
+                    "name": "SelfXWorkspace",
+                    "workspaceResourceId": "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>"
+                }
+            ]
+        },
+        "dataFlows": [
+            {
+                "streams": [ "Custom-SelfXInventory" ],
+                "destinations": [ "SelfXWorkspace" ],
+                "transformKql": "source",
+                "outputStream": "Custom-SelfXInventory_CL"
+            }
+        ]
+    }
+}

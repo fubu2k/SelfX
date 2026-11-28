@@ -28,7 +28,7 @@
     Name    : SelfXWizardGui.ps1
     Package : tools
     Context : Build machine (administrator of the package, own user account; not installed, not shipped to devices)
-    Version : 1.10.0
+    Version : 1.11.0
     Works in Windows PowerShell 5.1 and PowerShell 7 on Windows (WPF, single-threaded apartment). Sends nothing, starts no process
     except the Windows Explorer for the result folder (on request) and what Invoke-SelfXPackageBuild starts (IntuneWinAppUtil.exe and the
     rule scripts).
@@ -54,6 +54,8 @@
     1.9.0    2026-11-28  fubu2k               Page More settings: question DisturbWarning (hint before disruptive actions)
     1.10.0   2026-11-28  fubu2k               Page Signature: time stamp service at most 300 characters, saved in and loaded from selfx-answers.json
                                               (build setting TimestampServer); the switch "without time stamp" is passed to the build as -NoTimestamp
+    1.11.0   2026-11-28  fubu2k               Page More settings: questions HealthRemediation (Intune Remediations, not for Windows Server) and
+                                              HealthInventory (inventory file); result page lists the files of the monitoring
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -123,7 +125,7 @@ $script:WizardGuiPages = @(
     [pscustomobject]@{ Id = 'branding'; Questions = @('LogoPath', 'AccentColor') },
     [pscustomobject]@{ Id = 'ticket'; Questions = @('TicketEnabled', 'TicketMail', 'TicketSubjectTag', 'MultiOrg', 'HybridJoin', 'UseGroupTags', 'UseDeviceClass') },
     [pscustomobject]@{ Id = 'network'; Questions = @('NetworkEnabled', 'NetworkMicrosoft', 'NetworkHostNames') },
-    [pscustomobject]@{ Id = 'more'; Questions = @('CopilotEnabled', 'CopilotAudience', 'CopilotClearClipboard', 'WikiEnabled', 'WikiUrl', 'WikiName', 'TrayIcon', 'DisturbWarning', 'ShortcutDesktop', 'ShortcutStartMenu', 'Expert', 'LogRetention', 'FileCheck', 'Privileges', 'AppLockerRules', 'WdacBasePolicyId') },
+    [pscustomobject]@{ Id = 'more'; Questions = @('CopilotEnabled', 'CopilotAudience', 'CopilotClearClipboard', 'WikiEnabled', 'WikiUrl', 'WikiName', 'TrayIcon', 'DisturbWarning', 'HealthRemediation', 'HealthInventory', 'ShortcutDesktop', 'ShortcutStartMenu', 'Expert', 'LogRetention', 'FileCheck', 'Privileges', 'AppLockerRules', 'WdacBasePolicyId') },
     [pscustomobject]@{ Id = 'signing'; Questions = @() },
     [pscustomobject]@{ Id = 'summary'; Questions = @() },
     [pscustomobject]@{ Id = 'build'; Questions = @() },
@@ -1197,7 +1199,7 @@ function Show-WizardGuiResult {
     $configured = [bool]$script:Gui.State.Build.ConfigureOnly
     $ui.ResultText.Text = (Get-WText $(if ($configured) { 'gui.result.configured' } else { 'gui.result.text' }) @($result.OutputFolder))
     $files = New-Object System.Collections.Generic.List[string]
-    foreach ($name in @($result.PackageFile, $result.DetectionFile, $result.GuideFile, 'selfx-answers.json') + @($result.RuleFiles) + @($result.ScriptFiles)) { if ($name) { $files.Add($name) } }
+    foreach ($name in @($result.PackageFile, $result.DetectionFile, $result.GuideFile, 'selfx-answers.json') + @($result.RuleFiles) + @($result.ScriptFiles) + @($result.MonitoringFiles)) { if ($name) { $files.Add($name) } }
     $files.Add('package\')
     $ui.ResultFilesBox.Text = ($files -join [Environment]::NewLine)
     # A package for Windows Server is installed without Intune (SelfX-Server-Guide): the title of the instructions says so.

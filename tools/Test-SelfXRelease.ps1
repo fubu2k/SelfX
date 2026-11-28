@@ -25,7 +25,7 @@
     Name    : Test-SelfXRelease.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 3.1.1
+    Version : 3.1.2
     Exit code: 0 = all tests passed, 1 = at least one failed
 
     History:
@@ -34,6 +34,7 @@
     3.1.0    2026-11-27  fubu2k               Initial version
     3.1.1    2026-11-27  fubu2k               A script of the assistant may dot-source a code file of the package (App of the payload: the
                                               window SelfXWizardGui.ps1 loads Branding.ps1); eleven Windows PowerShell 5.1 tests
+    3.1.2    2026-11-28  fubu2k               Thirteen Windows PowerShell 5.1 tests (tools\Test-SelfXHealthDetection.ps1)
 #>
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -494,7 +495,7 @@ Write-Host '.github\workflows\service-ci.yml'
 $ci = [IO.File]::ReadAllText((Join-Path $RepositoryRoot '.github/workflows/service-ci.yml'))
 Assert ($ci -match '(?m)^  workflow_call:\s*$') 'the CI workflow can be called by the release workflow'
 Assert ([regex]::Matches($ci, 'Test-SelfXRelease\.ps1').Count -eq 2) 'this test runs in Windows PowerShell 5.1 and in PowerShell 7'
-Assert ($ci -match "Count -ne 12") 'the count of the Windows PowerShell 5.1 tests is 12'
+Assert ($ci -match "Count -ne 13") 'the count of the Windows PowerShell 5.1 tests is 13'
 
 # ---------------------------------------------------------------- docs
 Write-Host 'Docs'
