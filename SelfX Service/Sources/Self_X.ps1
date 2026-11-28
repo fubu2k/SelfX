@@ -1846,8 +1846,13 @@ Function Start-SelfXSystemAction
 		$Global:SvcAction_Runspace.ApartmentState = 'STA'
 		$Global:SvcAction_Runspace.Open()
 		$Run_Command = "Invoke-SelfXSystemAction -Script '$($Script -replace "'", "''")'"
-		# The ID has the form of a GUID (checked above), so it needs no quoting.
-		If($AppId) { $Run_Command = "Invoke-SelfXAppRetry -AppId '$AppId'"; Write-SelfXLog "Retry of one app requested: $AppId" }
+		# The ID (checked above) goes into the background runspace as a variable, not as text of the command.
+		If($AppId)
+			{
+				$Global:SvcAction_Runspace.SessionStateProxy.SetVariable('SelfXRetryAppId', $AppId)
+				$Run_Command = 'Invoke-SelfXAppRetry -AppId $SelfXRetryAppId'
+				Write-SelfXLog "Retry of one app requested: $AppId"
+			}
 		If($PostAction -eq 'MailReport')
 			{
 				# Texts are prepared here in the language of the user; the background runspace only opens the e-mail.
