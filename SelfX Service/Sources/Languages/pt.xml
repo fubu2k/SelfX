@@ -702,7 +702,7 @@ Pretende continuar?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Atualizar as definições da empresa (políticas de grupo) deste PC</Name>
 				<Explanation>As definições da sua empresa, como unidades de rede, impressoras ou regras de segurança, não chegam ou estão desatualizadas. A ação pede ao Windows que aplique novamente as políticas de grupo. Só funciona em dispositivos associados a um domínio (também dispositivos com associação híbrida).</Explanation>
-				<Alerte_MSG>O Windows verifica e aplica novamente as políticas de grupo da sua empresa. Isto pode demorar alguns minutos. A sua sessão não é terminada e o Windows não reinicia; uma definição que precise de reinício ou de nova sessão só entra em vigor depois. Se o dispositivo não estiver associado a um domínio, a ação termina com o código de saída 3 e não altera nada.
+				<Alerte_MSG>O Windows verifica e aplica novamente as políticas de grupo da sua empresa. Isto pode demorar alguns minutos. A sua sessão não é terminada e o Windows não reinicia; uma definição que precise de reinício ou de nova sessão só entra em vigor depois. Se o dispositivo não estiver associado a um domínio, a ação termina com o código de saída 3 e não altera nada. Num servidor de terminais (Windows Server), só são atualizadas as suas próprias definições de utilizador, não as do computador.
 
 Pretende continuar?</Alerte_MSG>
 			</Action>

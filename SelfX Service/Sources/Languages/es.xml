@@ -702,7 +702,7 @@ SelfX no elimina ni modifica ningún archivo. Si Defender encuentra una amenaza,
 			<Action Id="D_Device_GpUpdate">
 				<Name>Actualizar los ajustes de la empresa (directivas de grupo) de este PC</Name>
 				<Explanation>Los ajustes de su empresa, como unidades de red, impresoras o reglas de seguridad, no llegan o están desactualizados. La acción pide a Windows que vuelva a aplicar las directivas de grupo. Solo funciona en dispositivos unidos a un dominio (también dispositivos con unión híbrida).</Explanation>
-				<Alerte_MSG>Windows comprueba y vuelve a aplicar las directivas de grupo de su empresa. Esto puede tardar unos minutos. No se cierra su sesión y Windows no se reinicia; un ajuste que requiere reiniciar o volver a iniciar sesión surte efecto después. Si su dispositivo no está unido a un dominio, la acción termina con el código de salida 3 y no cambia nada.
+				<Alerte_MSG>Windows comprueba y vuelve a aplicar las directivas de grupo de su empresa. Esto puede tardar unos minutos. No se cierra su sesión y Windows no se reinicia; un ajuste que requiere reiniciar o volver a iniciar sesión surte efecto después. Si su dispositivo no está unido a un dominio, la acción termina con el código de salida 3 y no cambia nada. En un servidor de terminales (Windows Server) solo se actualizan los ajustes de su propio usuario, no los del equipo.
 
 ¿Quiere continuar?</Alerte_MSG>
 			</Action>

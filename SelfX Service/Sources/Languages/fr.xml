@@ -702,7 +702,7 @@ Voulez-vous continuer ?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Actualiser les paramètres de l’entreprise (stratégies de groupe) de ce PC</Name>
 				<Explanation>Les paramètres de votre entreprise, comme les lecteurs réseau, les imprimantes ou les règles de sécurité, n’arrivent pas ou sont obsolètes. L’action demande à Windows d’appliquer de nouveau les stratégies de groupe. Elle ne fonctionne que sur les appareils joints à un domaine (y compris les appareils joints en mode hybride).</Explanation>
-				<Alerte_MSG>Windows vérifie et applique de nouveau les stratégies de groupe de votre entreprise. Cela peut prendre quelques minutes. Vous n’êtes pas déconnecté et Windows ne redémarre pas ; un paramètre qui nécessite un redémarrage ou une nouvelle connexion ne prend effet qu’après. Si votre appareil n’est pas joint à un domaine, l’action se termine avec le code de sortie 3 et ne modifie rien.
+				<Alerte_MSG>Windows vérifie et applique de nouveau les stratégies de groupe de votre entreprise. Cela peut prendre quelques minutes. Vous n’êtes pas déconnecté et Windows ne redémarre pas ; un paramètre qui nécessite un redémarrage ou une nouvelle connexion ne prend effet qu’après. Si votre appareil n’est pas joint à un domaine, l’action se termine avec le code de sortie 3 et ne modifie rien. Sur un serveur de terminaux (Windows Server), seuls vos propres paramètres utilisateur sont mis à jour, pas ceux de l’ordinateur.
 
 Voulez-vous continuer ?</Alerte_MSG>
 			</Action>

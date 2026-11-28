@@ -782,7 +782,7 @@ Möchten Sie fortfahren?</Alerte_MSG>
 			<Action Id="D_Device_GpUpdate">
 				<Name>Die Unternehmenseinstellungen (Gruppenrichtlinien) dieses PCs aktualisieren</Name>
 				<Explanation>Einstellungen Ihres Unternehmens, etwa Netzlaufwerke, Drucker oder Sicherheitsregeln, kommen nicht an oder sind veraltet. Die Aktion fordert Windows auf, die Gruppenrichtlinien erneut anzuwenden. Sie funktioniert nur auf Geräten, die einer Domäne beigetreten sind (auch hybrid verbundene Geräte).</Explanation>
-				<Alerte_MSG>Windows prüft und wendet die Gruppenrichtlinien Ihres Unternehmens erneut an. Das kann einige Minuten dauern. Sie werden nicht abgemeldet und Windows startet nicht neu; eine Einstellung, die einen Neustart oder eine neue Anmeldung braucht, wird erst danach wirksam. Ist Ihr Gerät keiner Domäne beigetreten, endet die Aktion mit dem Exitcode 3 und ändert nichts.
+				<Alerte_MSG>Windows prüft und wendet die Gruppenrichtlinien Ihres Unternehmens erneut an. Das kann einige Minuten dauern. Sie werden nicht abgemeldet und Windows startet nicht neu; eine Einstellung, die einen Neustart oder eine neue Anmeldung braucht, wird erst danach wirksam. Ist Ihr Gerät keiner Domäne beigetreten, endet die Aktion mit dem Exitcode 3 und ändert nichts. Auf einem Terminalserver (Windows Server) werden nur Ihre eigenen Benutzereinstellungen aktualisiert, nicht die Einstellungen des Computers.
 
 Möchten Sie fortfahren?</Alerte_MSG>
 			</Action>
