@@ -29,7 +29,7 @@ Nutzlast-Archiv (oder im Repository). Sie startet Windows PowerShell 5.1 mit `-N
 | Branding | Logo (Dateiauswahl, Vorschau) und Firmenfarbe; das Fenster zeigt die Farbe sofort |
 | Ticket | Ticket-E-Mail und, bei mehreren Organisationen, ein Postfach je Organisation, zugeordnet über Gruppentag, OU oder Geräteklasse |
 | Verbindungstest | Verbindungstest einschalten, die mitgelieferten Microsoft-Ziele ein oder aus, Hostnamen im Bericht ein oder aus und eigene Ziele (Name, Host, Port, Gruppe, Art; bis zu 8 eigene Ziele). Siehe [Netzwerk-Messungen](Configuration.md#netzwerk-messungen) |
-| Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
+| Weitere Einstellungen | Copilot Chat, Firmen-Wiki, Statussymbol, Hinweis vor störenden Aktionen, Verknüpfungen, Experteneinstellungen, AppLocker und App Control (empfohlene Werte vorbelegt) |
 | Signatur | Kein Zertifikat (Vertrauensmodus Hash), Zertifikat aus dem Speicher (nur geeignete, gültige) oder PFX-Datei mit Kennwort; Zeitstempeldienst; weitere Signierer für einen Zertifikatswechsel. Zeigt Antragsteller, Aussteller, Ablauf, Fingerabdruck und die Sperrlisten-Adressen mit Warnungen. Siehe [Codesignatur-Zertifikat](Zertifikat.md) |
 | Zusammenfassung | Ihre Antworten, Paketordner, Ausgabeordner, `IntuneWinAppUtil.exe` (nicht für Windows Server), „Nur die Konfiguration schreiben“ |
 | Intune-Paket bauen | Ein Klick; eine Liste zeigt jeden Schritt; **Abbrechen** beendet den Bau, der Ausgabeordner bleibt unverändert |
@@ -109,7 +109,7 @@ Wichtige Parameter:
 5. **Verbindungstest:** ein oder aus (Standard aus), die mitgelieferten Microsoft-Ziele, Hostnamen im Bericht und eigene Ziele (eine Fragenschleife: Name, Host, Port, Gruppe, Art). Die Antworten heißen `NetworkEnabled`, `NetworkMicrosoft`, `NetworkHostNames` und `NetworkTargets`; ein Ziel ohne `NetworkEnabled` wird abgelehnt, nicht ignoriert. Der Assistent schreibt sie in `Network_Test_Config.xml` und lässt die Kommentare und die vier Microsoft-Ziele stehen.
 6. **Copilot Chat und Firmen-Wiki:** Copilot nur anbieten, wenn Sie es lizenziert haben; Zielgruppe der
    Antwort, Zwischenablage leeren. Optional eine Wiki-Schaltfläche mit `https://`-Adresse und Namen.
-7. **Verhalten auf dem Gerät:** Statussymbol, Verknüpfungen. Im Expertenmodus: Protokoll-Aufbewahrung,
+7. **Verhalten auf dem Gerät:** Statussymbol, Hinweis vor störenden Aktionen (`Disturb_Warning`), Verknüpfungen. Im Expertenmodus: Protokoll-Aufbewahrung,
    Dateiprüfung (`Enforce` oder `Audit`) und Rechte des Dienstes. Ohne Expertenmodus bleiben die sicheren Standardwerte.
 8. **AppLocker und App Control:** ob AppLocker-Regeln erzeugt werden (Standard ja) und, wenn Sie App Control for Business (WDAC)
    einsetzen, die ID Ihrer Basisrichtlinie. Ohne ID entsteht keine App-Control-Datei. Die Regelskripte brauchen Windows PowerShell 5.1;

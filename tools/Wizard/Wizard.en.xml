@@ -7,7 +7,7 @@
 	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
 	the same placeholders.
 -->
-<Wizard_Language Culture="en" Name="English" Version="1.8.0">
+<Wizard_Language Culture="en" Name="English" Version="1.9.0">
 	<T Id="title">SelfX package wizard</T>
 	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
 	<T Id="rec">Recommendation: </T>
@@ -117,6 +117,8 @@
 	<T Id="CopilotClearClipboard.rec">Yes if the text should not stay in the clipboard. The text already contains no names or addresses.</T>
 	<T Id="TrayIcon.ask">Show the status icon next to the clock for all users?</T>
 	<T Id="TrayIcon.rec">Yes. Users see problems early and open SelfX with one click.</T>
+	<T Id="DisturbWarning.ask">Before an action that can interrupt a meeting (closing Teams or Office, restarting the network or the device): show a hint when the user appears to be presenting or in full screen?</T>
+	<T Id="DisturbWarning.rec">Yes. It is only a sentence in the confirmation; nothing is blocked or switched. Windows tells SelfX only about presentation mode, full screen and quiet time, so not every meeting is recognised.</T>
 	<T Id="ShortcutDesktop.ask">Create a shortcut on the public desktop?</T>
 	<T Id="ShortcutDesktop.rec">Yes for the start, so that users find SelfX. Switch it off later if desktops should stay empty.</T>
 	<T Id="ShortcutStartMenu.ask">Create a shortcut in the Start menu?</T>

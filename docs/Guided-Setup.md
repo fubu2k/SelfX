@@ -28,7 +28,7 @@ archive (or in the repository). It starts Windows PowerShell 5.1 with `-NoProfil
 | Branding | Logo (file dialog, preview) and company color; the window shows the color at once |
 | Ticket | Ticket e-mail and, for several organisations, one mailbox per organisation, chosen by group tag, OU or device class |
 | Connection check | Switch the connection check on, the delivered Microsoft targets on or off, host names in the report on or off, and your own targets (name, host, port, group, kind; up to 8 own targets). See [Network measurements](Configuration.md#network-measurements) |
-| Further settings | Copilot Chat, company wiki, status icon, shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
+| Further settings | Copilot Chat, company wiki, status icon, hint before disruptive actions, shortcuts, expert settings, AppLocker and App Control (recommended values preset) |
 | Signature | No certificate (trust mode Hash), a certificate from the store (only suitable, valid ones) or a PFX file with its password; time stamp service; additional signers for a change of the certificate. Shows subject, issuer, end of validity, thumbprint and the revocation list addresses with warnings. See [Code signing certificate](Certificate-Guide.md) |
 | Summary | Your answers, the package folder, the output folder, `IntuneWinAppUtil.exe` (not for Windows Server), "only write the configuration" |
 | Build the Intune package | One click; a list shows every step; **Cancel** stops the build, the output folder stays unchanged |
@@ -103,7 +103,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 5. **Connection check:** on or off (default off), the delivered Microsoft targets, host names in the report and your own targets (a loop of questions: name, host, port, group, kind). The answers are `NetworkEnabled`, `NetworkMicrosoft`, `NetworkHostNames` and `NetworkTargets`; a target without `NetworkEnabled` is refused, not ignored. The wizard writes them into `Network_Test_Config.xml` and keeps its comments and the four Microsoft targets.
 6. **Copilot Chat and company wiki:** offer Copilot only if it is licensed; audience of the answer, clear
    the clipboard. Optionally a wiki button with an `https://` address and a name.
-7. **Behavior on the device:** status icon, shortcuts. In expert mode: log retention, file check
+7. **Behavior on the device:** status icon, hint before disruptive actions (`Disturb_Warning`), shortcuts. In expert mode: log retention, file check
    (`Enforce` or `Audit`) and service rights. Without expert mode the secure defaults stay.
 8. **AppLocker and App Control:** whether to create AppLocker rules (default yes) and, if you use App Control for Business (WDAC), the
    ID of your base policy. Without an ID no App Control file is written. The rule scripts need Windows PowerShell 5.1; AppLocker also the
