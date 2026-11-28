@@ -210,6 +210,7 @@ try {
 	[IO.File]::WriteAllText((Join-Path $package 'Config\Sub\Detection.ps1'), '# not at the top')
 	try { $null = Test-SelfXConfigPackageSignatures -PackageFolder $package -AllowedThumbprint @('A' * 40); $answer = 'accepted' } catch { $answer = "refused: $($_.Exception.Message)" }
 	Assert-Equal ($answer -like 'refused: Trust mode Signature: 2 of 2 scripts*Config\Sub\Detection.ps1 (NotSigned)*') $true "Signature check of -ConfigOnly: a Detection.ps1 below Config is checked ($answer)"
+	Reset-Fixture
 	Assert-Equal ((Invoke-Config ([pscustomobject]@{ Mode = 'Signature'; Signers = @() })) -like 'refused: -TrustedSigner is empty*') $true 'Mode Signature with an empty signer list: refused (never "allow all")'
 	Assert-Equal ((Invoke-Config $null) -like 'refused: -ConfigOnly needs an installed SelfX with a trust anchor*') $true 'No trust anchor: refused'
 	Assert-Equal ((Invoke-Config ([pscustomobject]@{ Mode = 'Other'; Signers = @() })) -like 'refused: The trust anchor of the device has no valid mode*') $true 'Unknown mode in the anchor: refused'
