@@ -18,13 +18,14 @@
     Name    : CopilotFacts.ps1
     Package : SelfX Service
     Context : GUI helper (signed-in user), functions only
-    Version : 2.8.11
+    Version : 3.1.0
 
     History:
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     2.8.10   2026-11-22  fubu2k               Initial version
     2.8.11   2026-11-22  fubu2k               Fix: Copilot_Include_AppNames = False also removes the details of the company apps row (they name the apps); network facts (connection types, VPN, proxy kind) from local values
+    3.1.0    2026-11-28  fubu2k               -TerminalServer (no kinds of connection) and -ServerFacts (Windows, uptime, drives, status rows of the server)
 #>
 
 function ConvertTo-SelfXCopilotStatusRows {
@@ -125,9 +126,26 @@ function Get-SelfXCopilotFacts {
 		[object[]]$HealthItems = @(),
 		[string]$SelfXVersion = '',
 		[string]$Language = '',
-		[bool]$IncludeAppNames = $true
+		[bool]$IncludeAppNames = $true,
+		# Environment_Mode TerminalServer: no kinds of connection (LAN, Wi-Fi, mobile, VPN).
+		[bool]$TerminalServer = $false,
+		# Facts of the class Server (Windows, uptime, drives, status rows); false for a normal user on a terminal server.
+		[bool]$ServerFacts = $true
 	)
 	$facts = @{}
+	if ($SelfXVersion) { $facts.SelfXVersion = $SelfXVersion }
+	if ($Language) { $facts.Language = $Language }
+	if ($ServerFacts) { Add-SelfXCopilotServerFacts -Facts $facts -HealthItems $HealthItems -IncludeAppNames $IncludeAppNames }
+	$network = Get-SelfXCopilotNetworkFacts
+	if ($TerminalServer) { $network.Remove('Connection') }
+	foreach ($key in @($network.Keys)) { $facts[$key] = $network[$key] }
+	return $facts
+}
+
+function Add-SelfXCopilotServerFacts {
+	# Facts of the class Server: Windows version, uptime, fixed drives and the device status rows.
+	param([hashtable]$Facts, [object[]]$HealthItems = @(), [bool]$IncludeAppNames = $true)
+	$facts = $Facts
 	try {
 		$cv = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction Stop
 		if ($cv.ProductName) { $facts.WindowsEdition = "$($cv.ProductName)" }
@@ -135,14 +153,9 @@ function Get-SelfXCopilotFacts {
 		if ($cv.CurrentBuildNumber) { $facts.WindowsBuild = ('{0}.{1}' -f $cv.CurrentBuildNumber, [int]$cv.UBR) }
 	}
 	catch { }
-	if ($SelfXVersion) { $facts.SelfXVersion = $SelfXVersion }
-	if ($Language) { $facts.Language = $Language }
 	try { $facts.UptimeDays = [math]::Floor([Environment]::TickCount64 / 86400000) } catch { }
 	$disks = @(Get-SelfXCopilotDiskFacts)
 	if ($disks.Count) { $facts.Disks = $disks }
 	$status = @(ConvertTo-SelfXCopilotStatusRows -HealthItems $HealthItems -IncludeAppNames $IncludeAppNames)
 	if ($status.Count) { $facts.Status = $status }
-	$network = Get-SelfXCopilotNetworkFacts
-	foreach ($key in @($network.Keys)) { $facts[$key] = $network[$key] }
-	return $facts
 }

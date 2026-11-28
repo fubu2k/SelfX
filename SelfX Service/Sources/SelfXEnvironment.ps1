@@ -22,6 +22,8 @@
     Version  Date        Author               Change
     -------  ----------  -------------------  ------------------------------------------------------------
     3.1.0    2026-11-27  fubu2k               Initial version (Environment_Mode, classification Show or Hide)
+    3.1.0    2026-11-28  fubu2k               TerminalServer_Health (Off or AdminOnly) and the view of a user: device status, rows of the class Server,
+                                              kinds of connection (ConvertTo-SelfXHealthAccess, Test-SelfXElevatedAdministrator, Get-SelfXViewScope)
 #>
 
 function ConvertTo-SelfXEnvironmentMode {
@@ -59,6 +61,39 @@ function Test-SelfXShownInEnvironment {
 	param([string]$Mode, [AllowNull()][AllowEmptyString()][string]$Classification)
 	if ($Mode -cne 'TerminalServer') { return $true }
 	return ("$Classification".Trim() -ceq 'Show')
+}
+
+function ConvertTo-SelfXHealthAccess {
+	# Who gets the device status (the same rule as the service): Everyone with Client; with TerminalServer AdminOnly only for exactly
+	# that value (case is ignored), otherwise Off (default, empty, any other value).
+	param([string]$Mode, [AllowNull()][AllowEmptyString()][string]$Value)
+	if ($Mode -cne 'TerminalServer') { return 'Everyone' }
+	if ("$Value".Trim() -ieq 'AdminOnly') { return 'AdminOnly' }
+	return 'Off'
+}
+
+function Test-SelfXElevatedAdministrator {
+	# True when this process runs with the elevated token of a member of Administrators (S-1-5-32-544). The filtered token of an
+	# administrator without elevation (UAC) is false, as in the service.
+	try {
+		$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+		return $principal.IsInRole((New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')))
+	} catch { return $false }
+}
+
+function Get-SelfXViewScope {
+	# What the window, the status icon, the ticket and the text for Copilot show to this user:
+	#   TerminalServer = the kinds of connection (LAN, Wi-Fi, mobile, VPN) are left out (they do not matter on a terminal server);
+	#   ServerRows     = rows of the class Server (device, Windows, management, addresses): always with Client, with TerminalServer only
+	#                    for elevated administrators;
+	#   Health         = device status: Everyone, or AdminOnly and an elevated administrator. The service checks this on its own.
+	param([string]$Mode, [string]$HealthAccess, [bool]$IsAdmin)
+	$terminalServer = $Mode -ceq 'TerminalServer'
+	return [pscustomobject]@{
+		TerminalServer = $terminalServer
+		ServerRows     = (-not $terminalServer) -or $IsAdmin
+		Health         = ($HealthAccess -ceq 'Everyone') -or ($HealthAccess -ceq 'AdminOnly' -and $IsAdmin)
+	}
 }
 
 function Get-SelfXRemediationClassification {

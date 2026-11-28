@@ -14,6 +14,8 @@
                                            "Free up space" in SelfX (user part, then SYSTEM part, result text, never in "Fix all problems").
         3.1.0  2026-11-27  fubu2k          Environment_Mode: repairs not classified Show are not returned with TerminalServer (also with a
                                            missing or unreadable Tool_Config.xml); SelfXEnvironment.ps1; classification in the service whitelist.
+        3.1.0  2026-11-28  fubu2k          TerminalServer_Health and the view of a user; system information without rows of the class Server
+                                           and without the kinds of connection; answer UNAVAILABLE TerminalServer in the client.
     #>
 $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
@@ -360,6 +362,28 @@ try {
     Assert-Equal "$($classes['a.ps1'])/$($classes['b.ps1'])" 'False/True' 'Repair classification: a script with one Hide entry is Hide'
     Assert-Equal "$(Test-SelfXRemediationOffered -Mode TerminalServer -Script 'B.PS1' -Classification $classes)/$(Test-SelfXRemediationOffered -Mode TerminalServer -Script 'C.ps1' -Classification $classes)/$(Test-SelfXRemediationOffered -Mode Client -Script 'A.ps1' -Classification @{})" 'True/False/True' 'Repair offered: Show (any case of the name), unknown script, Client'
     Assert-Equal @((Get-SelfXRemediationClassification -HealthConfigPath "$temp\Missing.xml").Keys).Count 0 'Repair classification: an unreadable file gives an empty table'
+    # TerminalServer_Health and the view of a user (19c): the same rule as the service.
+    foreach ($case in @(@('Client','Off','Everyone'), @('TerminalServer','','Off'), @('TerminalServer','AdminOnly','AdminOnly'), @('TerminalServer',' adminonly ','AdminOnly'), @('TerminalServer','Everyone','Off'), @('TerminalServer',$null,'Off'))) {
+        Assert-Equal (ConvertTo-SelfXHealthAccess $case[0] $case[1]) $case[2] "TerminalServer_Health: mode $($case[0]), value '$($case[1])' = $($case[2])"
+    }
+    foreach ($case in @(
+        @('Client','Everyone',$false,'False/True/True'),
+        @('TerminalServer','Off',$false,'True/False/False'),
+        @('TerminalServer','Off',$true,'True/True/False'),
+        @('TerminalServer','AdminOnly',$false,'True/False/False'),
+        @('TerminalServer','AdminOnly',$true,'True/True/True'))) {
+        $view = Get-SelfXViewScope -Mode $case[0] -HealthAccess $case[1] -IsAdmin $case[2]
+        Assert-Equal "$($view.TerminalServer)/$($view.ServerRows)/$($view.Health)" $case[3] "View: $($case[0]), $($case[1]), administrator $($case[2]) (terminal server/server rows/device status)"
+    }
+    Assert-Equal ((Test-SelfXElevatedAdministrator) -is [bool]) $true 'View: the check for an elevated administrator returns a truth value'
+    & {
+        function Invoke-SelfXServiceRequest { param($Request, $PipeName, $ConnectTimeoutMs) 'UNAVAILABLE TerminalServer' }
+        $cached = Get-SelfXServiceStatusCache
+        Assert-Equal "$($cached.State)/$(@($cached.Results).Count)/$($null -eq $cached.CollectedAt)" 'Unavailable/0/True' 'Client: STATUS answered UNAVAILABLE TerminalServer gives no rows'
+        Assert-Throws { Get-SelfXServiceHealthReport } 'Client: HEALTH answered UNAVAILABLE TerminalServer is an error'
+        $data = Get-SelfXStatusData -Mode Cached
+        Assert-Equal "$($data.Ok)/$(@($data.Items).Count)" 'True/0' 'Status data: no rows while the device status is not available'
+    }
     $script:disks = @([pscustomobject]@{ DeviceID='C:'; Size=500GB; FreeSpace=5GB })
     [IO.File]::WriteAllText("$temp\Tool_Config.xml", '<GUI_Config><Environment_Mode>TerminalServer</Environment_Mode></GUI_Config>')
     $tsDisk = @(Get-SelfXHealth -Root $temp -OnlyId Disk)[0]
@@ -592,6 +616,23 @@ try {
         Assert-Equal $unavailable.Count ($baseline.Count + 1) 'Service failure preserves existing information'
         Assert-Equal $unavailable[0].Category $labels.Category_Device 'Device still first on service failure'
         Assert-Equal $unavailable[-1].Status Unknown 'Unavailable health appended as Unknown'
+        # Environment_Mode TerminalServer (19c): a normal user sees only rows of the class User; the kinds of connection are left out for
+        # everyone; what is not shown is not read.
+        $script:dsregCalls = 0
+        $script:tcpCalls = 0
+        function Get-SelfXDsregStatus { $script:dsregCalls++; @{} }
+        function Test-SelfXTcpConnection { param($HostName, $Port) $script:tcpCalls++; $false }
+        # With these mocks there is no UPN and no Citrix Workspace; both are of the class User as well.
+        $expected = @(@('Current_User', 'Time_Zone', 'Proxy', 'Network_Drives', 'Collected_At') | ForEach-Object { Get-SelfXInfoText $_ })
+        $userRows = @(Get-SelfXSystemInfo -Text $labels -TerminalServer -ServerRows $false)
+        $unexpected = @($userRows | Where-Object { $_.Property -notin $expected })
+        Assert-Equal "$($userRows.Count)/$($unexpected.Count)" "$($expected.Count)/0" "TerminalServer, normal user: only the rows of the class User (found $(@($userRows | ForEach-Object { $_.Property }) -join ', '))"
+        Assert-Equal "$script:dsregCalls/$script:tcpCalls" '0/0' 'TerminalServer, normal user: no dsregcmd and no internet test'
+        $connectionRows = @(@('LAN_Connected', 'WiFi_Connected', 'WWAN_Connected', 'WiFi_SSID', 'VPN_Connected') | ForEach-Object { Get-SelfXInfoText $_ })
+        $adminRows = @(Get-SelfXSystemInfo -Text $labels -TerminalServer -ServerRows $true)
+        Assert-Equal @($adminRows | Where-Object { $_.Property -in $connectionRows }).Count 0 'TerminalServer, administrator: no rows of LAN, Wi-Fi, mobile and VPN'
+        Assert-Equal $adminRows.Count ($baseline.Count - $connectionRows.Count) 'TerminalServer, administrator: every other row stays'
+        Assert-Equal @($baseline | Where-Object { $_.Property -in $connectionRows }).Count $connectionRows.Count 'Client: the kinds of connection stay'
     }
     & {
         # Execute only the completion callback with fake runspaces/timers, never the action launcher.

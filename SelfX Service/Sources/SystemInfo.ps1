@@ -38,6 +38,8 @@
     3.1.0    2026-11-27  fubu2k               Connection check with verdict: targets get Group (Local, Internet, Microsoft, Company) and Kind (Vpn, Intranet), up to 12 targets,
                                               four group rows and one result sentence (pure function Get-SelfXConnectionVerdict), 15 second limit, setting HostNames
     3.1.0    2026-11-27  fubu2k               Health rows carry UserRemediation (part of a repair that SelfX runs in the context of the user)
+    3.1.0    2026-11-28  fubu2k               Get-SelfXSystemInfo -ServerRows (rows of the class Server) and -TerminalServer (no kinds of connection); what is
+                                              not shown is not read. Status request answered UNAVAILABLE TerminalServer: no status rows
 #>
 
 # English default labels. Keys are identical to the <SystemInfo> section of Languages\en.xml.
@@ -821,7 +823,11 @@ function Get-SelfXSystemInfo {
 		[int]$InternetTestPort = 80,
 		[string]$NetworkTestConfigPath = '',
 		[hashtable]$Text = @{},
-		[switch]$IncludeHealth
+		[switch]$IncludeHealth,
+		# Environment_Mode TerminalServer (SelfXEnvironment.ps1, Get-SelfXViewScope): no rows of LAN, Wi-Fi, mobile and VPN.
+		[switch]$TerminalServer,
+		# Rows of the class Server (device, Windows, management, addresses, connection check). False for a normal user on a terminal server.
+		[bool]$ServerRows = $true
 	)
 
 	# Overlay the localized labels on the English defaults.
@@ -841,100 +847,112 @@ function Get-SelfXSystemInfo {
 	$catNetwork = Get-SelfXInfoText 'Category_Network'
 	$catReport = Get-SelfXInfoText 'Category_Report'
 
-	# CIM and registry sources; each one may fail on its own without stopping the report.
-	$cs   = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop }
-	$os   = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop }
-	$bios = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_BIOS -ErrorAction Stop }
-	$cpu  = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop | Select-Object -First 1 }
-	$cv   = Invoke-SelfXSafe { Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction Stop }
+	# CIM and registry sources; each one may fail on its own without stopping the report. Environment_Mode TerminalServer: rows of the
+	# class Server (the device, Windows, the management and the addresses of the server) only with ServerRows (elevated administrators),
+	# and the kinds of connection (LAN, Wi-Fi, mobile, VPN) not at all. What is not shown is not read (no dsregcmd, no internet test).
+	if ($ServerRows) {
+		$cs   = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop }
+		$os   = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop }
+		$bios = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_BIOS -ErrorAction Stop }
+		$cpu  = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop | Select-Object -First 1 }
+		$cv   = Invoke-SelfXSafe { Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction Stop }
 
-	# Device
-	$items.Add((New-SelfXInfoItem $catDevice (& $L 'Computer_Name') $env:COMPUTERNAME))
-	$items.Add((New-SelfXInfoItem $catDevice (& $L 'Manufacturer') $cs.Manufacturer))
-	$items.Add((New-SelfXInfoItem $catDevice (& $L 'Model') $cs.Model))
-	$items.Add((New-SelfXInfoItem $catDevice (& $L 'Serial_Number') $bios.SerialNumber))
-	$items.Add((New-SelfXInfoItem $catDevice (& $L 'BIOS_Version') $bios.SMBIOSBIOSVersion))
-	$items.Add((New-SelfXInfoItem $catDevice (& $L 'Processor') ("$($cpu.Name)".Trim())))
-	if ($cs.TotalPhysicalMemory) {
-		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Memory') (Format-SelfXBytes $cs.TotalPhysicalMemory)))
-	}
-	$systemDrive = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$env:SystemDrive'" -ErrorAction Stop }
-	if ($systemDrive.Size) {
-		$freePercent = [math]::Round(($systemDrive.FreeSpace / $systemDrive.Size) * 100)
-		$items.Add((New-SelfXInfoItem $catDevice (Get-SelfXInfoText 'Free_Space' $env:SystemDrive) (Get-SelfXInfoText 'Free_Space_Value' (Format-SelfXBytes $systemDrive.FreeSpace) (Format-SelfXBytes $systemDrive.Size) $freePercent)))
-	}
-	$battery = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_Battery -ErrorAction Stop | Select-Object -First 1 }
-	if ($battery) {
-		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Battery') ("$($battery.EstimatedChargeRemaining)%")))
+		# Device
+		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Computer_Name') $env:COMPUTERNAME))
+		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Manufacturer') $cs.Manufacturer))
+		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Model') $cs.Model))
+		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Serial_Number') $bios.SerialNumber))
+		$items.Add((New-SelfXInfoItem $catDevice (& $L 'BIOS_Version') $bios.SMBIOSBIOSVersion))
+		$items.Add((New-SelfXInfoItem $catDevice (& $L 'Processor') ("$($cpu.Name)".Trim())))
+		if ($cs.TotalPhysicalMemory) {
+			$items.Add((New-SelfXInfoItem $catDevice (& $L 'Memory') (Format-SelfXBytes $cs.TotalPhysicalMemory)))
+		}
+		$systemDrive = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$env:SystemDrive'" -ErrorAction Stop }
+		if ($systemDrive.Size) {
+			$freePercent = [math]::Round(($systemDrive.FreeSpace / $systemDrive.Size) * 100)
+			$items.Add((New-SelfXInfoItem $catDevice (Get-SelfXInfoText 'Free_Space' $env:SystemDrive) (Get-SelfXInfoText 'Free_Space_Value' (Format-SelfXBytes $systemDrive.FreeSpace) (Format-SelfXBytes $systemDrive.Size) $freePercent)))
+		}
+		$battery = Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_Battery -ErrorAction Stop | Select-Object -First 1 }
+		if ($battery) {
+			$items.Add((New-SelfXInfoItem $catDevice (& $L 'Battery') ("$($battery.EstimatedChargeRemaining)%")))
+		}
 	}
 	# Citrix Workspace app (only when installed); the row also goes into the support ticket (device information).
 	$citrixText = Invoke-SelfXSafe { Get-SelfXCitrixWorkspaceText }
 	if ($citrixText) { $items.Add((New-SelfXInfoItem $catDevice 'Citrix Workspace' $citrixText)) }
 
 	# Windows
-	$osName = "$($os.Caption)".Replace('Microsoft ', '')
-	$items.Add((New-SelfXInfoItem $catWindows (& $L 'Windows_Version') ("$osName $($cv.DisplayVersion)".Trim())))
-	if ($cv.CurrentBuild) {
-		$build = $cv.CurrentBuild
-		if ($null -ne $cv.UBR) { $build = "$build.$($cv.UBR)" }
-		$items.Add((New-SelfXInfoItem $catWindows (& $L 'OS_Build') $build))
-	}
-	if ($os.LastBootUpTime) {
-		$uptime = (Get-Date) - $os.LastBootUpTime
-		$items.Add((New-SelfXInfoItem $catWindows (& $L 'Last_Boot') $os.LastBootUpTime.ToString('yyyy-MM-dd HH:mm:ss')))
-		$uptimeInfo = Get-SelfXUptimeInfo -Uptime $uptime
-		$items.Add((New-SelfXInfoItem $catWindows (& $L 'Uptime') $uptimeInfo.Value $uptimeInfo.Status))
-	}
-	$lastUpdate = Invoke-SelfXSafe { Get-HotFix -ErrorAction Stop | Where-Object { $_.InstalledOn } | Sort-Object InstalledOn -Descending | Select-Object -First 1 }
-	if ($lastUpdate) {
-		$items.Add((New-SelfXInfoItem $catWindows (& $L 'Last_Update') ('{0} ({1})' -f $lastUpdate.InstalledOn.ToString('yyyy-MM-dd'), $lastUpdate.HotFixID)))
+	if ($ServerRows) {
+		$osName = "$($os.Caption)".Replace('Microsoft ', '')
+		$items.Add((New-SelfXInfoItem $catWindows (& $L 'Windows_Version') ("$osName $($cv.DisplayVersion)".Trim())))
+		if ($cv.CurrentBuild) {
+			$build = $cv.CurrentBuild
+			if ($null -ne $cv.UBR) { $build = "$build.$($cv.UBR)" }
+			$items.Add((New-SelfXInfoItem $catWindows (& $L 'OS_Build') $build))
+		}
+		if ($os.LastBootUpTime) {
+			$uptime = (Get-Date) - $os.LastBootUpTime
+			$items.Add((New-SelfXInfoItem $catWindows (& $L 'Last_Boot') $os.LastBootUpTime.ToString('yyyy-MM-dd HH:mm:ss')))
+			$uptimeInfo = Get-SelfXUptimeInfo -Uptime $uptime
+			$items.Add((New-SelfXInfoItem $catWindows (& $L 'Uptime') $uptimeInfo.Value $uptimeInfo.Status))
+		}
+		$lastUpdate = Invoke-SelfXSafe { Get-HotFix -ErrorAction Stop | Where-Object { $_.InstalledOn } | Sort-Object InstalledOn -Descending | Select-Object -First 1 }
+		if ($lastUpdate) {
+			$items.Add((New-SelfXInfoItem $catWindows (& $L 'Last_Update') ('{0} ({1})' -f $lastUpdate.InstalledOn.ToString('yyyy-MM-dd'), $lastUpdate.HotFixID)))
+		}
 	}
 	$items.Add((New-SelfXInfoItem $catWindows (& $L 'Time_Zone') (Invoke-SelfXSafe { (Get-TimeZone).DisplayName })))
 
 	# User and management
-	$dsreg = Get-SelfXDsregStatus
 	$upn = Invoke-SelfXSafe { & "$env:SystemRoot\System32\whoami.exe" /upn 2>$null }
 	$items.Add((New-SelfXInfoItem $catUser (& $L 'Current_User') "$env:USERDOMAIN\$env:USERNAME"))
 	if ("$upn" -match '@') { $items.Add((New-SelfXInfoItem $catUser (& $L 'User_Principal_Name') "$upn".Trim())) }
-	$items.Add((New-SelfXInfoItem $catUser (& $L 'Domain') $cs.Domain))
-	$items.Add((New-SelfXInfoItem $catUser (& $L 'Entra_Joined') (& $dsregYesNo $dsreg['AzureAdJoined'])))
-	$items.Add((New-SelfXInfoItem $catUser (& $L 'Domain_Joined') (& $dsregYesNo $dsreg['DomainJoined'])))
-	if ($dsreg['TenantName']) { $items.Add((New-SelfXInfoItem $catUser (& $L 'Tenant') $dsreg['TenantName'])) }
-	if ($dsreg['DeviceId']) { $items.Add((New-SelfXInfoItem $catUser (& $L 'Entra_Device_Id') $dsreg['DeviceId'])) }
-	$mdmUpn = Get-SelfXMdmEnrollmentUpn
-	if ($mdmUpn) { $items.Add((New-SelfXInfoItem $catUser (& $L 'Intune_User') $mdmUpn)) }
-	$items.Add((New-SelfXInfoItem $catUser (& $L 'Intune_Last_Sync') (Get-SelfXIntuneLastSync)))
+	if ($ServerRows) {
+		$dsreg = Get-SelfXDsregStatus
+		$items.Add((New-SelfXInfoItem $catUser (& $L 'Domain') $cs.Domain))
+		$items.Add((New-SelfXInfoItem $catUser (& $L 'Entra_Joined') (& $dsregYesNo $dsreg['AzureAdJoined'])))
+		$items.Add((New-SelfXInfoItem $catUser (& $L 'Domain_Joined') (& $dsregYesNo $dsreg['DomainJoined'])))
+		if ($dsreg['TenantName']) { $items.Add((New-SelfXInfoItem $catUser (& $L 'Tenant') $dsreg['TenantName'])) }
+		if ($dsreg['DeviceId']) { $items.Add((New-SelfXInfoItem $catUser (& $L 'Entra_Device_Id') $dsreg['DeviceId'])) }
+		$mdmUpn = Get-SelfXMdmEnrollmentUpn
+		if ($mdmUpn) { $items.Add((New-SelfXInfoItem $catUser (& $L 'Intune_User') $mdmUpn)) }
+		$items.Add((New-SelfXInfoItem $catUser (& $L 'Intune_Last_Sync') (Get-SelfXIntuneLastSync)))
+	}
 
 	# Network: connection types, VPN, internet test and addresses of all IP-enabled adapters
-	$connections = Get-SelfXConnectionTypes -Adapters @(Invoke-SelfXSafe { Get-SelfXNetAdapters }) -GatewayIndexes (Get-SelfXGatewayInterfaceIndexes)
-	$lanUp  = $connections.Lan
-	$wifiUp = $connections.WiFi
-	$wwanUp = $connections.Wwan
-	$ssid = Get-SelfXWifiSsid
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'LAN_Connected') (& $yesNo $lanUp)))
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WiFi_Connected') (& $yesNo $wifiUp)))
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WWAN_Connected') (& $yesNo $wwanUp)))
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WiFi_SSID') $(if ($ssid) { $ssid } else { Get-SelfXInfoText 'No_WiFi' })))
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'VPN_Connected') (& $yesNo (Test-SelfXVpnConnection))))
-	$internetReachable = [bool](Test-SelfXTcpConnection -HostName $InternetTestHost -Port $InternetTestPort)
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Internet_Reachable') (& $yesNo $internetReachable)))
+	if (-not $TerminalServer) {
+		$connections = Get-SelfXConnectionTypes -Adapters @(Invoke-SelfXSafe { Get-SelfXNetAdapters }) -GatewayIndexes (Get-SelfXGatewayInterfaceIndexes)
+		$lanUp  = $connections.Lan
+		$wifiUp = $connections.WiFi
+		$wwanUp = $connections.Wwan
+		$ssid = Get-SelfXWifiSsid
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'LAN_Connected') (& $yesNo $lanUp)))
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WiFi_Connected') (& $yesNo $wifiUp)))
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WWAN_Connected') (& $yesNo $wwanUp)))
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'WiFi_SSID') $(if ($ssid) { $ssid } else { Get-SelfXInfoText 'No_WiFi' })))
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'VPN_Connected') (& $yesNo (Test-SelfXVpnConnection))))
+	}
+	if ($ServerRows) {
+		$internetReachable = [bool](Test-SelfXTcpConnection -HostName $InternetTestHost -Port $InternetTestPort)
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Internet_Reachable') (& $yesNo $internetReachable)))
 
-	$nics = @(Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Filter 'IPEnabled = True' -ErrorAction Stop })
-	$ipv4 = @($nics | ForEach-Object { $_.IPAddress } | Where-Object { $_ -match '^\d{1,3}(\.\d{1,3}){3}$' } | Sort-Object -Unique)
-	$ipv6 = @($nics | ForEach-Object { $_.IPAddress } | Where-Object { $_ -match ':' -and $_ -notmatch '^fe80' } | Sort-Object -Unique)
-	$gateways = @($nics | ForEach-Object { $_.DefaultIPGateway } | Where-Object { $_ } | Sort-Object -Unique)
-	$dns = @($nics | ForEach-Object { $_.DNSServerSearchOrder } | Where-Object { $_ } | Select-Object -Unique)
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'IPv4') $ipv4))
-	if ($ipv6.Count) { $items.Add((New-SelfXInfoItem $catNetwork (& $L 'IPv6') $ipv6)) }
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Gateway') $gateways))
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'DNS') $dns))
-	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'MAC') (@($nics | ForEach-Object { $_.MACAddress } | Where-Object { $_ } | Sort-Object -Unique))))
+		$nics = @(Invoke-SelfXSafe { Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Filter 'IPEnabled = True' -ErrorAction Stop })
+		$ipv4 = @($nics | ForEach-Object { $_.IPAddress } | Where-Object { $_ -match '^\d{1,3}(\.\d{1,3}){3}$' } | Sort-Object -Unique)
+		$ipv6 = @($nics | ForEach-Object { $_.IPAddress } | Where-Object { $_ -match ':' -and $_ -notmatch '^fe80' } | Sort-Object -Unique)
+		$gateways = @($nics | ForEach-Object { $_.DefaultIPGateway } | Where-Object { $_ } | Sort-Object -Unique)
+		$dns = @($nics | ForEach-Object { $_.DNSServerSearchOrder } | Where-Object { $_ } | Select-Object -Unique)
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'IPv4') $ipv4))
+		if ($ipv6.Count) { $items.Add((New-SelfXInfoItem $catNetwork (& $L 'IPv6') $ipv6)) }
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Gateway') $gateways))
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'DNS') $dns))
+		$items.Add((New-SelfXInfoItem $catNetwork (& $L 'MAC') (@($nics | ForEach-Object { $_.MACAddress } | Where-Object { $_ } | Sort-Object -Unique))))
+	}
 	$proxySettings = Invoke-SelfXSafe { Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -ErrorAction Stop }
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Proxy') (ConvertTo-SelfXProxyText $proxySettings)))
 	$driveLetters = Invoke-SelfXSafe { @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq [IO.DriveType]::Network } | ForEach-Object { $_.Name.TrimEnd('\') }) }
 	$items.Add((New-SelfXInfoItem $catNetwork (& $L 'Network_Drives') (Get-SelfXNetworkDriveText $driveLetters)))
-	# Optional connection check and latency measurements (only with an enabled Network_Test_Config.xml).
-	if ($NetworkTestConfigPath -and (Test-Path -LiteralPath $NetworkTestConfigPath -PathType Leaf)) {
+	# Optional connection check and latency measurements (only with an enabled Network_Test_Config.xml; rows of the class Server).
+	if ($ServerRows -and $NetworkTestConfigPath -and (Test-Path -LiteralPath $NetworkTestConfigPath -PathType Leaf)) {
 		$measureConfig = Invoke-SelfXSafe { Read-SelfXNetworkTestConfig -Path $NetworkTestConfigPath }
 		foreach ($measureItem in @(Invoke-SelfXSafe { Get-SelfXNetworkMeasureItems -Category $catNetwork -Config $measureConfig -Gateways $gateways -InternetTestReachable $internetReachable })) {
 			if ($measureItem) { $items.Add($measureItem) }

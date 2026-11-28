@@ -88,7 +88,7 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 
 ## The questions
 
-1. **Basics:** default language, language choice by users, organisation name, tool name, where SelfX runs (`Client` for a PC or notebook, `TerminalServer` for a terminal server or session host with several users; see [Configuration](Configuration.md#terminal-server-and-session-host-environment_mode)).
+1. **Basics:** default language, language choice by users, organisation name, tool name, where SelfX runs (`Client` for a PC or notebook, `TerminalServer` for a terminal server or session host with several users; see [Configuration](Configuration.md#terminal-server-and-session-host-environment_mode)) and, on a terminal server, who sees the device status (`TerminalServer_Health`).
 2. **Support contacts:** shared mailbox, phone, hours, website, Teams.
 3. **Branding:** logo (copied) and company color.
 4. **Ticket by e-mail:** on or off, default recipient, subject marker. If **other organisations or

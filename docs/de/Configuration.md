@@ -70,6 +70,7 @@ Marke: `SelfX.Config.json` enthält `ConfigRevision`, die UTC-Zeit des Paketlauf
 | `Show_Language_Setting` | `True` | Nutzer können die Sprache selbst wählen. `False`: immer `Tool_Language`. |
 | `Tool_Name` | SelfX | Name in der Titelleiste. |
 | `Environment_Mode` | `Client` | Wo SelfX läuft. `Client`: PC oder Notebook einer Person. `TerminalServer`: Terminalserver oder Sitzungshost mit mehreren Nutzern gleichzeitig. Siehe [Terminalserver und Sitzungshost](#terminalserver-und-sitzungshost-environment_mode). Jeder andere Wert gilt als `Client`. |
+| `TerminalServer_Health` | `Off` | Nur bei `Environment_Mode` = `TerminalServer`: wer den Gerätestatus bekommt. `Off`: niemand. `AdminOnly`: nur Administratoren, die SelfX mit erhöhten Rechten gestartet haben. Jeder andere Wert gilt als `Off`. |
 | `Tool_Theme` | `Auto` | Standardfarbe: `Auto` (folgt Windows), `Dark` oder `Light`. |
 | `Show_Theme_Button` | `True` | Nutzer können das Design selbst wählen. |
 | `Default_Solution_Mode` | `Simplified` | Startansicht der Fehlerbehebung: `Simplified` (einfach) oder `Detailed` (ausführlich). |
@@ -177,6 +178,22 @@ weil das Fenster keine Sicherheitsgrenze ist. Eine Aktion ohne Einstufung gilt a
 Dienst `Tool_Config.xml` nicht lesen, behandelt er Anfragen wie bei `TerminalServer`.
 
 Die Prüfung anderer aktiver Sitzungen (`OtherSessions`) gilt in beiden Modi gleich.
+
+**Gerätestatus und Systeminformationen auf einem Terminalserver.** Der Gerätestatus beschreibt den
+Server, nicht den Arbeitsplatz des Nutzers. `TerminalServer_Health` legt fest, wer ihn bekommt:
+
+- `Off` (Standard): keine Hintergrundprüfungen, keine Seite *Gerätestatus* und kein Status im
+  Statussymbol. Der Dienst beantwortet `HEALTH` und `STATUS` für jeden Aufrufer mit
+  `UNAVAILABLE TerminalServer`.
+- `AdminOnly`: Die Prüfungen laufen wie auf einem PC, den Status bekommen aber nur Administratoren, die
+  SelfX mit erhöhten Rechten gestartet haben. Der Dienst prüft das selbst.
+
+Normale Nutzer sehen in den *Systeminformationen*, im Ticket und im Text für Copilot nur Zeilen zu ihrem
+Konto und ihrer Sitzung: Nutzer, UPN, Zeitzone, Proxy, Netzlaufwerke, Citrix Workspace und den Zeitpunkt
+der Erfassung. Zeilen zum Server (Name, Hardware, Windows, Verwaltung, Adressen, Verbindungstest) sehen
+nur Administratoren mit erhöhten Rechten. LAN, WLAN, Mobilfunk und VPN werden auf einem Terminalserver
+nicht angezeigt. SelfX liest diese Werte mit den Rechten des Nutzers; das Ausblenden hält die Ansicht
+übersichtlich und ist keine Sicherheitsgrenze.
 
 Ist Windows ein Sitzungshost, steht `Environment_Mode` aber auf `Client`, schreibt der Dienst beim Start
 eine Warnung (Ereignis 4009). Er ändert die Einstellung nicht selbst.

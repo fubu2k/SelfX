@@ -31,6 +31,7 @@
     3.1.0    2026-11-27  fubu2k               Health results may carry UserRemediation (first part of a repair in the context of the user);
                                               checked with the same name rule and only together with a Remediation
     3.1.0    2026-11-27  fubu2k               Answer ERROR TerminalServer (action refused in Environment_Mode TerminalServer) = status TerminalServer
+    3.1.0    2026-11-28  fubu2k               Answer UNAVAILABLE TerminalServer to STATUS (state Unavailable, no rows) and HEALTH (clear error)
 #>
 
 $Script:SelfXDefaultPipeName = 'SelfX.Service'
@@ -220,6 +221,8 @@ function Get-SelfXServiceHealthReport {
         }
     }
     $response = Invoke-SelfXServiceRequest -Request $request
+    # Environment_Mode TerminalServer: the service gives no device status to this caller (TerminalServer_Health).
+    if ("$response" -ceq 'UNAVAILABLE TerminalServer') { throw 'The device status is not available on this terminal server.' }
     # -match (not -notmatch) fills $Matches with the base64 group used below.
     if (-not ($response -match '^HEALTH ([A-Za-z0-9+/=]+)$')) { throw "Health request failed: $response" }
     if ($response.Length -gt 30000) { throw 'Health response exceeds size limit.' }
@@ -253,6 +256,8 @@ function Get-SelfXServiceStatusCache {
     # State (Active, Battery or Disabled) and the validated Results.
     param([string]$PipeName = $Script:SelfXDefaultPipeName, [int]$ConnectTimeoutMs = 2000)
     $response = Invoke-SelfXServiceRequest -Request 'STATUS' -PipeName $PipeName -ConnectTimeoutMs $ConnectTimeoutMs
+    # Environment_Mode TerminalServer: the service gives no device status to this caller (TerminalServer_Health).
+    if ("$response" -ceq 'UNAVAILABLE TerminalServer') { return [pscustomobject]@{ CollectedAt = $null; IntervalMinutes = 0; State = 'Unavailable'; Results = @() } }
     # -match (not -notmatch) fills $Matches with the groups used below.
     if ("$response".Length -gt 100000 -or
         -not ("$response" -match '^STATUS (NONE|\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ) (\d{1,4}) (Active|Battery|Disabled) ([A-Za-z0-9+/=]+|-)$')) {

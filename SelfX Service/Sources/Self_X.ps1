@@ -56,6 +56,9 @@
                                               such repairs are never part of "Fix all problems"
     3.1.0    2026-11-27  fubu2k               Environment_Mode TerminalServer (Tool_Config.xml): actions and repairs not classified TerminalServer Show are not
                                               shown (SelfXEnvironment.ps1); a refusal of the service (ERROR TerminalServer) has its own message
+    3.1.0    2026-11-28  fubu2k               TerminalServer_Health (Off or AdminOnly): page Device status only when the user may see it; system information,
+                                              ticket and text for Copilot without rows of the class Server for normal users and without the
+                                              kinds of connection (Get-SelfXViewScope)
 #>
 param(
 	[ValidateSet('', 'Troubleshooting', 'Status', 'SystemInfo', 'SendLogs')]
@@ -303,6 +306,13 @@ $Global:SelfX_Detailed_Actions = @(Select-SelfXEnvironmentActions $Global:SelfX_
 # Repairs of the device status: with TerminalServer only those classified TerminalServer="Show" in Health_Config.xml. The health
 # collection clears the others too; this second check also covers a status cache written before the mode was changed.
 $Global:SelfX_RemediationClassification = Get-SelfXRemediationClassification -HealthConfigPath (Get-SelfXConfigPath -Name 'Health_Config.xml' -CodeRoot $Current_Folder)
+# Environment_Mode TerminalServer: the device status and the server rows describe the server, not the place of work of the user.
+# TerminalServer_Health (Off or AdminOnly) decides about the device status; normal users see only rows of the class User. The service
+# checks the device status on its own (HEALTH, STATUS); the rest is collected with the rights of the user, so hiding it keeps the view
+# and the ticket lean, it is not a security boundary.
+$Global:SelfX_HealthAccess = ConvertTo-SelfXHealthAccess $Global:SelfX_Environment.Mode (Get-SelfXText 'TerminalServer_Health' '')
+$Global:SelfX_View = Get-SelfXViewScope -Mode $Global:SelfX_Environment.Mode -HealthAccess $Global:SelfX_HealthAccess -IsAdmin (Test-SelfXElevatedAdministrator)
+If($Global:SelfX_View.TerminalServer) { Write-SelfXLog "Environment_Mode TerminalServer: device status $(If($Global:SelfX_View.Health) { 'shown' } Else { 'not shown' }) (TerminalServer_Health $($Global:SelfX_HealthAccess)), server rows $(If($Global:SelfX_View.ServerRows) { 'shown' } Else { 'not shown' })." }
 
 # The version of the code: ToolVersion of SelfX.Code.json in the install folder (Tool_Config.xml no longer carries it; an old Tool_Version
 # element there is ignored). Display only: a missing or unreadable list shows '?' and is logged, it never stops the window.
@@ -1866,6 +1876,8 @@ $Global:Health_AutoFull = $False
 Function Start-SelfXHealthJob
 	{
 		param([ValidateSet('Cached', 'Full', 'Single')][string]$Mode, [string]$Id = '', [string]$Name = '')
+		# Environment_Mode TerminalServer without the device status for this user: no request to the service (it would refuse it).
+		If(-not $Global:SelfX_View.Health) { return $False }
 		If($Global:Health_Busy) { return $False }
 		$Global:Health_Busy = $True
 		$Global:Health_Job = $Mode
@@ -2234,8 +2246,8 @@ Function Start-SysInfoCollection
 		Set-SysInfoBusy $True
 		$Global:SysInfo_PS = [PowerShell]::Create()
 		[void]$Global:SysInfo_PS.AddScript($Global:SysInfo_Script).AddStatement().AddScript(
-			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig); try { Save-SelfXSystemInfoCache -Items $Items -Culture $Culture } catch { }; $Items'
-		).AddArgument($SysInfo_Test_Host).AddArgument($SysInfo_Test_Port).AddArgument($Global:SysInfo_Texts).AddArgument($SelfX_UI_Language.Culture).AddArgument((Get-SelfXConfigPath -Name 'Network_Test_Config.xml' -CodeRoot $Current_Folder))
+			'param($TestHost, $TestPort, $Text, $Culture, $NetworkConfig, $TerminalServer, $ServerRows) $Items = @(Get-SelfXSystemInfo -InternetTestHost $TestHost -InternetTestPort $TestPort -Text $Text -NetworkTestConfigPath $NetworkConfig -TerminalServer:$TerminalServer -ServerRows $ServerRows); try { Save-SelfXSystemInfoCache -Items $Items -Culture $Culture } catch { }; $Items'
+		).AddArgument($SysInfo_Test_Host).AddArgument($SysInfo_Test_Port).AddArgument($Global:SysInfo_Texts).AddArgument($SelfX_UI_Language.Culture).AddArgument((Get-SelfXConfigPath -Name 'Network_Test_Config.xml' -CodeRoot $Current_Folder)).AddArgument([bool]$Global:SelfX_View.TerminalServer).AddArgument([bool]$Global:SelfX_View.ServerRows)
 		$Global:SysInfo_Handle = $Global:SysInfo_PS.BeginInvoke()
 		$SysInfo_Timer.Start()
 	}
@@ -2369,7 +2381,7 @@ Function Show-SelfXTicketDialog
 				{
 					$Items = @(Get-SelfXReportItems)
 					$Info_Text = If($Items.Count) { ConvertTo-SelfXSystemInfoText -Items $Items } Else { Get-SelfXString 'Ticket_No_Info_Text' }
-					$Ticket = New-SelfXTicket -Tag $Ticket_Tag -KindText (Get-SelfXString 'Ticket_Kind_Text') -DeviceName $env:COMPUTERNAME -Unit $Global:SelfX_TicketTarget.Unit -GroupTag $Global:SelfX_TicketTarget.GroupTag -Category $Global:SelfX_TicketTarget.Category -WindowsBuild ([string][Environment]::OSVersion.Version.Build) -SelfXVersion "$Tool_Version" -UserText $Dlg.FindName('TicketText').Text -DeviceInfoText $Info_Text
+					$Ticket = New-SelfXTicket -Tag $Ticket_Tag -KindText (Get-SelfXString 'Ticket_Kind_Text') -DeviceName $env:COMPUTERNAME -Unit $Global:SelfX_TicketTarget.Unit -GroupTag $Global:SelfX_TicketTarget.GroupTag -Category $Global:SelfX_TicketTarget.Category -WindowsBuild $(If($Global:SelfX_View.ServerRows) { [string][Environment]::OSVersion.Version.Build } Else { '' }) -SelfXVersion "$Tool_Version" -UserText $Dlg.FindName('TicketText').Text -DeviceInfoText $Info_Text
 					$Sent = Send-SelfXTicket -To $Global:SelfX_TicketTarget.To -Cc $Global:SelfX_TicketTarget.Cc -Ticket $Ticket -DeviceInfoText $Info_Text
 					# The log names the result only, never the text of the user or the device information.
 					Write-SelfXLog "Ticket e-mail prepared: $($Sent.Status), information rows: $($Items.Count)"
@@ -2425,7 +2437,7 @@ Function Show-SelfXCopilotDialog
 			$Result = $Dlg.FindName('CopilotResult')
 			Try
 				{
-					$Facts = Get-SelfXCopilotFacts -HealthItems @($Global:Health_Items) -SelfXVersion "$Tool_Version" -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames
+					$Facts = Get-SelfXCopilotFacts -HealthItems @($Global:Health_Items) -SelfXVersion "$Tool_Version" -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames -TerminalServer ([bool]$Global:SelfX_View.TerminalServer) -ServerFacts ([bool]$Global:SelfX_View.ServerRows)
 					$Context = @{ ComputerName = $env:COMPUTERNAME; UserName = $env:USERNAME; DomainName = @($env:USERDOMAIN, $env:USERDNSDOMAIN) }
 					$Template = Get-SelfXString $(If($Copilot_Audience -eq 'Admin') { 'Copilot_Prompt_Admin' } Else { 'Copilot_Prompt_User' })
 					$Prompt = New-SelfXCopilotPrompt -Facts $Facts -Description $Dlg.FindName('CopilotText').Text -Context $Context -Audience $Copilot_Audience -Language "$($SelfX_UI_Language.Culture)" -IncludeAppNames $Copilot_AppNames -Template $Template
@@ -2777,7 +2789,7 @@ If(-not ($Show_Theme_Setting -or $Show_Tray_Setting)) { $Btn_Settings.Visibility
 #******************************************************************************
 # Navigation, adaptive layout and window
 #******************************************************************************
-If((Get-SelfXText "Show_Status_Page" "True") -ne 'True') { $Nav_Status.Visibility = 'Collapsed' }
+If(((Get-SelfXText "Show_Status_Page" "True") -ne 'True') -or -not $Global:SelfX_View.Health) { $Nav_Status.Visibility = 'Collapsed' }
 If((Get-SelfXText "Show_SystemInfo_Tab" "True") -ne 'True') { $Nav_Info.Visibility = 'Collapsed' }
 
 Function Show-SelfXPage
