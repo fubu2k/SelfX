@@ -116,6 +116,7 @@
                                               (its old entries stay there); a failure is a warning, not a stop
     3.1.0    2026-11-28  fubu2k               -ConfigOnly: the package may hold Detection.ps1 at the top (the configuration package of the wizard keeps
                                               it); it is neither run nor installed
+    3.1.0    2026-11-28  fubu2k               sc.exe and icacls.exe with the full path of System32 (no search through PATH as SYSTEM)
 #>
 
 # Parameters are bound by name only: a thumbprint that is separated by a space instead of a comma must not become the install folder.
@@ -1139,7 +1140,7 @@ function Set-SelfXConfigFolderRights {
 	# Rights of a folder that becomes Config: the same as Install.ps1 gives the install folder (SYSTEM and administrators full control,
 	# users read and execute, not inherited), by SID.
 	param([Parameter(Mandatory = $true)][string]$Path)
-	& icacls.exe $Path /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $Path /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$Path' (exit code $LASTEXITCODE)." }
 }
 
@@ -1147,7 +1148,7 @@ function Reset-SelfXConfigFolderRights {
 	# After the folder has been moved into the install folder: its rights are the inherited ones again, exactly as after a full
 	# installation (Config inherits from the install folder).
 	param([Parameter(Mandatory = $true)][string]$Path)
-	& icacls.exe $Path /reset /T /C /Q | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $Path /reset /T /C /Q | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls /reset failed for '$Path' (exit code $LASTEXITCODE)." }
 }
 
@@ -1324,9 +1325,9 @@ function Set-SelfXServicePrivileges {
 	param([string]$Name, [string]$Mode)
 	if ($Mode -eq 'Default') { return 'Default (all LocalSystem privileges; Service_Privileges = Default).' }
 	$wanted = @(Get-SelfXServicePrivileges)
-	$output = @(& sc.exe privs $Name ($wanted -join '/') 2>&1)
+	$output = @(& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') privs $Name ($wanted -join '/') 2>&1)
 	if ($LASTEXITCODE -ne 0) { Write-Warning "sc.exe privs failed (exit code $LASTEXITCODE): the service keeps the default privileges. $($output -join ' ')"; return 'Default (setting failed).' }
-	$actual = @([regex]::Matches((@(& sc.exe qprivs $Name 2>&1) -join ' '), 'Se\w+Privilege') | ForEach-Object { $_.Value } | Sort-Object -Unique)
+	$actual = @([regex]::Matches((@(& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') qprivs $Name 2>&1) -join ' '), 'Se\w+Privilege') | ForEach-Object { $_.Value } | Sort-Object -Unique)
 	$missing = @($wanted | Where-Object { $actual -notcontains $_ })
 	$extra = @($actual | Where-Object { $wanted -notcontains $_ })
 	if ($missing.Count -or $extra.Count) { Write-Warning "The privileges of the service differ from the list (missing: $($missing -join ', '); extra: $($extra -join ', '))." }
@@ -1413,11 +1414,11 @@ function Initialize-SelfXDataFolder {
 	Invoke-SelfXSafeDelete -Exe $SafeDeleteExe -Arguments @("/cleandata:$Path", "/trusted:$($TrustedOwnerSids -join ';')", "/skip:$UserArea")
 
 	# Owner first, then rights from scratch: explicit entries that a former owner added are removed by /reset.
-	& icacls.exe $Path /setowner '*S-1-5-32-544' | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $Path /setowner '*S-1-5-32-544' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls /setowner failed for '$Path' (exit code $LASTEXITCODE)." }
-	& icacls.exe $Path /reset | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $Path /reset | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls /reset failed for '$Path' (exit code $LASTEXITCODE)." }
-	& icacls.exe $Path /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $Path /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$Path' (exit code $LASTEXITCODE)." }
 }
 
@@ -1480,8 +1481,8 @@ New-Item -ItemType Directory -Path $LogFolder -Force | Out-Null
 # folder or read the folders of other users.
 $UserLogFolder = Join-Path $LogFolder 'Users'
 New-Item -ItemType Directory -Path $UserLogFolder -Force | Out-Null
-& icacls.exe $UserLogFolder /setowner '*S-1-5-32-544' | Out-Null
-& icacls.exe $UserLogFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(AD,X,RA)' '*S-1-3-0:(OI)(CI)(IO)F' | Out-Null
+& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $UserLogFolder /setowner '*S-1-5-32-544' | Out-Null
+& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $UserLogFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(AD,X,RA)' '*S-1-3-0:(OI)(CI)(IO)F' | Out-Null
 Start-Transcript -Path (Join-Path $LogFolder 'Install.log') -Append | Out-Null
 If($SelfXWindows.Kind -eq 'Server') { Write-Output "Windows Server build $($SelfXWindows.Build): SelfX works as on a terminal server (mode TerminalServer)." }
 Else { Write-Output "Windows 11 build $($SelfXWindows.Build): SelfX works in the mode Client." }
@@ -1522,7 +1523,7 @@ Try
 	If($ExistingService)
 	{
 		If($ExistingService.Status -ne 'Stopped') { Stop-Service -Name $ServiceName -Force }
-		& sc.exe delete $ServiceName | Out-Null
+		& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') delete $ServiceName | Out-Null
 		For($i = 0; ($i -lt 30) -and (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }
 	}
 
@@ -1543,7 +1544,7 @@ Try
 	Copy-SelfXPayload -PackageFolder $PackageFolder -InstallFolder $InstallFolder -SignedPackage:($TrustMode -eq 'Signature')
 	Write-Output 'Installed App (code, SelfXService.exe, SelfX.exe, WinRT, audio and disturb libraries from Bin) and Config (configuration).'
 	# Users may read and run SelfX but must not change scripts that the service runs as SYSTEM (App and Config inherit the rights).
-	& icacls.exe $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'icacls.exe') $InstallFolder /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 	If($LASTEXITCODE -ne 0) { throw "icacls failed for '$InstallFolder' (exit code $LASTEXITCODE)." }
 	# Service host and the starter without console window (shortcuts and status icon).
 	$ServiceExe = Join-Path $AppFolder 'SelfXService.exe'
@@ -1567,8 +1568,8 @@ Try
 	Write-Output "Trust anchor written: HKLM\SOFTWARE\SelfX\Trust, Mode = $TrustMode."
 
 	New-Service -Name $ServiceName -DisplayName $ServiceDisplayName -BinaryPathName "`"$ServiceExe`"" -StartupType Automatic | Out-Null
-	& sc.exe description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null
-	& sc.exe failure $ServiceName reset= 86400 actions= restart/60000/restart/60000/restart/300000 | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') description $ServiceName 'Runs the SelfX actions that need administrator rights. Only scripts listed with Context System in the local SelfX catalog are accepted.' | Out-Null
+	& (Join-Path ([Environment]::SystemDirectory) 'sc.exe') failure $ServiceName reset= 86400 actions= restart/60000/restart/60000/restart/300000 | Out-Null
 	# Privileges of the service: Restricted (default) or Default (all LocalSystem privileges).
 	$PrivilegeMode = "$($ToolConfig.GUI_Config.Service_Privileges)".Trim()
 	If($PrivilegeMode -notin @('Restricted', 'Default'))

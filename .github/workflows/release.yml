@@ -34,9 +34,12 @@ jobs:
     permissions:
       contents: read
     env:
-      # Microsoft Win32 Content Prep Tool (builds the .intunewin). Pinned by tag; the script also requires a valid Microsoft
-      # Authenticode signature. Optional hardening: set the repository variable INTUNEWINAPPUTIL_SHA256 to pin the file hash.
+      # Microsoft Win32 Content Prep Tool (builds the .intunewin). Pinned by the commit of its tag; the script also requires a valid Microsoft
+      # Authenticode signature. Recommended hardening: set the repository variable INTUNEWINAPPUTIL_SHA256 to pin the file hash
+      # (the run prints the hash and warns while the variable is missing).
       INTUNEWINAPPUTIL_TAG: v1.8.7
+      # Commit of that tag (git ls-remote refs/tags/v1.8.7): a tag can be moved, a commit cannot. Change both together.
+      INTUNEWINAPPUTIL_COMMIT: 1d6cfcbdf8c28edc596337031f74df951f38f718
       INTUNEWINAPPUTIL_SHA256: ${{ vars.INTUNEWINAPPUTIL_SHA256 }}
       RELEASE_ATTEST: ${{ vars.RELEASE_ATTEST }}
     steps:
@@ -77,16 +80,22 @@ jobs:
           $ErrorActionPreference = 'Stop'
           & (Join-Path $env:GITHUB_WORKSPACE 'tools\Build-SelfXBinaries.ps1')
 
-      - name: Download the Content Prep Tool (pinned tag)
+      - name: Download the Content Prep Tool (pinned commit)
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          if ($env:INTUNEWINAPPUTIL_COMMIT -notmatch '^[0-9a-f]{40}$') { throw 'INTUNEWINAPPUTIL_COMMIT must be a full commit SHA.' }
           $tool = Join-Path $env:RUNNER_TEMP 'IntuneWinAppUtil.exe'
-          $url = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/$env:INTUNEWINAPPUTIL_TAG/IntuneWinAppUtil.exe"
+          $url = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/$env:INTUNEWINAPPUTIL_COMMIT/IntuneWinAppUtil.exe"
           Invoke-WebRequest -Uri $url -OutFile $tool -UseBasicParsing
           $hash = (Get-FileHash -LiteralPath $tool -Algorithm SHA256).Hash
-          "IntuneWinAppUtil.exe $env:INTUNEWINAPPUTIL_TAG SHA-256 $hash"
-          if ($env:INTUNEWINAPPUTIL_SHA256 -and $hash -ne $env:INTUNEWINAPPUTIL_SHA256.Trim()) { throw 'IntuneWinAppUtil.exe does not match INTUNEWINAPPUTIL_SHA256.' }
+          "IntuneWinAppUtil.exe $env:INTUNEWINAPPUTIL_TAG ($env:INTUNEWINAPPUTIL_COMMIT) SHA-256 $hash"
+          if ($env:INTUNEWINAPPUTIL_SHA256) {
+            if ($hash -ne $env:INTUNEWINAPPUTIL_SHA256.Trim()) { throw 'IntuneWinAppUtil.exe does not match INTUNEWINAPPUTIL_SHA256.' }
+          } else {
+            # The commit and the Microsoft signature below protect the file; the variable adds a hash pin.
+            "::warning::The repository variable INTUNEWINAPPUTIL_SHA256 is not set. Set it to the SHA-256 above to pin the file hash."
+          }
           # New-SelfXIntuneWin.ps1 requires a valid Microsoft Authenticode signature.
           "TOOL_PATH=$tool" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "TOOL_SHA256=$hash" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8

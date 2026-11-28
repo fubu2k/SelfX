@@ -25,7 +25,7 @@
     Name    : Test-SelfXRelease.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 3.1.3
+    Version : 3.1.4
     Exit code: 0 = all tests passed, 1 = at least one failed
 
     History:
@@ -35,7 +35,8 @@
     3.1.1    2026-11-27  fubu2k               A script of the assistant may dot-source a code file of the package (App of the payload: the
                                               window SelfXWizardGui.ps1 loads Branding.ps1); eleven Windows PowerShell 5.1 tests
     3.1.2    2026-11-28  fubu2k               Thirteen Windows PowerShell 5.1 tests (tools\Test-SelfXHealthDetection.ps1)
-    3.1.3    2026-11-28  fubu2k               service-ci.yml loads PSScriptAnalyzer only when every file has a valid Microsoft signature.
+    3.1.3    2026-11-28  fubu2k               release.yml downloads the Content Prep Tool from a full commit SHA (INTUNEWINAPPUTIL_COMMIT), not from a tag.
+    3.1.4    2026-11-28  fubu2k               service-ci.yml loads PSScriptAnalyzer only when every file has a valid Microsoft signature.
 #>
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -490,6 +491,7 @@ Assert ($release.IndexOf('Release notes from CHANGELOG.en.md') -lt $release.Inde
 Assert ($release -match 'New-SelfXReleaseNotes' -and $release -match 'Get-SelfXChecksumProblems' -and $release -match 'Get-SelfXPayloadArchiveProblems' -and $release -match '-PayloadFile') 'the workflow uses the tested functions'
 Assert ($release -match 'sha256sum --check --strict' -and $release -match 'gh release view "\$tag"') 'the files are checked against SHA256SUMS.txt before the upload and an existing release is never touched'
 Assert ($release -match 'SelfX Service/Version\.txt') 'the tag is compared with Version.txt'
+Assert ($release -match '(?m)^\s+INTUNEWINAPPUTIL_COMMIT: [0-9a-f]{40}\s*$' -and $release -match 'Microsoft-Win32-Content-Prep-Tool/\$env:INTUNEWINAPPUTIL_COMMIT/IntuneWinAppUtil\.exe' -and $release -notmatch 'Content-Prep-Tool/\$env:INTUNEWINAPPUTIL_TAG/') 'the Content Prep Tool is downloaded from a full commit SHA, not from a tag'
 Assert ($release.IndexOf('trap cleanup EXIT') -gt $release.IndexOf('gh release view "$tag"')) 'the draft is removed on failure only after the check for an existing release'
 
 Write-Host '.github\workflows\service-ci.yml'
