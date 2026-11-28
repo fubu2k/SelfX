@@ -7,7 +7,7 @@
 	language file is taken from Wizard.en.xml. Test-SelfXPackageWizard.ps1 checks that every file uses known Ids and
 	the same placeholders.
 -->
-<Wizard_Language Culture="en" Name="English" Version="1.9.0">
+<Wizard_Language Culture="en" Name="English" Version="1.10.0">
 	<T Id="title">SelfX package wizard</T>
 	<T Id="intro">This wizard asks a few questions, writes your settings into a copy of the package and builds the Intune package. Your repository files are not changed. Press Enter to accept the value in brackets. Every question has a recommendation.</T>
 	<T Id="rec">Recommendation: </T>
@@ -351,10 +351,10 @@
 	<T Id="gui.crl.nohttp">No revocation list has an http address. Devices outside the company network cannot reach ldap or file addresses; ask your PKI team for a public http address in first place.</T>
 	<T Id="gui.crl.internal">The revocation lists have internal names only. Devices outside the company network cannot reach them; Windows then treats the signature as valid.</T>
 	<T Id="Timestamp.ask">Time stamp service (http:// or https://)</T>
-	<T Id="Timestamp.rec">Required. A time stamp keeps the signatures valid after the certificate expires. Use the time stamp service of the vendor of your certificate or the internal one of your PKI.</T>
+	<T Id="Timestamp.rec">Used only while the package is built; the devices do not need it. A time stamp keeps the signatures valid after the certificate expires. Suggestion: the time stamp service of the vendor of your certificate or of your PKI. An internal time server (NTP) is not a time stamp service. Leave the field empty only together with the switch below.</T>
 	<T Id="NoTimestamp.ask">Sign without a time stamp (not recommended)</T>
 	<T Id="NoTimestamp.rec">Only for tests. Without a time stamp the signatures become invalid when the certificate expires, and SelfX then starts nothing on the devices.</T>
-	<T Id="gui.kind.timestamp">Enter an http:// or https:// address without user name, or switch on signing without a time stamp.</T>
+	<T Id="gui.kind.timestamp">Enter an http:// or https:// address without user name (at most 300 characters), or switch on signing without a time stamp.</T>
 	<T Id="Additional.ask">Additional allowed signers (thumbprints, separated by commas, optional)</T>
 	<T Id="Additional.rec">Only for a change of the certificate: the thumbprint of the next certificate, so that devices accept packages signed with it. Nothing is signed with it.</T>
 	<T Id="gui.sign.additional.invalid">Every entry must be a thumbprint of 40 hexadecimal characters; at most 9 entries.</T>

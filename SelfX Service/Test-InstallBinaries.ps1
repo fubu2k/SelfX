@@ -39,6 +39,8 @@
     3.1.0    2026-11-28  fubu2k               Windows check: Windows 11 25H2 and Windows Server 2022/2025 with Desktop Experience are accepted; Server Core,
                                               a domain controller, Windows Enterprise multi-session and unreadable values are refused
     3.1.0    2026-11-28  fubu2k               Disturb library (Disturb/SelfXDisturb.dll) in the fake package, the layout test and its refusal cases.
+    3.1.0    2026-11-28  fubu2k               Trust mode Signature: Detection.ps1 at the top without a signature is accepted (and still covered by
+                                              SelfX.Code.cat); a Detection.ps1 elsewhere and files with similar names are refused
     3.1.0    2026-11-28  fubu2k               Event log SelfX: new installation, move of the source out of the Application log, existing log, failures
                                               (warning only), order in Install.ps1; the registration commands are replaced by functions of the test.
 #>
@@ -500,7 +502,7 @@ else {
 	# --- Trust mode Signature: -TrustedSigner, signatures of the package, signed catalogs, trust anchor, downgrade ---
 	# Part 1 replaces Get-AuthenticodeSignature and Test-FileCatalog by functions of this test (a function is found before a cmdlet),
 	# so every status can be produced without a certificate. Part 2 (further down) uses real test certificates.
-	foreach ($name in 'ConvertTo-SelfXTrustedSignerList', 'Get-SelfXTrustAnchor', 'Resolve-SelfXTrustMode', 'Test-SelfXFileSignature', 'Test-SelfXPackageCatalog', 'Test-SelfXPackageSignatures', 'Test-SelfXInstalledLists', 'Set-SelfXTrustAnchor', 'Test-SelfXTrustAnchorState') {
+	foreach ($name in 'ConvertTo-SelfXTrustedSignerList', 'Get-SelfXTrustAnchor', 'Resolve-SelfXTrustMode', 'Test-SelfXFileSignature', 'Test-SelfXPackageCatalog', 'Test-SelfXUnsignedPackageFile', 'Test-SelfXPackageSignatures', 'Test-SelfXInstalledLists', 'Set-SelfXTrustAnchor', 'Test-SelfXTrustAnchorState') {
 		$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }.GetNewClosure(), $true)
 		Assert-Equal ($null -ne $definition) $true "Install.ps1 defines $name"
 		if ($definition) { . ([scriptblock]::Create($definition.Extent.Text)) }
@@ -634,9 +636,10 @@ else {
 
 	# 4. A completely signed package is accepted (the package with all scripts of the project).
 	New-SignedPackage -Full
-	$signableCount = @(Get-ChildItem -LiteralPath $signedPackage -Recurse -File -Force | Where-Object { $_.Extension -in '.exe', '.dll', '.ps1' }).Count
+	# Detection.ps1 at the top is the one file without the need of an embedded signature (Test-SelfXUnsignedPackageFile): not counted.
+	$signableCount = @(Get-ChildItem -LiteralPath $signedPackage -Recurse -File -Force | Where-Object { $_.Extension -in '.exe', '.dll', '.ps1' -and $_.FullName -ne (Join-Path $signedPackage 'Detection.ps1') }).Count
 	$verified = Test-SelfXPackageSignatures -PackageFolder $signedPackage -AllowedThumbprint $signerA
-	Assert-Equal $verified.Files $signableCount "signature: every program and script of the package was checked ($signableCount)"
+	Assert-Equal $verified.Files $signableCount "signature: every program and script of the package except Detection.ps1 at the top was checked ($signableCount)"
 	Assert-Equal ($signableCount -gt 60) $true 'signature: the test package holds the scripts of the project'
 	Assert-Equal $verified.CodeListHash (Get-FileHash -LiteralPath (Join-Path $signedPackage 'App\SelfX.Code.json') -Algorithm SHA256).Hash 'signature: the SHA256 of the checked SelfX.Code.json is returned'
 	Assert-Equal $verified.ConfigListHash (Get-FileHash -LiteralPath (Join-Path $signedPackage 'Config\SelfX.Config.json') -Algorithm SHA256).Hash 'signature: the SHA256 of the checked SelfX.Config.json is returned'
@@ -650,7 +653,9 @@ else {
 	Assert-Equal $slimCount 12 'the small test package has 12 programs and scripts'
 	Assert-Equal (Test-Signed) 'accepted' 'the small signed test package is accepted'
 	$answer = Test-Signed @($signerB)
-	Assert-Equal ($answer -match 'SignerNotAllowed' -and $answer -match "$slimCount of $slimCount" -and $answer -match 'Nothing was changed') $true "wrong signer: valid signatures of a signer that is not allowed are refused ($answer)"
+	$checkedCount = $slimCount - 1
+	Assert-Equal ($answer -match 'SignerNotAllowed' -and $answer -match "$checkedCount of $checkedCount" -and $answer -match 'Nothing was changed') $true "wrong signer: valid signatures of a signer that is not allowed are refused, Detection.ps1 at the top is not counted ($answer)"
+	Assert-Equal ($answer -match 'Detection\.ps1') $false 'wrong signer: Detection.ps1 at the top is not named'
 	Assert-Equal ($answer -match ' and \d+ more') $true 'many problems: the message names ten files and the number of the rest'
 	New-SignedPackage
 	$script:fakeSignatures.Remove((Get-FakeKey (Join-Path $signedPackage 'App\Self_X.ps1')))
@@ -688,6 +693,30 @@ else {
 	New-SignedPackage
 	[IO.File]::WriteAllText((Join-Path $signedPackage 'App\Scripts_to_run\Added.psm1'), '# module')
 	Assert-Equal ((Test-Signed) -match 'Added\.psm1 \(NotSigned\)') $true 'a module file (.psm1) must be signed too'
+
+	# 5a. Detection.ps1: the one exception is exactly the file at the top of the package (fixed path, no name or extension rule).
+	foreach ($case in @(@('Detection.ps1', $true), @('DETECTION.PS1', $true), @('detection.ps1', $true), @('App\Detection.ps1', $false), @('Config\Detection.ps1', $false),
+			@('Bin\Detection.ps1', $false), @('.\Detection.ps1', $false), @('Detection.ps1 ', $false), @(' Detection.ps1', $false), @('Detection.ps1.', $false), @('Detection.ps1:x', $false),
+			@('Detection.psm1', $false), @('Detection2.ps1', $false), @('XDetection.ps1', $false), @('Detection.ps1.ps1', $false), @('Detection', $false), @('Install.ps1', $false))) {
+		Assert-Equal (Test-SelfXUnsignedPackageFile -RelativePath $case[0]) $case[1] "unsigned exception: '$($case[0])' = $($case[1])"
+	}
+	New-SignedPackage
+	$script:fakeSignatures.Remove((Get-FakeKey (Join-Path $signedPackage 'Detection.ps1')))
+	Assert-Equal (Test-Signed) 'accepted' 'Detection.ps1 at the top without a signature is accepted'
+	New-SignedPackage
+	Set-FakeSignature (Join-Path $signedPackage 'Detection.ps1') $signerB
+	Assert-Equal (Test-Signed) 'accepted' 'Detection.ps1 at the top with a signature of another signer is not checked either'
+	New-SignedPackage
+	$script:fakeSignatures.Remove((Get-FakeKey (Join-Path $signedPackage 'Detection.ps1')))
+	Add-Content -LiteralPath (Join-Path $signedPackage 'Detection.ps1') -Value '# changed after the catalog was signed'
+	$answer = Test-Signed
+	Assert-Equal ($answer -match 'SelfX\.Code\.cat.*FilesDiffer \(changed: detection\.ps1\)') $true "unsigned Detection.ps1 changed after the catalog: refused by SelfX.Code.cat ($answer)"
+	foreach ($name in 'App\Detection.ps1', 'Bin\Detection.ps1', 'Detection2.ps1', 'XDetection.ps1', 'Detection.ps1.ps1', 'App\Scripts_to_run\Detection.ps1') {
+		New-SignedPackage
+		[IO.File]::WriteAllText((Join-Path $signedPackage $name), "# unsigned`r`n")
+		$answer = Test-Signed
+		Assert-Equal ($answer -match ([regex]::Escape($name) + ' \(NotSigned\)')) $true "an unsigned $name (not the file at the top) is refused ($answer)"
+	}
 
 	# 6. Negative cases of the catalog of the configuration.
 	New-SignedPackage
@@ -962,6 +991,8 @@ else {
 				[IO.File]::WriteAllText((Join-Path $real 'Bin\SelfX.Binaries.json'), '{}')
 				[IO.File]::WriteAllText((Join-Path $real 'Service\SelfXService.cs'), '// source')
 				$null = Set-SelfXCodeSignature -Path $scripts -Certificate $Certificate
+				# Detection.ps1 at the top stays unsigned (the one exception); the catalog of the code covers it.
+				[IO.File]::WriteAllText((Join-Path $real 'Detection.ps1'), "Write-Output 'detection'`r`n", (New-Object System.Text.UTF8Encoding($false)))
 				# The catalog of the code is written before the folder Config exists, so it lists everything outside Config.
 				$null = New-SelfXSignedCatalog -Path $real -CatalogFilePath (Join-Path $realCatalogs 'SelfX.Code.cat') -Certificate $Certificate
 				New-Item -ItemType Directory -Path (Join-Path $real 'Config\Branding') -Force | Out-Null
@@ -977,7 +1008,7 @@ else {
 			$watch = [Diagnostics.Stopwatch]::StartNew()
 			$answer = Test-Real @($certA.Thumbprint)
 			$watch.Stop()
-			Assert-Equal $answer 'accepted' 'real signatures: a signed package with both catalogs is accepted'
+			Assert-Equal $answer 'accepted' 'real signatures: a signed package with both catalogs and an unsigned Detection.ps1 at the top is accepted'
 			Write-Output "Real signatures: the check of the small test package took $($watch.ElapsedMilliseconds) ms."
 			Assert-Equal (Test-SelfXSignedCatalog -CatalogFilePath (Join-Path $real 'Config\SelfX.Config.cat') -Path (Join-Path $real 'Config') -AllowedThumbprint $certA.Thumbprint).Reason 'Ok' 'real signatures: the signing library accepts the same configuration catalog'
 			Assert-Equal ((Test-Real @($certB.Thumbprint)) -match 'SignerNotAllowed') $true 'real signatures: another allowed signer than the one that signed is refused'
@@ -993,6 +1024,12 @@ else {
 			New-RealPackage $certA
 			[IO.File]::WriteAllText((Join-Path $real 'App\Scripts_to_run\Added.ps1'), "Write-Output 'unsigned'`r`n")
 			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'Added\.ps1 \(NotSigned\)') $true 'real signatures: an added unsigned script is refused'
+			New-RealPackage $certA
+			[IO.File]::WriteAllText((Join-Path $real 'App\Detection.ps1'), "Write-Output 'unsigned'`r`n")
+			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'App\\Detection\.ps1 \(NotSigned\)') $true 'real signatures: an unsigned Detection.ps1 in App is refused (only the file at the top is the exception)'
+			New-RealPackage $certA
+			Add-Content -LiteralPath (Join-Path $real 'Detection.ps1') -Value '# changed'
+			Assert-Equal ((Test-Real @($certA.Thumbprint)) -match 'SelfX\.Code\.cat.*FilesDiffer \(changed: detection\.ps1\)') $true 'real catalog: a changed unsigned Detection.ps1 at the top is refused'
 			New-RealPackage $certA
 			Add-Content -LiteralPath (Join-Path $real 'Config\Tool_Config.xml') -Value '<!-- changed -->'
 			$answer = Test-Real @($certA.Thumbprint)

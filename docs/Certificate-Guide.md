@@ -17,6 +17,7 @@ Without a certificate SelfX works as well (trust mode **Hash**).
 - [Request it from an internal PKI (AD CS)](#request-it-from-an-internal-pki-ad-cs)
 - [Make the devices trust the certificate](#make-the-devices-trust-the-certificate)
 - [Sign with the package wizard](#sign-with-the-package-wizard)
+- [Time stamp](#time-stamp)
 - [Expiry and change of the certificate](#expiry-and-change-of-the-certificate)
 - [Sources](#sources)
 
@@ -91,17 +92,39 @@ Window (`tools\Start-SelfXPackageWizard.cmd`), page **Signature**:
 - **Certificate file (PFX):** choose the file and type the password. The file is opened in memory
   only (not imported); the password is used once and the field is emptied. The password is never
   shown, saved, logged or written to `selfx-answers.json`.
-- **Time stamp service (required):** the address of the time stamp service of the vendor of your
-  certificate or of your PKI. Signing without a time stamp has to be switched on explicitly and is
-  meant for tests only.
+- **Time stamp service:** the address of the time stamp service of the vendor of your certificate or
+  of your PKI (`http://` or `https://`, no user name or password in the address, at most 300
+  characters). Leave it empty only together with the switch "Sign without a time stamp", which is
+  meant for tests (see [Time stamp](#time-stamp)). The address is saved in `selfx-answers.json` and
+  suggested again when you load that file.
 - **Additional allowed signers:** only for a change of the certificate (below).
 
 Console: `tools\New-SelfXPackage.ps1 -CertificateThumbprint <thumbprint>` or `-PfxPath <file>` (the
-password is asked for, hidden), `-TimestampServer <address>`, `-AdditionalSigner <thumbprint>`
-([Package wizard](Guided-Setup.md)).
+password is asked for, hidden), `-TimestampServer <address>` (or `-NoTimestamp`),
+`-AdditionalSigner <thumbprint>` ([Package wizard](Guided-Setup.md)). Without either the console asks;
+with an answer file it takes `TimestampServer` from the file.
 
 The result page lists the steps for Intune with copy buttons; the install command contains
 `-TrustedSigner` with the thumbprint(s).
+
+## Time stamp
+
+A time stamp is a countersignature of a time stamp service: it confirms when the file was signed.
+Windows then accepts the signature as long as the certificate was valid at that time, also after
+the certificate expired. The service is used **only while the package is built**: the devices do not
+contact it, and the address is not written into the package or onto the device.
+
+An internal time server (NTP) is not enough. NTP only sets the clock of a computer; it signs nothing.
+A time stamp needs a time stamp service with its own certificate (RFC 3161), from the vendor of your
+certificate or from your PKI.
+
+Before the first file is signed, the wizard makes one test signature with the service. When it gives
+no time stamp (wrong address, no network, service down), the build stops with a short message and
+nothing is signed.
+
+Without a time stamp the signatures become invalid on the day the certificate expires (see below).
+The wizard therefore signs without one only when you switch it on explicitly (window: "Sign without a
+time stamp"; console: `-NoTimestamp`).
 
 ## Expiry and change of the certificate
 
@@ -140,3 +163,4 @@ device, and a signed package from the window with a real `IntuneWinAppUtil.exe`.
 - Microsoft Learn: [Trusted root certificate profiles for Microsoft Intune](https://learn.microsoft.com/intune/device-configuration/certificates/trusted-root-profiles)
 - Microsoft Learn: [RootCATrustedCertificates CSP](https://learn.microsoft.com/windows/client-management/mdm/rootcacertificates-csp)
 - Microsoft Learn: [Time stamping Authenticode signatures](https://learn.microsoft.com/windows/win32/seccrypto/time-stamping-authenticode-signatures)
+  (a signature without a time stamp becomes invalid when the certificate expires)

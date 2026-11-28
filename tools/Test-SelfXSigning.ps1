@@ -28,7 +28,7 @@
     Name    : Test-SelfXSigning.ps1
     Package : tools
     Context : Build machine / CI (any user)
-    Version : 3.1.0
+    Version : 3.1.1
     Exit code: 0 = all tests passed or skipped, 1 = at least one failed
 
     History:
@@ -38,6 +38,9 @@
     3.1.0    2026-11-27  fubu2k               Test roots in Cert:\LocalMachine\Root with administrator rights (the question of Windows for
                                               Cert:\CurrentUser\Root stopped the CI jobs); a script with text after the signature block is
                                               NotSigned, a script changed before it is HashMismatch
+    3.1.1    2026-11-28  fubu2k               Time stamp: address of 300 characters accepted, 301 refused; Assert-SelfXTimestampService with replaced
+                                              signing (accepted, failure with a plain text, no time stamp, refused addresses, test script removed)
+                                              and with an unreachable server
 #>
 $ErrorActionPreference = 'Stop'
 $ScriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -76,12 +79,12 @@ $text = [IO.File]::ReadAllText($libraryPath)
 Assert ($ps7Syntax.Count -eq 0 -and $text -notmatch '(?m)\?\?=?|ForEach-Object\s+-Parallel') 'no PowerShell 7 only syntax (ternary, && ||, ??, -Parallel)'
 Assert (-not ($text -match '[^\x00-\x7F]')) 'the file has only ASCII characters (signature and encoding of 5.1 and 7 agree)'
 $functionNames = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] }, $true) | ForEach-Object { $_.Name })
-foreach ($name in 'Get-SelfXSigningCertificate', 'Set-SelfXCodeSignature', 'New-SelfXSignedCatalog', 'Test-SelfXSignature', 'Test-SelfXSignedCatalog') {
+foreach ($name in 'Get-SelfXSigningCertificate', 'Set-SelfXCodeSignature', 'Assert-SelfXTimestampService', 'New-SelfXSignedCatalog', 'Test-SelfXSignature', 'Test-SelfXSignedCatalog') {
     Assert ($functionNames -contains $name) "function $name exists"
 }
 # The file only defines functions: nothing but function definitions and the three constants at the top level.
 $topLevel = @($ast.EndBlock.Statements | Where-Object { $_ -isnot [Management.Automation.Language.FunctionDefinitionAst] })
-Assert (@($topLevel | Where-Object { $_.Extent.Text -notmatch '^\$script:SelfX(CodeSigningEku|SignableExtensions|ScriptExtensions|MaxPfxBytes)\s*=' }).Count -eq 0) 'the file only defines functions and constants'
+Assert (@($topLevel | Where-Object { $_.Extent.Text -notmatch '^\$script:SelfX(CodeSigningEku|SignableExtensions|ScriptExtensions|MaxPfxBytes|TimestampUrlMaxLength)\s*=' }).Count -eq 0) 'the file only defines functions and constants'
 Write-Host 'Password handling (static)'
 foreach ($forbidden in 'ConvertFrom-SecureString', 'SecureStringTo', 'PtrToString', 'NetworkCredential', '-AsPlainText', 'Import-PfxCertificate', 'PersistKeySet', 'Invoke-Expression', 'Write-Host', 'Out-File', 'Set-Content', 'Add-Content') {
     Assert ($text.IndexOf($forbidden, [StringComparison]::OrdinalIgnoreCase) -lt 0) "the library does not contain '$forbidden'"
@@ -109,6 +112,12 @@ $refusedUrls = @('', '   ', 'ftp://ts.example.org', 'file:///C:/ts', '\\server\s
     'http://user:secret@ts.example.org/', 'http://ts.example.org/a b', "http://ts.example.org/`r`nX-Header: 1", 'http://', 'https:///path', 'mailto:a@b.c')
 foreach ($url in $acceptedUrls) { Assert (Test-SelfXTimestampUrl $url) "time stamp address accepted: $url" }
 foreach ($url in $refusedUrls) { Assert (-not (Test-SelfXTimestampUrl $url)) "time stamp address refused: $(($url -replace '[\x00-\x1F]', '?'))" }
+# Length: at most 300 characters.
+$longest = 'https://ts.example.org/' + ('a' * (300 - 'https://ts.example.org/'.Length))
+Assert ($longest.Length -eq 300 -and (Test-SelfXTimestampUrl $longest)) 'time stamp address of 300 characters accepted'
+Assert (-not (Test-SelfXTimestampUrl ($longest + 'a'))) 'time stamp address of 301 characters refused'
+Assert (-not (Test-SelfXTimestampUrl 'https://user@ts.example.org/')) 'time stamp address with a user name (no password) refused'
+Assert (-not (Test-SelfXTimestampUrl 'https://:secret@ts.example.org/')) 'time stamp address with a password only refused'
 
 # ---------------------------------------------------------------------------------------------------------------------
 Write-Host 'Script encoding'
@@ -157,6 +166,57 @@ try {
     Assert ((Get-SelfXSigningCertificateProblem (New-MemoryCertificate -NotBefore ([DateTime]::Now.AddDays(-10)) -NotAfter ([DateTime]::Now.AddDays(-1)))) -eq 'expired') 'expired certificate is refused'
     Assert ((Get-SelfXSigningCertificateProblem (New-MemoryCertificate -NotBefore ([DateTime]::Now.AddDays(1)) -NotAfter ([DateTime]::Now.AddDays(10)))) -eq 'not yet valid') 'certificate that is not yet valid is refused'
     Assert ((Get-SelfXSigningCertificateProblem $null) -eq 'no certificate') 'no certificate is refused'
+
+    # -------------------------------------------------------------------------------------------------------------------
+    Write-Host 'Check of the time stamp service before signing (signing replaced in a child scope; no network)'
+    $stampFolder = Join-Path $work 'stamp'
+    $null = New-Item -ItemType Directory -Path $stampFolder
+    $probeLeft = { @(Get-ChildItem -LiteralPath $stampFolder -Force).Count -eq 0 }
+    & {
+        $script:StampCalls = 0
+        $script:StampSeenUrl = ''
+        $script:StampSeenPath = ''
+        function Set-SelfXCodeSignature {
+            param([string[]]$Path, $Certificate, [string]$TimestampServer)
+            $script:StampCalls++
+            $script:StampSeenUrl = $TimestampServer
+            $script:StampSeenPath = $Path[0]
+            return [pscustomobject]@{ Path = $Path[0]; Status = 'Valid'; Thumbprint = $Certificate.Thumbprint; TimeStamped = $true }
+        }
+        Assert-SelfXTimestampService -Certificate $good -TimestampServer 'https://ts.example.org/tsa' -Folder $stampFolder
+        Assert ($script:StampCalls -eq 1 -and $script:StampSeenUrl -eq 'https://ts.example.org/tsa') 'a service that gives a time stamp is accepted with one test signature'
+        Assert ($script:StampSeenPath.StartsWith($stampFolder) -and $script:StampSeenPath -like '*.ps1') 'the test script lies in the given work folder'
+        Assert (& $probeLeft) 'the test script is removed after a successful check'
+    }
+    & {
+        function Set-SelfXCodeSignature {
+            param([string[]]$Path, $Certificate, [string]$TimestampServer)
+            throw 'The remote name could not be resolved: internal-secret-host (simulated)'
+        }
+        $message = Assert-Throws { Assert-SelfXTimestampService -Certificate $good -TimestampServer 'http://ts.example.org:8080/tsa' -Folder $stampFolder } 'a service that cannot be reached stops (simulated failure)'
+        Assert ($message -match 'gave no time stamp' -and $message -match 'ts\.example\.org' -and $message -match 'without a time stamp' -and $message -match 'Nothing was signed') "the message is plain and names the host ($message)"
+        Assert ($message -notmatch 'internal-secret-host' -and $message -notmatch 'could not be resolved') 'the message does not pass on the text of the exception'
+        Assert (& $probeLeft) 'the test script is removed after a failed check'
+    }
+    & {
+        function Set-SelfXCodeSignature {
+            param([string[]]$Path, $Certificate, [string]$TimestampServer)
+            return [pscustomobject]@{ Path = $Path[0]; Status = 'Valid'; Thumbprint = $Certificate.Thumbprint; TimeStamped = $false }
+        }
+        $null = Assert-Throws { Assert-SelfXTimestampService -Certificate $good -TimestampServer 'https://ts.example.org/' -Folder $stampFolder } 'a signature without a time stamp is a failure of the check'
+        Assert (& $probeLeft) 'the test script is removed when no time stamp came back'
+    }
+    & {
+        $script:StampCalls = 0
+        function Set-SelfXCodeSignature { param([string[]]$Path, $Certificate, [string]$TimestampServer) $script:StampCalls++ }
+        foreach ($url in 'ftp://ts.example.org', 'http://user:pw@ts.example.org/', ('https://ts.example.org/' + ('a' * 300)), "https://ts.example.org/`r`nX: 1") {
+            $null = Assert-Throws { Assert-SelfXTimestampService -Certificate $good -TimestampServer $url -Folder $stampFolder } "the check refuses the address before signing: $(($url -replace '[\x00-\x1F]', '?').Substring(0, [Math]::Min(40, $url.Length)))"
+        }
+        $null = Assert-Throws { Assert-SelfXTimestampService -Certificate $good -TimestampServer '' -Folder $stampFolder } 'the check refuses an empty address'
+        $null = Assert-Throws { Assert-SelfXTimestampService -Certificate $good -TimestampServer 'https://ts.example.org/' -Folder (Join-Path $work 'no-such-folder') } 'the check needs an existing work folder'
+        Assert ($script:StampCalls -eq 0) 'nothing was signed for a refused address'
+    }
+    Assert ((Get-Command Set-SelfXCodeSignature).ScriptBlock.ToString() -match 'Get-SelfXSigningCertificateProblem') 'the replacements of the child scopes do not stay (the library function is back)'
 
     # -------------------------------------------------------------------------------------------------------------------
     Write-Host 'PFX file and password'
@@ -381,6 +441,9 @@ try {
                 $tsScript = Join-Path $work 'ts.ps1'; Write-TestScript $tsScript
                 $tsMessage = Assert-Throws { Set-SelfXCodeSignature -Path $tsScript -Certificate $certA -TimestampServer 'http://127.0.0.1:9/' } 'an unreachable time stamp server is an error, not a signature without time stamp'
                 Assert ($null -ne $tsMessage -and $tsMessage -match 'could not be signed') 'the message says which file could not be signed'
+                $tsFolder = Join-Path $work 'tscheck'; $null = New-Item -ItemType Directory -Path $tsFolder
+                $tsCheck = Assert-Throws { Assert-SelfXTimestampService -Certificate $certA -TimestampServer 'http://127.0.0.1:9/' -Folder $tsFolder } 'the check before signing stops at an unreachable time stamp server'
+                Assert ($tsCheck -match 'gave no time stamp' -and @(Get-ChildItem -LiteralPath $tsFolder -Force).Count -eq 0) "the check names the problem in plain words and leaves no test script ($tsCheck)"
 
                 Write-Host 'Part 2: signed catalog'
                 $made = New-SelfXSignedCatalog -Path $folder -CatalogFilePath $catalogPath -Certificate $certA

@@ -51,7 +51,14 @@
     a file, a log or selfx-answers.json.
 
 .PARAMETER TimestampServer
-    Time stamp service (http or https address) for the signatures. Recommended, so the signatures stay valid after the certificate expires.
+    Time stamp service (http or https address without user name, at most 300 characters) for the signatures. Used only while the package
+    is built; the devices do not need it. It keeps the signatures valid after the certificate expires. It is saved in selfx-answers.json
+    (build setting TimestampServer) and taken from there when the parameter is missing. Before the package is signed, one test signature
+    checks the service; a service that gives no time stamp stops the run.
+
+.PARAMETER NoTimestamp
+    Trust mode Signature without a time stamp (not recommended, for tests): the signatures become invalid when the certificate expires.
+    Without -TimestampServer (and without TimestampServer in the answer file) a signed run needs this switch; interactively the wizard asks.
 
 .PARAMETER AdditionalSigner
     Trust mode Signature, change of the certificate: SHA1 thumbprints (40 hexadecimal characters) of further signers that the devices
@@ -78,7 +85,7 @@
     Name    : New-SelfXPackage.ps1
     Package : tools
     Context : Build machine (administrator of the package; not installed)
-    Version : 1.3.3
+    Version : 1.4.0
     Exit code: 0 = done, 1 = error or aborted
     Works in Windows PowerShell 5.1 and PowerShell 7. The wizard sends nothing; only -PfxPath makes it ask for the password of the PFX file (hidden, not stored).
 
@@ -96,6 +103,8 @@
     1.3.1    2026-11-27  fubu2k               Answer file: the answer NetworkTargets (own network targets) is known
     1.3.2    2026-11-28  fubu2k               Help: SelfX-Server-Guide for a package for Windows Server (question TargetOS)
     1.3.3    2026-11-28  fubu2k               Package for Windows Server: no .intunewin file, no question and no need for IntuneWinAppUtil.exe
+    1.4.0    2026-11-28  fubu2k               Time stamp: -NoTimestamp (explicit confirmation of a signature without time stamp, asked interactively),
+                                              TimestampServer from the answer file when the parameter is missing
 #>
 [CmdletBinding()]
 param(
@@ -111,6 +120,7 @@ param(
     [string]$CertificateThumbprint,
     [string]$PfxPath,
     [string]$TimestampServer,
+    [switch]$NoTimestamp,
     [string[]]$AdditionalSigner = @()
 )
 
@@ -126,6 +136,8 @@ try {
     $script:WizardInteractive = $interactive
     if ($CertificateThumbprint -and $PfxPath) { throw 'Use either -CertificateThumbprint or -PfxPath, not both.' }
     if ($TimestampServer -and -not ($CertificateThumbprint -or $PfxPath)) { throw '-TimestampServer needs -CertificateThumbprint or -PfxPath.' }
+    if ($NoTimestamp -and -not ($CertificateThumbprint -or $PfxPath)) { throw '-NoTimestamp needs -CertificateThumbprint or -PfxPath.' }
+    if ($NoTimestamp -and $TimestampServer) { throw 'Use either -TimestampServer or -NoTimestamp, not both.' }
     if ($ConfigPackage -and $SeparateConfig) { throw '-ConfigPackage and -SeparateConfig cannot be combined: one run builds one package.' }
     $packageKind = $(if ($ConfigPackage) { 'ConfigOnly' } elseif ($SeparateConfig) { 'FullSeparateConfig' } else { 'Full' })
     if ($ConfigureOnly -and ($CertificateThumbprint -or $PfxPath)) { throw '-ConfigureOnly does not sign: do not combine it with a certificate.' }
@@ -166,8 +178,11 @@ try {
         $json = Get-Content -LiteralPath $AnswerFile -Raw -Encoding UTF8 | ConvertFrom-Json
         $source = @{}
         foreach ($property in $json.PSObject.Properties) { $source[$property.Name] = $property.Value }
-        $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + @('Units', 'NetworkTargets', 'WizardLanguage')
+        $known = @((Get-WizardQuestions) | ForEach-Object { $_.Id }) + $script:WizardAnswerFileExtraKeys
         foreach ($key in $source.Keys) { if ($known -notcontains $key) { throw "Unknown answer '$key' in the answer file." } }
+        # The time stamp service is a build setting: taken out before the answers are read; the parameter wins.
+        $savedTimestamp = Get-WizardAnswerFileTimestamp -Source $source
+        if (-not $TimestampServer -and -not $NoTimestamp -and ($CertificateThumbprint -or $PfxPath)) { $TimestampServer = $savedTimestamp }
     }
     $answers = Read-WizardAnswers -Source $source
 
@@ -209,6 +224,18 @@ try {
         $password = $null
     }
 
+    # ---- time stamp (trust mode Signature): asked when it was not given; signing without one needs a yes
+    if ($null -ne $certificate -and -not $TimestampServer -and -not $NoTimestamp) {
+        if ($interactive) {
+            $TimestampServer = Get-WizardAnswer -Question @{ Id = 'Timestamp'; Kind = 'timestamp'; Default = '' } -Answers $answers -Source @{}
+            if (-not $TimestampServer) {
+                $NoTimestamp = [bool](Get-WizardAnswer -Question @{ Id = 'NoTimestamp'; Kind = 'bool'; Default = $false } -Answers $answers -Source @{})
+                if (-not $NoTimestamp) { Write-Host (Get-WText 'aborted'); exit 1 }
+            }
+        }
+        # Non-interactive without an address and without -NoTimestamp: Invoke-SelfXPackageBuild stops with the reason.
+    }
+
     # ---- programs (repository only: the payload archive contains them)
     if ($fromRepository -and -not $ConfigureOnly -and -not (Test-Path -LiteralPath (Join-Path $packageSource 'Bin\SelfX.Binaries.json') -PathType Leaf)) {
         $build = [bool]$BuildBinaries
@@ -221,7 +248,7 @@ try {
 
     # ---- build (the package folder of the repository is brought into the layout of the payload in a temporary folder first)
     $result = Invoke-SelfXWizardBuild -Answers $answers -PayloadFolder $packageSource -FromRepository:$fromRepository -OutputFolder $OutputFolder -ToolPath $ToolPath `
-        -Certificate $certificate -TimestampServer $TimestampServer -AdditionalSigner $AdditionalSigner -Language $Language -ConfigureOnly:$ConfigureOnly -PackageKind $packageKind `
+        -Certificate $certificate -TimestampServer $TimestampServer -NoTimestamp:$NoTimestamp -AdditionalSigner $AdditionalSigner -Language $Language -ConfigureOnly:$ConfigureOnly -PackageKind $packageKind `
         -OnProgress { param($id, $text) Write-Host $text -ForegroundColor Cyan }
 
     Write-Host ''

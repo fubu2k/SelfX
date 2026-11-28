@@ -247,7 +247,11 @@ nächster Abschnitt); der Dienst liest ihn vor jedem Start (siehe „Der Modus S
 2. Jede `.exe`, `.dll`, `.ps1`, `.psm1` und `.psd1` des Pakets trägt eine Authenticode-Signatur mit
    dem Status `Valid` eines Signierers der Liste. Das gilt auch für `Install.ps1` selbst und für
    Bibliotheken anderer Herausgeber in `Bin` (zum Beispiel `Microsoft.Windows.SDK.NET.dll`): Das
-   Unternehmen signiert auch diese.
+   Unternehmen signiert auch diese. Einzige Ausnahme ist `Detection.ps1` oben im Paket (genau dieser
+   Pfad, keine Regel nach Name oder Endung): `Install.ps1` führt sie nie aus und installiert sie
+   nicht, und Intune bekommt das Erkennungsskript getrennt hochgeladen (diese Kopie signiert der
+   Paketassistent). Sie bleibt durch `SelfX.Code.cat` abgedeckt (Schritt 4). Eine `Detection.ps1` in
+   einem anderen Ordner muss wie jedes Skript signiert sein.
 3. `Config\SelfX.Config.cat` ist von einem Signierer der Liste signiert, verwendet SHA256 und passt
    genau zum Ordner `Config` (keine geänderte, fehlende oder zusätzliche Datei).
 4. `SelfX.Code.cat` oben im Paket ist von einem Signierer der Liste signiert, verwendet SHA256 und

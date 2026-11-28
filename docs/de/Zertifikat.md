@@ -17,6 +17,7 @@ baut. Ohne Zertifikat funktioniert SelfX ebenfalls (Vertrauensmodus **Hash**).
 - [Bei einer internen PKI anfordern (AD CS)](#bei-einer-internen-pki-anfordern-ad-cs)
 - [Den Geräten das Vertrauen geben](#den-geräten-das-vertrauen-geben)
 - [Mit dem Paketassistenten signieren](#mit-dem-paketassistenten-signieren)
+- [Zeitstempel](#zeitstempel)
 - [Ablauf und Wechsel des Zertifikats](#ablauf-und-wechsel-des-zertifikats)
 - [Quellen](#quellen)
 
@@ -98,17 +99,39 @@ Fenster (`tools\Start-SelfXPackageWizard.cmd`), Seite **Signatur**:
   Arbeitsspeicher geöffnet (nicht importiert); das Kennwort wird einmal verwendet, danach wird das
   Feld geleert. Das Kennwort wird nie angezeigt, gespeichert, protokolliert oder in
   `selfx-answers.json` geschrieben.
-- **Zeitstempeldienst (erforderlich):** die Adresse des Zeitstempeldienstes des Anbieters Ihres
-  Zertifikats oder Ihrer PKI. Signieren ohne Zeitstempel muss ausdrücklich eingeschaltet werden und
-  ist nur für Tests gedacht.
+- **Zeitstempeldienst:** die Adresse des Zeitstempeldienstes des Anbieters Ihres Zertifikats oder
+  Ihrer PKI (`http://` oder `https://`, kein Benutzername oder Kennwort in der Adresse, höchstens 300
+  Zeichen). Lassen Sie das Feld nur zusammen mit dem Schalter „Ohne Zeitstempel signieren“ leer; der
+  ist für Tests gedacht (siehe [Zeitstempel](#zeitstempel)). Die Adresse wird in `selfx-answers.json`
+  gespeichert und beim Laden dieser Datei wieder vorgeschlagen.
 - **Weitere erlaubte Signierer:** nur für einen Zertifikatswechsel (unten).
 
 Konsole: `tools\New-SelfXPackage.ps1 -CertificateThumbprint <Fingerabdruck>` oder `-PfxPath <Datei>`
-(das Kennwort wird verdeckt abgefragt), `-TimestampServer <Adresse>`, `-AdditionalSigner <Fingerabdruck>`
-([Paketassistent](Assistent.md)).
+(das Kennwort wird verdeckt abgefragt), `-TimestampServer <Adresse>` (oder `-NoTimestamp`),
+`-AdditionalSigner <Fingerabdruck>` ([Paketassistent](Assistent.md)). Fehlt beides, fragt die
+Konsole; mit einer Antwortdatei nimmt sie `TimestampServer` aus der Datei.
 
 Die Ergebnisseite zeigt die Schritte für Intune mit Kopieren-Schaltflächen; der Installationsbefehl
 enthält `-TrustedSigner` mit dem oder den Fingerabdrücken.
+
+## Zeitstempel
+
+Ein Zeitstempel ist eine Gegensignatur eines Zeitstempeldienstes: Er bestätigt, wann die Datei
+signiert wurde. Windows nimmt die Signatur dann an, solange das Zertifikat zu diesem Zeitpunkt gültig
+war, auch nach dem Ablauf des Zertifikats. Der Dienst wird **nur beim Bauen des Pakets** gebraucht:
+Die Geräte fragen ihn nicht an, und die Adresse steht weder im Paket noch auf dem Gerät.
+
+Ein interner Zeitserver (NTP) reicht nicht. NTP stellt nur die Uhr eines Rechners; er signiert nichts.
+Für einen Zeitstempel braucht es einen Zeitstempeldienst mit eigenem Zertifikat (RFC 3161), vom
+Anbieter Ihres Zertifikats oder von Ihrer PKI.
+
+Vor der ersten Datei macht der Assistent eine Testsignatur mit dem Dienst. Liefert er keinen
+Zeitstempel (falsche Adresse, kein Netz, Dienst gestört), bricht der Bau mit einer kurzen Meldung ab,
+und nichts wird signiert.
+
+Ohne Zeitstempel werden die Signaturen am Tag des Ablaufs ungültig (siehe unten). Der Assistent
+signiert deshalb nur dann ohne, wenn Sie das ausdrücklich einschalten (Fenster: „Ohne Zeitstempel
+signieren“; Konsole: `-NoTimestamp`).
 
 ## Ablauf und Wechsel des Zertifikats
 

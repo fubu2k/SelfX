@@ -87,7 +87,8 @@ Wichtige Parameter:
 | `-ConfigureOnly` | Schreibt nur Konfiguration, Skripte und Anleitung; es wird nichts verpackt oder signiert. |
 | `-CertificateThumbprint <Fingerabdruck>` | Vertrauensmodus Signatur: signiert mit diesem Codesignatur-Zertifikat aus dem Zertifikatspeicher. |
 | `-PfxPath <Datei>` | Vertrauensmodus Signatur: signiert mit einer PFX-Datei. Der Assistent fragt das Kennwort ab (verdeckt, wird nie gespeichert). |
-| `-TimestampServer <Adresse>` | Zeitstempeldienst (`http` oder `https`) für die Signaturen. Empfohlen. |
+| `-TimestampServer <Adresse>` | Zeitstempeldienst (`http` oder `https`, ohne Benutzernamen, höchstens 300 Zeichen) für die Signaturen. Nur beim Bauen verwendet; wird in `selfx-answers.json` gespeichert und von dort genommen, wenn der Parameter fehlt. Eine Testsignatur prüft den Dienst vorab. |
+| `-NoTimestamp` | Ohne Zeitstempel signieren (nur für Tests). Ein signierter Lauf braucht einen Zeitstempeldienst oder diesen Schalter; im Dialog fragt der Assistent. |
 | `-AdditionalSigner <Fingerabdruck>` | Zertifikatswechsel: weitere Fingerabdrücke für `-TrustedSigner` im Installationsbefehl (damit wird nichts signiert; höchstens 9). |
 
 ## Die Fragen

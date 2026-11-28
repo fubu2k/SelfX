@@ -83,7 +83,8 @@ preferably from the latest release tag). The wizard asks for the path of the fil
 | `-ConfigureOnly` | Writes configuration, scripts and instructions only; nothing is packed or signed. |
 | `-CertificateThumbprint <thumbprint>` | Trust mode Signature: signs with this code signing certificate from the certificate store. |
 | `-PfxPath <file>` | Trust mode Signature: signs with a PFX file. The wizard asks for the password (hidden, never stored). |
-| `-TimestampServer <address>` | Time stamp service (`http` or `https`) for the signatures. Recommended. |
+| `-TimestampServer <address>` | Time stamp service (`http` or `https`, no user name, at most 300 characters) for the signatures. Used only while the package is built; saved in `selfx-answers.json` and taken from there when the parameter is missing. One test signature checks the service first. |
+| `-NoTimestamp` | Sign without a time stamp (tests only). A signed run needs a time stamp service or this switch; interactively the wizard asks. |
 | `-AdditionalSigner <thumbprint>` | Change of the certificate: further thumbprints for `-TrustedSigner` of the install command (nothing is signed with them; at most 9). |
 
 ## The questions
